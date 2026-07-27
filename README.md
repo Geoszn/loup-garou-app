@@ -15,50 +15,11 @@ Aucun serveur à gérer soi-même : toute la logique de jeu (répartition des r�
 
 1. Allez sur [supabase.com](https://supabase.com) → **New project** (le plan gratuit suffit largement).
 2. Une fois le projet créé, ouvrez **SQL Editor** dans le menu de gauche.
-3. Exécutez, **dans l'ordre**, chacun des fichiers du dossier `supabase/migrations/` :
-   - `0001_init.sql`
-   - `0002_security.sql`
-   - `0003_functions.sql`
-   - `0004_game_engine.sql`
-   - `0005_actions.sql`
-   - `0006_view.sql`
-   - `0007_grants.sql`
-   - `0008_fix_rls_recursion.sql`
-   - `0009_cascade_deletes.sql`
-   - `0010_chat.sql`
-   - `0011_wolf_timer.sql`
-   - `0012_fix_start_game_array.sql`
-   - `0013_restart_and_leave.sql`
-   - `0014_account.sql`
-   - `0015_stats.sql`
-   - `0016_social.sql`
-   - `0017_new_roles.sql`
-   - `0018_captain.sql`
-   - `0019_ghost_village_read.sql`
-   - `0020_join_ended_game.sql`
-   - `0021_ready_and_captain_call_vote.sql`
-   - `0022_wolf_tie_no_kill.sql`
-   - `0023_add_friend_by_user_id.sql`
-   - `0024_discussion_180s_and_narrator_test.sql`
-   - `0025_longer_timers_and_wolf_fix.sql`
-   - `0026_night_anonymous_chat.sql`
-   - `0027_vote_recap.sql`
-   - `0028_reset_chat_per_phase.sql`
-   - `0029_audit_fixes.sql`
-   - `0030_settings_and_moderation.sql`
-   - `0031_account_deletion_request.sql`
-   - `0032_remove_petite_fille_spy.sql`
-   - `0033_public_games.sql`
-   - `0034_lobby_voice_and_defaults.sql`
-   - `0035_wolf_abstain.sql`
-   - `0036_captain_call_vote_excludes_self.sql`
-   - `0037_my_active_game.sql`
-   - `0038_join_in_progress_games.sql`
-   - `0039_lobby_voice_after_game_ends.sql`
+3. Exécutez **tous les fichiers du dossier `supabase/migrations/`, dans l'ordre numérique** (`0001_...sql`, `0002_...sql`, etc. — le nom de fichier suffit à les trier, pas besoin de liste à jour ici : il y en a désormais plus de 50, une liste figée dans ce README serait obsolète dès la migration suivante).
 
-   Copiez-collez le contenu de chaque fichier (pas son nom, son contenu) dans l'éditeur SQL et cliquez sur **Run**, un fichier après l'autre, dans cet ordre exact.
+   Copiez-collez le **contenu** de chaque fichier (pas son nom) dans l'éditeur SQL et cliquez sur **Run**, un fichier après l'autre.
 
-   *(Si vous préférez la CLI Supabase : `supabase link` puis `supabase db push` avec ces fichiers dans `supabase/migrations/`.)*
+   *(Beaucoup plus fiable : la CLI Supabase, qui applique automatiquement tout ce qui manque, dans le bon ordre, sans risque de sauter ou de rejouer un fichier par erreur — voir [section 9](#9-outils-pour-les-développeurs).)*
 
 4. Allez dans **Authentication → Providers → Email** et vérifiez que **Confirm email** est activé (c'est le comportement par défaut). C'est ce qui oblige chaque joueur à valider son adresse avant de pouvoir jouer.
 5. Toujours dans **Authentication → URL Configuration** :
@@ -241,3 +202,49 @@ Par défaut, Playwright démarre `npm run dev` tout seul et attend qu'il soit pr
 `npm run test:e2e:ui` ouvre l'interface interactive de Playwright (pratique pour rejouer un test qui a échoué étape par étape). Un rapport HTML est aussi généré après chaque run (`playwright-report/index.html`).
 
 Le test de partie complète (`game-flow.spec.ts`) est le plus long et le plus fragile aux changements d'interface : il ouvre 4 navigateurs en parallèle, raccourcit les minuteurs de la partie via `update_game_settings`, puis boucle en prenant l'action la plus neutre disponible sur chaque écran jusqu'à la fin de partie. Si un futur changement d'ActionPanel.tsx renomme un bouton ou un titre de panneau, c'est ce fichier qu'il faudra ajuster en premier.
+
+⚠️ Ces tests ne couvrent pour l'instant que les parcours "historiques" (accueil, inscription/connexion, compte, amis, stats, une partie complète). Les fonctionnalités ajoutées plus récemment — réponse à un message, modération vocale, récap de nuit, dashboard admin, interrupteur "nouvelles parties" — n'ont pas encore de test dédié.
+
+---
+
+## 9. Outils pour les développeurs
+
+Ajoutés après deux régressions arrivées directement en production (une fonction reconstruite à partir d'un vieux modèle qui a fait disparaître un champ, puis deux fonctions RPC devenues inaccessibles après un durcissement des droits) : l'objectif est qu'un problème de ce genre soit détecté ici, avant un déploiement, plutôt que signalé par un joueur.
+
+### Vérifier les droits RPC avant de déployer une migration
+
+```bash
+npm run check:rpc
+```
+
+Relit toutes les migrations SQL pour reconstituer quelles fonctions existent et à qui elles sont accordées (`grant execute ... to authenticated/anon`), croise ça avec tous les appels `supabase.rpc(...)` trouvés dans `src/` et `api/`, et échoue (code de sortie 1) si une fonction que le client appelle réellement n'est accordée à personne — exactement le scénario qui a cassé le chat et la création de partie publique après la migration 0045. À lancer après avoir écrit une migration, avant de la coller dans l'éditeur SQL Supabase.
+
+### CLI Supabase (`supabase link` + `supabase db push`)
+
+Plus fiable que le copier-coller manuel dans l'éditeur SQL (source des deux régressions ci-dessus : rien n'empêche de coller le mauvais fichier, dans le mauvais ordre, ou d'oublier un fichier). `supabase/config.toml` est déjà en place dans ce projet.
+
+```bash
+npm install -g supabase        # une fois
+supabase login                 # une fois
+supabase link --project-ref <ref-de-votre-projet>   # trouvable dans Project Settings → General
+supabase db push                # applique tout ce qui manque, dans l'ordre
+```
+
+Idéalement sur un **projet de staging séparé** d'abord (voir plus bas), avant le projet de production.
+
+### Intégration continue (GitHub Actions)
+
+`.github/workflows/ci.yml` fait tourner, à chaque push et pull request :
+- `tsc -b` (typage)
+- `npm run check:rpc` (voir ci-dessus)
+- `npm run lint`
+- les tests Playwright (`npm run test:e2e`), mais seulement si les secrets `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` et `TEST_USER_PASSWORD` sont configurés dans Settings → Secrets and variables → Actions du dépôt GitHub (mêmes valeurs que `.env.test`, sur un **projet Supabase de test**, jamais celui de production). Sans ces secrets, ce job échoue sans bloquer le reste de la CI (`continue-on-error: true`) — à retirer une fois les secrets ajoutés.
+
+Ne se déclenche que si ce dossier est poussé sur GitHub (`git remote add origin ...` puis `git push`) — un dépôt git local a été initialisé dans ce projet, mais aucun remote n'est configuré pour l'instant.
+
+### Environnement de staging (recommandé, pas encore en place)
+
+Le point le plus structurant qui manque encore : un second projet Supabase + un déploiement Vercel preview, pour tester une migration ou une fonctionnalité avant qu'elle touche de vrais joueurs. Concrètement :
+1. Un deuxième projet sur [supabase.com](https://supabase.com), avec les mêmes migrations.
+2. Un projet Vercel (ou juste les déploiements "Preview" automatiques d'une pull request) pointant vers ce projet Supabase de staging via ses propres variables d'environnement.
+3. Tester dessus avant de pousser en production — les deux régressions mentionnées plus haut auraient été visibles ici avant d'atteindre un vrai joueur.

@@ -1,0 +1,37 @@
+# Config Supabase CLI — voir supabase/README.md pour comment s'en servir.
+#
+# Ce fichier seul ne connecte à rien : il permet juste à la CLI Supabase de
+# reconnaître ce dossier comme un projet Supabase (migrations dans
+# supabase/migrations/, déjà au bon format). Il faut ensuite `supabase link`
+# avec l'identifiant du vrai projet (voir README) pour que `supabase db
+# push`/`db diff` sachent où pousser/comparer.
+
+project_id = "loup-garou-app"
+
+[db]
+# Version majeure de Postgres utilisée par le projet Supabase distant —
+# n'affecte que la base locale éphémère lancée par `supabase start`, pas le
+# projet distant lui-même.
+major_version = 15
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public"]
+max_rows = 1000
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+# URL de base utilisée par les emails (confirmation, reset...) générés
+# pendant le développement local (`supabase start`). Sans effet sur le
+# projet distant, qui a sa propre config dans le dashboard Supabase.
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173"]
+
+[realtime]
+enabled = true

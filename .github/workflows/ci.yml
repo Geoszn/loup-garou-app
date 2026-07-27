@@ -1,0 +1,69 @@
+name: CI
+
+# Se déclenche à chaque push et à chaque pull request. Ne remplace pas un
+# vrai environnement de staging (voir README pour ce point), mais attrape
+# déjà, avant que ça n'atteigne la prod :
+#   - les erreurs de typage (tsc)
+#   - les incohérences de droits RPC (create_game/send_chat_message et
+#     tout futur cas du même genre — voir scripts/check-rpc-grants.mjs)
+#   - le lint
+#   - les tests de bout en bout, si les secrets d'un projet Supabase de
+#     test sont configurés (voir plus bas — ce job est volontairement
+#     non bloquant tant qu'ils ne le sont pas)
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  checks:
+    name: Typecheck, lint, RPC grants
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Typecheck (tsc)
+        run: npx tsc -b
+      - name: Cohérence des droits RPC (migrations vs appels client)
+        run: npm run check:rpc
+      - name: Lint
+        run: npm run lint
+
+  e2e:
+    name: Tests de bout en bout (Playwright)
+    runs-on: ubuntu-latest
+    # Non bloquant tant qu'un projet Supabase de test n'est pas configuré
+    # dans les secrets du dépôt GitHub (Settings → Secrets and variables →
+    # Actions) : VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY,
+    # SUPABASE_SERVICE_ROLE_KEY, TEST_USER_PASSWORD — mêmes valeurs que
+    # .env.test.example, mais sur un projet Supabase dédié aux tests, PAS
+    # le projet de production (ces tests créent de vrais comptes et de
+    # vraies parties). Une fois les secrets ajoutés, retirer
+    # `continue-on-error: true` ci-dessous pour que ce job bloque aussi la
+    # CI en cas d'échec.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Playwright
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
