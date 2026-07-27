@@ -1,0 +1,180 @@
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { Suspense, lazy, useEffect, useRef, type ReactNode } from 'react'
+import { useAuth } from './context/AuthContext'
+import { useLanguage } from './i18n/LanguageContext'
+import { useUiClickSound } from './hooks/useUiClickSound'
+import Landing from './pages/Landing'
+import SignUp from './pages/SignUp'
+import Login from './pages/Login'
+import VerifyEmail from './pages/VerifyEmail'
+import Dashboard from './pages/Dashboard'
+import Account from './pages/Account'
+import Stats from './pages/Stats'
+import Friends from './pages/Friends'
+import Lobby from './pages/Lobby'
+import PendingApproval from './pages/PendingApproval'
+import GameRoom from './pages/GameRoom'
+import JoinByLink from './pages/JoinByLink'
+import NotFound from './pages/NotFound'
+import { FullScreenLoader } from './components/FullScreenLoader'
+
+// Dashboard admin : route volontairement chargée en lazy (jamais dans le
+// bundle principal) et jamais liée nulle part dans l'app — seule une
+// personne connaissant cette URL exacte (voir ADMIN_ROUTE_PATH) peut même
+// espérer y accéder. Le vrai contrôle d'accès reste côté serveur
+// (admin_check_access(), voir AdminDashboard.tsx) : cette URL cachée n'est
+// qu'une couche d'obscurité en plus, pas la sécurité elle-même.
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
+// Garder ce chemin exact en tête (ou dans un gestionnaire de mots de passe) :
+// il n'apparaît nulle part ailleurs dans l'app.
+export const ADMIN_ROUTE_PATH = '/panel-beff77e1dae48f88d6b98231f160f0b8'
+
+// Pages légales : gros blocs de texte juridique/RGPD (en deux langues),
+// rarement consultés — chargées à la demande plutôt qu'incluses dans le
+// bundle principal, pour ne pas alourdir le chargement initial de l'appli
+// avec du texte que la plupart des joueurs ne liront jamais.
+const Privacy = lazy(() => import('./pages/Privacy'))
+const Terms = lazy(() => import('./pages/Terms'))
+const LegalNotice = lazy(() => import('./pages/LegalNotice'))
+
+function ProtectedRoute({ children }: { children: ReactNode }) {
+  const { session, loading } = useAuth()
+  if (loading) return <FullScreenLoader />
+  if (!session) return <Navigate to="/connexion" replace />
+  if (!session.user.email_confirmed_at) return <Navigate to="/verifier-email" replace />
+  return <>{children}</>
+}
+
+/** Applique la langue par défaut du compte (profiles.lang) dès qu'un profil
+ * vient de se charger après une connexion — une seule fois par connexion,
+ * pour ne jamais écraser un changement fait ensuite manuellement (bouton
+ * FR/EN) tant que l'utilisateur reste connecté avec le même compte. Pour un
+ * visiteur non connecté, LanguageContext garde son propre repli
+ * (localStorage puis langue du navigateur, voir detectInitialLang). */
+function LanguageProfileSync() {
+  const { profile } = useAuth()
+  const { setLang } = useLanguage()
+  const syncedUserIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!profile) {
+      syncedUserIdRef.current = null
+      return
+    }
+    if (syncedUserIdRef.current === profile.id) return
+    syncedUserIdRef.current = profile.id
+    if (profile.lang === 'fr' || profile.lang === 'en') setLang(profile.lang)
+  }, [profile, setLang])
+
+  return null
+}
+
+export default function App() {
+  useUiClickSound()
+  return (
+    <>
+      <LanguageProfileSync />
+      <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/inscription" element={<SignUp />} />
+      <Route path="/connexion" element={<Login />} />
+      <Route path="/verifier-email" element={<VerifyEmail />} />
+      <Route
+        path="/confidentialite"
+        element={
+          <Suspense fallback={<FullScreenLoader />}>
+            <Privacy />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/cgu"
+        element={
+          <Suspense fallback={<FullScreenLoader />}>
+            <Terms />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/mentions-legales"
+        element={
+          <Suspense fallback={<FullScreenLoader />}>
+            <LegalNotice />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/compte"
+        element={
+          <ProtectedRoute>
+            <Account />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/stats"
+        element={
+          <ProtectedRoute>
+            <Stats />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/amis"
+        element={
+          <ProtectedRoute>
+            <Friends />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/rejoindre/:code"
+        element={<JoinByLink />}
+      />
+      <Route
+        path="/attente/:gameId"
+        element={
+          <ProtectedRoute>
+            <PendingApproval />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/partie/:code/lobby"
+        element={
+          <ProtectedRoute>
+            <Lobby />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/partie/:code"
+        element={
+          <ProtectedRoute>
+            <GameRoom />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path={ADMIN_ROUTE_PATH}
+        element={
+          <ProtectedRoute>
+            <Suspense fallback={<FullScreenLoader />}>
+              <AdminDashboard />
+            </Suspense>
+          </ProtectedRoute>
+        }
+      />
+      <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
+  )
+}

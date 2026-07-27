@@ -1,0 +1,123 @@
+import { useEffect, useState } from 'react'
+import { roleLabel } from '../lib/roles'
+import type { PublicPlayer } from '../types/game'
+import { FriendRequestPopover } from './FriendRequestPopover'
+import { AvatarIcon } from './AvatarIcon'
+import { useLanguage } from '../i18n/LanguageContext'
+
+interface Props {
+  players: PublicPlayer[]
+  selfId?: string
+  selectable?: boolean
+  selectedId?: string | null
+  disabledIds?: string[]
+  highlightIds?: string[]
+  onSelect?: (userId: string) => void
+  showDeathReveal?: boolean
+  /** Ids des joueurs actuellement connectés (voir useGame.ts, présence
+   * Realtime) — si fourni, affiche un petit voyant vert/gris sur chaque
+   * avatar. Omis (undefined) : pas de voyant du tout, pour les usages qui
+   * n'ont pas cette donnée sous la main. */
+  onlineUserIds?: Set<string>
+}
+
+export function PlayerGrid({
+  players,
+  selfId,
+  selectable = false,
+  selectedId,
+  disabledIds = [],
+  highlightIds = [],
+  onSelect,
+  showDeathReveal = true,
+  onlineUserIds,
+}: Props) {
+  // Popover "Ajouter en ami" : uniquement en dehors d'un mode vote/action
+  // (selectable), pour ne jamais gêner le choix d'une cible pendant un vote.
+  // Un seul avatar ouvert à la fois ; un clic n'importe où ailleurs le ferme.
+  const [openId, setOpenId] = useState<string | null>(null)
+  const { t } = useLanguage()
+
+  useEffect(() => {
+    if (!openId) return
+    const close = () => setOpenId(null)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [openId])
+
+  return (
+    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
+      {players.map((p) => {
+        const isDisabled = !p.is_alive || disabledIds.includes(p.user_id)
+        const isSelected = selectedId === p.user_id
+        const isHighlighted = highlightIds.includes(p.user_id)
+        const clickable = selectable && !isDisabled && onSelect
+        const canAddFriend = !selectable && !!selfId && p.user_id !== selfId
+
+        return (
+          <div key={p.id} className="relative">
+            <button
+              type="button"
+              disabled={!clickable && !canAddFriend}
+              onClick={() => {
+                if (clickable) {
+                  onSelect?.(p.user_id)
+                } else if (canAddFriend) {
+                  setOpenId((cur) => (cur === p.user_id ? null : p.user_id))
+                }
+              }}
+              className={`group relative flex w-full flex-col items-center gap-1 rounded-xl border p-2 text-center shadow-card transition-all
+                ${isSelected ? 'border-blood-500 bg-gradient-to-b from-blood-700/30 to-blood-700/10 shadow-blood-glow' : 'border-night-600/60 bg-gradient-to-b from-night-700/50 to-night-900/50'}
+                ${isHighlighted && !isSelected ? 'border-moon-400/60' : ''}
+                ${!p.is_alive ? 'opacity-40 grayscale' : ''}
+                ${clickable || canAddFriend ? 'cursor-pointer hover:border-moon-400/50 hover:from-night-600/60 active:scale-95' : ''}
+              `}
+            >
+              {/* Couleur du texte fixe (pas liée au thème jour/nuit) : les
+                  avatars utilisent une palette de couleurs claires/vives fixe,
+                  donc un texte sombre garde une bonne lisibilité dans les deux
+                  thèmes, contrairement à night-950 qui deviendrait blanc de jour. */}
+              <span className="relative inline-flex">
+                <span
+                  className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-[#05070d]"
+                  style={{ backgroundColor: p.avatar_color }}
+                >
+                  {p.avatar_icon ? <AvatarIcon icon={p.avatar_icon} className="h-5 w-5" /> : p.display_name.slice(0, 1).toUpperCase()}
+                </span>
+                {onlineUserIds && (
+                  <span
+                    title={onlineUserIds.has(p.user_id) ? t('common.online') : t('common.offline')}
+                    className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-night-900 ${
+                      onlineUserIds.has(p.user_id) ? 'bg-emerald-400' : 'bg-night-500'
+                    }`}
+                  />
+                )}
+              </span>
+              <span className="max-w-full truncate text-xs font-medium text-moon-200/90">
+                {p.display_name}
+                {p.user_id === selfId ? ` (${t('common.you')})` : ''}
+              </span>
+              {!p.is_alive && showDeathReveal && p.revealed_role && (
+                <span className="text-[10px] text-blood-400">💀 {roleLabel(p.revealed_role, t)}</span>
+              )}
+              {p.is_host && <span className="absolute -right-1 -top-1 text-xs">👑</span>}
+              {p.is_captain && (
+                <span className="absolute -left-1 -top-1 text-xs" title={t('common.captain')}>
+                  🎖️
+                </span>
+              )}
+            </button>
+            {openId === p.user_id && (
+              <FriendRequestPopover
+                userId={p.user_id}
+                displayName={p.display_name}
+                avatarIcon={p.avatar_icon}
+                onClose={() => setOpenId(null)}
+              />
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
