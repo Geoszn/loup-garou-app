@@ -6,6 +6,8 @@ import { useUiClickSound } from './hooks/useUiClickSound'
 import Landing from './pages/Landing'
 import SignUp from './pages/SignUp'
 import Login from './pages/Login'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import VerifyEmail from './pages/VerifyEmail'
 import Dashboard from './pages/Dashboard'
 import Account from './pages/Account'
@@ -85,6 +87,8 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/inscription" element={<SignUp />} />
       <Route path="/connexion" element={<Login />} />
+      <Route path="/mot-de-passe-oublie" element={<ForgotPassword />} />
+      <Route path="/reinitialiser-mot-de-passe" element={<ResetPassword />} />
       <Route path="/verifier-email" element={<VerifyEmail />} />
       <Route
         path="/confidentialite"

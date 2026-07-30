@@ -130,6 +130,59 @@ export const translations = {
   'login.error.invalid': { fr: 'Email ou mot de passe incorrect.', en: 'Incorrect email or password.' },
   'login.noAccount': { fr: 'Pas encore de compte ?', en: 'No account yet?' },
   'login.signupLink': { fr: 'S’inscrire', en: 'Sign up' },
+  'login.forgotPassword': { fr: 'Mot de passe oublié ?', en: 'Forgot password?' },
+
+  'forgotPassword.title': { fr: 'Mot de passe oublié', en: 'Forgot password' },
+  'forgotPassword.subtitle': {
+    fr: 'Entrez votre email, on vous envoie un lien pour le réinitialiser.',
+    en: "Enter your email, we'll send you a link to reset it.",
+  },
+  'forgotPassword.submit': { fr: 'Envoyer le lien', en: 'Send link' },
+  'forgotPassword.submitting': { fr: 'Envoi...', en: 'Sending...' },
+  'forgotPassword.sent': {
+    fr: 'Si un compte existe pour {email}, un email vient de lui être envoyé avec un lien de réinitialisation.',
+    en: 'If an account exists for {email}, an email with a reset link was just sent to it.',
+  },
+  'forgotPassword.spamNote': {
+    fr: "Pas reçu l'email ? Vérifiez vos spams, ou réessayez dans une minute.",
+    en: "Didn't get the email? Check your spam folder, or try again in a minute.",
+  },
+  'forgotPassword.rateLimited': {
+    fr: 'Vous venez déjà de faire une demande. Réessayez dans une minute.',
+    en: 'You already made a request. Try again in a minute.',
+  },
+  'forgotPassword.backToLogin': { fr: '← Retour à la connexion', en: '← Back to login' },
+
+  'resetPassword.title': { fr: 'Nouveau mot de passe', en: 'New password' },
+  'resetPassword.subtitle': {
+    fr: 'Choisissez un nouveau mot de passe pour votre compte.',
+    en: 'Choose a new password for your account.',
+  },
+  'resetPassword.new': { fr: 'Nouveau mot de passe', en: 'New password' },
+  'resetPassword.confirm': { fr: 'Confirmer le nouveau mot de passe', en: 'Confirm new password' },
+  'resetPassword.tooShort': {
+    fr: 'Le mot de passe doit contenir au moins 6 caractères.',
+    en: 'Password must be at least 6 characters.',
+  },
+  'resetPassword.mismatch': {
+    fr: 'Les mots de passe ne correspondent pas.',
+    en: 'Passwords do not match.',
+  },
+  'resetPassword.updateError': {
+    fr: "Impossible de modifier le mot de passe. Redemandez un nouveau lien.",
+    en: 'Could not update password. Please request a new link.',
+  },
+  'resetPassword.submit': { fr: 'Modifier le mot de passe', en: 'Change password' },
+  'resetPassword.submitting': { fr: 'Modification...', en: 'Updating...' },
+  'resetPassword.successNotice': {
+    fr: 'Mot de passe modifié. Connectez-vous avec votre nouveau mot de passe.',
+    en: 'Password changed. Log in with your new password.',
+  },
+  'resetPassword.invalidLink': {
+    fr: "Ce lien est invalide ou a expiré. Demandez-en un nouveau.",
+    en: 'This link is invalid or has expired. Request a new one.',
+  },
+  'resetPassword.requestNewLink': { fr: 'Demander un nouveau lien', en: 'Request a new link' },
 
   // --- Inscription (SignUp.tsx) ----------------------------------------------
   'signup.langLabel': {

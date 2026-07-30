@@ -61,7 +61,15 @@ export default function Login() {
             />
           </div>
           <div>
-            <Label htmlFor="login-password">{t('login.password')}</Label>
+            <div className="flex items-baseline justify-between">
+              <Label htmlFor="login-password">{t('login.password')}</Label>
+              <Link
+                to="/mot-de-passe-oublie"
+                className="text-xs text-moon-300 underline underline-offset-4"
+              >
+                {t('login.forgotPassword')}
+              </Link>
+            </div>
             <Input
               id="login-password"
               type="password"
