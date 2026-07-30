@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Suspense, lazy, useEffect, useRef, type ReactNode } from 'react'
 import { useAuth } from './context/AuthContext'
 import { useLanguage } from './i18n/LanguageContext'
@@ -39,8 +39,15 @@ const LegalNotice = lazy(() => import('./pages/LegalNotice'))
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth()
+  const location = useLocation()
   if (loading) return <FullScreenLoader />
-  if (!session) return <Navigate to="/connexion" replace />
+  if (!session) {
+    // On mémorise la page d'origine (ex: le panel admin) dans ?redirect=...
+    // pour que Login.tsx y renvoie l'utilisateur une fois connecté, au lieu
+    // de toujours retomber sur /dashboard par défaut.
+    const redirect = encodeURIComponent(location.pathname + location.search)
+    return <Navigate to={`/connexion?redirect=${redirect}`} replace />
+  }
   if (!session.user.email_confirmed_at) return <Navigate to="/verifier-email" replace />
   return <>{children}</>
 }
