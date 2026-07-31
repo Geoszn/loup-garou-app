@@ -70,6 +70,18 @@ interface AdminGame {
 
 const USERS_PAGE_SIZE = 10
 
+// Filtre initial appliqué à l'onglet Utilisateurs quand on y arrive en
+// cliquant sur une carte de l'onglet Vue d'ensemble (ex. "Comptes
+// suspendus" -> liste déjà filtrée sur les comptes suspendus). `nonce` sert
+// uniquement à distinguer deux clics sur la même carte (sinon un second
+// clic avec un objet de filtre identique ne redéclencherait pas l'effet).
+interface UsersSeed {
+  banned?: boolean
+  admin?: boolean
+  createdFrom?: string
+  nonce: number
+}
+
 interface RoleStat {
   role: string
   played: number
@@ -175,7 +187,18 @@ export default function AdminDashboard() {
   const [allowed, setAllowed] = useState(false)
   const [tab, setTab] = useState<Tab>('stats')
   const [menuOpen, setMenuOpen] = useState(false)
+  const [usersSeed, setUsersSeed] = useState<UsersSeed | null>(null)
   const current = TAB_ITEMS.find((t) => t.id === tab)!
+
+  // Passée à StatsTab pour que ses cartes puissent renvoyer directement vers
+  // l'onglet concerné — avec un filtre pré-appliqué quand ça a du sens (voir
+  // UsersSeed ci-dessus) plutôt que la liste complète non filtrée.
+  function goToTab(target: Tab, usersFilter?: Omit<UsersSeed, 'nonce'>) {
+    if (target === 'users' && usersFilter) {
+      setUsersSeed({ ...usersFilter, nonce: Date.now() })
+    }
+    setTab(target)
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -230,8 +253,8 @@ export default function AdminDashboard() {
           <p className="text-xs text-moon-200/50">{user?.email}</p>
         </div>
 
-        {tab === 'stats' && <StatsTab />}
-        {tab === 'users' && <UsersTab currentUserId={user?.id ?? null} />}
+        {tab === 'stats' && <StatsTab onGoToTab={goToTab} />}
+        {tab === 'users' && <UsersTab currentUserId={user?.id ?? null} seed={usersSeed} />}
         {tab === 'games' && <GamesTab />}
         {tab === 'security' && <SecurityTab />}
         {tab === 'settings' && <SettingsTab />}
@@ -262,16 +285,16 @@ export default function AdminDashboard() {
 }
 
 // ----------------------------------------------------------------------------
-function StatCard({ label, value }: { label: string; value: string | number }) {
+function StatCard({ label, value, onClick }: { label: string; value: string | number; onClick?: () => void }) {
   return (
-    <Card className="p-4">
+    <Card className={`p-4 ${onClick ? 'cursor-pointer transition-colors hover:border-moon-400/40' : ''}`} onClick={onClick}>
       <p className="text-2xl font-display text-moon-200">{value}</p>
       <p className="text-xs text-moon-200/50">{label}</p>
     </Card>
   )
 }
 
-function StatsTab() {
+function StatsTab({ onGoToTab }: { onGoToTab: (target: Tab, usersFilter?: Omit<UsersSeed, 'nonce'>) => void }) {
   const [stats, setStats] = useState<Stats | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -302,15 +325,19 @@ function StatsTab() {
         <ErrorText>Les nouvelles parties sont actuellement désactivées (voir onglet Réglages).</ErrorText>
       )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Utilisateurs" value={stats.total_users} />
-        <StatCard label="Nouveaux aujourd’hui" value={stats.new_users_today} />
+        <StatCard label="Utilisateurs" value={stats.total_users} onClick={() => onGoToTab('users')} />
+        <StatCard
+          label="Nouveaux aujourd’hui"
+          value={stats.new_users_today}
+          onClick={() => onGoToTab('users', { createdFrom: new Date().toISOString().slice(0, 10) })}
+        />
         <StatCard label="Parties (total)" value={stats.total_games} />
-        <StatCard label="Parties en cours" value={stats.active_games} />
+        <StatCard label="Parties en cours" value={stats.active_games} onClick={() => onGoToTab('games')} />
         <StatCard label="Parties créées aujourd’hui" value={stats.games_today} />
         <StatCard label="Messages aujourd’hui" value={stats.messages_today} />
-        <StatCard label="Comptes suspendus" value={stats.banned_users} />
-        <StatCard label="Admins" value={stats.admin_users} />
-        <StatCard label="Suppressions en attente" value={stats.pending_deletions} />
+        <StatCard label="Comptes suspendus" value={stats.banned_users} onClick={() => onGoToTab('users', { banned: true })} />
+        <StatCard label="Admins" value={stats.admin_users} onClick={() => onGoToTab('users', { admin: true })} />
+        <StatCard label="Suppressions en attente" value={stats.pending_deletions} onClick={() => onGoToTab('security')} />
         <StatCard label="Demandes d’accès en attente" value={stats.pending_join_requests} />
       </div>
     </div>
@@ -318,7 +345,7 @@ function StatsTab() {
 }
 
 // ----------------------------------------------------------------------------
-function UsersTab({ currentUserId }: { currentUserId: string | null }) {
+function UsersTab({ currentUserId, seed }: { currentUserId: string | null; seed: UsersSeed | null }) {
   // Champs du formulaire de filtre (état "brouillon", pas encore appliqué) —
   // séparés de ce qui a vraiment été envoyé au serveur pour ne relancer une
   // recherche qu'à la soumission du formulaire, pas à chaque frappe.
@@ -326,8 +353,34 @@ function UsersTab({ currentUserId }: { currentUserId: string | null }) {
   const [emailInput, setEmailInput] = useState('')
   const [fromInput, setFromInput] = useState('')
   const [toInput, setToInput] = useState('')
-  const [filters, setFilters] = useState({ username: '', email: '', from: '', to: '' })
+  const [bannedOnlyInput, setBannedOnlyInput] = useState(false)
+  const [adminOnlyInput, setAdminOnlyInput] = useState(false)
+  const [filters, setFilters] = useState({ username: '', email: '', from: '', to: '', bannedOnly: false, adminOnly: false })
   const [page, setPage] = useState(1)
+
+  // Arrivée depuis une carte de l'onglet Vue d'ensemble (ex. "Comptes
+  // suspendus") : applique le filtre correspondant directement, sans que
+  // l'admin ait à rouvrir le tiroir de filtres lui-même.
+  useEffect(() => {
+    if (!seed) return
+    const next = {
+      username: '',
+      email: '',
+      from: seed.createdFrom ?? '',
+      to: '',
+      bannedOnly: !!seed.banned,
+      adminOnly: !!seed.admin,
+    }
+    setUsernameInput('')
+    setEmailInput('')
+    setFromInput(next.from)
+    setToInput('')
+    setBannedOnlyInput(next.bannedOnly)
+    setAdminOnlyInput(next.adminOnly)
+    setFilters(next)
+    setPage(1)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed?.nonce])
 
   const [users, setUsers] = useState<AdminUser[] | null>(null)
   const [total, setTotal] = useState(0)
@@ -345,6 +398,8 @@ function UsersTab({ currentUserId }: { currentUserId: string | null }) {
       p_created_to: f.to || null,
       p_limit: USERS_PAGE_SIZE,
       p_offset: (p - 1) * USERS_PAGE_SIZE,
+      p_banned_only: f.bannedOnly,
+      p_admin_only: f.adminOnly,
     })
     if (rpcError) {
       setError(rpcError.message)
@@ -364,7 +419,7 @@ function UsersTab({ currentUserId }: { currentUserId: string | null }) {
   function applyFilters(e: FormEvent) {
     e.preventDefault()
     setPage(1)
-    setFilters({ username: usernameInput, email: emailInput, from: fromInput, to: toInput })
+    setFilters({ username: usernameInput, email: emailInput, from: fromInput, to: toInput, bannedOnly: bannedOnlyInput, adminOnly: adminOnlyInput })
     setFiltersOpen(false)
   }
 
@@ -373,14 +428,18 @@ function UsersTab({ currentUserId }: { currentUserId: string | null }) {
     setEmailInput('')
     setFromInput('')
     setToInput('')
+    setBannedOnlyInput(false)
+    setAdminOnlyInput(false)
     setPage(1)
-    setFilters({ username: '', email: '', from: '', to: '' })
+    setFilters({ username: '', email: '', from: '', to: '', bannedOnly: false, adminOnly: false })
     setFiltersOpen(false)
   }
 
   const totalPages = Math.max(1, Math.ceil(total / USERS_PAGE_SIZE))
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const activeFilterCount = [filters.username, filters.email, filters.from, filters.to].filter(Boolean).length
+  const activeFilterCount = [filters.username, filters.email, filters.from, filters.to, filters.bannedOnly, filters.adminOnly].filter(
+    Boolean
+  ).length
 
   async function toggleBan(u: AdminUser) {
     if (u.is_banned) {
@@ -520,6 +579,24 @@ function UsersTab({ currentUserId }: { currentUserId: string | null }) {
             <Label>Jusqu’au</Label>
             <Input type="date" value={toInput} onChange={(e) => setToInput(e.target.value)} />
           </div>
+          <label className="flex items-center gap-2 text-sm text-moon-200/80">
+            <input
+              type="checkbox"
+              checked={bannedOnlyInput}
+              onChange={(e) => setBannedOnlyInput(e.target.checked)}
+              className="h-4 w-4 rounded border-night-600/70 bg-night-900/50 accent-blood-600"
+            />
+            Suspendus uniquement
+          </label>
+          <label className="flex items-center gap-2 text-sm text-moon-200/80">
+            <input
+              type="checkbox"
+              checked={adminOnlyInput}
+              onChange={(e) => setAdminOnlyInput(e.target.checked)}
+              className="h-4 w-4 rounded border-night-600/70 bg-night-900/50 accent-blood-600"
+            />
+            Admins uniquement
+          </label>
           <div className="mt-2 flex gap-3">
             <Button type="button" variant="ghost" className="flex-1" onClick={resetFilters}>
               Réinitialiser

@@ -140,8 +140,8 @@ export const translations = {
   'forgotPassword.submit': { fr: 'Envoyer le lien', en: 'Send link' },
   'forgotPassword.submitting': { fr: 'Envoi...', en: 'Sending...' },
   'forgotPassword.sent': {
-    fr: 'Si un compte existe pour {email}, un email vient de lui être envoyé avec un lien de réinitialisation.',
-    en: 'If an account exists for {email}, an email with a reset link was just sent to it.',
+    fr: 'Si un compte existe pour {{email}}, un email vient de lui être envoyé avec un lien de réinitialisation.',
+    en: 'If an account exists for {{email}}, an email with a reset link was just sent to it.',
   },
   'forgotPassword.spamNote': {
     fr: "Pas reçu l'email ? Vérifiez vos spams, ou réessayez dans une minute.",
@@ -714,6 +714,15 @@ export const translations = {
   'account.profile.usernameTooShort': { fr: 'Choisissez un pseudo d’au moins 2 caractères.', en: 'Choose a username of at least 2 characters.' },
   'account.profile.updated': { fr: 'Profil mis à jour.', en: 'Profile updated.' },
   'account.profile.editButton': { fr: 'Modifier mon profil', en: 'Edit my profile' },
+  'account.profile.confirmChangeTitle': { fr: 'Changer de pseudo ?', en: 'Change username?' },
+  'account.profile.confirmChangeMessage': {
+    fr: 'Une fois validé, vous ne pourrez plus changer de pseudo avant 7 jours. Voulez-vous continuer ?',
+    en: 'Once confirmed, you won\'t be able to change your username again for 7 days. Do you want to continue?',
+  },
+  'account.profile.usernameLockedUntil': {
+    fr: 'Vous pourrez à nouveau changer de pseudo le {{date}}.',
+    en: 'You can change your username again on {{date}}.',
+  },
   'account.email.title': { fr: 'Email', en: 'Email' },
   'account.email.locked': { fr: '🔒 Non modifiable', en: '🔒 Not editable' },
   'account.language.title': { fr: 'Langue', en: 'Language' },

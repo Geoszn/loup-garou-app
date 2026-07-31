@@ -14,6 +14,12 @@ import { useLanguage } from '../i18n/LanguageContext'
 // d'être redirigé.
 const REDIRECT_DELAY_MS = 700
 
+// Doit rester synchronisé avec le cooldown appliqué côté serveur dans
+// update_my_profile (migration 0051) — purement informatif ici (le serveur
+// reste la seule source de vérité), mais permet d'afficher la bonne date
+// et de désactiver le champ avant même de tenter l'appel.
+const USERNAME_COOLDOWN_DAYS = 7
+
 export default function Account() {
   const { profile, session, refreshProfile } = useAuth()
   const navigate = useNavigate()
@@ -119,15 +125,16 @@ function ProfileModal({
 }: {
   open: boolean
   onClose: () => void
-  profile: { username: string; avatar_icon: string } | null
+  profile: { username: string; avatar_icon: string; username_changed_at: string | null } | null
   onSaved: () => void
 }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const [username, setUsername] = useState(profile?.username ?? '')
   const [icon, setIcon] = useState(profile?.avatar_icon ?? AVATAR_ICONS[0])
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   // Resynchronise les champs sur les valeurs actuelles à chaque ouverture,
   // pour ne jamais réafficher un brouillon d'une session d'édition
@@ -138,10 +145,31 @@ function ProfileModal({
       setIcon(profile?.avatar_icon ?? AVATAR_ICONS[0])
       setError(null)
       setSuccess(null)
+      setConfirmOpen(false)
     }
   }, [open, profile])
 
-  async function handleSubmit(e: FormEvent) {
+  // Purement informatif côté client (le serveur revalide tout, voir
+  // migration 0051) : sert à désactiver le champ et afficher la date de
+  // déverrouillage sans attendre un aller-retour réseau qui échouerait de
+  // toute façon.
+  const nextAllowedChange = profile?.username_changed_at
+    ? new Date(new Date(profile.username_changed_at).getTime() + USERNAME_COOLDOWN_DAYS * 24 * 60 * 60 * 1000)
+    : null
+  const usernameLocked = !!nextAllowedChange && nextAllowedChange.getTime() > Date.now()
+  const nextAllowedLabel = nextAllowedChange
+    ? nextAllowedChange.toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-US', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null
+
+  const usernameChanged = username.trim().length > 0 && username.trim().toLowerCase() !== (profile?.username ?? '').toLowerCase()
+
+  function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
     setSuccess(null)
@@ -151,6 +179,20 @@ function ProfileModal({
       return
     }
 
+    // Changer de pseudo verrouille le champ pour 7 jours (voir migration
+    // 0051) : on prévient explicitement avant de valider plutôt que de
+    // laisser la surprise arriver la prochaine fois que le joueur essaiera
+    // de le modifier.
+    if (usernameChanged && !usernameLocked) {
+      setConfirmOpen(true)
+      return
+    }
+
+    doSave()
+  }
+
+  async function doSave() {
+    setConfirmOpen(false)
     setLoading(true)
     const { error: rpcError } = await supabase.rpc('update_my_profile', {
       p_username: username.trim(),
@@ -177,8 +219,14 @@ function ProfileModal({
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             maxLength={24}
+            disabled={usernameLocked}
             required
           />
+          {usernameLocked && nextAllowedLabel && (
+            <p className="mt-1.5 text-xs text-moon-200/50">
+              🔒 {t('account.profile.usernameLockedUntil', { date: nextAllowedLabel })}
+            </p>
+          )}
         </div>
 
         <div>
@@ -209,6 +257,16 @@ function ProfileModal({
           {loading ? t('common.saving') : t('common.save')}
         </Button>
       </form>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={t('account.profile.confirmChangeTitle')}
+        message={t('account.profile.confirmChangeMessage')}
+        confirmLabel={t('common.confirm')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={doSave}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </Modal>
   )
 }

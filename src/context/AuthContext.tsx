@@ -7,6 +7,7 @@ interface Profile {
   username: string
   avatar_icon: string
   lang: 'fr' | 'en'
+  username_changed_at: string | null
 }
 
 interface AuthContextValue {
@@ -26,7 +27,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   async function loadProfile(userId: string) {
-    const { data } = await supabase.from('profiles').select('id, username, avatar_icon, lang').eq('id', userId).maybeSingle()
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, username, avatar_icon, lang, username_changed_at')
+      .eq('id', userId)
+      .maybeSingle()
     if (data) setProfile(data as Profile)
   }
 
