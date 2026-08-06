@@ -360,6 +360,15 @@ export const translations = {
     fr: "Gardez votre carte ou échangez-la contre l'une des deux cartes proposées (uniquement la première nuit).",
     en: 'Keep your card or swap it for one of the two offered cards (first night only).',
   },
+  'role.enfant_sauvage.name': { fr: 'Enfant Sauvage', en: 'Wild Child' },
+  'role.enfant_sauvage.description': {
+    fr: "Au début de la partie, vous choisissez secrètement un mentor parmi les autres joueurs. Tant qu'il ou elle est en vie, vous jouez avec les Villageois. Dès qu'il ou elle meurt, peu importe la cause, vous devenez immédiatement un Loup-Garou et rejoignez la meute.",
+    en: 'At the start of the game, you secretly choose a mentor among the other players. As long as they are alive, you play with the Villagers. The moment they die, no matter the cause, you immediately become a Werewolf and join the pack.',
+  },
+  'role.enfant_sauvage.nightAction': {
+    fr: 'Choisissez secrètement votre mentor (uniquement la première nuit).',
+    en: 'Secretly choose your mentor (first night only).',
+  },
   'role.capitaine.name': { fr: 'Capitaine', en: 'Captain' },
 
   // --- Salon d'attente (Lobby.tsx) --------------------------------------------
@@ -577,6 +586,12 @@ export const translations = {
   'action.cupidon.title': { fr: 'Désignez les deux amoureux', en: 'Choose the two lovers' },
   'action.cupidon.subtitle': { fr: "Cette action n'a lieu que la première nuit.", en: 'This action only happens on the first night.' },
   'action.cupidon.confirm': { fr: 'Confirmer le couple', en: 'Confirm the couple' },
+  'action.enfantSauvage.title': { fr: 'Choisissez votre mentor', en: 'Choose your mentor' },
+  'action.enfantSauvage.subtitle': {
+    fr: "Si ce joueur meurt, vous deviendrez un Loup-Garou. Cette action n'a lieu que la première nuit.",
+    en: 'If this player dies, you will become a Werewolf. This action only happens on the first night.',
+  },
+  'action.enfantSauvage.confirm': { fr: 'Confirmer mon mentor', en: 'Confirm my mentor' },
   'action.voyante.title': { fr: "Sondez l'identité d'un joueur", en: "Probe a player's identity" },
   'action.voyante.pastVisions': { fr: 'Vos visions passées', en: 'Your past visions' },
   'action.voyante.confirm': { fr: 'Sonder ce joueur', en: 'Probe this player' },

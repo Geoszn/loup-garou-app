@@ -12,6 +12,7 @@ export type GameStatus =
 export type NightStep =
   | 'voleur'
   | 'cupidon'
+  | 'enfant_sauvage'
   | 'voyante'
   | 'loup_garou'
   | 'sorciere'
@@ -27,6 +28,7 @@ export interface RoleCounts {
   cupidon: boolean
   ancien: boolean
   voleur: boolean
+  enfant_sauvage: boolean
   capitaine: boolean
 }
 
@@ -134,6 +136,11 @@ export interface MyGameView {
   my_role: string | null
   my_alive: boolean
   lover_id: string | null
+  // Mentor secrètement choisi par l'Enfant Sauvage (voir migration 0052) —
+  // toujours la donnée propre à SA ligne game_roles_secret, même une fois
+  // converti en Loup-Garou après la mort de ce mentor. null tant qu'il n'a
+  // pas encore choisi, ou pour tout autre rôle.
+  wild_child_mentor: string | null
   wolf_teammates: string[]
   seer_reveals: { target_id: string; role: string; night_number: number }[]
   witch_heal_used: boolean
@@ -162,6 +169,10 @@ export interface MyGameView {
     votes: { voter_id: string; target_id: string | null }[]
     ready_ids: string[]
     captain_voter_id: string | null
+    // Message d'annonce si le Capitaine a été désigné au hasard faute de
+    // successeur choisi à temps pendant CE round (voir migration 0053) —
+    // null la plupart du temps.
+    captain_random_notice: string | null
   } | null
   final_reveal: { user_id: string; role: string }[] | null
   thief_extra_roles: string[] | null

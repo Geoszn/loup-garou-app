@@ -10,6 +10,7 @@ export type RoleId =
   | 'cupidon'
   | 'ancien'
   | 'voleur'
+  | 'enfant_sauvage'
 
 // Les noms/descriptions ne sont plus stockés en dur ici : ce sont des clés du
 // dictionnaire i18n (voir src/i18n/translations.ts, namespace `role.*`), pour
@@ -104,6 +105,20 @@ export const ROLES: Record<RoleId, RoleInfo> = {
     descriptionKey: 'role.voleur.description',
     nightActionKey: 'role.voleur.nightAction',
   },
+  enfant_sauvage: {
+    id: 'enfant_sauvage',
+    // Camp affiché comme "village" : c'est son camp tant que le mentor est
+    // vivant, et le camp qui apparaît dans les réglages/le récap (le
+    // basculement vers les loups, s'il a lieu, est une conséquence du jeu,
+    // pas un choix de configuration — exactement comme pour le Voleur qui
+    // peut lui aussi finir loup).
+    team: 'village',
+    emoji: '🐾',
+    color: '#b0895a',
+    nameKey: 'role.enfant_sauvage.name',
+    descriptionKey: 'role.enfant_sauvage.description',
+    nightActionKey: 'role.enfant_sauvage.nightAction',
+  },
 }
 
 export const ROLE_ORDER: RoleId[] = [
@@ -115,6 +130,7 @@ export const ROLE_ORDER: RoleId[] = [
   'cupidon',
   'ancien',
   'voleur',
+  'enfant_sauvage',
   'villageois',
 ]
 

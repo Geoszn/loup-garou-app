@@ -78,8 +78,45 @@ function LanguageProfileSync() {
   return null
 }
 
+// Accès simplifié au dashboard admin : ce domaine dédié (voir le projet
+// Vercel — domaine à ajouter séparément, DNS géré chez le registrar du nom
+// de domaine principal) pointe directement vers AdminDashboard quel que
+// soit le chemin visité, plutôt que d'avoir à retenir l'URL secrète
+// ADMIN_ROUTE_PATH (qui continue de fonctionner normalement par ailleurs,
+// notamment pour tout lien déjà enregistré dans un gestionnaire de mots de
+// passe). Ce n'est qu'un raccourci pratique : le vrai contrôle d'accès
+// reste entièrement côté serveur (admin_check_access(), voir
+// AdminDashboard.tsx) — quiconque tape ce nom de domaine sans être admin
+// tombe simplement sur l'écran "Accès refusé".
+const ADMIN_HOSTNAME = 'admin.loupgarouafrique.com'
+const isAdminHost = typeof window !== 'undefined' && window.location.hostname === ADMIN_HOSTNAME
+
 export default function App() {
   useUiClickSound()
+
+  if (isAdminHost) {
+    // Mini-routeur dédié : /connexion et /verifier-email restent nécessaires
+    // ici pour que ProtectedRoute puisse réellement rediriger un compte non
+    // connecté (sinon "?redirect=" pointerait vers un chemin sans route sur
+    // ce domaine) — tout le reste ("*") mène directement au dashboard.
+    return (
+      <Routes>
+        <Route path="/connexion" element={<Login />} />
+        <Route path="/verifier-email" element={<VerifyEmail />} />
+        <Route
+          path="*"
+          element={
+            <ProtectedRoute>
+              <Suspense fallback={<FullScreenLoader />}>
+                <AdminDashboard />
+              </Suspense>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    )
+  }
+
   return (
     <>
       <LanguageProfileSync />

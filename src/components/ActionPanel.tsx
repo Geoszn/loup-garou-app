@@ -15,6 +15,8 @@ export function ActionPanel({ view, gameId, selfId }: { view: MyGameView; gameId
       return <VoleurPanel view={view} gameId={gameId} />
     case 'cupidon':
       return <CupidonPanel view={view} gameId={gameId} />
+    case 'enfant_sauvage':
+      return <EnfantSauvagePanel view={view} gameId={gameId} selfId={selfId} />
     case 'voyante':
       return <VoyantePanel view={view} gameId={gameId} selfId={selfId} />
     case 'loup_garou':
@@ -162,6 +164,37 @@ function VoyantePanel({ view, gameId, selfId }: { view: MyGameView; gameId: stri
       <ErrorText>{error}</ErrorText>
       <Button className="mt-4 w-full" disabled={!selected || loading} onClick={confirm}>
         {loading ? t('common.sending') : t('action.voyante.confirm')}
+      </Button>
+    </PanelShell>
+  )
+}
+
+// Choix du mentor par l'Enfant Sauvage — même forme qu'un choix à une seule
+// cible (VoyantePanel) : uniquement la première nuit, jamais soi-même. Une
+// fois le choix envoyé, submit_enfant_sauvage clôt l'étape de nuit (comme
+// submit_voleur/submit_cupidon) : ce panneau ne réapparaît pas ensuite.
+function EnfantSauvagePanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
+  const { t } = useLanguage()
+  const [selected, setSelected] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const alive = view.players.filter((p) => p.is_alive && p.user_id !== selfId)
+
+  async function confirm() {
+    if (!selected) return
+    setLoading(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('submit_enfant_sauvage', { p_game_id: gameId, p_mentor_id: selected })
+    setLoading(false)
+    if (rpcError) setError(rpcError.message)
+  }
+
+  return (
+    <PanelShell emoji="🐾" title={t('action.enfantSauvage.title')} subtitle={t('action.enfantSauvage.subtitle')}>
+      <PlayerGrid players={alive} selectable selectedId={selected} onSelect={setSelected} />
+      <ErrorText>{error}</ErrorText>
+      <Button className="mt-4 w-full" disabled={!selected || loading} onClick={confirm}>
+        {loading ? t('common.sending') : t('action.enfantSauvage.confirm')}
       </Button>
     </PanelShell>
   )

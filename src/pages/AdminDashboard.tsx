@@ -3,6 +3,9 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { Button, Card, ConfirmDialog, ErrorText, Input, Label, Modal, SideDrawer, SuccessText } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
+import { DEFAULT_ROLE_IMAGES } from '../components/RoleCard'
+import { ROLES, ROLE_ORDER, type RoleId } from '../lib/roles'
+import { translations, type TranslationKey } from '../i18n/translations'
 
 // ============================================================================
 // Dashboard administrateur. Volontairement en français uniquement, pas
@@ -21,12 +24,13 @@ import { FullScreenLoader } from '../components/FullScreenLoader'
 // l'écran "Accès refusé".
 // ============================================================================
 
-type Tab = 'stats' | 'users' | 'games' | 'security' | 'settings'
+type Tab = 'stats' | 'users' | 'games' | 'content' | 'security' | 'settings'
 
 const TAB_ITEMS: { id: Tab; label: string; icon: string }[] = [
   { id: 'stats', label: 'Vue d’ensemble', icon: '📊' },
   { id: 'users', label: 'Utilisateurs', icon: '👤' },
   { id: 'games', label: 'Salons', icon: '🎲' },
+  { id: 'content', label: 'Contenu du jeu', icon: '📝' },
   { id: 'security', label: 'Sécurité', icon: '🔒' },
   { id: 'settings', label: 'Réglages', icon: '⚙️' },
 ]
@@ -256,6 +260,7 @@ export default function AdminDashboard() {
         {tab === 'stats' && <StatsTab onGoToTab={goToTab} />}
         {tab === 'users' && <UsersTab currentUserId={user?.id ?? null} seed={usersSeed} />}
         {tab === 'games' && <GamesTab />}
+        {tab === 'content' && <ContentTab />}
         {tab === 'security' && <SecurityTab />}
         {tab === 'settings' && <SettingsTab />}
       </div>
@@ -787,6 +792,319 @@ function GamesTab() {
         onCancel={() => setEndTarget(null)}
       />
     </div>
+  )
+}
+
+// ----------------------------------------------------------------------------
+// Contenu du jeu : deux sections indépendantes.
+//   1. Textes (role.*/rules.*) — voir migration 0053, content_overrides.
+//   2. Illustrations des cartes de rôle — voir migration 0053, bucket de
+//      stockage "role-cards".
+// ----------------------------------------------------------------------------
+
+type ContentOverridesMap = Record<string, { fr: string | null; en: string | null }>
+
+interface EditableField {
+  key: TranslationKey
+  label: string
+}
+
+const EDITABLE_ROLE_FIELDS: EditableField[] = ROLE_ORDER.flatMap((id) => {
+  const role = ROLES[id]
+  const roleName = translations[role.nameKey].fr
+  const fields: EditableField[] = [
+    { key: role.nameKey, label: `${role.emoji} ${roleName} — nom` },
+    { key: role.descriptionKey, label: `${role.emoji} ${roleName} — description` },
+  ]
+  if (role.nightActionKey) {
+    fields.push({ key: role.nightActionKey, label: `${role.emoji} ${roleName} — action de nuit` })
+  }
+  return fields
+})
+
+const RULES_FIELD_LABELS: Partial<Record<TranslationKey, string>> = {
+  'rules.title': 'Titre du panneau de règles',
+  'rules.objective.title': 'Objectif — titre',
+  'rules.objective.text': 'Objectif — texte',
+  'rules.flow.title': 'Déroulement — titre',
+  'rules.flow.text': 'Déroulement — texte',
+  'rules.nightChat.title': 'Chat de nuit — titre',
+  'rules.nightChat.text': 'Chat de nuit — texte',
+  'rules.roles.title': 'Section « Les rôles » — titre',
+  'rules.captain.title': 'Capitaine — titre',
+  'rules.captain.text': 'Capitaine — texte',
+  'rules.victory.title': 'Victoire — titre',
+  'rules.victory.text': 'Victoire — texte',
+}
+
+const EDITABLE_RULES_FIELDS: EditableField[] = (Object.keys(RULES_FIELD_LABELS) as TranslationKey[]).map((key) => ({
+  key,
+  label: RULES_FIELD_LABELS[key]!,
+}))
+
+function ContentTab() {
+  const [overrides, setOverrides] = useState<ContentOverridesMap | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [filter, setFilter] = useState('')
+
+  const load = useCallback(async () => {
+    const { data, error: rpcError } = await supabase.rpc('get_content_overrides')
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    setError(null)
+    setOverrides((data ?? {}) as ContentOverridesMap)
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const q = filter.trim().toLowerCase()
+  const roleFields = EDITABLE_ROLE_FIELDS.filter((f) => !q || f.label.toLowerCase().includes(q))
+  const rulesFields = EDITABLE_RULES_FIELDS.filter((f) => !q || f.label.toLowerCase().includes(q))
+
+  return (
+    <div className="flex flex-col gap-6">
+      <ErrorText>{error}</ErrorText>
+
+      <RoleImagesSection />
+
+      <Input placeholder="🔍 Filtrer les textes..." value={filter} onChange={(e) => setFilter(e.target.value)} />
+
+      {overrides === null ? (
+        <p className="text-sm text-moon-200/50">Chargement...</p>
+      ) : (
+        <>
+          {roleFields.length > 0 && (
+            <section>
+              <h2 className="mb-2 font-display text-base text-moon-200">Textes des rôles</h2>
+              <div className="flex flex-col gap-3">
+                {roleFields.map((f) => (
+                  <ContentField key={f.key} fieldKey={f.key} label={f.label} override={overrides[f.key]} onSaved={load} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {rulesFields.length > 0 && (
+            <section>
+              <h2 className="mb-2 font-display text-base text-moon-200">Règles générales</h2>
+              <div className="flex flex-col gap-3">
+                {rulesFields.map((f) => (
+                  <ContentField key={f.key} fieldKey={f.key} label={f.label} override={overrides[f.key]} onSaved={load} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {roleFields.length === 0 && rulesFields.length === 0 && (
+            <p className="text-sm text-moon-200/50">Aucun texte ne correspond à « {filter} ».</p>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+/** Une ligne éditable : texte par défaut (codé en dur, affiché en
+ * placeholder) + override FR/EN facultatif. `key` sur le composant parent
+ * garantit une instance stable par champ ; on resynchronise quand même
+ * l'état local sur `override` via useEffect, au cas où le chargement initial
+ * arrive après le premier rendu (overrides passe de `undefined` à sa vraie
+ * valeur une fois la requête terminée). */
+function ContentField({
+  fieldKey,
+  label,
+  override,
+  onSaved,
+}: {
+  fieldKey: TranslationKey
+  label: string
+  override?: { fr: string | null; en: string | null }
+  onSaved: () => void
+}) {
+  const defaultFr = translations[fieldKey]?.fr ?? ''
+  const defaultEn = translations[fieldKey]?.en ?? ''
+  const [fr, setFr] = useState(override?.fr ?? '')
+  const [en, setEn] = useState(override?.en ?? '')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setFr(override?.fr ?? '')
+    setEn(override?.en ?? '')
+  }, [override?.fr, override?.en])
+
+  const hasOverride = !!(override?.fr || override?.en)
+
+  async function save() {
+    setBusy(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('admin_set_content_override', {
+      p_key: fieldKey,
+      p_text_fr: fr,
+      p_text_en: en,
+    })
+    setBusy(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    onSaved()
+  }
+
+  async function reset() {
+    setBusy(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('admin_delete_content_override', { p_key: fieldKey })
+    setBusy(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    onSaved()
+  }
+
+  const textareaClass =
+    'w-full rounded-xl border border-night-500 bg-night-800/80 px-3 py-2 text-sm text-moon-200 placeholder:text-moon-200/30 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20'
+
+  return (
+    <Card className="p-4">
+      <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-moon-200">
+        {label}
+        {hasOverride && (
+          <span className="rounded-full bg-blood-700/20 px-2 py-0.5 text-[10px] uppercase text-blood-400">Modifié</span>
+        )}
+      </p>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <Label>Français</Label>
+          <textarea rows={2} value={fr} placeholder={defaultFr} onChange={(e) => setFr(e.target.value)} className={textareaClass} />
+        </div>
+        <div>
+          <Label>English</Label>
+          <textarea rows={2} value={en} placeholder={defaultEn} onChange={(e) => setEn(e.target.value)} className={textareaClass} />
+        </div>
+      </div>
+      <ErrorText>{error}</ErrorText>
+      <div className="mt-3 flex gap-2">
+        <Button className="px-3 py-1.5 text-xs" disabled={busy} onClick={save}>
+          Enregistrer
+        </Button>
+        {hasOverride && (
+          <Button variant="ghost" className="px-3 py-1.5 text-xs" disabled={busy} onClick={reset}>
+            Revenir au texte par défaut
+          </Button>
+        )}
+      </div>
+    </Card>
+  )
+}
+
+/** Illustration de chaque carte de rôle : bouton d'upload (remplace l'image
+ * dans le bucket "role-cards", toujours au chemin "{roleId}.jpg" quel que
+ * soit le format importé — voir roleCardImageCandidates dans RoleCard.tsx)
+ * et lien de téléchargement de l'image actuellement affichée aux joueurs
+ * (celle du bucket si elle existe, sinon l'asset bundlé par défaut). */
+function RoleImagesSection() {
+  const [overriddenIds, setOverriddenIds] = useState<Set<string> | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [busyRole, setBusyRole] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    const { data, error: listError } = await supabase.storage.from('role-cards').list('')
+    if (listError) {
+      setError(listError.message)
+      return
+    }
+    setError(null)
+    setOverriddenIds(new Set((data ?? []).map((f) => f.name.replace(/\.[^.]+$/, ''))))
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  async function handleUpload(roleId: RoleId, file: File) {
+    setBusyRole(roleId)
+    setError(null)
+    const { error: uploadError } = await supabase.storage.from('role-cards').upload(`${roleId}.jpg`, file, {
+      upsert: true,
+      contentType: file.type || 'image/jpeg',
+      cacheControl: '300',
+    })
+    setBusyRole(null)
+    if (uploadError) {
+      setError(uploadError.message)
+      return
+    }
+    load()
+  }
+
+  return (
+    <section>
+      <h2 className="mb-1 font-display text-base text-moon-200">Cartes des rôles</h2>
+      <p className="mb-3 text-xs text-moon-200/50">
+        Remplace l’illustration affichée sur la carte de chaque rôle (format portrait, mêmes proportions que les cartes
+        actuelles). Le changement peut prendre quelques minutes à apparaître pour les joueurs déjà en jeu (mise en cache du
+        navigateur).
+      </p>
+      <ErrorText>{error}</ErrorText>
+      {overriddenIds === null ? (
+        <p className="text-sm text-moon-200/50">Chargement...</p>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+          {ROLE_ORDER.filter((id) => id !== 'villageois').map((id) => {
+            const role = ROLES[id]
+            const overridden = overriddenIds.has(id)
+            const currentUrl = overridden
+              ? supabase.storage.from('role-cards').getPublicUrl(`${id}.jpg`).data.publicUrl
+              : DEFAULT_ROLE_IMAGES[id]
+            return (
+              <Card key={id} className="p-3">
+                <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-moon-200">
+                  {role.emoji} {translations[role.nameKey].fr}
+                </p>
+                <div className="mb-2 flex aspect-[2/3] items-center justify-center overflow-hidden rounded-lg border border-night-600/60 bg-night-800/60">
+                  {currentUrl ? (
+                    <img src={currentUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-3xl opacity-40">{role.emoji}</span>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="cursor-pointer rounded-lg border border-night-600/70 bg-night-800/50 px-2 py-1.5 text-center text-[11px] font-semibold text-moon-200/80 transition-colors hover:border-moon-400/40">
+                    {busyRole === id ? '...' : '📤 Changer l’image'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={busyRole === id}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) handleUpload(id, file)
+                        e.target.value = ''
+                      }}
+                    />
+                  </label>
+                  {currentUrl && (
+                    <a
+                      href={currentUrl}
+                      download={`${id}.jpg`}
+                      className="rounded-lg border border-night-600/70 bg-night-800/50 px-2 py-1.5 text-center text-[11px] font-semibold text-moon-200/80 transition-colors hover:border-moon-400/40"
+                    >
+                      ⬇️ Télécharger l’actuelle
+                    </a>
+                  )}
+                </div>
+              </Card>
+            )
+          })}
+        </div>
+      )}
+    </section>
   )
 }
 

@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { supabase } from '../lib/supabase'
 import { ROLES, roleTeamLabel, type RoleId } from '../lib/roles'
 import { useLanguage } from '../i18n/LanguageContext'
 
@@ -6,7 +7,10 @@ import { useLanguage } from '../i18n/LanguageContext'
 // rouleau de texte en bas), un par rôle, à déposer dans public/roles/. Tant
 // qu'un fichier n'existe pas pour un rôle donné (ex: l'Ancien, ajouté plus
 // tard), on retombe sur l'ancien affichage emoji — jamais de lien cassé.
-const ROLE_IMAGES: Partial<Record<RoleId, string>> = {
+// Exporté : réutilisé par AdminDashboard.tsx pour proposer le même lien de
+// téléchargement "image actuellement en ligne" quand aucune image n'a
+// encore été mise en ligne depuis le dashboard pour un rôle donné.
+export const DEFAULT_ROLE_IMAGES: Partial<Record<RoleId, string>> = {
   villageois: '/roles/villageois.jpg',
   loup_garou: '/roles/loup-garou.jpg',
   voyante: '/roles/voyante.jpg',
@@ -17,10 +21,37 @@ const ROLE_IMAGES: Partial<Record<RoleId, string>> = {
   voleur: '/roles/voleur.jpg',
 }
 
+// Chaque rôle a désormais potentiellement DEUX sources d'image, essayées
+// dans l'ordre : d'abord le bucket de stockage "role-cards" (modifiable
+// depuis le dashboard admin sans redéploiement — voir migration 0053), puis
+// l'asset statique bundlé ci-dessus (avant même que l'admin n'ait rien mis
+// en ligne, ou pour les rôles qui n'ont jamais eu d'illustration bundlée,
+// ex. l'Ancien/l'Enfant Sauvage). `getPublicUrl` ne fait aucun appel réseau
+// — c'est juste la construction déterministe de l'URL ; c'est le <img> qui
+// tente réellement de charger, et son onError qui fait passer au candidat
+// suivant (voir cascade plus bas).
+function roleCardImageCandidates(roleId: RoleId): string[] {
+  const candidates: string[] = []
+  const { data } = supabase.storage.from('role-cards').getPublicUrl(`${roleId}.jpg`)
+  if (data?.publicUrl) candidates.push(data.publicUrl)
+  const bundled = DEFAULT_ROLE_IMAGES[roleId]
+  if (bundled) candidates.push(bundled)
+  return candidates
+}
+
 export function RoleCard({ roleId, revealed = true }: { roleId: string | null; revealed?: boolean }) {
   const { t } = useLanguage()
   const role = roleId ? ROLES[roleId as RoleId] : null
-  const image = role ? ROLE_IMAGES[role.id] : undefined
+  const candidates = role ? roleCardImageCandidates(role.id) : []
+  // Repart de zéro (retente d'abord le stockage) à chaque changement de
+  // rôle affiché — sinon, une fois épuisée sur un premier rôle sans
+  // illustration, la cascade resterait bloquée sur l'emoji pour tous les
+  // suivants même s'ils ont bien une image.
+  const [candidateIdx, setCandidateIdx] = useState(0)
+  useEffect(() => {
+    setCandidateIdx(0)
+  }, [role?.id])
+  const image = candidateIdx < candidates.length ? candidates[candidateIdx] : undefined
 
   return (
     <div className="card-3d mx-auto w-full max-w-xs">
@@ -37,7 +68,12 @@ export function RoleCard({ roleId, revealed = true }: { roleId: string | null; r
           </div>
         ) : image ? (
           <>
-            <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <img
+              src={image}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+              onError={() => setCandidateIdx((i) => i + 1)}
+            />
             {/* Fixe (pas lié aux variables jour/nuit) : c'est l'éclairage de
                 la photo elle-même, pas celui de l'interface autour. */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/5 to-black/45" />

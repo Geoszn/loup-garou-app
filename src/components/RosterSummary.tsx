@@ -8,7 +8,7 @@ import { useLanguage } from '../i18n/LanguageContext'
 // Rôles spéciaux du village qu'on affiche en détail (statut vivant/éliminé).
 // Volontairement sans 'loup_garou' (compté à part, camp par camp) ni
 // 'capitaine' (un titre, pas un rôle avec sa propre carte).
-const SPECIAL_ROLE_KEYS: RoleId[] = ['voyante', 'sorciere', 'chasseur', 'petite_fille', 'cupidon', 'ancien', 'voleur']
+const SPECIAL_ROLE_KEYS: RoleId[] = ['voyante', 'sorciere', 'chasseur', 'petite_fille', 'cupidon', 'ancien', 'voleur', 'enfant_sauvage']
 
 /** Petit bouton "effectifs", ouvert/fermé à la demande, visible pendant
  * toute la partie (branché dans PhaseBanner) — pour répondre à "combien de

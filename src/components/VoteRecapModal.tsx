@@ -21,6 +21,7 @@ export function VoteRecapModal({ view, gameId, selfId }: { view: MyGameView; gam
   // Capitaine actuel si le vote l'a justement éliminé et qu'un successeur a
   // depuis été désigné — voir migration 0029).
   const captainVoterId = view.vote_recap?.captain_voter_id ?? null
+  const captainRandomNotice = view.vote_recap?.captain_random_notice ?? null
 
   const byId = new Map<string, PublicPlayer>(view.players.map((p) => [p.user_id, p]))
 
@@ -78,6 +79,12 @@ export function VoteRecapModal({ view, gameId, selfId }: { view: MyGameView; gam
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4 text-sm">
+          {captainRandomNotice && (
+            <p className="rounded-xl border border-moon-400/40 bg-moon-400/10 px-3 py-2.5 text-moon-200">
+              {captainRandomNotice}
+            </p>
+          )}
+
           {eliminated ? (
             <p className="rounded-xl border border-blood-700/40 bg-blood-700/10 px-3 py-2.5 text-moon-200">
               {eliminated.revealed_role

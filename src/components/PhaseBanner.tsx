@@ -107,11 +107,15 @@ export function PhaseBanner({
 
   return (
     <div
-      className={`sticky top-0 z-20 flex items-center justify-between gap-3 border-b bg-gradient-to-r px-4 py-3 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.4)] backdrop-blur-md sm:px-6 ${
+      className={`sticky top-0 z-20 flex items-center justify-between gap-3 border-b bg-gradient-to-r px-4 pb-3 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.4)] backdrop-blur-md sm:px-6 ${
         status === 'night'
           ? 'border-night-600/60 from-night-950/90 via-night-900/90 to-night-950/90'
           : 'border-blood-700/30 from-night-900/90 via-night-800/90 to-night-900/90'
       }`}
+      // Comme la barre fixe en bas (voir ui.tsx) : garantit un espace
+      // au moins équivalent à py-3 même quand env(safe-area-inset-top)
+      // vaut 0 (web), et pousse sous la barre de statut dans l'app native.
+      style={{ paddingTop: 'max(env(safe-area-inset-top), 0.75rem)' }}
     >
       {/* key={status} : force un remontage de ce bloc à chaque changement de
           phase, pour rejouer le fondu d'entrée sur le titre — sans ça React

@@ -27,6 +27,7 @@ const DEFAULT_COUNTS: RoleCounts = {
   cupidon: false,
   ancien: false,
   voleur: false,
+  enfant_sauvage: false,
   capitaine: true,
 }
 
@@ -275,7 +276,8 @@ export default function Lobby() {
     Number(counts.petite_fille) +
     Number(counts.cupidon) +
     Number(counts.ancien) +
-    Number(counts.voleur)
+    Number(counts.voleur) +
+    Number(counts.enfant_sauvage)
   const rolesOverflow = customized && specialTotal > playerCount
 
   return (
@@ -493,6 +495,7 @@ export default function Lobby() {
               <RoleToggle label={`💘 ${t(ROLES.cupidon.nameKey)}`} checked={counts.cupidon} onChange={(v) => { setCounts((c) => ({ ...c, cupidon: v })); setCustomized(true) }} />
               <RoleToggle label={`🧓 ${t(ROLES.ancien.nameKey)}`} checked={counts.ancien} onChange={(v) => { setCounts((c) => ({ ...c, ancien: v })); setCustomized(true) }} />
               <RoleToggle label={`🃏 ${t(ROLES.voleur.nameKey)}`} checked={counts.voleur} onChange={(v) => { setCounts((c) => ({ ...c, voleur: v })); setCustomized(true) }} />
+              <RoleToggle label={`🐾 ${t(ROLES.enfant_sauvage.nameKey)}`} checked={counts.enfant_sauvage} onChange={(v) => { setCounts((c) => ({ ...c, enfant_sauvage: v })); setCustomized(true) }} />
               <div className="border-t border-night-700/60 pt-3">
                 <RoleToggle label={`🎖️ ${t('role.capitaine.name')}`} checked={counts.capitaine} onChange={(v) => { setCounts((c) => ({ ...c, capitaine: v })); setCustomized(true) }} />
                 <p className="mt-1.5 text-xs text-moon-200/40">{t('lobby.captainToggleHint')}</p>
