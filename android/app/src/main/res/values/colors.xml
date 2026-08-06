@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Repris de la palette web (voir tailwind.config.js / src/index.css)
+         pour que la coquille native (barre de statut, thème système) reste
+         cohérente avec l'appli elle-même plutôt que le bleu Material par
+         défaut de Capacitor. colors.xml manquait ici alors que styles.xml
+         le référence déjà — sans ce fichier, le build Gradle échoue avec
+         "resource color/colorPrimary not found". -->
+    <color name="colorPrimary">#221610</color>
+    <color name="colorPrimaryDark">#160f0a</color>
+    <color name="colorAccent">#9c331f</color>
+</resources>
