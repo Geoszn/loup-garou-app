@@ -3,7 +3,7 @@
 // d'installabilité (manifest + fetch handler) et d'offrir un filet de
 // sécurité réseau-d'abord en cas de coupure passagère — jamais de données
 // de partie périmées.
-const CACHE_NAME = 'lg-shell-v2'
+const CACHE_NAME = 'lg-shell-v3'
 
 self.addEventListener('install', () => {
   self.skipWaiting()
@@ -31,8 +31,18 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
-        const copy = response.clone()
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy))
+        // La Cache API refuse les réponses HTTP 206 (Partial Content) — le
+        // cas typique étant un fichier audio (sons de l'appli, voir
+        // public/sounds/) rejoué via une requête Range. Sans ce filtre,
+        // cache.put() rejette et remonte en "Uncaught (in promise)" dans la
+        // console (visible notamment dans Logcat côté Android) alors même
+        // que la réponse est bien servie à la page — inoffensif mais
+        // bruyant. Le .catch() final couvre les cas restants (réponse
+        // opaque d'une origine différente, quota de stockage dépassé...).
+        if (response.status === 200) {
+          const copy = response.clone()
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy).catch(() => {}))
+        }
         return response
       })
       .catch(() => caches.match(request).then((cached) => cached || caches.match('/')))
