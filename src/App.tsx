@@ -19,6 +19,7 @@ import GameRoom from './pages/GameRoom'
 import JoinByLink from './pages/JoinByLink'
 import NotFound from './pages/NotFound'
 import { FullScreenLoader } from './components/FullScreenLoader'
+import { isAdminHost } from './lib/adminHost'
 
 // Dashboard admin : route volontairement chargée en lazy (jamais dans le
 // bundle principal) et jamais liée nulle part dans l'app — seule une
@@ -88,8 +89,6 @@ function LanguageProfileSync() {
 // reste entièrement côté serveur (admin_check_access(), voir
 // AdminDashboard.tsx) — quiconque tape ce nom de domaine sans être admin
 // tombe simplement sur l'écran "Accès refusé".
-const ADMIN_HOSTNAME = 'admin.loupgarouafrique.com'
-const isAdminHost = typeof window !== 'undefined' && window.location.hostname === ADMIN_HOSTNAME
 
 export default function App() {
   useUiClickSound()
