@@ -186,7 +186,7 @@ function timeSince(iso: string) {
 }
 
 export default function AdminDashboard() {
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const [checking, setChecking] = useState(true)
   const [allowed, setAllowed] = useState(false)
   const [tab, setTab] = useState<Tab>('stats')
@@ -254,7 +254,16 @@ export default function AdminDashboard() {
               <span className="block text-[11px] text-moon-200/40">Menu administration</span>
             </span>
           </button>
-          <p className="text-xs text-moon-200/50">{user?.email}</p>
+          <div className="flex items-center gap-3">
+            <p className="text-xs text-moon-200/50">{user?.email}</p>
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="rounded-lg border border-night-600/70 px-3 py-1.5 text-xs font-semibold text-blood-400 transition-colors hover:border-blood-600/60 hover:bg-blood-700/10"
+            >
+              Se déconnecter
+            </button>
+          </div>
         </div>
 
         {tab === 'stats' && <StatsTab onGoToTab={goToTab} />}
