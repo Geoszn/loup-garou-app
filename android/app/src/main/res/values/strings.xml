@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Loup Garou d\'Afrique</string>
-    <string name="title_activity_main">Loup Garou d\'Afrique</string>
+    <string name="app_name">LG Afrique</string>
+    <string name="title_activity_main">LG Afrique</string>
     <string name="package_name">com.loupgarouafrique.app</string>
     <string name="custom_url_scheme">com.loupgarouafrique.app</string>
 </resources>

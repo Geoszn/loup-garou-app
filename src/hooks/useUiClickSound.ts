@@ -1,18 +1,26 @@
 import { useEffect, useRef } from 'react'
+import { Capacitor } from '@capacitor/core'
+import { Haptics, ImpactStyle } from '@capacitor/haptics'
 
 const STORAGE_KEY = 'loup-garou-sfx-enabled'
 const CLICK_SRC = '/sounds/click.mp3'
+// Uniquement dans l'app native (Android/iOS) : sur le web classique, il n'y
+// a pas de moteur de vibration adressable de cette façon, et le rendre
+// conditionnel ici évite un import/appel inutile côté navigateur.
+const isNative = Capacitor.isNativePlatform()
 
 /**
- * Petit clic sonore joué sur n'importe quel <button> de l'appli, pas
- * seulement en partie — écoute globale posée une fois à la racine (App.tsx)
- * plutôt qu'un son ajouté bouton par bouton, pour couvrir tous les écrans
- * (tableau de bord, salon, partie...) sans rien oublier.
+ * Petit clic sonore (+ vibration légère dans l'app native, voir plus bas)
+ * joué sur n'importe quel <button> de l'appli, pas seulement en partie —
+ * écoute globale posée une fois à la racine (App.tsx) plutôt qu'un son
+ * ajouté bouton par bouton, pour couvrir tous les écrans (tableau de bord,
+ * salon, partie...) sans rien oublier.
  *
  * Partage le même interrupteur que les effets sonores de partie (clé
  * localStorage `loup-garou-sfx-enabled`, réglable via 🎶/🔇 dans le bandeau
  * de phase) : un seul réglage "son" pour le joueur plutôt que d'en ajouter un
- * deuxième.
+ * deuxième. La vibration suit ce même interrupteur (pas de réglage séparé) —
+ * c'est le même geste de "retour tactile/sonore" pour l'utilisateur.
  *
  * Contrairement au narrateur/aux effets de partie, aucun déverrouillage
  * Safari/iOS n'est nécessaire ici : le clic qui déclenche le son EST déjà le
@@ -55,6 +63,12 @@ export function useUiClickSound() {
         // Fichier absent (voir public/sounds/README.md) ou lecture bloquée :
         // silencieux, ce n'est pas une erreur pour l'utilisateur.
       })
+      if (isNative) {
+        // Vibration très légère (style "Light") à chaque bouton — c'est ce
+        // petit retour physique, absent de tout site web, qui fait le plus
+        // ressentir qu'on manipule une vraie appli plutôt qu'une page.
+        Haptics.impact({ style: ImpactStyle.Light }).catch(() => {})
+      }
     }
 
     // capture: true pour attraper le clic même si un enfant du bouton

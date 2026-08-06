@@ -31,6 +31,68 @@ html, body {
   max-width: 100vw;
 }
 
+/* --- "Effet appli" plutôt que "site web dans un cadre" ------------------
+   Une appli web bien codée peut être quasi indiscernable d'une appli
+   native sur le plan visuel, mais quelques comportements par défaut du
+   navigateur/WebView la trahissent immédiatement au toucher, avant même de
+   regarder l'écran. Tout ce bloc est scopé à `html.capacitor-native`
+   (classe posée par main.tsx uniquement quand `Capacitor.isNativePlatform()`
+   est vrai) pour ne jamais changer quoi que ce soit sur le site web
+   classique — là où la sélection de texte, le zoom, le clic droit etc.
+   restent des attentes normales d'un navigateur desktop/mobile. */
+
+html.capacitor-native, html.capacitor-native body {
+  /* Supprime le rebond élastique (rubber-banding) qui découvre un aplat
+     gris/blanc derrière le contenu en tirant au-delà des bords — le
+     "tell" le plus reconnaissable d'une page web. L'appli garde son
+     propre scroll (rien n'est bloqué), seul le dépassement élastique aux
+     bords disparaît. */
+  overscroll-behavior: none;
+  /* Supprime le flash gris/bleu qui s'affiche brièvement au toucher de
+     tout élément cliquable (bouton, lien...) — un autre indice "page web"
+     très reconnaissable. Nos boutons ont déjà leurs propres retours
+     visuels (:active, ombre...), ce flash-là est donc redondant. */
+  -webkit-tap-highlight-color: transparent;
+  /* Retire le délai de ~300ms avant qu'un tap ne déclenche son clic (le
+     temps que le navigateur attende un éventuel double-tap de zoom) et
+     empêche le double-tap/pincement de zoomer la page comme un site web
+     classique. */
+  touch-action: manipulation;
+  /* Empêche la sélection de texte à l'appui long (loupe de sélection iOS,
+     menu "Copier/Rechercher"...) sur l'interface elle-même — un geste qui
+     n'a de sens que sur du texte qu'on veut copier depuis une page web, pas
+     dans une appli. Réactivé juste en dessous pour le texte qui doit
+     rester sélectionnable (champs de saisie...). */
+  -webkit-user-select: none;
+  user-select: none;
+  /* Supprime aussi le menu contextuel natif iOS (Copier/Partager/
+     Rechercher) qui apparaît sur un appui long. */
+  -webkit-touch-callout: none;
+}
+html.capacitor-native input,
+html.capacitor-native textarea,
+html.capacitor-native [contenteditable='true'],
+html.capacitor-native .selectable-text {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+/* Barres de défilement discrètes sur toute l'appli native (pas seulement
+   les listes qui utilisaient déjà .scrollbar-thin) : une barre de
+   défilement large et permanente façon desktop est un autre signal
+   "navigateur" qui n'a pas sa place ici. */
+html.capacitor-native * {
+  scrollbar-width: thin;
+}
+html.capacitor-native *::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+html.capacitor-native *::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
 /* Palette "nuit" (par défaut, partout dans l'app) sous forme de variables
    CSS (triplets RGB) pour pouvoir être réécrite localement en pleine partie
    pendant les phases de jour — voir `.theme-day` plus bas.

@@ -2,10 +2,34 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import * as Sentry from '@sentry/react'
+import { Capacitor } from '@capacitor/core'
+import { StatusBar, Style } from '@capacitor/status-bar'
+import { SplashScreen } from '@capacitor/splash-screen'
 import './index.css'
 import App from './App'
 import { AuthProvider } from './context/AuthContext'
 import { LanguageProvider } from './i18n/LanguageContext'
+
+// Coquille native (Android/iOS) uniquement : sur le web classique, ces
+// appels seraient soit inutiles (pas de barre de statut) soit no-op (le
+// plugin web de SplashScreen n'existe pas visuellement) — on ne les exécute
+// donc que dans l'app packagée, pour ne jamais toucher au comportement du
+// site web.
+if (Capacitor.isNativePlatform()) {
+  // Active les règles CSS "effet appli" scopées à cette classe (voir
+  // index.css) : jamais posée sur le web classique, donc le site web garde
+  // son comportement de navigateur normal (sélection de texte, zoom...).
+  document.documentElement.classList.add('capacitor-native')
+
+  // Icônes claires (texte/heure blancs) sur notre thème sombre — sans ça la
+  // barre de statut système reste au réglage par défaut (souvent des icônes
+  // noires invisibles sur fond sombre), un des détails qui trahit le plus
+  // "site web habillé" plutôt que vraie appli.
+  StatusBar.setStyle({ style: Style.Dark }).catch(() => {})
+  if (Capacitor.getPlatform() === 'android') {
+    StatusBar.setBackgroundColor({ color: '#160f0a' }).catch(() => {})
+  }
+}
 
 // Suivi d'erreurs en prod : capture les crashs React et les erreurs JS
 // avec leur stack trace + contexte. Désactivé si aucune DSN n'est fournie
@@ -32,6 +56,21 @@ createRoot(document.getElementById('root')!).render(
     </Sentry.ErrorBoundary>
   </StrictMode>
 )
+
+// Masque l'écran de démarrage natif une fois le premier vrai rendu affiché
+// à l'écran (double requestAnimationFrame : le 1er est planifié avant que
+// le navigateur ait peint la frame en cours, le 2nd s'exécute donc juste
+// après ce peint) plutôt qu'après un délai fixe arbitraire — élimine à la
+// fois le flash blanc (splash masqué trop tôt) et le petit temps mort figé
+// (splash masqué trop tard) qui donnent l'un comme l'autre une impression
+// de site web qui charge plutôt que d'appli qui s'ouvre.
+if (Capacitor.isNativePlatform()) {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      SplashScreen.hide().catch(() => {})
+    })
+  })
+}
 
 function ErrorFallback() {
   return (

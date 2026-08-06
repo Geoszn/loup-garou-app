@@ -3,6 +3,9 @@
 # et resynchroniser le projet Android avec les derniers changements
 # (icône, écran de démarrage, permissions, mise en page).
 cd "$(dirname "$0")"
+echo "=== npm install ==="
+npm install
+echo ""
 echo "=== npm run build ==="
 npm run build
 echo ""

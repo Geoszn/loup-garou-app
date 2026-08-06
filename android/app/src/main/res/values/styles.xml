@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Base application theme. -->
     <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
@@ -13,6 +13,13 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- Barre de navigation système (gestes/boutons en bas d'écran)
+             assortie au fond de l'appli plutôt que laissée au blanc/noir
+             par défaut d'Android — sans ça, l'app affiche une bande claire
+             qui casse net l'immersion dès qu'on regarde le bas de l'écran,
+             un des indices les plus visibles de "site web dans un cadre". -->
+        <item name="android:navigationBarColor">@color/colorPrimaryDark</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
     </style>
 
 

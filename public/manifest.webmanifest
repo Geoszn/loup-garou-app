@@ -1,6 +1,6 @@
 {
   "name": "Loup Garou d'Afrique",
-  "short_name": "Loup Garou",
+  "short_name": "LG Afrique",
   "description": "Jouez au Loup Garou d'Afrique en ligne, l'application arbitre la partie pour vous.",
   "start_url": "/dashboard",
   "id": "/dashboard",

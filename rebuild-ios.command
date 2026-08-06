@@ -2,6 +2,12 @@
 # Double-clique sur ce fichier pour resynchroniser le projet iOS avec les
 # derniers changements (icône, écran de démarrage, permissions).
 cd "$(dirname "$0")"
+echo "=== npm install ==="
+npm install
+echo ""
+echo "=== npm run build ==="
+npm run build
+echo ""
 echo "=== npx cap sync ios ==="
 npx cap sync ios
 echo ""
