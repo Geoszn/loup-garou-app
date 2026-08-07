@@ -93,6 +93,7 @@ export const translations = {
   'landing.nav.login': { fr: 'Connexion', en: 'Log in' },
   'landing.nav.signup': { fr: 'Créer un compte', en: 'Sign up' },
   'landing.badge.upTo25': { fr: 'Jusqu’à 25 joueurs', en: 'Up to 25 players' },
+  'landing.leaderboard.title': { fr: 'Classement mondial', en: 'Global leaderboard' },
   'landing.hero.title1': { fr: 'Le village dort.', en: 'The village sleeps.' },
   'landing.hero.title2': { fr: 'Les loups veillent.', en: 'The wolves are watching.' },
   'landing.hero.tagline': {
@@ -745,6 +746,12 @@ export const translations = {
     fr: 'Choisissez la langue de l’application. Elle devient la langue par défaut de votre compte.',
     en: 'Choose the app’s language. It becomes your account’s default language.',
   },
+  'account.country.title': { fr: 'Pays', en: 'Country' },
+  'account.country.description': {
+    fr: 'Utilisé pour le classement national — facultatif.',
+    en: 'Used for the national leaderboard — optional.',
+  },
+  'account.country.none': { fr: 'Non renseigné', en: 'Not set' },
   'account.password.title': { fr: 'Mot de passe', en: 'Password' },
   'account.password.changeButton': { fr: 'Changer mon mot de passe', en: 'Change my password' },
   'account.password.subtitle': { fr: 'Changez votre mot de passe de connexion.', en: 'Change your login password.' },
@@ -828,13 +835,33 @@ export const translations = {
   'stats.recent.loss': { fr: 'Défaite', en: 'Loss' },
   'stats.leaderboard.title': { fr: '🏆 Classement', en: '🏆 Leaderboard' },
   'stats.leaderboard.subtitle': {
-    fr: 'Basé sur le taux de victoire, à partir de 3 parties terminées.',
-    en: 'Based on win rate, from 3 completed games onward.',
+    fr: 'Basé sur le rang (points), à partir de 3 parties terminées.',
+    en: 'Based on rank (points), from 3 completed games onward.',
   },
   'stats.leaderboard.empty': {
     fr: "Pas encore assez de parties jouées sur l'ensemble des comptes pour établir un classement.",
     en: 'Not enough games played across all accounts yet to establish a leaderboard.',
   },
+  'stats.leaderboard.global': { fr: 'Mondial', en: 'Global' },
+  'stats.leaderboard.country': { fr: 'National', en: 'National' },
+  'stats.leaderboard.noCountry': {
+    fr: 'Choisissez votre pays dans "Mon compte" pour apparaître dans le classement national.',
+    en: 'Choose your country in "My account" to appear in the national leaderboard.',
+  },
+  'stats.rank.points': { fr: '{{points}} points', en: '{{points}} points' },
+  'stats.rank.nextTier': {
+    fr: 'Encore {{points}} points avant {{emoji}} {{tier}}',
+    en: '{{points}} more points until {{emoji}} {{tier}}',
+  },
+  'stats.rank.streak': { fr: '{{count}} victoires d’affilée', en: '{{count}}-game win streak' },
+  'stats.rank.globalPosition': { fr: '#{{position}} mondial', en: '#{{position}} global' },
+  'stats.rank.countryPosition': { fr: '#{{position}} national', en: '#{{position}} national' },
+  'rank.tier.nouveau_venu': { fr: 'Nouveau Venu', en: 'Newcomer' },
+  'rank.tier.villageois': { fr: 'Villageois', en: 'Villager' },
+  'rank.tier.chasseur': { fr: 'Chasseur', en: 'Hunter' },
+  'rank.tier.ancien': { fr: 'Ancien', en: 'Elder' },
+  'rank.tier.sage': { fr: 'Sage du Village', en: 'Village Sage' },
+  'rank.tier.legende': { fr: 'Légende du Village', en: 'Village Legend' },
 
   // --- Menu compte (AccountMenu.tsx) ------------------------------------------
   'accountMenu.myAccount': { fr: 'Mon compte', en: 'My account' },

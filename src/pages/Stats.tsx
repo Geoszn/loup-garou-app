@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { roleLabel, ROLES, type RoleId } from '../lib/roles'
+import { tierInfo, tierLabel, pointsToNextTier } from '../lib/ranks'
+import { countryFlag } from '../lib/countries'
 import { Button, Card, ErrorText, Segmented } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { AvatarIcon } from '../components/AvatarIcon'
@@ -23,58 +25,91 @@ interface RecentGame {
   created_at: string
 }
 
+interface MyRank {
+  rank_points: number
+  rank_tier: string
+  current_streak: number
+  best_streak: number
+  country: string | null
+  global_position: number
+  country_position: number | null
+}
+
 interface MyStats {
   games_played: number
   games_won: number
   by_role: RoleStat[]
   recent_games: RecentGame[]
+  rank: MyRank | null
 }
 
 interface LeaderboardEntry {
   user_id: string
   username: string
   avatar_icon: string
-  games_played: number
-  games_won: number
-  win_rate: number
+  country: string | null
+  rank_points: number
+  tier: string
+  current_streak: number
+  best_streak: number
+  rank_wins: number
+  rank_games_played: number
 }
 
 export default function Stats() {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
   const { t, lang } = useLanguage()
   const [tab, setTab] = useState<'moi' | 'classement'>('moi')
+  const [scope, setScope] = useState<'global' | 'country'>('global')
   const [stats, setStats] = useState<MyStats | null>(null)
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[] | null>(null)
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    Promise.all([supabase.rpc('get_my_stats'), supabase.rpc('get_leaderboard', { p_limit: 20 })]).then(
-      ([statsRes, boardRes]) => {
-        if (cancelled) return
-        if (statsRes.error) {
-          setError(statsRes.error.message)
-        } else {
-          setStats(statsRes.data as MyStats)
-        }
-        if (!boardRes.error) {
-          setLeaderboard(boardRes.data as LeaderboardEntry[])
-        }
-        setLoading(false)
+    supabase.rpc('get_my_stats').then(({ data, error: rpcError }) => {
+      if (cancelled) return
+      if (rpcError) {
+        setError(rpcError.message)
+      } else {
+        setStats(data as MyStats)
       }
-    )
+      setLoading(false)
+    })
     return () => {
       cancelled = true
     }
   }, [])
 
+  // Classement chargé séparément (public, indépendant de get_my_stats) et
+  // rechargé à chaque bascule mondial/national — le scope national reste
+  // désactivé si le joueur n'a pas encore choisi de pays (voir Mon compte).
+  useEffect(() => {
+    if (tab !== 'classement') return
+    let cancelled = false
+    setLeaderboardLoading(true)
+    supabase
+      .rpc('get_public_leaderboard', { p_scope: scope, p_country: profile?.country ?? null, p_limit: 20 })
+      .then(({ data, error: rpcError }) => {
+        if (cancelled) return
+        if (!rpcError) setLeaderboard(data as LeaderboardEntry[])
+        setLeaderboardLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [tab, scope, profile?.country])
+
   if (loading) return <FullScreenLoader />
 
   const winRate = stats && stats.games_played > 0 ? Math.round((100 * stats.games_won) / stats.games_played) : 0
   const bestRole = stats?.by_role.slice().sort((a, b) => b.played - a.played)[0] ?? null
+  const myRank = stats?.rank ?? null
+  const nextTier = myRank ? pointsToNextTier(myRank.rank_points) : null
 
   return (
     <div className="min-h-screen px-4 py-10">
@@ -99,6 +134,54 @@ export default function Stats() {
 
         {tab === 'moi' && stats && (
           <>
+            {myRank && (
+              <Card className="text-center">
+                <p className="text-4xl">{tierInfo(myRank.rank_tier).emoji}</p>
+                <p className="mt-1 font-display text-xl text-moon-200">{tierLabel(myRank.rank_tier, t)}</p>
+                <p className="mt-0.5 text-sm text-moon-200/50">
+                  {t('stats.rank.points', { points: myRank.rank_points })}
+                </p>
+
+                {nextTier && (
+                  <div className="mx-auto mt-4 max-w-xs">
+                    <div className="h-1.5 overflow-hidden rounded-full bg-night-900/70">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-blood-500 to-moon-400"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            Math.round(
+                              (100 * (myRank.rank_points - tierInfo(myRank.rank_tier).minPoints)) /
+                                (nextTier.next.minPoints - tierInfo(myRank.rank_tier).minPoints)
+                            )
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="mt-1.5 text-xs text-moon-200/40">
+                      {t('stats.rank.nextTier', {
+                        points: nextTier.remaining,
+                        tier: tierLabel(nextTier.next.id, t),
+                        emoji: nextTier.next.emoji,
+                      })}
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-4 flex items-center justify-center gap-4 text-xs text-moon-200/50">
+                  {myRank.current_streak >= 2 && (
+                    <span className="text-blood-400">🔥 {t('stats.rank.streak', { count: myRank.current_streak })}</span>
+                  )}
+                  <span>{t('stats.rank.globalPosition', { position: myRank.global_position })}</span>
+                  {myRank.country && myRank.country_position && (
+                    <span>
+                      {countryFlag(myRank.country)} {t('stats.rank.countryPosition', { position: myRank.country_position })}
+                    </span>
+                  )}
+                </div>
+              </Card>
+            )}
+
             <div className="grid grid-cols-3 gap-3">
               <StatBox label={t('stats.gamesPlayed')} value={stats.games_played} />
               <StatBox label={t('stats.gamesWon')} value={stats.games_won} />
@@ -172,7 +255,24 @@ export default function Stats() {
           <Card>
             <h2 className="mb-1 font-display text-lg text-moon-200">{t('stats.leaderboard.title')}</h2>
             <p className="mb-4 text-sm text-moon-200/50">{t('stats.leaderboard.subtitle')}</p>
-            {!leaderboard || leaderboard.length === 0 ? (
+
+            <div className="mb-4">
+              <Segmented
+                tabs={[
+                  { id: 'global', label: t('stats.leaderboard.global') },
+                  { id: 'country', label: profile?.country ? countryFlag(profile.country) + ' ' + t('stats.leaderboard.country') : t('stats.leaderboard.country') },
+                ]}
+                active={scope}
+                onChange={setScope}
+              />
+              {scope === 'country' && !profile?.country && (
+                <p className="mt-2 text-xs text-moon-200/40">{t('stats.leaderboard.noCountry')}</p>
+              )}
+            </div>
+
+            {leaderboardLoading ? (
+              <p className="text-sm text-moon-200/50">{t('common.loading')}</p>
+            ) : !leaderboard || leaderboard.length === 0 ? (
               <p className="text-sm text-moon-200/50">{t('stats.leaderboard.empty')}</p>
             ) : (
               <ol className="flex flex-col gap-2">
@@ -187,12 +287,13 @@ export default function Stats() {
                   >
                     <span className="w-5 shrink-0 text-center text-moon-200/40">{i + 1}</span>
                     <span className="flex flex-1 min-w-0 items-center gap-1.5 truncate text-moon-200/90">
-                      <AvatarIcon icon={entry.avatar_icon} className="h-4 w-4 shrink-0" /> {entry.username}
+                      <AvatarIcon icon={entry.avatar_icon} className="h-4 w-4 shrink-0" />
+                      {entry.country && <span>{countryFlag(entry.country)}</span>}
+                      {entry.username}
                     </span>
-                    <span className="shrink-0 text-moon-200/60">
-                      {entry.games_won}/{entry.games_played}
-                    </span>
-                    <span className="w-12 shrink-0 text-right font-semibold text-moon-200">{entry.win_rate}%</span>
+                    {entry.current_streak >= 2 && <span className="shrink-0 text-xs text-blood-400">🔥{entry.current_streak}</span>}
+                    <span className="shrink-0 text-lg">{tierInfo(entry.tier).emoji}</span>
+                    <span className="w-12 shrink-0 text-right font-semibold text-moon-200">{entry.rank_points}</span>
                   </li>
                 ))}
               </ol>

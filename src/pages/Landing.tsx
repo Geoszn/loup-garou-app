@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { LinkButton } from '../components/ui'
 import { RulesPanel } from '../components/RulesPanel'
+import { LeaderboardWidget } from '../components/LeaderboardWidget'
 import { useLanguage } from '../i18n/LanguageContext'
 
 export default function Landing() {
@@ -61,6 +62,10 @@ export default function Landing() {
           <FeatureCard emoji="🎭" title={t('landing.feature.roles.title')} text={t('landing.feature.roles.text')} />
           <FeatureCard emoji="🌙" title={t('landing.feature.dayNight.title')} text={t('landing.feature.dayNight.text')} />
           <FeatureCard emoji="🔗" title={t('landing.feature.join.title')} text={t('landing.feature.join.text')} />
+        </div>
+
+        <div className="mt-6 w-full max-w-md">
+          <LeaderboardWidget />
         </div>
 
         <div className="mt-6 w-full">

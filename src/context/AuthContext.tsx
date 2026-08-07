@@ -8,6 +8,14 @@ interface Profile {
   avatar_icon: string
   lang: 'fr' | 'en'
   username_changed_at: string | null
+  // Rang/progression (voir migration 0055_ranking_system.sql) : chargés ici
+  // directement (RLS profiles_select_own autorise déjà chacun à lire sa
+  // propre ligne), pas besoin d'un aller-retour RPC séparé juste pour le
+  // badge de rang affiché dans l'en-tête du tableau de bord.
+  rank_points: number
+  current_streak: number
+  best_streak: number
+  country: string | null
 }
 
 interface AuthContextValue {
@@ -29,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function loadProfile(userId: string) {
     const { data } = await supabase
       .from('profiles')
-      .select('id, username, avatar_icon, lang, username_changed_at')
+      .select('id, username, avatar_icon, lang, username_changed_at, rank_points, current_streak, best_streak, country')
       .eq('id', userId)
       .maybeSingle()
     if (data) setProfile(data as Profile)

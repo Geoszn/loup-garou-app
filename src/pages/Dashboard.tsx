@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { Button, Card, ErrorText, Input, Label, Modal } from '../components/ui'
 import { RulesPanel } from '../components/RulesPanel'
 import { AccountMenu } from '../components/AccountMenu'
+import { RankBadge } from '../components/RankBadge'
 import { PublicGamesList } from '../components/PublicGamesBrowser'
 import { QuoteCarousel } from '../components/QuoteCarousel'
 import { AvatarIcon } from '../components/AvatarIcon'
@@ -248,6 +249,7 @@ export default function Dashboard() {
             </span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
+            {profile && <RankBadge points={profile.rank_points} streak={profile.current_streak} />}
             <AccountMenu
               username={profile?.username}
               avatarIcon={profile?.avatar_icon}
