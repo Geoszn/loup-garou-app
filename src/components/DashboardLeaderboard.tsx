@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { tierInfo } from '../lib/ranks'
-import { countryFlag } from '../lib/countries'
 import { AvatarIcon } from './AvatarIcon'
 import { Card } from './ui'
 import { useLanguage } from '../i18n/LanguageContext'
@@ -12,7 +11,6 @@ interface Entry {
   user_id: string
   username: string
   avatar_icon: string
-  country: string | null
   rank_points: number
   current_streak: number
 }
@@ -35,7 +33,7 @@ export function DashboardLeaderboard() {
   useEffect(() => {
     let cancelled = false
     supabase
-      .rpc('get_public_leaderboard', { p_scope: 'global', p_country: null, p_limit: 8 })
+      .rpc('get_public_leaderboard', { p_scope: 'global', p_continent: null, p_limit: 8 })
       .then(({ data, error }) => {
         if (!cancelled && !error) setEntries(data as Entry[])
       })
@@ -99,7 +97,6 @@ export function DashboardLeaderboard() {
                 user_id: user?.id ?? '',
                 username: profile.username,
                 avatar_icon: profile.avatar_icon,
-                country: profile.country,
                 rank_points: profile.rank_points,
                 current_streak: profile.current_streak,
               }}
@@ -125,7 +122,6 @@ function LeaderboardRow({ entry, position, mine }: { entry: Entry; position: num
       <span className="w-6 shrink-0 text-center text-xs text-moon-200/40">{position ? `#${position}` : '—'}</span>
       <span className="flex flex-1 min-w-0 items-center gap-1.5 truncate text-moon-200/90">
         <AvatarIcon icon={entry.avatar_icon} className="h-4 w-4 shrink-0" />
-        {entry.country && <span className="shrink-0">{countryFlag(entry.country)}</span>}
         <span className="truncate">{mine ? t('dashboard.leaderboard.youLabel', { username: entry.username }) : entry.username}</span>
       </span>
       {entry.current_streak >= 2 && <span className="shrink-0 text-xs text-blood-400">🔥{entry.current_streak}</span>}

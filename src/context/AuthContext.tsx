@@ -15,7 +15,7 @@ interface Profile {
   rank_points: number
   current_streak: number
   best_streak: number
-  country: string | null
+  continent: string | null
 }
 
 interface AuthContextValue {
@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function loadProfile(userId: string) {
     const { data } = await supabase
       .from('profiles')
-      .select('id, username, avatar_icon, lang, username_changed_at, rank_points, current_streak, best_streak, country')
+      .select('id, username, avatar_icon, lang, username_changed_at, rank_points, current_streak, best_streak, continent')
       .eq('id', userId)
       .maybeSingle()
     if (data) setProfile(data as Profile)

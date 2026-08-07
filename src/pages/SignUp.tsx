@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Button, Card, ErrorText, Input, Label } from '../components/ui'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
+import { CONTINENTS } from '../lib/continents'
 import { useLanguage } from '../i18n/LanguageContext'
 
 export default function SignUp() {
@@ -11,6 +12,7 @@ export default function SignUp() {
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [continent, setContinent] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -26,13 +28,17 @@ export default function SignUp() {
       setError(t('signup.error.passwordTooShort'))
       return
     }
+    if (!continent) {
+      setError(t('signup.error.continentRequired'))
+      return
+    }
 
     setLoading(true)
     const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { username: username.trim(), lang },
+        data: { username: username.trim(), lang, continent },
         emailRedirectTo: `${window.location.origin}/verifier-email`,
       },
     })
@@ -92,6 +98,25 @@ export default function SignUp() {
               placeholder="••••••••"
               required
             />
+          </div>
+          <div>
+            <Label htmlFor="signup-continent">{t('signup.continent')}</Label>
+            <select
+              id="signup-continent"
+              value={continent}
+              onChange={(e) => setContinent(e.target.value)}
+              required
+              className="w-full rounded-xl border border-night-500 bg-night-800/80 px-4 py-3 text-moon-200 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20"
+            >
+              <option value="" disabled>
+                {t('signup.continentPlaceholder')}
+              </option>
+              {CONTINENTS.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.emoji} {lang === 'fr' ? c.fr : c.en}
+                </option>
+              ))}
+            </select>
           </div>
 
           <ErrorText>{error}</ErrorText>

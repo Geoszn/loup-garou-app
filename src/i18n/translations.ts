@@ -195,8 +195,11 @@ export const translations = {
   'signup.username': { fr: 'Pseudo', en: 'Username' },
   'signup.email': { fr: 'Email', en: 'Email' },
   'signup.password': { fr: 'Mot de passe', en: 'Password' },
+  'signup.continent': { fr: 'Continent', en: 'Continent' },
+  'signup.continentPlaceholder': { fr: 'Choisissez votre continent', en: 'Choose your continent' },
   'signup.submit': { fr: 'Créer mon compte', en: 'Create my account' },
   'signup.submitting': { fr: 'Création...', en: 'Creating...' },
+  'signup.error.continentRequired': { fr: 'Choisissez votre continent.', en: 'Choose your continent.' },
   'signup.error.usernameTooShort': {
     fr: 'Choisissez un pseudo d’au moins 2 caractères.',
     en: 'Choose a username of at least 2 characters.',
@@ -771,12 +774,12 @@ export const translations = {
     fr: 'Choisissez la langue de l’application. Elle devient la langue par défaut de votre compte.',
     en: 'Choose the app’s language. It becomes your account’s default language.',
   },
-  'account.country.title': { fr: 'Pays', en: 'Country' },
-  'account.country.description': {
-    fr: 'Utilisé pour le classement national — facultatif.',
-    en: 'Used for the national leaderboard — optional.',
+  'account.continent.title': { fr: 'Continent', en: 'Continent' },
+  'account.continent.description': {
+    fr: 'Utilisé pour le classement par continent — facultatif.',
+    en: 'Used for the continental leaderboard — optional.',
   },
-  'account.country.none': { fr: 'Non renseigné', en: 'Not set' },
+  'account.continent.none': { fr: 'Non renseigné', en: 'Not set' },
   'account.password.title': { fr: 'Mot de passe', en: 'Password' },
   'account.password.changeButton': { fr: 'Changer mon mot de passe', en: 'Change my password' },
   'account.password.subtitle': { fr: 'Changez votre mot de passe de connexion.', en: 'Change your login password.' },
@@ -868,10 +871,10 @@ export const translations = {
     en: 'Not enough games played across all accounts yet to establish a leaderboard.',
   },
   'stats.leaderboard.global': { fr: 'Mondial', en: 'Global' },
-  'stats.leaderboard.country': { fr: 'National', en: 'National' },
-  'stats.leaderboard.noCountry': {
-    fr: 'Choisissez votre pays dans "Mon compte" pour apparaître dans le classement national.',
-    en: 'Choose your country in "My account" to appear in the national leaderboard.',
+  'stats.leaderboard.continent': { fr: 'Continent', en: 'Continent' },
+  'stats.leaderboard.noContinent': {
+    fr: 'Choisissez votre continent dans "Mon compte" pour apparaître dans ce classement.',
+    en: 'Choose your continent in "My account" to appear in this leaderboard.',
   },
   'stats.rank.points': { fr: '{{points}} points', en: '{{points}} points' },
   'stats.rank.nextTier': {
@@ -880,13 +883,21 @@ export const translations = {
   },
   'stats.rank.streak': { fr: '{{count}} victoires d’affilée', en: '{{count}}-game win streak' },
   'stats.rank.globalPosition': { fr: '#{{position}} mondial', en: '#{{position}} global' },
-  'stats.rank.countryPosition': { fr: '#{{position}} national', en: '#{{position}} national' },
+  'stats.rank.continentPosition': { fr: '#{{position}} continent', en: '#{{position}} continent' },
   'rank.tier.nouveau_venu': { fr: 'Nouveau Venu', en: 'Newcomer' },
   'rank.tier.villageois': { fr: 'Villageois', en: 'Villager' },
   'rank.tier.chasseur': { fr: 'Chasseur', en: 'Hunter' },
   'rank.tier.ancien': { fr: 'Ancien', en: 'Elder' },
   'rank.tier.sage': { fr: 'Sage du Village', en: 'Village Sage' },
   'rank.tier.legende': { fr: 'Légende du Village', en: 'Village Legend' },
+
+  // --- Pop-up choix du continent (ContinentPrompt.tsx) ------------------------
+  'continentPrompt.title': { fr: 'Choisis ton continent', en: 'Choose your continent' },
+  'continentPrompt.subtitle': {
+    fr: 'Pour apparaître dans le classement par continent, en plus du classement mondial. Modifiable à tout moment depuis "Mon compte".',
+    en: 'To appear in the continental leaderboard, in addition to the global one. Changeable anytime from "My account".',
+  },
+  'continentPrompt.skip': { fr: 'Plus tard', en: 'Later' },
 
   // --- Menu compte (AccountMenu.tsx) ------------------------------------------
   'accountMenu.myAccount': { fr: 'Mon compte', en: 'My account' },

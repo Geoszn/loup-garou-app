@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { roleLabel, ROLES, type RoleId } from '../lib/roles'
 import { tierInfo, tierLabel, pointsToNextTier } from '../lib/ranks'
-import { countryFlag } from '../lib/countries'
+import { continentEmoji, continentName } from '../lib/continents'
 import { Button, Card, ErrorText, Segmented } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { AvatarIcon } from '../components/AvatarIcon'
@@ -30,9 +30,9 @@ interface MyRank {
   rank_tier: string
   current_streak: number
   best_streak: number
-  country: string | null
+  continent: string | null
   global_position: number
-  country_position: number | null
+  continent_position: number | null
 }
 
 interface MyStats {
@@ -47,7 +47,6 @@ interface LeaderboardEntry {
   user_id: string
   username: string
   avatar_icon: string
-  country: string | null
   rank_points: number
   tier: string
   current_streak: number
@@ -61,7 +60,7 @@ export default function Stats() {
   const navigate = useNavigate()
   const { t, lang } = useLanguage()
   const [tab, setTab] = useState<'moi' | 'classement'>('moi')
-  const [scope, setScope] = useState<'global' | 'country'>('global')
+  const [scope, setScope] = useState<'global' | 'continent'>('global')
   const [stats, setStats] = useState<MyStats | null>(null)
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[] | null>(null)
   const [leaderboardLoading, setLeaderboardLoading] = useState(false)
@@ -86,14 +85,16 @@ export default function Stats() {
   }, [])
 
   // Classement chargé séparément (public, indépendant de get_my_stats) et
-  // rechargé à chaque bascule mondial/national — le scope national reste
-  // désactivé si le joueur n'a pas encore choisi de pays (voir Mon compte).
+  // rechargé à chaque bascule mondial/continent — le scope continent reste
+  // désactivé si le joueur n'a pas encore choisi de continent (voir Mon
+  // compte), et get_public_leaderboard renvoie de toute façon un tableau
+  // vide tant qu'il n'y a pas au moins 3 joueurs éligibles sur ce continent.
   useEffect(() => {
     if (tab !== 'classement') return
     let cancelled = false
     setLeaderboardLoading(true)
     supabase
-      .rpc('get_public_leaderboard', { p_scope: scope, p_country: profile?.country ?? null, p_limit: 20 })
+      .rpc('get_public_leaderboard', { p_scope: scope, p_continent: profile?.continent ?? null, p_limit: 20 })
       .then(({ data, error: rpcError }) => {
         if (cancelled) return
         if (!rpcError) setLeaderboard(data as LeaderboardEntry[])
@@ -102,7 +103,7 @@ export default function Stats() {
     return () => {
       cancelled = true
     }
-  }, [tab, scope, profile?.country])
+  }, [tab, scope, profile?.continent])
 
   if (loading) return <FullScreenLoader />
 
@@ -173,9 +174,9 @@ export default function Stats() {
                     <span className="text-blood-400">🔥 {t('stats.rank.streak', { count: myRank.current_streak })}</span>
                   )}
                   <span>{t('stats.rank.globalPosition', { position: myRank.global_position })}</span>
-                  {myRank.country && myRank.country_position && (
+                  {myRank.continent && myRank.continent_position && (
                     <span>
-                      {countryFlag(myRank.country)} {t('stats.rank.countryPosition', { position: myRank.country_position })}
+                      {continentEmoji(myRank.continent)} {t('stats.rank.continentPosition', { position: myRank.continent_position })}
                     </span>
                   )}
                 </div>
@@ -260,13 +261,18 @@ export default function Stats() {
               <Segmented
                 tabs={[
                   { id: 'global', label: t('stats.leaderboard.global') },
-                  { id: 'country', label: profile?.country ? countryFlag(profile.country) + ' ' + t('stats.leaderboard.country') : t('stats.leaderboard.country') },
+                  {
+                    id: 'continent',
+                    label: profile?.continent
+                      ? `${continentEmoji(profile.continent)} ${continentName(profile.continent, lang) ?? t('stats.leaderboard.continent')}`
+                      : t('stats.leaderboard.continent'),
+                  },
                 ]}
                 active={scope}
                 onChange={setScope}
               />
-              {scope === 'country' && !profile?.country && (
-                <p className="mt-2 text-xs text-moon-200/40">{t('stats.leaderboard.noCountry')}</p>
+              {scope === 'continent' && !profile?.continent && (
+                <p className="mt-2 text-xs text-moon-200/40">{t('stats.leaderboard.noContinent')}</p>
               )}
             </div>
 
@@ -288,7 +294,6 @@ export default function Stats() {
                     <span className="w-5 shrink-0 text-center text-moon-200/40">{i + 1}</span>
                     <span className="flex flex-1 min-w-0 items-center gap-1.5 truncate text-moon-200/90">
                       <AvatarIcon icon={entry.avatar_icon} className="h-4 w-4 shrink-0" />
-                      {entry.country && <span>{countryFlag(entry.country)}</span>}
                       {entry.username}
                     </span>
                     {entry.current_streak >= 2 && <span className="shrink-0 text-xs text-blood-400">🔥{entry.current_streak}</span>}

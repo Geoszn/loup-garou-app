@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { tierInfo } from '../lib/ranks'
-import { countryFlag } from '../lib/countries'
 import { useLanguage } from '../i18n/LanguageContext'
 
 interface Entry {
   user_id: string
   username: string
   avatar_icon: string
-  country: string | null
   rank_points: number
   tier: string
   current_streak: number
@@ -27,7 +25,7 @@ export function LeaderboardWidget() {
   useEffect(() => {
     let cancelled = false
     supabase
-      .rpc('get_public_leaderboard', { p_scope: 'global', p_country: null, p_limit: 5 })
+      .rpc('get_public_leaderboard', { p_scope: 'global', p_continent: null, p_limit: 5 })
       .then(({ data, error }) => {
         if (!cancelled && !error) setEntries(data as Entry[])
       })
@@ -52,7 +50,6 @@ export function LeaderboardWidget() {
           >
             <span className="w-5 shrink-0 text-center text-moon-200/40">{i + 1}</span>
             <span className="flex flex-1 min-w-0 items-center gap-1.5 truncate text-moon-200/90">
-              {entry.country && <span>{countryFlag(entry.country)}</span>}
               {entry.username}
             </span>
             {entry.current_streak >= 2 && <span className="shrink-0 text-xs text-blood-400">🔥{entry.current_streak}</span>}

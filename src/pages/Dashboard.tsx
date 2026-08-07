@@ -8,6 +8,7 @@ import { AccountMenu } from '../components/AccountMenu'
 import { RankBadge } from '../components/RankBadge'
 import { DashboardLeaderboard } from '../components/DashboardLeaderboard'
 import { FeedbackButton } from '../components/FeedbackButton'
+import { ContinentPrompt } from '../components/ContinentPrompt'
 import { PublicGamesList } from '../components/PublicGamesBrowser'
 import { QuoteCarousel } from '../components/QuoteCarousel'
 import { AvatarIcon } from '../components/AvatarIcon'
@@ -235,6 +236,9 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen px-4 py-10">
+      {/* Comptes créés avant la migration 0057 (continent) : pop-up
+          non bloquante, tant que le continent n'est pas choisi. */}
+      <ContinentPrompt />
       <div className="mx-auto flex max-w-3xl flex-col gap-8">
         <header className="flex items-center justify-between gap-2">
           {/* Logo cliquable vers la page d'accueil publique — jusqu'ici rien

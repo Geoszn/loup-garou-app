@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { AVATAR_ICONS } from '../lib/avatars'
 import { Button, Card, ConfirmDialog, ErrorText, Input, Label, Modal, SuccessText } from '../components/ui'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
-import { CountrySelect } from '../components/CountrySelect'
+import { ContinentSelect } from '../components/ContinentSelect'
 import { AvatarIcon } from '../components/AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
 
@@ -66,8 +66,8 @@ export default function Account() {
             <LanguageSwitcher onChanged={goToGameCreation} />
           </SettingsRow>
 
-          <SettingsRow label={t('account.country.title')} description={t('account.country.description')}>
-            <CountrySelect />
+          <SettingsRow label={t('account.continent.title')} description={t('account.continent.description')}>
+            <ContinentSelect />
           </SettingsRow>
 
           <SettingsRow label={t('account.password.title')}>
