@@ -240,6 +240,23 @@ export const translations = {
   'dashboard.leaderboard.you': { fr: 'Toi', en: 'You' },
   'dashboard.leaderboard.youLabel': { fr: '{{username}} (toi)', en: '{{username}} (you)' },
 
+  // --- Feedback (FeedbackButton.tsx) -----------------------------------------
+  'feedback.openButton': { fr: 'Donner mon avis', en: 'Give feedback' },
+  'feedback.title': { fr: 'Donner mon avis', en: 'Give feedback' },
+  'feedback.subtitle': {
+    fr: 'Bug, idée de fonctionnalité, retour sur une partie... écris-nous, on lit tout.',
+    en: 'Bug, feature idea, feedback on a game... write to us, we read everything.',
+  },
+  'feedback.placeholder': { fr: 'Ton message...', en: 'Your message...' },
+  'feedback.submit': { fr: 'Envoyer', en: 'Send' },
+  'feedback.sending': { fr: 'Envoi...', en: 'Sending...' },
+  'feedback.success': { fr: 'Merci ! Ton message a bien été envoyé. 🙏', en: 'Thanks! Your message has been sent. 🙏' },
+  'feedback.cooldown': {
+    fr: 'Tu as déjà envoyé un message cette semaine. Tu pourras réessayer à partir du {{date}}.',
+    en: "You've already sent a message this week. You can try again from {{date}}.",
+  },
+  'feedback.error.generic': { fr: "Impossible d'envoyer le message.", en: 'Unable to send the message.' },
+
   'dashboard.create.title': { fr: 'Créer une partie', en: 'Create a game' },
   'dashboard.create.private.title': { fr: 'Partie privée', en: 'Private game' },
   'dashboard.create.private.subtitle': {

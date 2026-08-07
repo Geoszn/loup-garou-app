@@ -7,6 +7,7 @@ import { RulesPanel } from '../components/RulesPanel'
 import { AccountMenu } from '../components/AccountMenu'
 import { RankBadge } from '../components/RankBadge'
 import { DashboardLeaderboard } from '../components/DashboardLeaderboard'
+import { FeedbackButton } from '../components/FeedbackButton'
 import { PublicGamesList } from '../components/PublicGamesBrowser'
 import { QuoteCarousel } from '../components/QuoteCarousel'
 import { AvatarIcon } from '../components/AvatarIcon'
@@ -355,18 +356,24 @@ export default function Dashboard() {
 
         <RulesPanel />
 
-        {narrator.supported && (
-          <div className="flex items-center justify-center gap-1.5 text-xs text-moon-200/40">
-            <span>🔊</span>
-            <button
-              type="button"
-              onClick={runNarratorTest}
-              className="underline underline-offset-4 transition-colors hover:text-moon-200/70"
-            >
-              {t('dashboard.testNarrator')}
-            </button>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-moon-200/40">
+          {narrator.supported && (
+            <span className="flex items-center gap-1.5">
+              <span>🔊</span>
+              <button
+                type="button"
+                onClick={runNarratorTest}
+                className="underline underline-offset-4 transition-colors hover:text-moon-200/70"
+              >
+                {t('dashboard.testNarrator')}
+              </button>
+            </span>
+          )}
+          <span className="flex items-center gap-1.5">
+            <span>💬</span>
+            <FeedbackButton />
+          </span>
+        </div>
 
         <QuoteCarousel />
       </div>

@@ -47,8 +47,12 @@ export function DashboardLeaderboard() {
     }
   }, [])
 
+  const hasEntries = !!entries && entries.length > 0
   const iAmInTop = !!entries?.some((e) => e.user_id === user?.id)
-  const showMyRow = profile && !iAmInTop
+  // La ligne "Toi" ne s'affiche que s'il existe un VRAI classement à côté
+  // duquel se situer — sinon "personne n'est classé" + "#1 Toi (0 points)"
+  // se contredisent l'un l'autre au premier coup d'œil.
+  const showMyRow = hasEntries && profile && !iAmInTop
 
   return (
     <Card className="!p-0 overflow-hidden">
@@ -71,7 +75,10 @@ export function DashboardLeaderboard() {
             ))}
           </div>
         ) : entries.length === 0 ? (
-          <p className="px-2 py-3 text-center text-sm text-moon-200/50">{t('dashboard.leaderboard.empty')}</p>
+          <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
+            <span className="text-3xl opacity-50">🌱</span>
+            <p className="max-w-xs text-sm text-moon-200/50">{t('dashboard.leaderboard.empty')}</p>
+          </div>
         ) : (
           <ol className="flex flex-col gap-1.5">
             {entries.map((entry, i) => (
