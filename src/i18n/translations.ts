@@ -231,6 +231,14 @@ export const translations = {
   'dashboard.createGame': { fr: 'Créer une partie', en: 'Create a game' },
   'dashboard.joinGame': { fr: 'Rejoindre une partie', en: 'Join a game' },
   'dashboard.testNarrator': { fr: 'Tester le narrateur', en: 'Test the narrator' },
+  'dashboard.leaderboard.title': { fr: 'Classement mondial', en: 'Global leaderboard' },
+  'dashboard.leaderboard.seeAll': { fr: 'Tout voir →', en: 'See all →' },
+  'dashboard.leaderboard.empty': {
+    fr: 'Personne n’est encore classé — gagne 3 parties pour apparaître ici en premier !',
+    en: 'No one is ranked yet — win 3 games to be the first to appear here!',
+  },
+  'dashboard.leaderboard.you': { fr: 'Toi', en: 'You' },
+  'dashboard.leaderboard.youLabel': { fr: '{{username}} (toi)', en: '{{username}} (you)' },
 
   'dashboard.create.title': { fr: 'Créer une partie', en: 'Create a game' },
   'dashboard.create.private.title': { fr: 'Partie privée', en: 'Private game' },
