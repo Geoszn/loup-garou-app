@@ -141,6 +141,11 @@ export interface MyGameView {
   // converti en Loup-Garou après la mort de ce mentor. null tant qu'il n'a
   // pas encore choisi, ou pour tout autre rôle.
   wild_child_mentor: string | null
+  // Inverse de wild_child_mentor : les Enfants Sauvages qui ME choisissent
+  // comme mentor (voir migration 0061). Toujours calculé, mais uniquement
+  // affiché à la nuit 1 par NightRecapModal — seul moment où ce choix a
+  // lieu (voir next_night_step, 0052_enfant_sauvage.sql).
+  mentee_ids: string[]
   wolf_teammates: string[]
   seer_reveals: { target_id: string; role: string; night_number: number }[]
   witch_heal_used: boolean

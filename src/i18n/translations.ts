@@ -550,6 +550,16 @@ export const translations = {
     en: "👻 You've been eliminated. You can watch the rest of the game.",
   },
   'game.dayRevealTitle': { fr: "☀️ Ce qui s'est passé cette nuit", en: '☀️ What happened last night' },
+  'game.loverRevealTitle': { fr: '💘 Coup de foudre', en: '💘 Love at first sight' },
+  'game.loverReveal': {
+    fr: 'Cupidon a frappé : vous êtes amoureux(se) de {{name}}. Si l’un de vous meurt, l’autre en mourra de chagrin.',
+    en: 'Cupid has struck: you are in love with {{name}}. If one of you dies, the other will die of heartbreak.',
+  },
+  'game.mentorRevealTitle': { fr: '🌱 Modèle choisi', en: '🌱 Chosen as a role model' },
+  'game.mentorReveal': {
+    fr: '{{name}} vous a choisi(e) comme mentor. Si vous mourez, {{name}} rejoindra les Loups-Garous par vengeance.',
+    en: '{{name}} has chosen you as their role model. If you die, {{name}} will join the Werewolves out of revenge.',
+  },
   'game.discussionHint': {
     fr: "💬 Discutez pour démasquer les Loups-Garous — le vote ouvre automatiquement dans la limite de temps, ou plus tôt si le Capitaine le lance avec l'accord de tout le village.",
     en: "💬 Discuss to unmask the Werewolves — the vote opens automatically once time runs out, or sooner if the Captain calls it with the whole village's agreement.",
