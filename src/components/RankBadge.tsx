@@ -16,7 +16,7 @@ export function RankBadge({ points, streak }: { points: number; streak: number }
     <Link
       to="/stats"
       title={tierLabel(tier.id, t)}
-      className="flex items-center gap-1.5 rounded-full border border-night-600 bg-night-800/60 py-1.5 px-3 text-sm text-moon-200/80 transition-colors hover:border-moon-400/50 hover:text-moon-200"
+      className="flex shrink-0 items-center gap-1 rounded-full border border-night-600 bg-night-800/60 py-1 px-2 text-xs text-moon-200/80 transition-colors hover:border-moon-400/50 hover:text-moon-200 sm:gap-1.5 sm:py-1.5 sm:px-3 sm:text-sm"
     >
       <span>{tier.emoji}</span>
       <span className="font-semibold text-moon-200">{points}</span>

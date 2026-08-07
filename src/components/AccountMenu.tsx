@@ -43,12 +43,12 @@ export function AccountMenu({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="relative flex items-center gap-2 rounded-full border border-night-600 bg-night-800/60 py-1.5 pl-1.5 pr-3 text-sm text-moon-200/80 transition-colors hover:border-moon-400/50 hover:text-moon-200"
+        className="relative flex items-center gap-1.5 rounded-full border border-night-600 bg-night-800/60 py-1 pl-1 pr-2 text-xs text-moon-200/80 transition-colors hover:border-moon-400/50 hover:text-moon-200 sm:gap-2 sm:py-1.5 sm:pl-1.5 sm:pr-3 sm:text-sm"
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-night-700 text-sm">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-night-700 text-sm sm:h-7 sm:w-7">
           <AvatarIcon icon={avatarIcon} className="h-4 w-4" />
         </span>
-        <span className="max-w-[110px] truncate">{username}</span>
+        <span className="max-w-[64px] truncate sm:max-w-[110px]">{username}</span>
         <span className="text-[9px] text-moon-200/40">{open ? '▲' : '▼'}</span>
         {pendingFriendCount > 0 && (
           <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-blood-600 text-[10px] font-bold text-[#fdf6e3]">

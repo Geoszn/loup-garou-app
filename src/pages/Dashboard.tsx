@@ -236,21 +236,22 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen px-4 py-10">
       <div className="mx-auto flex max-w-3xl flex-col gap-8">
-        <header className="flex flex-wrap items-center justify-between gap-3">
+        <header className="flex items-center justify-between gap-2">
           {/* Logo cliquable vers la page d'accueil publique — jusqu'ici rien
               sur ce tableau de bord ne permettait d'en sortir autrement
-              qu'en fermant l'onglet. */}
+              qu'en fermant l'onglet. Une seule ligne, taille réduite sur
+              mobile : le retour à la ligne forcé faisait passer les badges
+              de droite sur une deuxième ligne collée à gauche, un rendu qui
+              ressemblait à un bug plus qu'à une mise en page voulue. */}
           <Link
             to="/"
             title={t('common.backHome')}
-            className="flex items-center gap-2 font-display text-lg text-moon-300 transition-opacity hover:opacity-80"
+            className="flex min-w-0 shrink items-center gap-1.5 font-display text-sm text-moon-300 transition-opacity hover:opacity-80 sm:gap-2 sm:text-lg"
           >
-            <img src="/logo.png" alt="" className="h-8 w-8 rounded-full" />
-            <span>
-              Loup Garou<br className="sm:hidden" /> d'Afrique
-            </span>
+            <img src="/logo.png" alt="" className="h-7 w-7 shrink-0 rounded-full sm:h-8 sm:w-8" />
+            <span className="truncate">Loup Garou d'Afrique</span>
           </Link>
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             {profile && <RankBadge points={profile.rank_points} streak={profile.current_streak} />}
             <AccountMenu
               username={profile?.username}
