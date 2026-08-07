@@ -78,13 +78,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Envoi de l'email — best effort, voir commentaire en tête de fichier.
+  // Le résultat (succès ou échec, avec le détail renvoyé par Resend) est
+  // toujours journalisé côté serveur (Vercel > Runtime Logs) même si rien
+  // ne remonte jamais au joueur : sans ça, un échec silencieux de Resend
+  // (mauvaise clé, domaine non vérifié pour cet alias, etc.) serait
+  // impossible à diagnostiquer après coup.
   const resendApiKey = process.env.RESEND_API_KEY
   const toEmail = process.env.FEEDBACK_TO_EMAIL
-  if (resendApiKey && toEmail) {
+  if (!resendApiKey || !toEmail) {
+    console.warn('[feedback] Resend non configuré (RESEND_API_KEY ou FEEDBACK_TO_EMAIL manquante) — email non envoyé.')
+  } else {
     try {
       const { data: profile } = await supabase.from('profiles').select('username').eq('id', user.id).maybeSingle()
       const fromEmail = process.env.RESEND_FROM_EMAIL || 'LG Afrique <onboarding@resend.dev>'
-      await fetch(RESEND_API_URL, {
+      const resendRes = await fetch(RESEND_API_URL, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${resendApiKey}`,
@@ -102,12 +109,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ].join('\n'),
         }),
       })
-      // Le résultat de l'envoi n'est volontairement pas vérifié plus loin
-      // (pas de `if (!resendRes.ok)`) : un échec Resend ne doit jamais faire
-      // échouer la requête pour le joueur, le message est déjà en sécurité
-      // dans feedback_messages à ce stade.
-    } catch {
-      // Idem : une erreur réseau vers Resend ne remonte jamais au joueur.
+      const resendBody = await resendRes.text()
+      if (!resendRes.ok) {
+        console.error(`[feedback] Resend a refusé l'envoi (${resendRes.status}): ${resendBody}`)
+      } else {
+        console.log(`[feedback] Email envoyé via Resend: ${resendBody}`)
+      }
+    } catch (err) {
+      console.error('[feedback] Erreur réseau vers Resend:', err instanceof Error ? err.message : err)
     }
   }
 
