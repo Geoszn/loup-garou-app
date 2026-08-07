@@ -106,13 +106,14 @@ begin
   end loop;
 
   -- Dernier rôle + série en cours de chaque joueur, dans le MÊME ordre que
-  -- v_players (array_agg order by ord, pas l'ordre du join) pour pouvoir
-  -- comparer v_last_roles[i] à v_shuffled[i] par simple index plus bas.
-  select array_agg(coalesce(p.last_role, '')), array_agg(coalesce(p.role_streak, 0))
+  -- v_players pour pouvoir comparer v_last_roles[i] à v_shuffled[i] par
+  -- simple index plus bas. Le ORDER BY doit être DANS array_agg() lui-même
+  -- (order by t.ord) — un ORDER BY seulement dans la sous-requête ne garantit
+  -- rien une fois passé par le join, Postgres reste libre de réordonner les
+  -- lignes avant l'agrégation.
+  select array_agg(coalesce(p.last_role, '') order by t.ord), array_agg(coalesce(p.role_streak, 0) order by t.ord)
   into v_last_roles, v_last_streaks
-  from (
-    select user_id, ord from unnest(v_players) with ordinality as t(user_id, ord) order by ord
-  ) t
+  from unnest(v_players) with ordinality as t(user_id, ord)
   join public.profiles p on p.id = t.user_id;
 
   -- Retire une distribution complète tant qu'elle ferait vivre à un
