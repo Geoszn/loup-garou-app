@@ -34,10 +34,16 @@ export default function Dashboard() {
   const { t } = useLanguage()
   // Message ponctuel passé via navigate(path, { state: { notice } }), par
   // exemple après avoir été retiré d'un salon/partie par l'hôte (voir
-  // Lobby.tsx / GameRoom.tsx). Capturé une seule fois au montage : on ne
-  // veut pas qu'il réapparaisse si l'utilisateur revient sur cette page par
-  // un autre chemin plus tard dans la session.
-  const [notice] = useState<string | null>((location.state as { notice?: string } | null)?.notice ?? null)
+  // Lobby.tsx / GameRoom.tsx) ou après confirmation d'email (voir
+  // VerifyEmail.tsx). Capturé une seule fois au montage : on ne veut pas
+  // qu'il réapparaisse si l'utilisateur revient sur cette page par un autre
+  // chemin plus tard dans la session. `tone` distingue un avertissement (rouge,
+  // par défaut — comportement historique de ce bandeau) d'une bonne nouvelle
+  // (vert) : les appelants existants ne passent pas `tone`, donc rien ne
+  // change pour eux.
+  const noticeState = location.state as { notice?: string; tone?: 'warning' | 'success' } | null
+  const [notice] = useState<string | null>(noticeState?.notice ?? null)
+  const [noticeTone] = useState<'warning' | 'success'>(noticeState?.tone ?? 'warning')
   const [noticeDismissed, setNoticeDismissed] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [invites, setInvites] = useState<GameInvite[]>([])
@@ -252,8 +258,14 @@ export default function Dashboard() {
         </header>
 
         {notice && !noticeDismissed && (
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-blood-700/40 bg-blood-700/10 px-4 py-2.5 text-sm text-moon-200/90">
-            <span>🚫 {notice}</span>
+          <div
+            className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-2.5 text-sm text-moon-200/90 ${
+              noticeTone === 'success'
+                ? 'border-emerald-700/50 bg-emerald-700/10'
+                : 'border-blood-700/40 bg-blood-700/10'
+            }`}
+          >
+            <span>{noticeTone === 'success' ? '✅' : '🚫'} {notice}</span>
             <button
               type="button"
               onClick={() => setNoticeDismissed(true)}

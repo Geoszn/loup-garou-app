@@ -12,21 +12,21 @@ export default function VerifyEmail() {
   const [resent, setResent] = useState(false)
   const [checking, setChecking] = useState(false)
 
-  // Une fois l'email confirmé, on renvoie vers la connexion plutôt que de
-  // laisser l'utilisateur enchaîner automatiquement sur le tableau de bord :
-  // le lien de confirmation s'ouvre souvent dans un autre onglet/navigateur
-  // que celui utilisé pour s'inscrire (ex. appli mail sur téléphone), où
-  // rester "connecté" via le jeton du lien de confirmation n'est pas
-  // forcément voulu. On déconnecte donc cette session éphémère et on
-  // redirige vers /connexion avec un message de confirmation.
-  async function goToLoginConfirmed() {
-    await supabase.auth.signOut()
-    navigate('/connexion', { state: { notice: t('verifyEmail.confirmedNotice') } })
+  // Dès que l'email est confirmé, on file directement vers le tableau de
+  // bord plutôt que de repasser par la connexion : c'est justement cliquer
+  // sur le lien reçu par mail qui vient de créer une session confirmée dans
+  // cet onglet (Supabase la détecte dans l'URL au chargement de la page) —
+  // la faire sauter pour forcer une reconnexion manuelle n'ajoutait aucune
+  // sécurité réelle, juste une étape en plus pour un ami pressé de rejoindre
+  // une partie. (Avant : on déconnectait cette session et on renvoyait vers
+  // /connexion.)
+  function goToDashboardConfirmed() {
+    navigate('/dashboard', { state: { notice: t('verifyEmail.confirmedNotice'), tone: 'success' } })
   }
 
   useEffect(() => {
     if (!loading && session?.user.email_confirmed_at) {
-      goToLoginConfirmed()
+      goToDashboardConfirmed()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, session])
@@ -35,7 +35,7 @@ export default function VerifyEmail() {
     const interval = setInterval(async () => {
       const { data } = await supabase.auth.getSession()
       if (data.session?.user.email_confirmed_at) {
-        goToLoginConfirmed()
+        goToDashboardConfirmed()
       }
     }, 4000)
     return () => clearInterval(interval)

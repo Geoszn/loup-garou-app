@@ -92,7 +92,7 @@ export const translations = {
   'landing.nav.myAccount': { fr: 'Mon espace', en: 'My account' },
   'landing.nav.login': { fr: 'Connexion', en: 'Log in' },
   'landing.nav.signup': { fr: 'Créer un compte', en: 'Sign up' },
-  'landing.badge.upTo20': { fr: 'Jusqu’à 20 joueurs', en: 'Up to 20 players' },
+  'landing.badge.upTo25': { fr: 'Jusqu’à 25 joueurs', en: 'Up to 25 players' },
   'landing.hero.title1': { fr: 'Le village dort.', en: 'The village sleeps.' },
   'landing.hero.title2': { fr: 'Les loups veillent.', en: 'The wolves are watching.' },
   'landing.hero.tagline': {
@@ -113,8 +113,8 @@ export const translations = {
   },
   'landing.feature.join.title': { fr: 'Rejoindre en un clic', en: 'Join in one click' },
   'landing.feature.join.text': {
-    fr: 'Partagez un code ou un lien, jusqu’à 20 joueurs peuvent rejoindre la partie.',
-    en: 'Share a code or a link — up to 20 players can join the game.',
+    fr: 'Partagez un code ou un lien, jusqu’à 25 joueurs peuvent rejoindre la partie.',
+    en: 'Share a code or a link — up to 25 players can join the game.',
   },
   'landing.footer.privacy': { fr: 'Confidentialité', en: 'Privacy' },
   'landing.footer.terms': { fr: 'CGU', en: 'Terms' },
@@ -877,7 +877,7 @@ export const translations = {
   'publicGames.refreshing': { fr: 'Actualisation...', en: 'Refreshing...' },
   'publicGames.searching': { fr: 'Recherche...', en: 'Searching...' },
   'publicGames.empty': { fr: 'Aucune partie publique ouverte pour l’instant.', en: 'No public game open right now.' },
-  'publicGames.playerCount': { fr: '{{count}}/20 joueurs', en: '{{count}}/20 players' },
+  'publicGames.playerCount': { fr: '{{count}}/25 joueurs', en: '{{count}}/25 players' },
   'publicGames.statusLobby': { fr: 'En salon', en: 'In lobby' },
   'publicGames.statusInProgress': { fr: '🌙 En cours', en: '🌙 In progress' },
   'publicGames.inProgressTooltip': {
@@ -931,8 +931,8 @@ export const translations = {
   'verifyEmail.resent': { fr: 'Email renvoyé ✓', en: 'Email resent ✓' },
   'verifyEmail.resend': { fr: "Renvoyer l'email", en: 'Resend email' },
   'verifyEmail.confirmedNotice': {
-    fr: 'Email confirmé ! Vous pouvez maintenant vous connecter.',
-    en: 'Email confirmed! You can now log in.',
+    fr: 'Email confirmé ! Bienvenue.',
+    en: 'Email confirmed! Welcome.',
   },
 
   // --- Page introuvable (NotFound.tsx) -----------------------------------------

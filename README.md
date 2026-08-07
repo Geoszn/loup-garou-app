@@ -5,7 +5,7 @@ Application web (mobile + desktop) pour jouer au Loup Garou à distance. L'appli
 - **Frontend** : React + TypeScript + Vite + Tailwind CSS
 - **Backend** : [Supabase](https://supabase.com) (Postgres + Auth avec validation par email + Realtime)
 - **Comptes** : inscription par email, obligatoire, avec validation du lien reçu par mail
-- **Parties** : jusqu'à 20 joueurs, créées avec un code à 6 caractères + lien d'invitation
+- **Parties** : jusqu'à 25 joueurs, créées avec un code à 6 caractères + lien d'invitation
 
 Aucun serveur à gérer soi-même : toute la logique de jeu (répartition des rôles, résolution des nuits, votes, victoire) tourne dans des fonctions Postgres sécurisées côté Supabase, donc impossible pour un joueur de tricher en lisant le code source du site.
 
@@ -130,7 +130,7 @@ Le code est déjà branché mais n'inclut aucun fichier audio par défaut : voir
 
 Toute la logique sensible (qui est loup-garou, qui vote quoi la nuit) vit dans des fonctions Postgres `SECURITY DEFINER` : le client ne peut jamais lire directement le rôle d'un autre joueur vivant, seulement via `get_my_game_view`, qui calcule côté serveur ce que chaque joueur a le droit de voir.
 
-- **`create_game` / `join_game` / `leave_game`** — gestion du salon d'attente (max 20 joueurs).
+- **`create_game` / `join_game` / `leave_game`** — gestion du salon d'attente (max 25 joueurs).
 - **`start_game`** — répartit aléatoirement les rôles selon la configuration de l'hôte (ou une répartition par défaut selon le nombre de joueurs).
 - **`advance_phase` / `tick_game`** — le "meneur de jeu" automatique. Chaque client connecté appelle `tick_game` toutes les ~1,5s ; la fonction ne fait quelque chose que si le minuteur de la phase en cours est écoulé, donc plusieurs appels simultanés ne posent aucun problème.
 - **`submit_cupidon`, `submit_voyante`, `submit_wolf_vote`, `submit_sorciere`, `submit_petite_fille`, `submit_vote`, `submit_hunter_shot`** — actions des joueurs. Dès que toutes les actions requises pour une étape sont reçues, la phase avance immédiatement sans attendre la fin du minuteur.

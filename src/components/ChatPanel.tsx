@@ -43,6 +43,27 @@ export function ChatPanel({
   const bottomRef = useRef<HTMLDivElement>(null)
   const info = CHANNEL_LABEL[channel]
 
+  // Quand le clavier virtuel est ouvert ET qu'on écrit dans CE salon, on
+  // agrandit temporairement la zone de messages pour profiter au maximum de
+  // l'espace visible restant au-dessus du clavier. Sans ça, la hauteur fixe
+  // (h-64/h-80) ne laisse voir que 2-3 messages pendant la frappe, ce qui
+  // rend une conversation active illisible sur mobile (retour utilisateur :
+  // le clavier "barre complètement la vue du jeu").
+  const [inputFocused, setInputFocused] = useState(false)
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null)
+
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const update = () => setViewportHeight(vv.height)
+    update()
+    vv.addEventListener('resize', update)
+    return () => vv.removeEventListener('resize', update)
+  }, [])
+
+  const keyboardExpandedHeight =
+    inputFocused && viewportHeight ? Math.max(220, Math.min(viewportHeight - 24, 560)) : null
+
   // Index des messages par id, recalculé seulement quand `messages` change.
   // Avant, la citation d'un message (repliedTo) était retrouvée via
   // `messages.find(...)` directement dans `messages.map(...)`, donc en
@@ -70,7 +91,10 @@ export function ChatPanel({
   }, [messages.length])
 
   return (
-    <div className={`flex flex-col rounded-2xl border border-night-600/60 bg-night-900/50 ${compact ? 'h-64' : 'h-80'}`}>
+    <div
+      style={keyboardExpandedHeight ? { height: `${keyboardExpandedHeight}px` } : undefined}
+      className={`flex flex-col rounded-2xl border border-night-600/60 bg-night-900/50 transition-[height] duration-150 ${compact ? 'h-64' : 'h-80'}`}
+    >
       <div className="flex items-center gap-2 border-b border-night-600/50 px-4 py-2.5">
         <span>{info.emoji}</span>
         <span className="text-sm font-semibold text-moon-200">{t(info.titleKey)}</span>
@@ -166,6 +190,7 @@ export function ChatPanel({
           replyToId={replyTarget?.id ?? null}
           onSent={() => setReplyTarget(null)}
           send={send}
+          onFocusChange={setInputFocused}
         />
       )}
     </div>
@@ -185,12 +210,14 @@ function Composer({
   replyToId,
   onSent,
   send,
+  onFocusChange,
 }: {
   placeholder: string
   sending: boolean
   replyToId: string | null
   onSent: () => void
   send: (content: string, replyTo?: string | null) => Promise<unknown>
+  onFocusChange: (focused: boolean) => void
 }) {
   const [text, setText] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -201,20 +228,29 @@ function Composer({
   // fini de rétrécir la fenêtre visible — l'input se retrouve alors caché
   // derrière. On refait un scrollIntoView une fois le clavier réellement
   // ouvert (évènement resize du visualViewport), en plus du comportement
-  // natif du navigateur au focus.
+  // natif du navigateur au focus. Alignement 'end' (plutôt que 'center')
+  // pour coller le champ tout en bas de l'espace visible restant, juste
+  // au-dessus du clavier — ça laisse le maximum de place possible aux
+  // messages affichés au-dessus (voir aussi l'agrandissement du panneau
+  // dans ChatPanel, piloté par le même évènement de focus).
   function handleInputFocus() {
+    onFocusChange(true)
     const vv = window.visualViewport
     if (!vv) return
     let done = false
     const scrollNow = () => {
       if (done) return
       done = true
-      inputRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      inputRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' })
     }
     vv.addEventListener('resize', scrollNow, { once: true })
     // Filet de sécurité si le clavier était déjà ouvert (pas de resize à
     // venir) ou si le navigateur ne redéclenche pas l'évènement à temps.
     setTimeout(scrollNow, 400)
+  }
+
+  function handleInputBlur() {
+    onFocusChange(false)
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -233,6 +269,7 @@ function Composer({
         value={text}
         onChange={(e) => setText(e.target.value)}
         onFocus={handleInputFocus}
+        onBlur={handleInputBlur}
         placeholder={placeholder}
         maxLength={500}
         className="min-w-0 flex-1 rounded-xl border border-night-600 bg-night-800/70 px-3 py-2 text-[16px] text-moon-200 outline-none placeholder:text-moon-200/30 focus:border-moon-400/50 sm:text-sm"

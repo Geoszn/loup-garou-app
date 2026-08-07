@@ -42,7 +42,7 @@ export default function Landing() {
 
       <main className="relative z-10 mx-auto flex max-w-4xl flex-col items-center px-6 pb-24 pt-16 text-center sm:pt-24">
         <span className="mb-4 rounded-full border border-night-600 bg-night-800/60 px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-moon-200/60">
-          {t('landing.badge.upTo20')}
+          {t('landing.badge.upTo25')}
         </span>
         <h1 className="font-display text-4xl leading-tight text-moon-200 sm:text-6xl">
           {t('landing.hero.title1')} <span className="text-blood-500">{t('landing.hero.title2')}</span>

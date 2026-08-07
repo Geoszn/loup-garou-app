@@ -169,7 +169,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // startAudioOff dans useVoiceChat.ts, qui applique la même règle
           // côté client au moment du join()).
           start_audio_off: true,
-          max_participants: 20,
+          max_participants: 25,
         },
       }),
     })
