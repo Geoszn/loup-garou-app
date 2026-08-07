@@ -417,7 +417,7 @@ export const translations = {
   'lobby.privateBadge': { fr: '🔒 Partie privée', en: '🔒 Private game' },
   'lobby.noRequestsYet': { fr: "aucune demande pour l'instant.", en: 'no requests yet.' },
   'lobby.copyInviteLink': { fr: "🔗 Copier le lien d'invitation", en: '🔗 Copy invite link' },
-  'lobby.playersTitle': { fr: 'Joueurs ({{count}}/20)', en: 'Players ({{count}}/20)' },
+  'lobby.playersTitle': { fr: 'Joueurs ({{count}}/25)', en: 'Players ({{count}}/25)' },
   'lobby.closeInvite': { fr: 'Fermer', en: 'Close' },
   'lobby.inviteFriendsToggle': { fr: '+ Inviter des amis', en: '+ Invite friends' },
   'lobby.invited': { fr: 'Invité ✓', en: 'Invited ✓' },
