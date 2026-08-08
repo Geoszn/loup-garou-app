@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { tierInfo } from '../lib/ranks'
+import { RankTierBadge } from './RankTierBadge'
 import { useLanguage } from '../i18n/LanguageContext'
 
 interface Entry {
@@ -53,7 +54,7 @@ export function LeaderboardWidget() {
               {entry.username}
             </span>
             {entry.current_streak >= 2 && <span className="shrink-0 text-xs text-blood-400">🔥{entry.current_streak}</span>}
-            <span className="shrink-0">{tierInfo(entry.tier).emoji}</span>
+            <RankTierBadge tier={tierInfo(entry.tier).id} size={20} />
             <span className="w-10 shrink-0 text-right font-semibold text-moon-200">{entry.rank_points}</span>
           </li>
         ))}

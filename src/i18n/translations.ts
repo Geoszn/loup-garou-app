@@ -925,18 +925,27 @@ export const translations = {
   },
   'stats.rank.points': { fr: '{{points}} points', en: '{{points}} points' },
   'stats.rank.nextTier': {
-    fr: 'Encore {{points}} points avant {{emoji}} {{tier}}',
-    en: '{{points}} more points until {{emoji}} {{tier}}',
+    fr: 'Encore {{points}} points avant {{tier}}',
+    en: '{{points}} more points until {{tier}}',
   },
   'stats.rank.firstTier': { fr: 'Début', en: 'Start' },
   'stats.rank.maxTier': { fr: 'Max', en: 'Max' },
   'stats.rank.streak': { fr: '{{count}} victoires d’affilée', en: '{{count}}-game win streak' },
   'stats.rank.globalPosition': { fr: '#{{position}} mondial', en: '#{{position}} global' },
   'stats.rank.continentPosition': { fr: '#{{position}} continent', en: '#{{position}} continent' },
+  // Noms de paliers volontairement distincts des noms de rôles (role.villageois
+  // .name, role.chasseur.name, role.ancien.name) : les ids internes
+  // ('villageois', 'chasseur', 'ancien', voir RANK_TIERS) sont restés
+  // identiques pour ne rien casser côté serveur, mais avant cette réécriture
+  // les LIBELLÉS affichés étaient mot pour mot les mêmes que ceux des rôles
+  // jouables — un joueur au palier "Chasseur" pouvait croire que ça parlait
+  // du rôle Chasseur qu'il vient de jouer. D'où Apprenti/Apprentice,
+  // Éclaireur/Scout, Doyen/Veteran plutôt que Villageois/Villager,
+  // Chasseur/Hunter, Ancien/Elder.
   'rank.tier.nouveau_venu': { fr: 'Nouveau Venu', en: 'Newcomer' },
-  'rank.tier.villageois': { fr: 'Villageois', en: 'Villager' },
-  'rank.tier.chasseur': { fr: 'Chasseur', en: 'Hunter' },
-  'rank.tier.ancien': { fr: 'Ancien', en: 'Elder' },
+  'rank.tier.villageois': { fr: 'Apprenti', en: 'Apprentice' },
+  'rank.tier.chasseur': { fr: 'Éclaireur', en: 'Scout' },
+  'rank.tier.ancien': { fr: 'Doyen', en: 'Veteran' },
   'rank.tier.sage': { fr: 'Sage du Village', en: 'Village Sage' },
   'rank.tier.legende': { fr: 'Légende du Village', en: 'Village Legend' },
 

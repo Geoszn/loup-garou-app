@@ -8,6 +8,7 @@ import { continentEmoji, continentName } from '../lib/continents'
 import { Button, Card, ErrorText, Segmented } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { AvatarIcon } from '../components/AvatarIcon'
+import { RankTierBadge } from '../components/RankTierBadge'
 import { useLanguage } from '../i18n/LanguageContext'
 
 interface RoleStat {
@@ -147,7 +148,7 @@ export default function Stats() {
                   <TierNeighbor tier={prevTier} placeholder={t('stats.rank.firstTier')} />
                   <span className="text-moon-200/20">→</span>
                   <div className="flex flex-col items-center">
-                    <p className="text-4xl">{tierInfo(myRank.rank_tier).emoji}</p>
+                    <RankTierBadge tier={tierInfo(myRank.rank_tier).id} size={56} />
                     <p className="mt-1 font-display text-xl text-moon-200">{tierLabel(myRank.rank_tier, t)}</p>
                   </div>
                   <span className="text-moon-200/20">→</span>
@@ -177,7 +178,6 @@ export default function Stats() {
                       {t('stats.rank.nextTier', {
                         points: nextTier.remaining,
                         tier: tierLabel(nextTier.next.id, t),
-                        emoji: nextTier.next.emoji,
                       })}
                     </p>
                   </div>
@@ -311,7 +311,7 @@ export default function Stats() {
                       {entry.username}
                     </span>
                     {entry.current_streak >= 2 && <span className="shrink-0 text-xs text-blood-400">🔥{entry.current_streak}</span>}
-                    <span className="shrink-0 text-lg">{tierInfo(entry.tier).emoji}</span>
+                    <RankTierBadge tier={tierInfo(entry.tier).id} size={22} />
                     <span className="w-12 shrink-0 text-right font-semibold text-moon-200">{entry.rank_points}</span>
                   </li>
                 ))}
@@ -333,7 +333,7 @@ function TierNeighbor({ tier, placeholder }: { tier: RankTierInfo | null; placeh
   const { t } = useLanguage()
   return (
     <div className="flex w-12 shrink-0 flex-col items-center gap-0.5 opacity-40 sm:w-16">
-      <span className="text-lg">{tier ? tier.emoji : '—'}</span>
+      {tier ? <RankTierBadge tier={tier.id} size={22} /> : <span className="text-lg">—</span>}
       <span className="truncate text-[9px] uppercase tracking-wide text-moon-200/70">
         {tier ? tierLabel(tier.id, t) : placeholder}
       </span>

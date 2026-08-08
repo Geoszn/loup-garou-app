@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { tierInfo } from '../lib/ranks'
+import { tierForPoints } from '../lib/ranks'
 import { AvatarIcon } from './AvatarIcon'
+import { RankTierBadge } from './RankTierBadge'
 import { Card } from './ui'
 import { useLanguage } from '../i18n/LanguageContext'
 
@@ -112,7 +113,7 @@ export function DashboardLeaderboard() {
 
 function LeaderboardRow({ entry, position, mine }: { entry: Entry; position: number | null; mine: boolean }) {
   const { t } = useLanguage()
-  const tier = tierInfo(pointsToTier(entry.rank_points))
+  const tier = tierForPoints(entry.rank_points)
   return (
     <li
       className={`flex items-center gap-3 rounded-xl border px-3.5 py-2 text-sm ${
@@ -125,17 +126,8 @@ function LeaderboardRow({ entry, position, mine }: { entry: Entry; position: num
         <span className="truncate">{mine ? t('dashboard.leaderboard.youLabel', { username: entry.username }) : entry.username}</span>
       </span>
       {entry.current_streak >= 2 && <span className="shrink-0 text-xs text-blood-400">🔥{entry.current_streak}</span>}
-      <span className="shrink-0 text-base">{tier.emoji}</span>
+      <RankTierBadge tier={tier.id} size={20} />
       <span className="w-10 shrink-0 text-right font-semibold text-moon-200">{entry.rank_points}</span>
     </li>
   )
-}
-
-function pointsToTier(points: number): string {
-  if (points >= 1500) return 'legende'
-  if (points >= 900) return 'sage'
-  if (points >= 500) return 'ancien'
-  if (points >= 250) return 'chasseur'
-  if (points >= 100) return 'villageois'
-  return 'nouveau_venu'
 }

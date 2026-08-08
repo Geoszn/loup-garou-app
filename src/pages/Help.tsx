@@ -5,6 +5,7 @@ import { useLanguage } from '../i18n/LanguageContext'
 import { ROLES, ROLE_ORDER, roleTeamLabel } from '../lib/roles'
 import { RANK_TIERS } from '../lib/ranks'
 import { Button, Card } from '../components/ui'
+import { RankTierBadge } from '../components/RankTierBadge'
 
 /** Page d'aide dédiée, publique (accessible sans compte) : regroupe ce qui
  * vivait avant en un seul bloc "Règles du jeu" toujours déplié au milieu de
@@ -184,7 +185,7 @@ function RankingContent() {
               className="flex items-center justify-between rounded-xl border border-night-600/60 bg-night-900/50 px-3 py-2"
             >
               <span className="flex items-center gap-2 text-moon-200">
-                <span>{tier.emoji}</span> {t(tier.nameKey)}
+                <RankTierBadge tier={tier.id} size={20} /> {t(tier.nameKey)}
               </span>
               <span className="text-xs text-moon-200/50">
                 {t('help.ranking.tiers.fromPoints', { points: tier.minPoints })}
