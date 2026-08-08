@@ -862,6 +862,8 @@ export const translations = {
     en: 'This request will be sent to the publisher, who will permanently delete your account and associated data. You can keep playing while the request is being processed.',
   },
   'account.danger.confirmLabel': { fr: 'Confirmer la demande', en: 'Confirm the request' },
+  'account.danger.cancelButton': { fr: 'Annuler ma demande', en: 'Cancel my request' },
+  'account.danger.cancelling': { fr: 'Annulation...', en: 'Cancelling...' },
 
   // --- Amis (Friends.tsx) -----------------------------------------------------
   'friends.title': { fr: 'Amis', en: 'Friends' },

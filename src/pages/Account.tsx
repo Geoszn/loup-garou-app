@@ -399,6 +399,7 @@ function DangerZoneCard() {
   const [loadingStatus, setLoadingStatus] = useState(true)
   const [confirming, setConfirming] = useState(false)
   const [sending, setSending] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -429,17 +430,35 @@ function DangerZoneCard() {
     setRequestedAt(data?.requested_at ?? new Date().toISOString())
   }
 
+  async function cancelRequest() {
+    setCancelling(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('cancel_account_deletion')
+    setCancelling(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    setRequestedAt(null)
+  }
+
   return (
     <Card className="border-blood-700/30">
       <h2 className="mb-1 font-display text-lg text-blood-400">{t('account.danger.title')}</h2>
       <p className="mb-5 text-sm text-moon-200/50">{t('account.danger.subtitle')}</p>
 
       {loadingStatus ? null : requestedAt ? (
-        <p className="text-sm text-moon-200/70">
-          {t('account.danger.requestedOn', {
-            date: new Date(requestedAt).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US'),
-          })}
-        </p>
+        <>
+          <p className="mb-4 text-sm text-moon-200/70">
+            {t('account.danger.requestedOn', {
+              date: new Date(requestedAt).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US'),
+            })}
+          </p>
+          <ErrorText>{error}</ErrorText>
+          <Button variant="ghost" onClick={cancelRequest} disabled={cancelling} className="w-full">
+            {cancelling ? t('account.danger.cancelling') : t('account.danger.cancelButton')}
+          </Button>
+        </>
       ) : (
         <>
           <ErrorText>{error}</ErrorText>
