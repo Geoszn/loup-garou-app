@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { LinkButton } from '../components/ui'
-import { RulesPanel } from '../components/RulesPanel'
 import { LeaderboardWidget } from '../components/LeaderboardWidget'
 import { useLanguage } from '../i18n/LanguageContext'
 
@@ -26,6 +25,9 @@ export default function Landing() {
           </span>
         </div>
         <nav className="flex items-center gap-2 sm:gap-3">
+          <LinkButton to="/aide" variant="ghost">
+            {t('landing.nav.help')}
+          </LinkButton>
           {session ? (
             <LinkButton to="/dashboard" variant="ghost">
               {t('landing.nav.myAccount')}
@@ -66,10 +68,6 @@ export default function Landing() {
 
         <div className="mt-6 w-full max-w-md">
           <LeaderboardWidget />
-        </div>
-
-        <div className="mt-6 w-full">
-          <RulesPanel />
         </div>
       </main>
 

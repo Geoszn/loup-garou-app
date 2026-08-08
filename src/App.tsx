@@ -39,6 +39,12 @@ export const ADMIN_ROUTE_PATH = '/panel-beff77e1dae48f88d6b98231f160f0b8'
 const Privacy = lazy(() => import('./pages/Privacy'))
 const Terms = lazy(() => import('./pages/Terms'))
 const LegalNotice = lazy(() => import('./pages/LegalNotice'))
+// Page d'aide (règles + classement) : même logique, consultée ponctuellement
+// plutôt qu'à chaque chargement — voir Help.tsx (remplace l'ancien
+// RulesPanel affiché en permanence sur Landing.tsx / Dashboard.tsx).
+// Volontairement PAS derrière ProtectedRoute : accessible aussi aux
+// visiteurs non connectés depuis le lien du header de Landing.tsx.
+const Help = lazy(() => import('./pages/Help'))
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth()
@@ -147,6 +153,14 @@ export default function App() {
         element={
           <Suspense fallback={<FullScreenLoader />}>
             <LegalNotice />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/aide"
+        element={
+          <Suspense fallback={<FullScreenLoader />}>
+            <Help />
           </Suspense>
         }
       />

@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Button, Card, ErrorText, Input, Label, Modal } from '../components/ui'
-import { RulesPanel } from '../components/RulesPanel'
 import { AccountMenu } from '../components/AccountMenu'
 import { RankBadge } from '../components/RankBadge'
 import { DashboardLeaderboard } from '../components/DashboardLeaderboard'
@@ -358,8 +357,6 @@ export default function Dashboard() {
         </div>
 
         <DashboardLeaderboard />
-
-        <RulesPanel />
 
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-moon-200/40">
           {narrator.supported && (

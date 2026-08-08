@@ -92,6 +92,7 @@ export const translations = {
   'landing.nav.myAccount': { fr: 'Mon espace', en: 'My account' },
   'landing.nav.login': { fr: 'Connexion', en: 'Log in' },
   'landing.nav.signup': { fr: 'Créer un compte', en: 'Sign up' },
+  'landing.nav.help': { fr: '❓ Aide', en: '❓ Help' },
   'landing.badge.upTo25': { fr: 'Jusqu’à 25 joueurs', en: 'Up to 25 players' },
   'landing.leaderboard.title': { fr: 'Classement mondial', en: 'Global leaderboard' },
   'landing.hero.title1': { fr: 'Le village dort.', en: 'The village sleeps.' },
@@ -755,6 +756,42 @@ export const translations = {
     en: 'The Village wins as soon as all the Werewolves are eliminated. The Werewolves win if they manage to equal or outnumber the surviving villagers. Special case: if Cupid designated two Lovers, they win together if they are the last two survivors, regardless of their original side.',
   },
 
+  // --- Page Aide (Help.tsx) ---------------------------------------------------
+  'help.pageTitle': { fr: 'Aide', en: 'Help' },
+  'help.subtitle': {
+    fr: 'Tout ce qu\'il faut savoir pour jouer et progresser.',
+    en: 'Everything you need to know to play and progress.',
+  },
+  'help.category.rules.subtitle': {
+    fr: 'Objectif, déroulement, rôles, capitaine, victoire.',
+    en: 'Objective, flow, roles, captain, victory.',
+  },
+  'help.category.ranking.title': { fr: '🏆 Classements & Progression', en: '🏆 Rankings & Progression' },
+  'help.category.ranking.subtitle': {
+    fr: 'Comment gagner des points, monter de palier et grimper au classement.',
+    en: 'How to earn points, climb tiers, and rise up the leaderboard.',
+  },
+  'help.ranking.intro': {
+    fr: 'Chaque partie terminée fait évoluer tes points de rang : une victoire en rapporte, une défaite en retire. Ces points déterminent ton palier et ta position dans le classement.',
+    en: 'Every finished game moves your rank points: a win earns some, a loss costs some. These points determine your tier and your position on the leaderboard.',
+  },
+  'help.ranking.points.title': { fr: '⚔️ Comment gagner des points', en: '⚔️ How points are earned' },
+  'help.ranking.points.text': {
+    fr: 'Victoire : +30 points, plus un bonus si tu enchaînes plusieurs victoires d\'affilée (+10 par victoire consécutive au-delà de la première, jusqu\'à +50 à partir d\'une série de 6). Défaite : -15 points — mais jamais en dessous du palier le plus haut que tu as déjà atteint.',
+    en: 'Win: +30 points, plus a bonus for consecutive wins (+10 per win in a row beyond the first, up to +50 from a streak of 6). Loss: -15 points — but never below the highest tier you\'ve already reached.',
+  },
+  'help.ranking.tiers.title': { fr: '🎖️ Les paliers', en: '🎖️ Tiers' },
+  'help.ranking.tiers.text': {
+    fr: 'Tes points te placent dans un palier, du plus modeste au plus prestigieux :',
+    en: 'Your points place you in a tier, from the most modest to the most prestigious:',
+  },
+  'help.ranking.tiers.fromPoints': { fr: 'à partir de {{points}} pts', en: 'from {{points}} pts' },
+  'help.ranking.leaderboard.title': { fr: '🌍 Classement mondial & continental', en: '🌍 Global & continental leaderboard' },
+  'help.ranking.leaderboard.text': {
+    fr: 'À partir de 3 parties jouées, tu apparais dans le classement mondial — et dans celui de ton continent si tu l\'as renseigné dans Mon compte. Le classement continental ne s\'affiche que s\'il y a au moins 3 joueurs éligibles sur ce continent.',
+    en: 'Once you\'ve played 3 games, you appear on the global leaderboard — and on your continent\'s leaderboard if you\'ve set it in My account. The continental leaderboard only shows once at least 3 players on that continent are eligible.',
+  },
+
   // --- Compte (Account.tsx) ---------------------------------------------------
   'account.title': { fr: 'Mon compte', en: 'My account' },
   'account.profile.title': { fr: 'Profil', en: 'Profile' },
@@ -910,6 +947,7 @@ export const translations = {
   'continentPrompt.skip': { fr: 'Plus tard', en: 'Later' },
 
   // --- Menu compte (AccountMenu.tsx) ------------------------------------------
+  'accountMenu.help': { fr: 'Aide', en: 'Help' },
   'accountMenu.myAccount': { fr: 'Mon compte', en: 'My account' },
   'accountMenu.stats': { fr: 'Statistiques', en: 'Statistics' },
   'accountMenu.friends': { fr: 'Amis', en: 'Friends' },

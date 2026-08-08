@@ -4,9 +4,11 @@ import { AvatarIcon } from './AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
 
 /** Un seul point d'entrée "compte" (avatar + pseudo) qui déroule un menu
- * vers Mon compte / Statistiques / Amis / Déconnexion, à la place d'une
+ * vers Aide / Mon compte / Statistiques / Amis / Déconnexion, à la place d'une
  * rangée de plusieurs icônes séparées dans l'en-tête — moins encombré, et le
- * badge de demandes d'ami en attente reste visible qu'on l'ouvre ou non. */
+ * badge de demandes d'ami en attente reste visible qu'on l'ouvre ou non.
+ * "Aide" est placé avant "Mon compte" à la demande explicite : c'est le
+ * premier élément qu'on croise en déroulant le menu, avant les réglages. */
 export function AccountMenu({
   username,
   avatarIcon,
@@ -59,6 +61,7 @@ export function AccountMenu({
 
       {open && (
         <div className="absolute right-0 top-full z-20 mt-2 w-52 rounded-xl border border-night-600 bg-night-800 p-1.5 shadow-card">
+          <MenuLink to="/aide" onNavigate={() => setOpen(false)} icon="❓" label={t('accountMenu.help')} />
           <MenuLink to="/compte" onNavigate={() => setOpen(false)} icon="⚙️" label={t('accountMenu.myAccount')} />
           <MenuLink to="/stats" onNavigate={() => setOpen(false)} icon="📊" label={t('accountMenu.stats')} />
           <MenuLink
