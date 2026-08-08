@@ -92,7 +92,7 @@ export const translations = {
   'landing.nav.myAccount': { fr: 'Mon espace', en: 'My account' },
   'landing.nav.login': { fr: 'Connexion', en: 'Log in' },
   'landing.nav.signup': { fr: 'Créer un compte', en: 'Sign up' },
-  'landing.nav.help': { fr: '❓ Aide', en: '❓ Help' },
+  'landing.nav.help': { fr: 'Aide', en: 'Help' },
   'landing.badge.upTo25': { fr: 'Jusqu’à 25 joueurs', en: 'Up to 25 players' },
   'landing.leaderboard.title': { fr: 'Classement mondial', en: 'Global leaderboard' },
   'landing.hero.title1': { fr: 'Le village dort.', en: 'The village sleeps.' },

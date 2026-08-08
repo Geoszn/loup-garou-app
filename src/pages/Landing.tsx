@@ -25,8 +25,13 @@ export default function Landing() {
           </span>
         </div>
         <nav className="flex items-center gap-2 sm:gap-3">
-          <LinkButton to="/aide" variant="ghost">
-            {t('landing.nav.help')}
+          {/* Icône seule sur mobile (sinon, avec "Connexion"/"Créer un
+              compte" à côté, la rangée dépasse et tout le nav retombe sur
+              sa propre ligne, mal aligné sous le logo) — le libellé
+              complet ne revient qu'à partir de sm:, où il y a la place. */}
+          <LinkButton to="/aide" variant="ghost" aria-label={t('landing.nav.help')} className="!px-3 sm:!px-5">
+            <span aria-hidden="true">❓</span>
+            <span className="hidden sm:inline">{t('landing.nav.help')}</span>
           </LinkButton>
           {session ? (
             <LinkButton to="/dashboard" variant="ghost">
