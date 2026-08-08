@@ -928,6 +928,8 @@ export const translations = {
     fr: 'Encore {{points}} points avant {{emoji}} {{tier}}',
     en: '{{points}} more points until {{emoji}} {{tier}}',
   },
+  'stats.rank.firstTier': { fr: 'Début', en: 'Start' },
+  'stats.rank.maxTier': { fr: 'Max', en: 'Max' },
   'stats.rank.streak': { fr: '{{count}} victoires d’affilée', en: '{{count}}-game win streak' },
   'stats.rank.globalPosition': { fr: '#{{position}} mondial', en: '#{{position}} global' },
   'stats.rank.continentPosition': { fr: '#{{position}} continent', en: '#{{position}} continent' },

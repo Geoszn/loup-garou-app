@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { roleLabel, ROLES, type RoleId } from '../lib/roles'
-import { tierInfo, tierLabel, pointsToNextTier } from '../lib/ranks'
+import { tierInfo, tierLabel, pointsToNextTier, previousTierOf, type RankTierInfo } from '../lib/ranks'
 import { continentEmoji, continentName } from '../lib/continents'
 import { Button, Card, ErrorText, Segmented } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
@@ -111,6 +111,7 @@ export default function Stats() {
   const bestRole = stats?.by_role.slice().sort((a, b) => b.played - a.played)[0] ?? null
   const myRank = stats?.rank ?? null
   const nextTier = myRank ? pointsToNextTier(myRank.rank_points) : null
+  const prevTier = myRank ? previousTierOf(myRank.rank_tier) : null
 
   return (
     <div className="min-h-screen px-4 py-10">
@@ -137,9 +138,22 @@ export default function Stats() {
           <>
             {myRank && (
               <Card className="text-center">
-                <p className="text-4xl">{tierInfo(myRank.rank_tier).emoji}</p>
-                <p className="mt-1 font-display text-xl text-moon-200">{tierLabel(myRank.rank_tier, t)}</p>
-                <p className="mt-0.5 text-sm text-moon-200/50">
+                {/* Échelle précédent → actuel → suivant : jusqu'ici seul le
+                    palier actuel était affiché (+ une barre de progression
+                    sans le nom du palier précédent) — on montre maintenant
+                    les deux voisins pour que chacun voie d'où il vient et
+                    vers quoi il va, pas juste où il en est. */}
+                <div className="flex items-center justify-center gap-2 sm:gap-4">
+                  <TierNeighbor tier={prevTier} placeholder={t('stats.rank.firstTier')} />
+                  <span className="text-moon-200/20">→</span>
+                  <div className="flex flex-col items-center">
+                    <p className="text-4xl">{tierInfo(myRank.rank_tier).emoji}</p>
+                    <p className="mt-1 font-display text-xl text-moon-200">{tierLabel(myRank.rank_tier, t)}</p>
+                  </div>
+                  <span className="text-moon-200/20">→</span>
+                  <TierNeighbor tier={nextTier?.next ?? null} placeholder={t('stats.rank.maxTier')} />
+                </div>
+                <p className="mt-2 text-sm text-moon-200/50">
                   {t('stats.rank.points', { points: myRank.rank_points })}
                 </p>
 
@@ -306,6 +320,23 @@ export default function Stats() {
           </Card>
         )}
       </div>
+    </div>
+  )
+}
+
+/** Un des deux paliers voisins du palier actuel (précédent ou suivant),
+ * volontairement en retrait (plus petit, atténué) pour que le palier actuel
+ * au centre reste le point focal — voir la carte de rang de Stats(). Affiche
+ * un placeholder (ex. "Début"/"Max") plutôt que rien quand ce voisin
+ * n'existe pas (déjà au palier le plus bas ou le plus haut). */
+function TierNeighbor({ tier, placeholder }: { tier: RankTierInfo | null; placeholder: string }) {
+  const { t } = useLanguage()
+  return (
+    <div className="flex w-12 shrink-0 flex-col items-center gap-0.5 opacity-40 sm:w-16">
+      <span className="text-lg">{tier ? tier.emoji : '—'}</span>
+      <span className="truncate text-[9px] uppercase tracking-wide text-moon-200/70">
+        {tier ? tierLabel(tier.id, t) : placeholder}
+      </span>
     </div>
   )
 }

@@ -39,3 +39,15 @@ export function pointsToNextTier(points: number): { next: RankTierInfo; remainin
   if (!next) return null
   return { next, remaining: next.minPoints - points }
 }
+
+/** Palier juste en dessous du palier donné, ou null si c'est déjà le plus bas
+ * (Nouveau Venu) — sert à afficher "d'où l'on vient" à côté du palier actuel
+ * (voir Stats.tsx), en complément de pointsToNextTier qui ne donne que "où
+ * l'on va". Se base sur le palier lui-même (pas sur les points bruts comme
+ * pointsToNextTier) : les deux restent cohérents entre eux puisque le palier
+ * fourni est lui-même dérivé des points côté serveur. */
+export function previousTierOf(tier: string | null | undefined): RankTierInfo | null {
+  const idx = RANK_TIERS.findIndex((r) => r.id === tier)
+  if (idx <= 0) return null
+  return RANK_TIERS[idx - 1]
+}
