@@ -42,6 +42,20 @@ function cleanForSpeech(message: string): string {
  * silencieusement. On "déverrouille" donc les deux moteurs dès le tout
  * premier clic/tap sur la page de jeu, quel qu'il soit.
  */
+// Coupure générale de la fonctionnalité : mise à `false` pour économiser
+// les ressources qu'elle consomme en continu pour chaque joueur en partie
+// (un canal Supabase Realtime dédié ouvert par joueur, en plus des canaux
+// déjà utilisés par la partie elle-même, + des appels réseau à l'API
+// ElevenLabs à chaque événement du journal). `supported` devient donc
+// toujours `false` : ça coupe net l'abonnement Realtime plus bas (l'effet
+// correspondant sort immédiatement si `!supported`), les écouteurs de
+// "déverrouillage" audio, et masque automatiquement le bouton "Tester le
+// narrateur" du tableau de bord ainsi que le toggle dans le menu en partie
+// (tous deux conditionnés par `narrator.supported`) — sans supprimer le
+// reste du code. Pour réactiver la fonctionnalité plus tard, repasser cette
+// constante à `true`.
+const NARRATOR_FEATURE_ENABLED = false
+
 export function useNarrator(gameId: string | null) {
   const [enabled, setEnabled] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true
@@ -49,7 +63,9 @@ export function useNarrator(gameId: string | null) {
     return stored === null ? true : stored === 'true'
   })
   const [supported] = useState(
-    typeof window !== 'undefined' && (typeof Audio !== 'undefined' || speechSupported())
+    NARRATOR_FEATURE_ENABLED &&
+      typeof window !== 'undefined' &&
+      (typeof Audio !== 'undefined' || speechSupported())
   )
   const enabledRef = useRef(enabled)
   const gameIdRef = useRef(gameId)
