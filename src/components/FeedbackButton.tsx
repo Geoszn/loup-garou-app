@@ -84,6 +84,12 @@ export function FeedbackButton() {
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value.slice(0, MAX_CHARS))}
+                onFocus={(e) => {
+                  const el = e.currentTarget
+                  // Voir Input dans ui.tsx : sur mobile, le clavier peut
+                  // couvrir ce champ dans la popup — même correctif ici.
+                  setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300)
+                }}
                 placeholder={t('feedback.placeholder')}
                 rows={5}
                 maxLength={MAX_CHARS}

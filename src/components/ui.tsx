@@ -56,6 +56,21 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
+      onFocus={(e) => {
+        props.onFocus?.(e)
+        // Sur mobile, le clavier virtuel peut couvrir le champ qui vient
+        // d'être focalisé — surtout sur les formulaires centrés verticalement
+        // (connexion, inscription, etc.) où le document n'a pas besoin de
+        // défiler pour "tenir" à l'écran, donc le navigateur ne le fait pas
+        // tout seul. Un scrollIntoView explicite règle ça quel que soit le
+        // support de interactive-widget=resizes-content (voir index.html) ;
+        // le petit délai laisse le clavier commencer à s'ouvrir avant de
+        // recalculer la position. Un seul endroit (ce composant partagé) sert
+        // toutes les pages avec formulaire (connexion, inscription, mot de
+        // passe, profil, amis...).
+        const el = e.currentTarget
+        setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300)
+      }}
       className={`w-full rounded-xl border border-night-500 bg-night-800/80 px-4 py-3 text-moon-200 placeholder:text-moon-200/30 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20 ${props.className ?? ''}`}
     />
   )

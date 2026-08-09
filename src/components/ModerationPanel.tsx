@@ -97,6 +97,12 @@ export function ModerationPanel({ view, gameId, selfId }: { view: MyGameView; ga
                 addWord()
               }
             }}
+            onFocus={(e) => {
+              // Voir Input dans ui.tsx : sur mobile, le clavier peut couvrir
+              // ce champ — même correctif ici.
+              const el = e.currentTarget
+              setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300)
+            }}
             placeholder={t('moderation.addWordPlaceholder')}
             maxLength={40}
             className="min-w-0 flex-1 rounded-xl border border-night-600 bg-night-800/70 px-3 py-2 text-sm text-moon-200 outline-none placeholder:text-moon-200/30 focus:border-moon-400/50"
