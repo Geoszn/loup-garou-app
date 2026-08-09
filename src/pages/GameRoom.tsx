@@ -7,7 +7,7 @@ import { useSoundEffects } from '../hooks/useSoundEffects'
 import { useTurnNotifications } from '../hooks/useTurnNotifications'
 import { supabase } from '../lib/supabase'
 import { FullScreenLoader } from '../components/FullScreenLoader'
-import { PhaseBanner, NIGHT_STEP_LABEL } from '../components/PhaseBanner'
+import { PhaseBanner, NIGHT_STEP_LABEL, NIGHT_STEP_ICON } from '../components/PhaseBanner'
 import { RoleCard } from '../components/RoleCard'
 import { PlayerGrid } from '../components/PlayerGrid'
 import { ReadyGrid } from '../components/ReadyGrid'
@@ -666,7 +666,30 @@ function WaitingCard({
   nightStep?: string | null
 }) {
   const { t } = useLanguage()
-  const nightLabel = nightStep ? NIGHT_STEP_LABEL[nightStep] : null
+  // Bug corrigé : NIGHT_STEP_LABEL[nightStep] est une CLÉ de traduction
+  // ('nightStep.loup_garou'), pas le texte final — il manquait l'appel à
+  // t() ici, ce qui affichait la clé brute à l'écran pendant la nuit au
+  // lieu de la phrase traduite.
+  const nightLabelKey = nightStep ? NIGHT_STEP_LABEL[nightStep] : null
+  const nightLabel = nightLabelKey ? t(nightLabelKey) : null
+  const nightIcon = nightStep ? NIGHT_STEP_ICON[nightStep] : null
+
+  // Pendant la nuit (vivant, pas de vote en cours) : rendu spécifique,
+  // beaucoup plus visible qu'un texte gris générique — une grande icône du
+  // rôle en train d'agir, animée, avec un halo doré. C'est le seul repère
+  // du joueur sur ce qui se passe pendant que d'autres agissent.
+  if (alive && !voting && nightLabel) {
+    return (
+      <Card className="animate-fade-in flex flex-col items-center gap-3 border-moon-400/30 py-8 text-center shadow-glow">
+        <span className="animate-breathe text-5xl drop-shadow-[0_0_14px_rgba(224,168,74,0.55)]" aria-hidden="true">
+          {nightIcon}
+        </span>
+        <p className="font-display text-base text-moon-200 sm:text-lg">{nightLabel}</p>
+        <p className="text-[11px] uppercase tracking-[0.2em] text-moon-200/40">{t('game.waitingOthers')}</p>
+      </Card>
+    )
+  }
+
   return (
     <Card className="animate-fade-in text-center">
       {!alive ? (
@@ -676,9 +699,7 @@ function WaitingCard({
             : t('game.waitingEliminatedNoRole')}
         </p>
       ) : (
-        <p className="animate-breathe text-moon-200/60">
-          {voting ? t('game.voteInProgress') : nightLabel ?? t('game.waitingOthers')}
-        </p>
+        <p className="animate-breathe text-moon-200/60">{voting ? t('game.voteInProgress') : t('game.waitingOthers')}</p>
       )}
     </Card>
   )

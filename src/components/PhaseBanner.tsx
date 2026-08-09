@@ -33,6 +33,21 @@ export const NIGHT_STEP_LABEL: Record<string, TranslationKey> = {
   resolve: 'nightStep.resolve',
 }
 
+// Même émoji que le rôle concerné (voir lib/roles.ts ROLES[id].emoji) —
+// dupliqué ici en constantes plutôt qu'importé pour éviter un import
+// circulaire (roles.ts n'a pas besoin de connaître ce composant), 'resolve'
+// n'étant de toute façon pas un rôle. Utilisé par WaitingCard (GameRoom.tsx)
+// pour rendre visuellement identifiable, d'un coup d'œil, quel rôle est en
+// train d'agir pendant qu'on attend.
+export const NIGHT_STEP_ICON: Record<string, string> = {
+  voleur: '🃏',
+  cupidon: '💘',
+  voyante: '🔮',
+  loup_garou: '🐺',
+  sorciere: '🧪',
+  resolve: '🌙',
+}
+
 export function PhaseBanner({
   status,
   nightNumber,
@@ -127,7 +142,7 @@ export function PhaseBanner({
             {t(info.titleKey)}
             {status === 'night' ? ` ${nightNumber}` : ''}
           </p>
-          {subtitle && <p className="mt-0.5 truncate text-xs text-moon-200/50">{subtitle}</p>}
+          {subtitle && <p className="mt-0.5 truncate text-xs text-moon-200/70">{subtitle}</p>}
         </div>
       </div>
       {/* Rangée volontairement réduite au strict nécessaire toujours visible
