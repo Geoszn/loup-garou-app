@@ -11,7 +11,9 @@ import { ContinentPrompt } from '../components/ContinentPrompt'
 import { PublicGamesList } from '../components/PublicGamesBrowser'
 import { QuoteCarousel } from '../components/QuoteCarousel'
 import { AvatarIcon } from '../components/AvatarIcon'
+import { EventBanner } from '../components/EventBanner'
 import { useNarrator } from '../hooks/useNarrator'
+import { useActiveEvents } from '../hooks/useActiveEvents'
 import { useLanguage } from '../i18n/LanguageContext'
 
 interface GameInvite {
@@ -75,6 +77,12 @@ export default function Dashboard() {
       if (!rpcError && data) setNewGamesEnabled(!!(data as { new_games_enabled: boolean }).new_games_enabled)
     })
   }, [])
+
+  // Bannière(s) d'événement en cours (voir migration 0067) — même hook que
+  // Landing.tsx, pour que « Mon espace » affiche aussi les événements actifs
+  // (demandé explicitement : les joueurs déjà connectés ne passent pas
+  // forcément par la page d'accueil publique).
+  const { events, refresh: refreshEvents } = useActiveEvents()
 
   function resumeActiveGame() {
     if (!activeGame) return
@@ -264,6 +272,14 @@ export default function Dashboard() {
             />
           </div>
         </header>
+
+        {events.length > 0 && (
+          <div>
+            {events.map((e) => (
+              <EventBanner key={e.id} event={e} onExpire={refreshEvents} />
+            ))}
+          </div>
+        )}
 
         {notice && !noticeDismissed && (
           <div
