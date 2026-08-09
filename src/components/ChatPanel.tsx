@@ -60,26 +60,40 @@ export function ChatPanel({
   const bottomRef = useRef<HTMLDivElement>(null)
   const info = CHANNEL_LABEL[channel]
 
-  // Quand le clavier virtuel est ouvert ET qu'on écrit dans CE salon, on
-  // agrandit temporairement la zone de messages pour profiter au maximum de
-  // l'espace visible restant au-dessus du clavier. Sans ça, la hauteur fixe
-  // (h-64/h-80) ne laisse voir que 2-3 messages pendant la frappe, ce qui
-  // rend une conversation active illisible sur mobile (retour utilisateur :
-  // le clavier "barre complètement la vue du jeu").
+  // Quand le clavier virtuel est ouvert ET qu'on écrit dans CE salon, le
+  // panneau passe en plein écran, calé exactement sur ce que
+  // window.visualViewport rapporte comme espace RÉELLEMENT visible
+  // au-dessus du clavier (position: fixed, top/height recalculés en JS —
+  // pas juste une hauteur plus grande en flux normal). Avant, on se
+  // contentait d'agrandir la hauteur du panneau et de faire un
+  // scrollIntoView sur le champ : ça ne suffisait pas sur iOS Safari plus
+  // ancien (avant le support d'interactive-widget=resizes-content, voir
+  // index.html), où le clavier reste superposé par-dessus une page qui ne
+  // rétrécit pas vraiment — le champ de saisie et une partie du chat se
+  // retrouvaient cachés derrière malgré tout. Recalculer top/height en
+  // continu (resize ET scroll : sur iOS, offsetTop bouge aussi si la page
+  // défile pendant que le clavier est ouvert) garantit que le panneau colle
+  // toujours pile au bord du clavier, quel que soit le navigateur.
   const [inputFocused, setInputFocused] = useState(false)
-  const [viewportHeight, setViewportHeight] = useState<number | null>(null)
+  const [viewport, setViewport] = useState<{ height: number; top: number } | null>(null)
 
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
-    const update = () => setViewportHeight(vv.height)
+    const update = () => setViewport({ height: vv.height, top: vv.offsetTop })
     update()
     vv.addEventListener('resize', update)
-    return () => vv.removeEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+    }
   }, [])
 
-  const keyboardExpandedHeight =
-    inputFocused && viewportHeight ? Math.max(220, Math.min(viewportHeight - 24, 560)) : null
+  // true seulement pendant la frappe dans CE salon précis — les autres
+  // ChatPanel éventuellement montés en même temps (ex. village + loups la
+  // nuit) restent dans leur taille normale.
+  const expanded = inputFocused && !!viewport
 
   // Index des messages par id, recalculé seulement quand `messages` change.
   // Avant, la citation d'un message (repliedTo) était retrouvée via
@@ -152,8 +166,14 @@ export function ChatPanel({
 
   return (
     <div
-      style={keyboardExpandedHeight ? { height: `${keyboardExpandedHeight}px` } : undefined}
-      className={`flex flex-col rounded-2xl border border-night-600/60 bg-night-900/50 transition-[height] duration-150 ${compact ? 'h-64' : 'h-80'}`}
+      style={
+        expanded
+          ? { position: 'fixed', left: 0, right: 0, top: viewport!.top, height: viewport!.height, zIndex: 60 }
+          : undefined
+      }
+      className={`flex flex-col border border-night-600/60 transition-[height] duration-150 ${
+        expanded ? 'rounded-none bg-night-900/95' : `rounded-2xl bg-night-900/50 ${compact ? 'h-64' : 'h-80'}`
+      }`}
     >
       <div className="flex items-center gap-2 border-b border-night-600/50 px-4 py-2.5">
         <span>{info.emoji}</span>
@@ -164,7 +184,15 @@ export function ChatPanel({
       </div>
       {note && <p className="border-b border-night-600/40 px-4 py-1.5 text-[11px] text-moon-200/40">{note}</p>}
 
-      <div className="flex-1 space-y-2 overflow-y-auto scrollbar-thin px-4 py-3">
+      {/* Tapoter le fond vide de la liste (pas un message ni un bouton —
+          voir la condition e.target === e.currentTarget) referme le clavier
+          en plein écran, comme dans la plupart des apps de chat. */}
+      <div
+        className="flex-1 space-y-2 overflow-y-auto scrollbar-thin px-4 py-3"
+        onClick={(e) => {
+          if (expanded && e.target === e.currentTarget) (document.activeElement as HTMLElement | null)?.blur()
+        }}
+      >
         {messages.length === 0 && (
           <p className="text-center text-xs text-moon-200/30">{t('chat.empty')}</p>
         )}
@@ -361,31 +389,17 @@ function Composer({
   const [text, setText] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Le clavier virtuel met un petit moment à s'ouvrir sur mobile : le
-  // scroll-vers-l'input automatique du navigateur (déclenché par le focus)
-  // vise parfois une position obsolète, calculée avant que le clavier n'ait
-  // fini de rétrécir la fenêtre visible — l'input se retrouve alors caché
-  // derrière. On refait un scrollIntoView une fois le clavier réellement
-  // ouvert (évènement resize du visualViewport), en plus du comportement
-  // natif du navigateur au focus. Alignement 'end' (plutôt que 'center')
-  // pour coller le champ tout en bas de l'espace visible restant, juste
-  // au-dessus du clavier — ça laisse le maximum de place possible aux
-  // messages affichés au-dessus (voir aussi l'agrandissement du panneau
-  // dans ChatPanel, piloté par le même évènement de focus).
+  // ChatPanel passe en plein écran calé sur window.visualViewport dès que ce
+  // champ reçoit le focus (voir `expanded` dans ChatPanel) — le champ se
+  // retrouve alors déjà à sa place, tout en bas de l'écran visible, sans
+  // action supplémentaire ici. Seul filet de sécurité : un navigateur sans
+  // API visualViewport (très ancien) ne peut pas passer en plein écran,
+  // on retombe alors sur un simple scroll classique.
   function handleInputFocus() {
     onFocusChange(true)
-    const vv = window.visualViewport
-    if (!vv) return
-    let done = false
-    const scrollNow = () => {
-      if (done) return
-      done = true
-      inputRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' })
+    if (!window.visualViewport) {
+      setTimeout(() => inputRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }), 300)
     }
-    vv.addEventListener('resize', scrollNow, { once: true })
-    // Filet de sécurité si le clavier était déjà ouvert (pas de resize à
-    // venir) ou si le navigateur ne redéclenche pas l'évènement à temps.
-    setTimeout(scrollNow, 400)
   }
 
   function handleInputBlur() {
