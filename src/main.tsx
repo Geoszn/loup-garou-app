@@ -29,6 +29,14 @@ if (Capacitor.isNativePlatform()) {
   if (Capacitor.getPlatform() === 'android') {
     StatusBar.setBackgroundColor({ color: '#160f0a' }).catch(() => {})
   }
+  if (Capacitor.getPlatform() === 'ios') {
+    // Voir index.css (html.capacitor-ios) : sur iOS, env(safe-area-inset-top)
+    // s'est révélé insuffisant au lancement (header collé sous la barre de
+    // statut/l'encoche sur iPhone) — cette classe active un filet de
+    // sécurité CSS avec un minimum garanti, jamais posée sur Android où le
+    // padding env() seul suffit déjà.
+    document.documentElement.classList.add('capacitor-ios')
+  }
 }
 
 // Suivi d'erreurs en prod : capture les crashs React et les erreurs JS

@@ -23,6 +23,22 @@ html {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* iOS spécifiquement : `env(safe-area-inset-top)` s'est révélé peu fiable
+   au lancement dans la WKWebView (capacitor.config.ts a `ios.contentInset:
+   'always'`, qui fait gérer l'inset nativement par le scroll de la
+   WKWebView — selon la version d'iOS, la valeur CSS peut alors redescendre
+   à 0) : le header du Dashboard (logo, points, pastille profil) se
+   retrouvait collé sous la barre de statut/l'encoche, chevauché par
+   l'horloge et les icônes système (retour utilisateur, capture iPhone 13
+   Pro Max). `capacitor-ios` est posée par main.tsx UNIQUEMENT sur iOS
+   (jamais sur Android, où le padding env() seul fonctionne déjà
+   correctement) : garantit un minimum de 2,75rem même si env() ne remonte
+   rien de fiable, sans jamais réduire la vraie valeur si elle est
+   correctement rapportée (ex. Dynamic Island, plus haut que 2,75rem). */
+html.capacitor-ios {
+  padding-top: max(env(safe-area-inset-top), 2.75rem);
+}
+
 /* Filet de sécurité : un élément un peu trop large (calc, largeur fixe...)
    ne doit jamais faire apparaître de scroll horizontal ni de contenu qui
    dépasse du cadre de l'écran. */
