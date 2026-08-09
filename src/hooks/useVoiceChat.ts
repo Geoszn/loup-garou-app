@@ -84,6 +84,18 @@ export function useVoiceChat(
   // essai manuel après un échec (voir VoiceChat.tsx, bouton "Réessayer")
   // sans obliger le joueur à recharger toute la page.
   const [retryToken, setRetryToken] = useState(0)
+  // Diagnostic TEMPORAIRE (à retirer une fois le bug "connecté mais aucun
+  // son" résolu en natif iOS) : affiché directement dans VoiceChat.tsx pour
+  // pouvoir être lu sur un screenshot du joueur, faute d'accès à la console
+  // JS (Safari Web Inspector non pilotable à distance dans ce contexte).
+  // Capture l'état réel de la piste micro locale (readyState/muted/enabled)
+  // et le nombre de pistes distantes effectivement reçues, pour distinguer
+  // "la connexion WebRTC ne transporte aucune piste" de "les pistes
+  // arrivent mais sans son".
+  const [debugInfo, setDebugInfo] = useState('')
+  const remoteTrackEventsRef = useRef(0)
+  const playBlockedRef = useRef(false)
+  const debugIntervalRef = useRef<number | null>(null)
 
   function clearRemoteAudio() {
     for (const el of remoteAudioElsRef.current.values()) {
@@ -99,6 +111,8 @@ export function useVoiceChat(
     const trackId = evt.track.id
     if (remoteAudioElsRef.current.has(trackId)) return
 
+    remoteTrackEventsRef.current += 1
+
     const audioEl = document.createElement('audio')
     audioEl.autoplay = true
     audioEl.hidden = true
@@ -106,11 +120,41 @@ export function useVoiceChat(
     audioEl.srcObject = new MediaStream([evt.track])
     document.body.appendChild(audioEl)
     remoteAudioElsRef.current.set(trackId, audioEl)
-    audioEl.play().catch(() => {
-      // Bloqué par la politique autoplay du navigateur (pas encore
-      // d'interaction utilisateur sur la page) : on retentera au prochain
-      // clic, la balise reste posée et prête.
-    })
+    audioEl.play()
+      .then(() => updateDebugInfo())
+      .catch(() => {
+        // Bloqué par la politique autoplay du navigateur (pas encore
+        // d'interaction utilisateur sur la page) : on retentera au prochain
+        // clic, la balise reste posée et prête.
+        playBlockedRef.current = true
+        updateDebugInfo()
+      })
+    updateDebugInfo()
+  }
+
+  // Diagnostic TEMPORAIRE (voir déclaration de debugInfo plus haut) : lit
+  // l'état réel (pas juste ce que notre propre state React croit) de la
+  // piste micro locale exposée par Daily, plus le décompte de pistes
+  // distantes reçues et un éventuel blocage de lecture autoplay.
+  function updateDebugInfo() {
+    const call = callRef.current
+    if (!call) return
+    try {
+      const local = call.participants().local
+      const audioTrack = local?.tracks?.audio
+      const rawTrack = audioTrack?.persistentTrack ?? audioTrack?.track
+      const parts = [
+        `micro local: état="${audioTrack?.state ?? '?'}" abonné=${audioTrack?.subscribed ?? '?'}`,
+        rawTrack
+          ? `piste brute: readyState=${rawTrack.readyState} enabled=${rawTrack.enabled} muted=${rawTrack.muted}`
+          : 'piste brute: absente',
+        `pistes distantes reçues: ${remoteTrackEventsRef.current} (éléments audio actifs: ${remoteAudioElsRef.current.size})`,
+        playBlockedRef.current ? 'lecture autoplay: BLOQUÉE' : 'lecture autoplay: ok',
+      ]
+      setDebugInfo(parts.join(' • '))
+    } catch (e) {
+      setDebugInfo(`diag erreur: ${e instanceof Error ? e.message : String(e)}`)
+    }
   }
 
   function detachRemoteTrack(evt: DailyEventObjectTrack) {
@@ -128,6 +172,13 @@ export function useVoiceChat(
     const call = callRef.current
     callRef.current = null
     clearRemoteAudio()
+    if (debugIntervalRef.current !== null) {
+      window.clearInterval(debugIntervalRef.current)
+      debugIntervalRef.current = null
+    }
+    remoteTrackEventsRef.current = 0
+    playBlockedRef.current = false
+    setDebugInfo('')
     if (call) {
       try {
         call.stopRemoteParticipantsAudioLevelObserver()
@@ -236,6 +287,8 @@ export function useVoiceChat(
         } catch {
           /* pas bloquant : le vocal marche quand même sans le voyant local */
         }
+        updateDebugInfo()
+        debugIntervalRef.current = window.setInterval(updateDebugInfo, 1000)
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : t('voiceChat.errorConnection'))
       } finally {
@@ -287,6 +340,7 @@ export function useVoiceChat(
     const next = !muted
     call.setLocalAudio(!next)
     setMuted(next)
+    setTimeout(updateDebugInfo, 300)
   }
 
   // Coupe/rétablit ce qu'on ENTEND des autres — n'affecte ni son propre
@@ -332,5 +386,6 @@ export function useVoiceChat(
     selfSpeaking,
     deafened,
     toggleSound,
+    debugInfo,
   }
 }
