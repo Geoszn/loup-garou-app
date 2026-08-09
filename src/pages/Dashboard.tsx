@@ -357,7 +357,7 @@ export default function Dashboard() {
           <button
             type="button"
             onClick={() => setCreateOpen(true)}
-            className="flex flex-col items-center gap-2 rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/60 to-night-900/70 p-6 shadow-card backdrop-blur-sm transition-colors hover:border-moon-400/50"
+            className="flex flex-col items-center gap-2 rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/70 to-night-900/85 p-6 shadow-card transition-colors hover:border-moon-400/50"
           >
             <span className="text-3xl">🌕</span>
             <span className="font-display text-sm text-moon-200 sm:text-base">{t('dashboard.createGame')}</span>
@@ -365,7 +365,7 @@ export default function Dashboard() {
           <button
             type="button"
             onClick={() => setJoinStep('choose')}
-            className="flex flex-col items-center gap-2 rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/60 to-night-900/70 p-6 shadow-card backdrop-blur-sm transition-colors hover:border-moon-400/50"
+            className="flex flex-col items-center gap-2 rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/70 to-night-900/85 p-6 shadow-card transition-colors hover:border-moon-400/50"
           >
             <span className="text-3xl">🔑</span>
             <span className="font-display text-sm text-moon-200 sm:text-base">{t('dashboard.joinGame')}</span>

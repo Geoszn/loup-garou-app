@@ -94,8 +94,14 @@ export function Card({
       // Fond en dégradé (plutôt qu'un aplat) + ombre à trois couches
       // (liseré clair + contact + halo large, voir .shadow-card dans
       // index.css) : c'est ce combo qui donne du relief à la carte au lieu
-      // d'un simple rectangle bordé.
-      className={`rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/60 to-night-900/70 p-6 shadow-card backdrop-blur-sm ${className}`}
+      // d'un simple rectangle bordé. Pas de `backdrop-blur` ici : ce
+      // composant est réutilisé ~45 fois dans l'appli (plusieurs cartes
+      // empilées à l'écran pendant une partie), et le flou d'arrière-plan
+      // force une couche de composition GPU par carte sur WKWebView iOS —
+      // un des plus gros coûts de fluidité identifiés. Le dégradé est un
+      // peu plus opaque (70%/85% au lieu de 60%/70%) pour garder le même
+      // rendu visuel sans le flou.
+      className={`rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/70 to-night-900/85 p-6 shadow-card ${className}`}
       onClick={onClick}
     >
       {children}
@@ -111,7 +117,11 @@ export function Card({
  * de la page ne se retrouve pas caché derrière. */
 export function BottomActionBar({ children }: { children: ReactNode }) {
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-night-700/60 bg-night-900/85 px-4 pt-3 shadow-[0_-8px_24px_-4px_rgba(0,0,0,0.5)] backdrop-blur-md sm:px-6" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.75rem)' }}>
+    // Barre fixe visible en permanence à l'écran : pas de `backdrop-blur`
+    // (coûteux à recalculer à chaque frame de scroll sur WKWebView iOS
+    // puisque le contenu derrière une barre `fixed` change en continu) —
+    // fond quasi opaque à la place, rendu visuel quasi identique.
+    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-night-700/60 bg-night-900/95 px-4 pt-3 shadow-[0_-8px_24px_-4px_rgba(0,0,0,0.5)] sm:px-6" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.75rem)' }}>
       <div className="mx-auto max-w-3xl">{children}</div>
     </div>
   )

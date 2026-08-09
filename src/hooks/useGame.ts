@@ -16,6 +16,14 @@ export function useGame(gameId: string | null, userId: string | null = null) {
   // recalculé à chaque (re)connexion.
   const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set())
   const busyRef = useRef(false)
+  // Dernière réponse brute reçue de l'RPC (sérialisée), pour ne déclencher
+  // un `setView` — et donc un re-render de tout l'écran de jeu (grille de
+  // joueurs, bannière, panneaux) — que si quelque chose a réellement changé.
+  // Sans ça, le filet de sécurité toutes les 2,5s (voir plus bas) ET chaque
+  // event Realtime (mouvement de n'importe lequel des joueurs) forçaient un
+  // re-render complet même quand rien de visible ne bougeait — un des
+  // principaux contributeurs au ressenti de lenteur pendant une partie.
+  const lastRawRef = useRef<string | null>(null)
 
   const refresh = useCallback(async () => {
     if (!gameId) return
@@ -28,7 +36,11 @@ export function useGame(gameId: string | null, userId: string | null = null) {
       return
     }
     setError(null)
-    setView(data as MyGameView)
+    const raw = JSON.stringify(data)
+    if (raw !== lastRawRef.current) {
+      lastRawRef.current = raw
+      setView(data as MyGameView)
+    }
     setLoading(false)
   }, [gameId])
 

@@ -10,12 +10,7 @@ import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import VerifyEmail from './pages/VerifyEmail'
 import Dashboard from './pages/Dashboard'
-import Account from './pages/Account'
-import Stats from './pages/Stats'
-import Friends from './pages/Friends'
-import Lobby from './pages/Lobby'
 import PendingApproval from './pages/PendingApproval'
-import GameRoom from './pages/GameRoom'
 import JoinByLink from './pages/JoinByLink'
 import NotFound from './pages/NotFound'
 import { FullScreenLoader } from './components/FullScreenLoader'
@@ -45,6 +40,20 @@ const LegalNotice = lazy(() => import('./pages/LegalNotice'))
 // Volontairement PAS derrière ProtectedRoute : accessible aussi aux
 // visiteurs non connectés depuis le lien du header de Landing.tsx.
 const Help = lazy(() => import('./pages/Help'))
+
+// Écrans secondaires (compte, stats, amis, salon d'attente) : sortis du
+// bundle principal, chargés à la demande — n'affectent pas le premier
+// écran vu après connexion (Dashboard, resté eager).
+const Account = lazy(() => import('./pages/Account'))
+const Stats = lazy(() => import('./pages/Stats'))
+const Friends = lazy(() => import('./pages/Friends'))
+const Lobby = lazy(() => import('./pages/Lobby'))
+// GameRoom entraîne avec lui tout le SDK vocal Daily.co/WebRTC (le plus
+// gros contributeur de poids du bundle après React/Supabase) — inutile
+// avant qu'une partie ne démarre réellement, donc chargé à ce moment-là
+// seulement plutôt que dans le JS initial que la WKWebView doit analyser/
+// exécuter dès l'ouverture de l'appli.
+const GameRoom = lazy(() => import('./pages/GameRoom'))
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth()
@@ -176,7 +185,9 @@ export default function App() {
         path="/compte"
         element={
           <ProtectedRoute>
-            <Account />
+            <Suspense fallback={<FullScreenLoader />}>
+              <Account />
+            </Suspense>
           </ProtectedRoute>
         }
       />
@@ -184,7 +195,9 @@ export default function App() {
         path="/stats"
         element={
           <ProtectedRoute>
-            <Stats />
+            <Suspense fallback={<FullScreenLoader />}>
+              <Stats />
+            </Suspense>
           </ProtectedRoute>
         }
       />
@@ -192,7 +205,9 @@ export default function App() {
         path="/amis"
         element={
           <ProtectedRoute>
-            <Friends />
+            <Suspense fallback={<FullScreenLoader />}>
+              <Friends />
+            </Suspense>
           </ProtectedRoute>
         }
       />
@@ -212,7 +227,9 @@ export default function App() {
         path="/partie/:code/lobby"
         element={
           <ProtectedRoute>
-            <Lobby />
+            <Suspense fallback={<FullScreenLoader />}>
+              <Lobby />
+            </Suspense>
           </ProtectedRoute>
         }
       />
@@ -220,7 +237,9 @@ export default function App() {
         path="/partie/:code"
         element={
           <ProtectedRoute>
-            <GameRoom />
+            <Suspense fallback={<FullScreenLoader />}>
+              <GameRoom />
+            </Suspense>
           </ProtectedRoute>
         }
       />

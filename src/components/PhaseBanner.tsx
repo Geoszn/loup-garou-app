@@ -121,11 +121,16 @@ export function PhaseBanner({
   }
 
   return (
+    // Bandeau `sticky` visible pendant 100% de la partie : `backdrop-blur`
+    // y était particulièrement coûteux (recalcul du flou à chaque frame de
+    // scroll puisque le contenu défilant en dessous change en continu) —
+    // retiré, dégradé rendu quasi opaque (97% au lieu de 90%) pour garder
+    // un rendu visuel très proche sans le coût GPU.
     <div
-      className={`sticky top-0 z-20 flex items-center justify-between gap-3 border-b bg-gradient-to-r px-4 pb-3 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.4)] backdrop-blur-md sm:px-6 ${
+      className={`sticky top-0 z-20 flex items-center justify-between gap-3 border-b bg-gradient-to-r px-4 pb-3 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.4)] sm:px-6 ${
         status === 'night'
-          ? 'border-night-600/60 from-night-950/90 via-night-900/90 to-night-950/90'
-          : 'border-blood-700/30 from-night-900/90 via-night-800/90 to-night-900/90'
+          ? 'border-night-600/60 from-night-950/97 via-night-900/97 to-night-950/97'
+          : 'border-blood-700/30 from-night-900/97 via-night-800/97 to-night-900/97'
       }`}
       // Comme la barre fixe en bas (voir ui.tsx) : garantit un espace
       // au moins équivalent à py-3 même quand env(safe-area-inset-top)
