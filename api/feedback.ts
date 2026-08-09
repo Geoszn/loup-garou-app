@@ -21,12 +21,28 @@ interface VercelRequest {
 interface VercelResponse {
   status(code: number): VercelResponse
   json(body: unknown): void
+  setHeader(name: string, value: string): void
+  end(): void
 }
 
 const MAX_CHARS = 2000
 const RESEND_API_URL = 'https://api.resend.com/emails'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // CORS : voir le même commentaire dans api/daily-room.ts — l'app native
+  // (Capacitor) appelle désormais cette route en URL absolue (chemin
+  // relatif impossible depuis la WebView native), ce qui en fait une
+  // requête cross-origin nécessitant une réponse explicite au preflight
+  // OPTIONS envoyé par le navigateur avant le vrai POST.
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+
+  if (req.method === 'OPTIONS') {
+    res.status(204).end()
+    return
+  }
+
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' })
     return

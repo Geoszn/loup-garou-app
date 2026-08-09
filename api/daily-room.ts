@@ -29,12 +29,34 @@ interface VercelRequest {
 interface VercelResponse {
   status(code: number): VercelResponse
   json(body: unknown): void
+  setHeader(name: string, value: string): void
+  end(): void
 }
 
 const DAILY_API_URL = 'https://api.daily.co/v1/rooms'
 const DAILY_TOKENS_URL = 'https://api.daily.co/v1/meeting-tokens'
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // CORS : nécessaire depuis que l'app native (Capacitor) appelle cette
+  // route en URL absolue (voir src/lib/apiUrl.ts) plutôt qu'en chemin
+  // relatif — la WebView native a pour origine un pseudo-domaine local
+  // (capacitor://localhost / https://localhost), donc chaque appel devient
+  // une requête cross-origin. Le navigateur/WebView envoie d'abord une
+  // requête OPTIONS de "preflight" (le POST a un Content-Type JSON et un
+  // header Authorization, tous deux hors de la liste des "requêtes
+  // simples") : sans réponse explicite ici, elle recevait 405 "Method not
+  // allowed" et bloquait le vrai POST avant même qu'il parte, malgré
+  // src/lib/apiUrl.ts pointant déjà vers la bonne URL. Pas de cookies/
+  // session ici (auth par Bearer token), donc `*` est sans risque.
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+
+  if (req.method === 'OPTIONS') {
+    res.status(204).end()
+    return
+  }
+
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' })
     return
