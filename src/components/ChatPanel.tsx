@@ -33,9 +33,23 @@ export function ChatPanel({
 }) {
   const { t } = useLanguage()
   const { messages, identities, reactions, send, sending, toggleReaction } = useChat(gameId, channel)
-  // Message dont le petit sélecteur de réaction est ouvert (au plus un à la
-  // fois) — purement local à l'affichage, jamais persisté.
-  const [pickerOpenFor, setPickerOpenFor] = useState<string | null>(null)
+  // Message dont le petit menu (réagir / répondre) est ouvert (au plus un à
+  // la fois) — purement local à l'affichage, jamais persisté. Ouvert par un
+  // appui long sur le message (voir handlers plus bas), pas par un bouton
+  // visible en permanence : plus proche des habitudes WhatsApp/Messenger,
+  // et libère l'espace autour de chaque bulle.
+  const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null)
+  // Minuteur de l'appui long en cours (touch ou souris) — un seul à la fois,
+  // annulé si le doigt/curseur bouge ou est relâché avant l'échéance.
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Un "click" de souris fantôme suit toujours un touchend sur mobile : sans
+  // ce garde-fou, le clic qui termine l'appui long rouvrirait/refermerait le
+  // menu immédiatement après l'avoir ouvert.
+  const suppressNextClick = useRef(false)
+  // Évite qu'un touchstart déclenche AUSSI le onMouseDown correspondant
+  // (même appareil, deux évènements pour un seul geste sur beaucoup de
+  // navigateurs mobiles).
+  const touchActive = useRef(false)
   // Message auquel on est en train de répondre (voir migration 0041) —
   // uniquement une référence à un message déjà chargé dans `messages`, pas
   // un état serveur : abandonné sans conséquence si on change d'onglet ou
@@ -105,6 +119,37 @@ export function ChatPanel({
     bottomRef.current?.scrollIntoView({ block: 'end' })
   }, [messages.length])
 
+  const LONG_PRESS_MS = 450
+
+  function beginLongPress(messageId: string) {
+    cancelLongPress()
+    longPressTimer.current = setTimeout(() => {
+      setMenuOpenFor(messageId)
+      suppressNextClick.current = true
+      // Léger retour haptique sur les appareils qui le supportent — pas
+      // d'effet si l'API n'existe pas (desktop, iOS Safari).
+      navigator.vibrate?.(15)
+    }, LONG_PRESS_MS)
+  }
+
+  function cancelLongPress() {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+
+  function handleBubbleClick(messageId: string) {
+    if (suppressNextClick.current) {
+      suppressNextClick.current = false
+      return
+    }
+    // Un tap simple pendant que le menu de CE message est déjà ouvert le
+    // referme — sinon un tap ailleurs ne fait rien de spécial (pas de
+    // fermeture globale au clic extérieur, pour rester simple).
+    setMenuOpenFor((cur) => (cur === messageId ? null : cur))
+  }
+
   return (
     <div
       style={keyboardExpandedHeight ? { height: `${keyboardExpandedHeight}px` } : undefined}
@@ -149,32 +194,38 @@ export function ChatPanel({
             .filter((g) => g.entries.length > 0)
 
           return (
-            <div key={m.id} className={`group animate-fade-in text-sm ${isMine ? 'text-right' : ''}`}>
-              {/* Toujours visible (pas juste au survol group-hover) : sur
-                  mobile il n'existe pas de "survol", un bouton caché derrière
-                  un hover y serait tout simplement invisible et donc
-                  intouchable. Opacité réduite par défaut, pleine au survol
-                  sur les appareils qui le supportent (souris). */}
-              {!readOnly && (
-                <button
-                  type="button"
-                  onClick={() => setReplyTarget(m)}
-                  title={t('chat.replyTo')}
-                  className="mx-1 align-middle text-xs text-moon-200/30 transition-colors hover:text-moon-300 active:text-moon-300"
-                >
-                  ↩
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setPickerOpenFor((cur) => (cur === m.id ? null : m.id))}
-                title={t('chat.addReaction')}
-                className="mx-1 align-middle text-xs text-moon-200/30 transition-colors hover:text-moon-300 active:text-moon-300"
-              >
-                ☺+
-              </button>
+            <div key={m.id} className={`animate-fade-in text-sm ${isMine ? 'text-right' : ''}`}>
+              {/* Réagir/répondre : appui long (tactile ou souris maintenue,
+                  voir beginLongPress) sur la bulle elle-même plutôt que des
+                  boutons toujours visibles à côté — même logique que
+                  WhatsApp/Messenger. select-none + onContextMenu évite que le
+                  maintien du doigt ne déclenche la sélection de texte ou le
+                  menu contextuel natif du navigateur pendant l'appui. */}
               <span
-                className={`inline-block max-w-[85%] break-words rounded-2xl px-3 py-1.5 text-left ${
+                onTouchStart={() => {
+                  touchActive.current = true
+                  beginLongPress(m.id)
+                }}
+                onTouchEnd={() => {
+                  cancelLongPress()
+                  setTimeout(() => {
+                    touchActive.current = false
+                  }, 400)
+                }}
+                onTouchMove={cancelLongPress}
+                onTouchCancel={() => {
+                  cancelLongPress()
+                  touchActive.current = false
+                }}
+                onMouseDown={() => {
+                  if (touchActive.current) return
+                  beginLongPress(m.id)
+                }}
+                onMouseUp={cancelLongPress}
+                onMouseLeave={cancelLongPress}
+                onContextMenu={(e) => e.preventDefault()}
+                onClick={() => handleBubbleClick(m.id)}
+                className={`inline-block max-w-[85%] select-none break-words rounded-2xl px-3 py-1.5 text-left ${
                   isMine
                     ? 'bg-blood-700/30 text-moon-200'
                     : m.is_anonymous
@@ -195,7 +246,7 @@ export function ChatPanel({
                 {m.content}
               </span>
 
-              {(groupedReactions.length > 0 || pickerOpenFor === m.id) && (
+              {(groupedReactions.length > 0 || menuOpenFor === m.id) && (
                 <div className={`mt-1 flex flex-wrap items-center gap-1 ${isMine ? 'justify-end' : ''}`}>
                   {groupedReactions.map((g) => {
                     const mine = g.entries.some((r) => r.user_id === selfId)
@@ -215,21 +266,37 @@ export function ChatPanel({
                       </button>
                     )
                   })}
-                  {pickerOpenFor === m.id && (
-                    <div className="flex items-center gap-1 rounded-full border border-night-600/60 bg-night-800/80 px-1.5 py-1">
+                  {menuOpenFor === m.id && (
+                    <div className="flex items-center gap-1.5 rounded-full border border-night-600/60 bg-night-800/80 px-2 py-1">
                       {REACTION_EMOJIS.map((emoji) => (
                         <button
                           key={emoji}
                           type="button"
                           onClick={() => {
                             toggleReaction(m.id, emoji)
-                            setPickerOpenFor(null)
+                            setMenuOpenFor(null)
                           }}
                           className="text-sm leading-none transition-transform hover:scale-125"
                         >
                           {emoji}
                         </button>
                       ))}
+                      {!readOnly && (
+                        <>
+                          <span className="h-4 w-px bg-night-600/60" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReplyTarget(m)
+                              setMenuOpenFor(null)
+                            }}
+                            title={t('chat.replyTo')}
+                            className="whitespace-nowrap text-xs text-moon-200/70 transition-colors hover:text-moon-200"
+                          >
+                            ↩ {t('chat.replyTo')}
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

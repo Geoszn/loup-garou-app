@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { Button, Card, ConfirmDialog, ErrorText, Input, Label, Modal, SideDrawer, SuccessText } from '../components/ui'
+import { Button, Card, ConfirmDialog, ErrorText, Input, Label, Modal, Segmented, SideDrawer, SuccessText } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { DEFAULT_ROLE_IMAGES } from '../components/RoleCard'
 import { ROLES, ROLE_ORDER, type RoleId } from '../lib/roles'
 import { translations, type TranslationKey } from '../i18n/translations'
+import type { EventBannerColor, EventBonusType, GameEvent } from '../types/events'
 
 // ============================================================================
 // Dashboard administrateur. Volontairement en français uniquement, pas
@@ -24,13 +25,14 @@ import { translations, type TranslationKey } from '../i18n/translations'
 // l'écran "Accès refusé".
 // ============================================================================
 
-type Tab = 'stats' | 'users' | 'games' | 'content' | 'security' | 'settings'
+type Tab = 'stats' | 'users' | 'games' | 'content' | 'events' | 'security' | 'settings'
 
 const TAB_ITEMS: { id: Tab; label: string; icon: string }[] = [
   { id: 'stats', label: 'Vue d’ensemble', icon: '📊' },
   { id: 'users', label: 'Utilisateurs', icon: '👤' },
   { id: 'games', label: 'Salons', icon: '🎲' },
   { id: 'content', label: 'Contenu du jeu', icon: '📝' },
+  { id: 'events', label: 'Événements', icon: '🎉' },
   { id: 'security', label: 'Sécurité', icon: '🔒' },
   { id: 'settings', label: 'Réglages', icon: '⚙️' },
 ]
@@ -270,6 +272,7 @@ export default function AdminDashboard() {
         {tab === 'users' && <UsersTab currentUserId={user?.id ?? null} seed={usersSeed} />}
         {tab === 'games' && <GamesTab />}
         {tab === 'content' && <ContentTab />}
+        {tab === 'events' && <EventsTab />}
         {tab === 'security' && <SecurityTab />}
         {tab === 'settings' && <SettingsTab />}
       </div>
@@ -1114,6 +1117,463 @@ function RoleImagesSection() {
         </div>
       )}
     </section>
+  )
+}
+
+// ----------------------------------------------------------------------------
+// Événements : voir migration 0067. Un événement actif affiche une bannière
+// sur Landing.tsx et peut donner un bonus de points (fixe ou multiplicateur)
+// appliqué dans apply_rank_result. Une seule fonction serveur
+// (admin_upsert_event) gère à la fois la création et la modification —
+// même principe que ContentField plus haut.
+// ----------------------------------------------------------------------------
+
+const BONUS_TYPE_LABELS: Record<EventBonusType, string> = {
+  none: 'Aucun (bannière seule)',
+  flat: 'Bonus de points fixe',
+  multiplier: 'Multiplicateur de points',
+}
+
+const BANNER_COLOR_SWATCHES: Record<EventBannerColor, string> = {
+  gold: 'bg-moon-400',
+  blood: 'bg-blood-500',
+  emerald: 'bg-emerald-500',
+  violet: 'bg-violet-500',
+}
+
+// Format attendu par <input type="datetime-local"> : "AAAA-MM-JJTHH:mm", en
+// heure locale du navigateur de l'admin — converti en ISO (UTC) uniquement
+// à l'envoi (voir toIsoString), et reconverti en local à l'édition (voir
+// toDatetimeLocal) pour que le formulaire réaffiche l'heure telle qu'elle a
+// été saisie.
+function toDatetimeLocal(iso: string): string {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function eventStatus(e: GameEvent): { label: string; className: string } {
+  if (!e.is_enabled) return { label: 'Désactivé', className: 'bg-night-600 text-moon-200/60' }
+  const now = Date.now()
+  const start = new Date(e.starts_at).getTime()
+  const end = new Date(e.ends_at).getTime()
+  if (now < start) return { label: 'Programmé', className: 'bg-night-600 text-moon-200/70' }
+  if (now > end) return { label: 'Terminé', className: 'bg-night-600 text-moon-200/50' }
+  return { label: 'En cours', className: 'bg-emerald-700/30 text-emerald-400' }
+}
+
+function bonusSummary(e: GameEvent): string | null {
+  if (e.bonus_type === 'flat') return `+${e.bonus_value} pts par victoire`
+  if (e.bonus_type === 'multiplier') return `×${e.bonus_value} points par victoire`
+  return null
+}
+
+interface EventFormState {
+  name: string
+  starts_at: string
+  ends_at: string
+  bonus_type: EventBonusType
+  bonus_value: string
+  banner_text_fr: string
+  banner_text_en: string
+  banner_color: EventBannerColor
+  is_enabled: boolean
+}
+
+const EMPTY_EVENT_FORM: EventFormState = {
+  name: '',
+  starts_at: '',
+  ends_at: '',
+  bonus_type: 'none',
+  bonus_value: '0',
+  banner_text_fr: '',
+  banner_text_en: '',
+  banner_color: 'gold',
+  is_enabled: true,
+}
+
+function EventsTab() {
+  const [events, setEvents] = useState<GameEvent[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<GameEvent | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<GameEvent | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    const { data, error: rpcError } = await supabase.rpc('admin_list_events')
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    setError(null)
+    setEvents((data ?? []) as GameEvent[])
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  function openCreate() {
+    setEditing(null)
+    setFormOpen(true)
+  }
+
+  function openEdit(e: GameEvent) {
+    setEditing(e)
+    setFormOpen(true)
+  }
+
+  async function toggleEnabled(e: GameEvent) {
+    setBusyId(e.id)
+    const { error: rpcError } = await supabase.rpc('admin_upsert_event', {
+      p_id: e.id,
+      p_name: e.name,
+      p_starts_at: e.starts_at,
+      p_ends_at: e.ends_at,
+      p_bonus_type: e.bonus_type,
+      p_bonus_value: e.bonus_value,
+      p_banner_text_fr: e.banner_text_fr,
+      p_banner_text_en: e.banner_text_en,
+      p_banner_color: e.banner_color,
+      p_is_enabled: !e.is_enabled,
+    })
+    setBusyId(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    load()
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    setBusyId(deleteTarget.id)
+    const { error: rpcError } = await supabase.rpc('admin_delete_event', { p_id: deleteTarget.id })
+    setBusyId(null)
+    setDeleteTarget(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    load()
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-moon-200/60">{events?.length ?? 0} événement(s)</p>
+        <Button className="px-3.5 py-2 text-xs" onClick={openCreate}>
+          + Nouvel événement
+        </Button>
+      </div>
+
+      <ErrorText>{error}</ErrorText>
+
+      {events === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
+      {events !== null && events.length === 0 && <p className="text-sm text-moon-200/50">Aucun événement créé.</p>}
+
+      <div className="flex flex-col gap-2">
+        {events?.map((e) => {
+          const status = eventStatus(e)
+          const bonus = bonusSummary(e)
+          return (
+            <Card key={e.id} className="flex flex-col gap-3 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="flex items-center gap-2 text-sm font-semibold text-moon-200">
+                    <span className={`h-2.5 w-2.5 rounded-full ${BANNER_COLOR_SWATCHES[e.banner_color]}`} />
+                    {e.name}
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase ${status.className}`}>{status.label}</span>
+                  </p>
+                  <p className="mt-1 text-xs text-moon-200/50">
+                    Du {fmtDate(e.starts_at)} au {fmtDate(e.ends_at)}
+                    {bonus && <span className="text-moon-300"> · {bonus}</span>}
+                  </p>
+                  {(e.banner_text_fr || e.banner_text_en) && (
+                    <p className="mt-1 text-xs text-moon-200/40">
+                      🇫🇷 {e.banner_text_fr || '—'} · 🇬🇧 {e.banner_text_en || '—'}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="ghost" className="px-3 py-1.5 text-xs" disabled={busyId === e.id} onClick={() => openEdit(e)}>
+                    Modifier
+                  </Button>
+                  <Button variant="ghost" className="px-3 py-1.5 text-xs" disabled={busyId === e.id} onClick={() => toggleEnabled(e)}>
+                    {e.is_enabled ? 'Désactiver' : 'Activer'}
+                  </Button>
+                  <Button variant="danger" className="px-3 py-1.5 text-xs" disabled={busyId === e.id} onClick={() => setDeleteTarget(e)}>
+                    Supprimer
+                  </Button>
+                </div>
+              </div>
+              <EventBannerImage event={e} onUploaded={load} />
+            </Card>
+          )
+        })}
+      </div>
+
+      <EventFormDrawer
+        open={formOpen}
+        event={editing}
+        onClose={() => setFormOpen(false)}
+        onSaved={() => {
+          setFormOpen(false)
+          load()
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={`Supprimer « ${deleteTarget?.name ?? ''} » ?`}
+        message="La bannière disparaîtra immédiatement de la page d'accueil si l'événement est en cours. Action irréversible."
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        danger
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
+    </div>
+  )
+}
+
+/** Formulaire de création/édition, dans un tiroir — même schéma que le
+ * tiroir de filtres de UsersTab. `event` fourni = édition (formulaire
+ * pré-rempli), `null` = création. */
+function EventFormDrawer({
+  open,
+  event,
+  onClose,
+  onSaved,
+}: {
+  open: boolean
+  event: GameEvent | null
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [form, setForm] = useState<EventFormState>(EMPTY_EVENT_FORM)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    if (event) {
+      setForm({
+        name: event.name,
+        starts_at: toDatetimeLocal(event.starts_at),
+        ends_at: toDatetimeLocal(event.ends_at),
+        bonus_type: event.bonus_type,
+        bonus_value: String(event.bonus_value),
+        banner_text_fr: event.banner_text_fr,
+        banner_text_en: event.banner_text_en,
+        banner_color: event.banner_color,
+        is_enabled: event.is_enabled ?? true,
+      })
+    } else {
+      setForm(EMPTY_EVENT_FORM)
+    }
+    setError(null)
+  }, [open, event])
+
+  async function save(e: FormEvent) {
+    e.preventDefault()
+    if (!form.name.trim() || !form.starts_at || !form.ends_at) {
+      setError('Nom et période requis.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('admin_upsert_event', {
+      p_id: event?.id ?? null,
+      p_name: form.name,
+      p_starts_at: new Date(form.starts_at).toISOString(),
+      p_ends_at: new Date(form.ends_at).toISOString(),
+      p_bonus_type: form.bonus_type,
+      p_bonus_value: Number(form.bonus_value) || 0,
+      p_banner_text_fr: form.banner_text_fr,
+      p_banner_text_en: form.banner_text_en,
+      p_banner_color: form.banner_color,
+      p_is_enabled: form.is_enabled,
+    })
+    setBusy(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    onSaved()
+  }
+
+  const textareaClass =
+    'w-full rounded-xl border border-night-500 bg-night-800/80 px-3 py-2 text-sm text-moon-200 placeholder:text-moon-200/30 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20'
+
+  return (
+    <SideDrawer open={open} onClose={onClose} title={event ? 'Modifier l’événement' : 'Nouvel événement'}>
+      <form className="flex flex-col gap-4" onSubmit={save}>
+        <div>
+          <Label>Nom (interne, pas affiché aux joueurs)</Label>
+          <Input value={form.name} onChange={(ev) => setForm((f) => ({ ...f, name: ev.target.value }))} placeholder="Ex. Week-end Halloween" />
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <Label>Début</Label>
+            <Input
+              type="datetime-local"
+              value={form.starts_at}
+              onChange={(ev) => setForm((f) => ({ ...f, starts_at: ev.target.value }))}
+            />
+          </div>
+          <div>
+            <Label>Fin</Label>
+            <Input type="datetime-local" value={form.ends_at} onChange={(ev) => setForm((f) => ({ ...f, ends_at: ev.target.value }))} />
+          </div>
+        </div>
+
+        <div>
+          <Label>Bonus</Label>
+          <Segmented
+            tabs={(['none', 'flat', 'multiplier'] as EventBonusType[]).map((id) => ({ id, label: BONUS_TYPE_LABELS[id] }))}
+            active={form.bonus_type}
+            onChange={(id) => setForm((f) => ({ ...f, bonus_type: id }))}
+          />
+        </div>
+        {form.bonus_type !== 'none' && (
+          <div>
+            <Label>{form.bonus_type === 'flat' ? 'Points bonus par victoire' : 'Multiplicateur (ex. 2 = points doublés)'}</Label>
+            <Input
+              type="number"
+              step={form.bonus_type === 'flat' ? 1 : 0.1}
+              min={0}
+              value={form.bonus_value}
+              onChange={(ev) => setForm((f) => ({ ...f, bonus_value: ev.target.value }))}
+            />
+          </div>
+        )}
+
+        <div>
+          <Label>Couleur de la bannière</Label>
+          <div className="flex gap-2">
+            {(['gold', 'blood', 'emerald', 'violet'] as EventBannerColor[]).map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, banner_color: c }))}
+                className={`h-8 w-8 rounded-full ${BANNER_COLOR_SWATCHES[c]} ${
+                  form.banner_color === c ? 'ring-2 ring-moon-200 ring-offset-2 ring-offset-night-900' : 'opacity-60'
+                }`}
+                aria-label={c}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <Label>Texte de la bannière — Français</Label>
+          <textarea
+            rows={2}
+            value={form.banner_text_fr}
+            onChange={(ev) => setForm((f) => ({ ...f, banner_text_fr: ev.target.value }))}
+            placeholder="Ex. 🎃 Week-end Halloween : points doublés sur toutes les victoires !"
+            className={textareaClass}
+          />
+        </div>
+        <div>
+          <Label>Texte de la bannière — English</Label>
+          <textarea
+            rows={2}
+            value={form.banner_text_en}
+            onChange={(ev) => setForm((f) => ({ ...f, banner_text_en: ev.target.value }))}
+            placeholder="Ex. 🎃 Halloween weekend: double points on every win!"
+            className={textareaClass}
+          />
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-moon-200/80">
+          <input
+            type="checkbox"
+            checked={form.is_enabled}
+            onChange={(ev) => setForm((f) => ({ ...f, is_enabled: ev.target.checked }))}
+            className="h-4 w-4 rounded border-night-600/70 bg-night-900/50 accent-blood-600"
+          />
+          Activé (visible dès que la période commence)
+        </label>
+
+        <ErrorText>{error}</ErrorText>
+
+        <div className="mt-2 flex gap-3">
+          <Button type="button" variant="ghost" className="flex-1" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button type="submit" className="flex-1" disabled={busy}>
+            {event ? 'Enregistrer' : 'Créer'}
+          </Button>
+        </div>
+      </form>
+    </SideDrawer>
+  )
+}
+
+/** Image de bannière optionnelle — même principe que RoleImagesSection :
+ * upload direct dans le bucket "event-banners" (nommé "{id}.jpg" quel que
+ * soit le format importé), puis admin_set_event_banner_image associe le
+ * chemin à l'événement. Séparé du formulaire principal car il n'a de sens
+ * qu'une fois l'événement créé (a besoin de son id pour le nom du fichier). */
+function EventBannerImage({ event, onUploaded }: { event: GameEvent; onUploaded: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const currentUrl = event.banner_image_path
+    ? supabase.storage.from('event-banners').getPublicUrl(event.banner_image_path).data.publicUrl
+    : null
+
+  async function handleUpload(file: File) {
+    setBusy(true)
+    setError(null)
+    const path = `${event.id}.jpg`
+    const { error: uploadError } = await supabase.storage.from('event-banners').upload(path, file, {
+      upsert: true,
+      contentType: file.type || 'image/jpeg',
+      cacheControl: '300',
+    })
+    if (uploadError) {
+      setBusy(false)
+      setError(uploadError.message)
+      return
+    }
+    const { error: rpcError } = await supabase.rpc('admin_set_event_banner_image', { p_id: event.id, p_path: path })
+    setBusy(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    onUploaded()
+  }
+
+  return (
+    <div className="flex items-center gap-3 border-t border-night-600/50 pt-3">
+      {currentUrl ? (
+        <img src={currentUrl} alt="" className="h-12 w-24 rounded-lg border border-night-600/60 object-cover" />
+      ) : (
+        <span className="flex h-12 w-24 items-center justify-center rounded-lg border border-dashed border-night-600/60 text-[10px] text-moon-200/30">
+          Aucune image
+        </span>
+      )}
+      <ErrorText>{error}</ErrorText>
+      <label className="cursor-pointer rounded-lg border border-night-600/70 bg-night-800/50 px-3 py-1.5 text-[11px] font-semibold text-moon-200/80 transition-colors hover:border-moon-400/40">
+        {busy ? '...' : currentUrl ? '📤 Changer l’image' : '📤 Ajouter une image'}
+        <input
+          type="file"
+          accept="image/*"
+          className="hidden"
+          disabled={busy}
+          onChange={(ev) => {
+            const file = ev.target.files?.[0]
+            if (file) handleUpload(file)
+            ev.target.value = ''
+          }}
+        />
+      </label>
+    </div>
   )
 }
 

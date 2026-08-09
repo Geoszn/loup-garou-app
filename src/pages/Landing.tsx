@@ -1,12 +1,31 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { LinkButton } from '../components/ui'
 import { LeaderboardWidget } from '../components/LeaderboardWidget'
+import { EventBanner } from '../components/EventBanner'
 import { useLanguage } from '../i18n/LanguageContext'
+import { supabase } from '../lib/supabase'
+import type { GameEvent } from '../types/events'
 
 export default function Landing() {
   const { session } = useAuth()
   const { t } = useLanguage()
+  // Bannière(s) d'événement en cours (voir migration 0067) — lecture
+  // publique, chargée une fois au montage (pas de temps réel : un événement
+  // qui démarre/se termine pendant que la page est déjà ouverte apparaîtra
+  // au prochain chargement, inutile de complexifier pour ce cas rare).
+  const [events, setEvents] = useState<GameEvent[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    supabase.rpc('get_active_events').then(({ data }) => {
+      if (!cancelled && data) setEvents(data as GameEvent[])
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -49,6 +68,13 @@ export default function Landing() {
       </header>
 
       <main className="relative z-10 mx-auto flex max-w-4xl flex-col items-center px-6 pb-24 pt-16 text-center sm:pt-24">
+        {events.length > 0 && (
+          <div className="mb-6 w-full">
+            {events.map((e) => (
+              <EventBanner key={e.id} event={e} />
+            ))}
+          </div>
+        )}
         <span className="mb-4 rounded-full border border-night-600 bg-night-800/60 px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-moon-200/60">
           {t('landing.badge.upTo25')}
         </span>
