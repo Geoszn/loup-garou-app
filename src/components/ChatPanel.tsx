@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { useChat } from '../hooks/useChat'
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type MutableRefObject } from 'react'
+import { useChat, type RevealedIdentity } from '../hooks/useChat'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
 import { REACTION_EMOJIS, type ChatChannel, type ChatMessage, type ChatReaction, type ReactionEmoji } from '../types/game'
@@ -10,7 +10,24 @@ const CHANNEL_LABEL: Record<ChatChannel, { titleKey: TranslationKey; emoji: stri
   graveyard: { titleKey: 'chat.graveyard.title', emoji: '👻', placeholderKey: 'chat.graveyard.placeholder' },
 }
 
-export function ChatPanel({
+// Référence stable partagée par tous les messages sans réaction — évite de
+// créer un nouveau tableau `[]` à chaque rendu pour chacun d'eux (voir son
+// usage plus bas), ce qui casserait sinon la mémoïsation de MessageRow pour
+// la quasi-totalité des messages d'un salon peu réactif.
+const EMPTY_REACTIONS: ChatReaction[] = []
+
+const LONG_PRESS_MS = 450
+
+// Mémoïsé : GameRoom.tsx re-rend périodiquement (voir useGame.ts, filet de
+// sécurité qui re-synchronise l'état toutes les 2,5s même sans changement
+// réel) — sans memo, chaque ChatPanel monté à ce moment-là (village + loups
+// la nuit, ou village + cimetière côté fantôme) se re-rendrait entièrement à
+// chaque fois, `messages.map(...)` compris, même sans la moindre activité
+// dans le salon. Les props passées ici (gameId, channel, selfId, compact,
+// readOnly, note) sont des primitives stables d'un rendu à l'autre — le
+// comparateur par défaut de React.memo suffit, pas besoin d'un comparateur
+// personnalisé.
+export const ChatPanel = memo(function ChatPanel({
   gameId,
   channel,
   selfId,
@@ -63,21 +80,18 @@ export function ChatPanel({
   // Quand le clavier virtuel est ouvert ET qu'on écrit dans CE salon, le
   // panneau passe en plein écran, calé exactement sur ce que
   // window.visualViewport rapporte comme espace RÉELLEMENT visible
-  // au-dessus du clavier (position: fixed, top/height recalculés en JS —
-  // pas juste une hauteur plus grande en flux normal). Avant, on se
-  // contentait d'agrandir la hauteur du panneau et de faire un
-  // scrollIntoView sur le champ : ça ne suffisait pas sur iOS Safari plus
-  // ancien (avant le support d'interactive-widget=resizes-content, voir
-  // index.html), où le clavier reste superposé par-dessus une page qui ne
-  // rétrécit pas vraiment — le champ de saisie et une partie du chat se
-  // retrouvaient cachés derrière malgré tout. Recalculer top/height en
-  // continu (resize ET scroll : sur iOS, offsetTop bouge aussi si la page
-  // défile pendant que le clavier est ouvert) garantit que le panneau colle
-  // toujours pile au bord du clavier, quel que soit le navigateur.
+  // au-dessus du clavier (position: fixed, top/height recalculés en JS).
+  // L'écoute resize/scroll de visualViewport n'est active QUE pendant la
+  // frappe (dépendance [inputFocused] ci-dessous) : la brancher en
+  // permanence faisait tourner un handler sur chaque scroll de la page,
+  // même hors saisie, et re-rendait tout le panneau (donc toute la liste de
+  // messages) à chaque fois — un coût significatif sur un salon très actif,
+  // remonté comme un ralentissement général du chat sur mobile.
   const [inputFocused, setInputFocused] = useState(false)
   const [viewport, setViewport] = useState<{ height: number; top: number } | null>(null)
 
   useEffect(() => {
+    if (!inputFocused) return
     const vv = window.visualViewport
     if (!vv) return
     const update = () => setViewport({ height: vv.height, top: vv.offsetTop })
@@ -88,7 +102,7 @@ export function ChatPanel({
       vv.removeEventListener('resize', update)
       vv.removeEventListener('scroll', update)
     }
-  }, [])
+  }, [inputFocused])
 
   // true seulement pendant la frappe dans CE salon précis — les autres
   // ChatPanel éventuellement montés en même temps (ex. village + loups la
@@ -106,7 +120,12 @@ export function ChatPanel({
   }, [messages])
 
   // Réactions groupées par message — recalculé seulement quand `reactions`
-  // change, même logique que messagesById ci-dessus.
+  // change, même logique que messagesById ci-dessus. Important pour la
+  // mémoïsation de MessageRow : cette Map n'est reconstruite QUE si une
+  // réaction change quelque part dans le salon (pas à chaque nouveau
+  // message), donc `.get(id)` renvoie la MÊME référence de tableau pour
+  // tous les messages non concernés — c'est ce qui permet à leur ligne de ne
+  // pas se re-rendre quand un nouveau message arrive ailleurs dans la liste.
   const reactionsByMessage = useMemo(() => {
     const map = new Map<string, ChatReaction[]>()
     for (const r of reactions) {
@@ -117,43 +136,36 @@ export function ChatPanel({
     return map
   }, [reactions])
 
-  // Même règle d'affichage du nom que dans le rendu des messages plus bas
-  // (auteur réel démasqué seulement si la RLS de chat_message_identities
-  // nous y autorise) — factorisée ici pour être réutilisée par l'aperçu de
-  // citation au-dessus du champ de saisie ET par la bulle citée dans chaque
-  // message qui répond à un autre.
-  function labelFor(m: ChatMessage): string {
-    const identity = m.is_anonymous ? identities[m.id] : undefined
-    const label = m.is_anonymous ? identity?.display_name ?? null : m.display_name
-    if (m.is_anonymous) return label ? `🕵️ ${label}` : t('chat.anonymous')
-    return label ?? t('common.playerFallback')
-  }
-
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' })
   }, [messages.length])
 
-  const LONG_PRESS_MS = 450
-
-  function beginLongPress(messageId: string) {
-    cancelLongPress()
-    longPressTimer.current = setTimeout(() => {
-      setMenuOpenFor(messageId)
-      suppressNextClick.current = true
-      // Léger retour haptique sur les appareils qui le supportent — pas
-      // d'effet si l'API n'existe pas (desktop, iOS Safari).
-      navigator.vibrate?.(15)
-    }, LONG_PRESS_MS)
-  }
-
-  function cancelLongPress() {
+  // Tous les handlers passés à MessageRow sont mémoïsés (useCallback, deps
+  // vides ou stables) : une ligne ne se re-rend que si SES propres props
+  // changent, jamais parce que ChatPanel s'est re-rendu pour une autre
+  // raison (nouveau message ailleurs, frappe dans le champ, etc.).
+  const cancelLongPress = useCallback(() => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current)
       longPressTimer.current = null
     }
-  }
+  }, [])
 
-  function handleBubbleClick(messageId: string) {
+  const beginLongPress = useCallback(
+    (messageId: string) => {
+      cancelLongPress()
+      longPressTimer.current = setTimeout(() => {
+        setMenuOpenFor(messageId)
+        suppressNextClick.current = true
+        // Léger retour haptique sur les appareils qui le supportent — pas
+        // d'effet si l'API n'existe pas (desktop, iOS Safari).
+        navigator.vibrate?.(15)
+      }, LONG_PRESS_MS)
+    },
+    [cancelLongPress]
+  )
+
+  const handleBubbleClick = useCallback((messageId: string) => {
     if (suppressNextClick.current) {
       suppressNextClick.current = false
       return
@@ -162,7 +174,12 @@ export function ChatPanel({
     // referme — sinon un tap ailleurs ne fait rien de spécial (pas de
     // fermeture globale au clic extérieur, pour rester simple).
     setMenuOpenFor((cur) => (cur === messageId ? null : cur))
-  }
+  }, [])
+
+  const handleReply = useCallback((m: ChatMessage) => {
+    setReplyTarget(m)
+    setMenuOpenFor(null)
+  }, [])
 
   return (
     <div
@@ -196,149 +213,32 @@ export function ChatPanel({
         {messages.length === 0 && (
           <p className="text-center text-xs text-moon-200/30">{t('chat.empty')}</p>
         )}
-        {messages.map((m) => {
-          // Message anonyme (village, la nuit) : l'auteur réel n'est jamais
-          // présent dans `m` elle-même (voir migration 0026) — seulement
-          // dans `identities`, si la RLS de chat_message_identities nous
-          // autorise à le voir (c'est notre propre message, ou on est la
-          // Petite Fille vivante).
-          const identity = m.is_anonymous ? identities[m.id] : undefined
-          const isMine = m.is_anonymous ? identity?.user_id === selfId : m.user_id === selfId
-          const label = m.is_anonymous ? identity?.display_name ?? null : m.display_name
-          // Le message cité n'est renvoyé que par référence (reply_to_message_id,
-          // voir migration 0041) : on le retrouve parmi les messages déjà
-          // chargés dans cette même fenêtre. S'il n'y est plus (paginé hors
-          // des 200 derniers, ou salon rechargé depuis), on affiche un
-          // repère générique plutôt que de masquer la citation.
-          const repliedTo = m.reply_to_message_id ? messagesById.get(m.reply_to_message_id) : undefined
-          // Groupées par emoji pour l'affichage en pastilles (une par emoji
-          // utilisé, avec le compte) plutôt qu'une réaction par ligne — même
-          // idée que Slack/Discord. Autorisé même en `readOnly` (un fantôme
-          // qui suit le village peut réagir sans pouvoir écrire, voir
-          // migration 0066 : can_read_channel suffit côté serveur).
-          const messageReactions = reactionsByMessage.get(m.id) ?? []
-          const groupedReactions = REACTION_EMOJIS
-            .map((emoji) => ({ emoji, entries: messageReactions.filter((r) => r.emoji === emoji) }))
-            .filter((g) => g.entries.length > 0)
-
-          return (
-            <div key={m.id} className={`animate-fade-in text-sm ${isMine ? 'text-right' : ''}`}>
-              {/* Réagir/répondre : appui long (tactile ou souris maintenue,
-                  voir beginLongPress) sur la bulle elle-même plutôt que des
-                  boutons toujours visibles à côté — même logique que
-                  WhatsApp/Messenger. select-none + onContextMenu évite que le
-                  maintien du doigt ne déclenche la sélection de texte ou le
-                  menu contextuel natif du navigateur pendant l'appui. */}
-              <span
-                onTouchStart={() => {
-                  touchActive.current = true
-                  beginLongPress(m.id)
-                }}
-                onTouchEnd={() => {
-                  cancelLongPress()
-                  setTimeout(() => {
-                    touchActive.current = false
-                  }, 400)
-                }}
-                onTouchMove={cancelLongPress}
-                onTouchCancel={() => {
-                  cancelLongPress()
-                  touchActive.current = false
-                }}
-                onMouseDown={() => {
-                  if (touchActive.current) return
-                  beginLongPress(m.id)
-                }}
-                onMouseUp={cancelLongPress}
-                onMouseLeave={cancelLongPress}
-                onContextMenu={(e) => e.preventDefault()}
-                onClick={() => handleBubbleClick(m.id)}
-                className={`inline-block max-w-[85%] select-none break-words rounded-2xl px-3 py-1.5 text-left ${
-                  isMine
-                    ? 'bg-blood-700/30 text-moon-200'
-                    : m.is_anonymous
-                      ? 'bg-night-800/70 text-moon-200/80'
-                      : 'bg-night-700/60 text-moon-200/90'
-                }`}
-              >
-                {!isMine && (
-                  <span className="mr-1.5 text-xs font-semibold text-moon-300">
-                    {m.is_anonymous ? (label ? `🕵️ ${label}` : t('chat.anonymous')) : label}
-                  </span>
-                )}
-                {m.reply_to_message_id && (
-                  <span className="mb-1 block truncate rounded-lg border-l-2 border-moon-400/40 bg-black/15 px-2 py-1 text-xs text-moon-200/50">
-                    {repliedTo ? `${labelFor(repliedTo)} — ${repliedTo.content}` : t('chat.repliedMessageUnavailable')}
-                  </span>
-                )}
-                {m.content}
-              </span>
-
-              {(groupedReactions.length > 0 || menuOpenFor === m.id) && (
-                <div className={`mt-1 flex flex-wrap items-center gap-1 ${isMine ? 'justify-end' : ''}`}>
-                  {groupedReactions.map((g) => {
-                    const mine = g.entries.some((r) => r.user_id === selfId)
-                    return (
-                      <button
-                        key={g.emoji}
-                        type="button"
-                        onClick={() => toggleReaction(m.id, g.emoji)}
-                        title={g.entries.map((r) => r.display_name).join(', ')}
-                        className={`rounded-full border px-1.5 py-0.5 text-xs transition-colors ${
-                          mine
-                            ? 'border-blood-500/60 bg-blood-700/20 text-moon-200'
-                            : 'border-night-600/60 bg-night-800/60 text-moon-200/70 hover:border-moon-400/40'
-                        }`}
-                      >
-                        {g.emoji} {g.entries.length}
-                      </button>
-                    )
-                  })}
-                  {menuOpenFor === m.id && (
-                    <div className="flex items-center gap-1.5 rounded-full border border-night-600/60 bg-night-800/80 px-2 py-1">
-                      {REACTION_EMOJIS.map((emoji) => (
-                        <button
-                          key={emoji}
-                          type="button"
-                          onClick={() => {
-                            toggleReaction(m.id, emoji)
-                            setMenuOpenFor(null)
-                          }}
-                          className="text-sm leading-none transition-transform hover:scale-125"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                      {!readOnly && (
-                        <>
-                          <span className="h-4 w-px bg-night-600/60" />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setReplyTarget(m)
-                              setMenuOpenFor(null)
-                            }}
-                            title={t('chat.replyTo')}
-                            className="whitespace-nowrap text-xs text-moon-200/70 transition-colors hover:text-moon-200"
-                          >
-                            ↩ {t('chat.replyTo')}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )
-        })}
+        {messages.map((m) => (
+          <MessageRow
+            key={m.id}
+            message={m}
+            selfId={selfId}
+            identities={identities}
+            repliedTo={m.reply_to_message_id ? messagesById.get(m.reply_to_message_id) : undefined}
+            reactions={reactionsByMessage.get(m.id) ?? EMPTY_REACTIONS}
+            menuOpen={menuOpenFor === m.id}
+            readOnly={readOnly}
+            touchActiveRef={touchActive}
+            onBeginLongPress={beginLongPress}
+            onCancelLongPress={cancelLongPress}
+            onBubbleClick={handleBubbleClick}
+            onToggleReaction={toggleReaction}
+            onReply={handleReply}
+          />
+        ))}
         <div ref={bottomRef} />
       </div>
 
       {!readOnly && replyTarget && (
         <div className="flex items-center gap-2 border-t border-night-600/50 bg-night-800/50 px-3 py-1.5 text-xs">
           <span className="min-w-0 flex-1 truncate text-moon-200/60">
-            <span className="text-moon-300">{t('chat.replyingTo')}</span> {labelFor(replyTarget)} — {replyTarget.content}
+            <span className="text-moon-300">{t('chat.replyingTo')}</span> {labelFor(replyTarget, identities, t)} —{' '}
+            {replyTarget.content}
           </span>
           <button
             type="button"
@@ -362,7 +262,183 @@ export function ChatPanel({
       )}
     </div>
   )
+})
+
+/** Même règle d'affichage du nom partout : auteur réel démasqué seulement si
+ * la RLS de chat_message_identities nous y autorise (c'est notre propre
+ * message, ou on est la Petite Fille vivante) — factorisée en dehors du
+ * composant (pas de dépendance sur des hooks) pour être appelable aussi bien
+ * depuis ChatPanel (aperçu de citation) que depuis MessageRow (bulle citée). */
+function labelFor(
+  m: ChatMessage,
+  identities: Record<string, RevealedIdentity>,
+  t: (key: TranslationKey) => string
+): string {
+  const identity = m.is_anonymous ? identities[m.id] : undefined
+  const label = m.is_anonymous ? identity?.display_name ?? null : m.display_name
+  if (m.is_anonymous) return label ? `🕵️ ${label}` : t('chat.anonymous')
+  return label ?? t('common.playerFallback')
 }
+
+/** Une bulle de message + ses réactions/menu — mémoïsée (React.memo) pour
+ * qu'un salon actif (beaucoup de messages/réactions) ne re-rende PAS chaque
+ * ligne existante à chaque nouveau message : seule la ligne dont les props
+ * ont réellement changé (nouveau message lui-même, ses propres réactions,
+ * son propre menu ouvert/fermé) se re-rend. C'est ce point précis qui a été
+ * identifié comme coûteux sur un salon très animé (retour utilisateur :
+ * ralentissements sur mobile) — avant, `messages.map(...)` recréait tout à
+ * chaque rendu de ChatPanel, quelle qu'en soit la cause. */
+const MessageRow = memo(function MessageRow({
+  message: m,
+  selfId,
+  identities,
+  repliedTo,
+  reactions,
+  menuOpen,
+  readOnly,
+  touchActiveRef,
+  onBeginLongPress,
+  onCancelLongPress,
+  onBubbleClick,
+  onToggleReaction,
+  onReply,
+}: {
+  message: ChatMessage
+  selfId: string
+  identities: Record<string, RevealedIdentity>
+  repliedTo: ChatMessage | undefined
+  reactions: ChatReaction[]
+  menuOpen: boolean
+  readOnly: boolean
+  touchActiveRef: MutableRefObject<boolean>
+  onBeginLongPress: (messageId: string) => void
+  onCancelLongPress: () => void
+  onBubbleClick: (messageId: string) => void
+  onToggleReaction: (messageId: string, emoji: ReactionEmoji) => void
+  onReply: (m: ChatMessage) => void
+}) {
+  const { t } = useLanguage()
+
+  // Message anonyme (village, la nuit) : l'auteur réel n'est jamais présent
+  // dans `m` elle-même (voir migration 0026) — seulement dans `identities`,
+  // si la RLS de chat_message_identities nous autorise à le voir.
+  const identity = m.is_anonymous ? identities[m.id] : undefined
+  const isMine = m.is_anonymous ? identity?.user_id === selfId : m.user_id === selfId
+  const label = m.is_anonymous ? identity?.display_name ?? null : m.display_name
+
+  // Groupées par emoji pour l'affichage en pastilles (une par emoji utilisé,
+  // avec le compte) plutôt qu'une réaction par ligne — même idée que
+  // Slack/Discord. Autorisé même en `readOnly` (un fantôme qui suit le
+  // village peut réagir sans pouvoir écrire, voir migration 0066 :
+  // can_read_channel suffit côté serveur).
+  const groupedReactions = REACTION_EMOJIS.map((emoji) => ({ emoji, entries: reactions.filter((r) => r.emoji === emoji) })).filter(
+    (g) => g.entries.length > 0
+  )
+
+  return (
+    <div className={`animate-fade-in text-sm ${isMine ? 'text-right' : ''}`}>
+      {/* Réagir/répondre : appui long (tactile ou souris maintenue) sur la
+          bulle elle-même plutôt que des boutons toujours visibles à côté —
+          même logique que WhatsApp/Messenger. select-none + onContextMenu
+          évite que le maintien du doigt ne déclenche la sélection de texte
+          ou le menu contextuel natif du navigateur pendant l'appui. */}
+      <span
+        onTouchStart={() => {
+          touchActiveRef.current = true
+          onBeginLongPress(m.id)
+        }}
+        onTouchEnd={() => {
+          onCancelLongPress()
+          setTimeout(() => {
+            touchActiveRef.current = false
+          }, 400)
+        }}
+        onTouchMove={onCancelLongPress}
+        onTouchCancel={() => {
+          onCancelLongPress()
+          touchActiveRef.current = false
+        }}
+        onMouseDown={() => {
+          if (touchActiveRef.current) return
+          onBeginLongPress(m.id)
+        }}
+        onMouseUp={onCancelLongPress}
+        onMouseLeave={onCancelLongPress}
+        onContextMenu={(e) => e.preventDefault()}
+        onClick={() => onBubbleClick(m.id)}
+        className={`inline-block max-w-[85%] select-none break-words rounded-2xl px-3 py-1.5 text-left ${
+          isMine
+            ? 'bg-blood-700/30 text-moon-200'
+            : m.is_anonymous
+              ? 'bg-night-800/70 text-moon-200/80'
+              : 'bg-night-700/60 text-moon-200/90'
+        }`}
+      >
+        {!isMine && (
+          <span className="mr-1.5 text-xs font-semibold text-moon-300">
+            {m.is_anonymous ? (label ? `🕵️ ${label}` : t('chat.anonymous')) : label}
+          </span>
+        )}
+        {m.reply_to_message_id && (
+          <span className="mb-1 block truncate rounded-lg border-l-2 border-moon-400/40 bg-black/15 px-2 py-1 text-xs text-moon-200/50">
+            {repliedTo ? `${labelFor(repliedTo, identities, t)} — ${repliedTo.content}` : t('chat.repliedMessageUnavailable')}
+          </span>
+        )}
+        {m.content}
+      </span>
+
+      {(groupedReactions.length > 0 || menuOpen) && (
+        <div className={`mt-1 flex flex-wrap items-center gap-1 ${isMine ? 'justify-end' : ''}`}>
+          {groupedReactions.map((g) => {
+            const mine = g.entries.some((r) => r.user_id === selfId)
+            return (
+              <button
+                key={g.emoji}
+                type="button"
+                onClick={() => onToggleReaction(m.id, g.emoji)}
+                title={g.entries.map((r) => r.display_name).join(', ')}
+                className={`rounded-full border px-1.5 py-0.5 text-xs transition-colors ${
+                  mine
+                    ? 'border-blood-500/60 bg-blood-700/20 text-moon-200'
+                    : 'border-night-600/60 bg-night-800/60 text-moon-200/70 hover:border-moon-400/40'
+                }`}
+              >
+                {g.emoji} {g.entries.length}
+              </button>
+            )
+          })}
+          {menuOpen && (
+            <div className="flex items-center gap-1.5 rounded-full border border-night-600/60 bg-night-800/80 px-2 py-1">
+              {REACTION_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => onToggleReaction(m.id, emoji)}
+                  className="text-sm leading-none transition-transform hover:scale-125"
+                >
+                  {emoji}
+                </button>
+              ))}
+              {!readOnly && (
+                <>
+                  <span className="h-4 w-px bg-night-600/60" />
+                  <button
+                    type="button"
+                    onClick={() => onReply(m)}
+                    title={t('chat.replyTo')}
+                    className="whitespace-nowrap text-xs text-moon-200/70 transition-colors hover:text-moon-200"
+                  >
+                    ↩ {t('chat.replyTo')}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+})
 
 /** Champ de saisie isolé dans son propre composant, avec son propre état
  * `text` — plutôt que de le garder dans ChatPanel comme avant. Sinon,

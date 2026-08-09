@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { ChatChannel, ChatMessage, ChatReaction, ReactionEmoji } from '../types/game'
 
 /** Identité réelle démasquée pour un message anonyme — n'existe que pour les
  * messages que la RLS de chat_message_identities autorise le joueur courant
  * à voir : les siens, et tous ceux de la partie s'il est la Petite Fille
- * vivante (voir migration 0026). */
-interface RevealedIdentity {
+ * vivante (voir migration 0026). Exportée pour que ChatPanel.tsx puisse
+ * l'utiliser sans dupliquer la définition (voir MessageRow, mémoïsé — il en
+ * a besoin pour typer la prop `identities`). */
+export interface RevealedIdentity {
   user_id: string
   display_name: string
 }
@@ -129,32 +131,40 @@ export function useChat(gameId: string | null, channel: ChatChannel | null) {
     }
   }, [gameId, channel])
 
-  async function send(content: string, replyTo?: string | null) {
-    if (!gameId || !channel) return
-    const trimmed = content.trim()
-    if (!trimmed) return
-    setSending(true)
-    const { error } = await supabase.rpc('send_chat_message', {
-      p_game_id: gameId,
-      p_channel: channel,
-      p_content: trimmed,
-      p_reply_to: replyTo ?? null,
-    })
-    setSending(false)
-    return error
-  }
+  // useCallback (deps: gameId/channel seulement) : ChatPanel passe ces deux
+  // fonctions à des lignes de message mémoïsées (React.memo, voir
+  // MessageRow) — sans ça, une nouvelle référence de fonction à chaque
+  // rendu de ChatPanel aurait invalidé le memo de CHAQUE ligne à CHAQUE
+  // rendu, l'annulant complètement.
+  const send = useCallback(
+    async (content: string, replyTo?: string | null) => {
+      if (!gameId || !channel) return
+      const trimmed = content.trim()
+      if (!trimmed) return
+      setSending(true)
+      const { error } = await supabase.rpc('send_chat_message', {
+        p_game_id: gameId,
+        p_channel: channel,
+        p_content: trimmed,
+        p_reply_to: replyTo ?? null,
+      })
+      setSending(false)
+      return error
+    },
+    [gameId, channel]
+  )
 
-  // Pas de mise à jour optimiste locale : comme pour `send` ci-dessus, l'ajout
-  // ou le retrait réel dans `reactions` vient de l'écho realtime (INSERT ou
-  // DELETE sur chat_message_reactions), pas de cet appel — évite de dupliquer
-  // la logique d'affichage groupé ici en plus de ChatPanel.tsx.
-  async function toggleReaction(messageId: string, emoji: ReactionEmoji) {
+  // Pas de mise à jour optimiste locale : l'ajout ou le retrait réel dans
+  // `reactions` vient de l'écho realtime (INSERT ou DELETE sur
+  // chat_message_reactions), pas de cet appel — évite de dupliquer la
+  // logique d'affichage groupé ici en plus de ChatPanel.tsx.
+  const toggleReaction = useCallback(async (messageId: string, emoji: ReactionEmoji) => {
     const { error } = await supabase.rpc('toggle_chat_reaction', {
       p_message_id: messageId,
       p_emoji: emoji,
     })
     return error
-  }
+  }, [])
 
   return { messages, identities, reactions, send, sending, toggleReaction }
 }
