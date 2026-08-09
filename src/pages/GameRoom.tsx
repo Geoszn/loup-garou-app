@@ -315,7 +315,6 @@ export default function GameRoom() {
         {view.game.status === 'day_discussion' && (
           <div className="flex animate-fade-in flex-col gap-4">
             <p className="text-center text-sm text-moon-200/50">{t('game.discussionHint')}</p>
-            {alive && <CallVotePanel view={view} gameId={gameId!} selfId={user.id} me={me} />}
             {alive ? (
               <DayTabs
                 dayTab={dayTab}
@@ -329,6 +328,12 @@ export default function GameRoom() {
             ) : (
               <PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
             )}
+            {/* Sous le chat/vocal/grille plutôt qu'au-dessus (retour
+                utilisateur) : on discute d'abord, on décide de voter ensuite
+                — une vraie carte plutôt qu'une ligne fine, pour bien la
+                distinguer comme un appel à l'action une fois la discussion
+                déjà sous les yeux. */}
+            {alive && <CallVotePanel view={view} gameId={gameId!} selfId={user.id} me={me} />}
           </div>
         )}
 
@@ -639,42 +644,51 @@ function CallVotePanel({
     if (rpcError) setError(rpcError.message)
   }
 
-  // Discret plutôt qu'un gros bloc avec la liste nommée de qui a répondu
-  // quoi (ReadyGrid) : juste un compte "X/Y" + une fine barre de
-  // progression anonyme, sur une seule ligne avec le bouton d'action. Le
-  // détail joueur par joueur n'apporte rien d'utile ici (contrairement au
-  // vote lui-même, où savoir QUI a voté pour QUI compte) — seul le total
-  // compte pour savoir si le débat est prêt à se terminer.
+  // Reste discret sur le détail (pas de liste nommée de qui a répondu quoi,
+  // voir ReadyGrid ailleurs) : le détail joueur par joueur n'apporte rien
+  // d'utile ici (contrairement au vote lui-même, où savoir QUI a voté pour
+  // QUI compte) — seul le total compte pour savoir si le débat est prêt à
+  // se terminer. Positionné sous le chat/vocal/grille (voir son appel plus
+  // bas dans le rendu de 'day_discussion') plutôt qu'au-dessus : ça respecte
+  // l'ordre naturel "on discute d'abord, on décide de voter ensuite", et une
+  // vraie carte (icône, titre, compte, bouton pleine largeur) plutôt qu'une
+  // simple ligne fine, pour bien la distinguer comme un appel à l'action.
   const progress = others.length > 0 ? agreedIds.length / others.length : 0
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-night-700/40 bg-night-900/20 px-3 py-2">
-      <div className="flex items-center gap-2">
-        <span className="shrink-0 text-[11px] text-moon-200/40">
-          {t('game.callVoteTitle', { agreed: agreedIds.length, total: others.length })}
-        </span>
-        <div className="h-1 min-w-[36px] flex-1 overflow-hidden rounded-full bg-night-700/50">
-          <div
-            className="h-full rounded-full bg-moon-400/70 transition-all duration-300"
-            style={{ width: `${Math.round(progress * 100)}%` }}
-          />
+    <div
+      className={`flex flex-col gap-3 rounded-2xl border px-4 py-3.5 transition-colors ${
+        allOthersAgreed ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-night-600/60 bg-night-900/40'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <span className="shrink-0 text-xl">🗳️</span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-moon-200">{t('game.callVoteHeading')}</p>
+          <p className="text-xs text-moon-200/50">
+            {t('game.callVoteProgress', { agreed: agreedIds.length, total: others.length })}
+          </p>
         </div>
-        {!isCaptain && (
-          <Button
-            variant={agreed ? 'ghost' : 'primary'}
-            className="shrink-0 px-3 py-1.5 text-xs"
-            disabled={loading}
-            onClick={toggleAgree}
-          >
-            {agreed ? t('game.cancelAgreement') : t('game.agree')}
-          </Button>
-        )}
-        {isCaptain && (
-          <Button className="shrink-0 px-3 py-1.5 text-xs" disabled={!allOthersAgreed || loading} onClick={callVote}>
-            {allOthersAgreed ? t('game.callVoteButton') : t('game.callVoteButtonWaiting')}
-          </Button>
-        )}
+        <span className="shrink-0 font-display text-sm tabular-nums text-moon-200/60">
+          {agreedIds.length}/{others.length}
+        </span>
       </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-night-700/50">
+        <div
+          className="h-full rounded-full bg-moon-400/70 transition-all duration-300"
+          style={{ width: `${Math.round(progress * 100)}%` }}
+        />
+      </div>
+      {!isCaptain && (
+        <Button variant={agreed ? 'ghost' : 'primary'} className="w-full" disabled={loading} onClick={toggleAgree}>
+          {agreed ? t('game.cancelAgreement') : t('game.agree')}
+        </Button>
+      )}
+      {isCaptain && (
+        <Button className="w-full" disabled={!allOthersAgreed || loading} onClick={callVote}>
+          {allOthersAgreed ? t('game.callVoteButton') : t('game.callVoteButtonWaiting')}
+        </Button>
+      )}
       <ErrorText>{error}</ErrorText>
     </div>
   )
