@@ -25,11 +25,20 @@ const config: CapacitorConfig = {
     // défaut — évite à la fois le flash blanc et une coupure brutale entre
     // le splash et l'appli, qui sont ce qui trahit le plus une appli
     // "juste un site web emballé".
+    //
+    // Spinner activé (doré, assorti au thème) : le logo seul sur fond
+    // sombre pouvait donner l'impression d'un écran figé/tout noir pendant
+    // le chargement initial (retour joueur) — un indicateur d'activité
+    // visible en dessous du logo confirme que l'appli travaille bel et
+    // bien, même si l'attente réelle reste très courte.
     SplashScreen: {
       launchShowDuration: 0,
       launchAutoHide: false,
       backgroundColor: '#160f0a',
-      showSpinner: false,
+      showSpinner: true,
+      spinnerColor: '#d99a3f',
+      iosSpinnerStyle: 'large',
+      androidSpinnerStyle: 'large',
       androidScaleType: 'CENTER_CROP',
       splashFullScreen: true,
       splashImmersive: true,

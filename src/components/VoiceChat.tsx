@@ -31,7 +31,6 @@ export function VoiceChat({
     selfSpeaking,
     deafened,
     toggleSound,
-    debugInfo,
   } = useVoiceChat(gameId, code, channel, displayName, listenOnly)
   const { t } = useLanguage()
 
@@ -165,16 +164,6 @@ export function VoiceChat({
             </li>
           ))}
         </ul>
-      )}
-
-      {/* Diagnostic TEMPORAIRE (voir useVoiceChat.ts) : à retirer une fois le
-          bug "connecté mais aucun son" résolu en natif iOS — permet de lire
-          l'état réel de la piste micro directement sur un screenshot du
-          joueur, sans accès à la console JS. */}
-      {connected && debugInfo && (
-        <p className="break-words rounded-lg border border-amber-400/30 bg-amber-400/5 px-2 py-1 text-[10px] leading-snug text-amber-300/80">
-          🔧 {debugInfo}
-        </p>
       )}
     </div>
   )
