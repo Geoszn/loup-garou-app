@@ -17,11 +17,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // haut-parleur. `.playAndRecord` + `.defaultToSpeaker` règle les deux
         // problèmes : le son sort toujours par le haut-parleur et ignore le
         // bouton silencieux, comme n'importe quelle vraie appli d'appel/jeu.
+        //
+        // Volontairement PAS de `setActive(true)` ici, et PAS de
+        // `.mixWithOthers` : après une première version avec les deux, le
+        // vocal (Daily.co/WebRTC) s'est retrouvé cassé (plus aucun son
+        // capté/reçu) alors que la connexion elle-même réussissait — signe
+        // classique d'un conflit entre une session audio déjà activée
+        // manuellement au lancement et celle que WebKit active tout seul
+        // pour une capture micro WebRTC. On se contente de poser la
+        // catégorie (ce qui suffit pour les effets sonores/vidéo <audio>
+        // classiques, lus par la WKWebView elle-même) et on laisse WebKit
+        // gérer l'activation/désactivation de la session le moment venu,
+        // aussi bien pour la lecture que pour la capture micro.
         try? AVAudioSession.sharedInstance().setCategory(
             .playAndRecord,
-            options: [.defaultToSpeaker, .allowBluetooth, .allowBluetoothA2DP, .mixWithOthers]
+            options: [.defaultToSpeaker, .allowBluetooth, .allowBluetoothA2DP]
         )
-        try? AVAudioSession.sharedInstance().setActive(true)
 
         // Demande l'autorisation du micro dès le lancement (vocal en partie,
         // voir Daily.co) plutôt que d'attendre que la personne rejoigne un
