@@ -105,13 +105,36 @@ export const ChatPanel = memo(function ChatPanel({
     if (!inputFocused || !isTouchDevice) return
     const vv = window.visualViewport
     if (!vv) return
-    const update = () => setViewport({ height: vv.height, top: vv.offsetTop })
+    // iOS déclenche resize/scroll sur visualViewport très souvent pendant la
+    // frappe (barre de prédiction qui apparaît/disparaît selon le mot en
+    // cours, micro-ajustements du clavier) — potentiellement plusieurs fois
+    // par seconde en tapant vite. Deux garde-fous pour que ça reste léger :
+    // 1) rAF pour ne traiter au plus qu'une mise à jour par frame au lieu
+    //    d'une par évènement (les évènements peuvent arriver en rafale) ;
+    // 2) ne pas appeler setState du tout si la valeur n'a pas réellement
+    //    changé, pour ne pas déclencher un re-rendu (et la transition CSS
+    //    qui l'accompagnait, voir plus bas) sans raison.
+    let raf = 0
+    let last = { height: -1, top: -1 }
+    const update = () => {
+      raf = 0
+      const height = vv.height
+      const top = vv.offsetTop
+      if (height === last.height && top === last.top) return
+      last = { height, top }
+      setViewport({ height, top })
+    }
+    const schedule = () => {
+      if (raf) return
+      raf = requestAnimationFrame(update)
+    }
     update()
-    vv.addEventListener('resize', update)
-    vv.addEventListener('scroll', update)
+    vv.addEventListener('resize', schedule)
+    vv.addEventListener('scroll', schedule)
     return () => {
-      vv.removeEventListener('resize', update)
-      vv.removeEventListener('scroll', update)
+      if (raf) cancelAnimationFrame(raf)
+      vv.removeEventListener('resize', schedule)
+      vv.removeEventListener('scroll', schedule)
     }
   }, [inputFocused, isTouchDevice])
 
@@ -200,7 +223,16 @@ export const ChatPanel = memo(function ChatPanel({
           ? { position: 'fixed', left: 0, right: 0, top: viewport!.top, height: viewport!.height, zIndex: 60 }
           : undefined
       }
-      className={`flex flex-col border border-night-600/60 transition-[height] duration-150 ${
+      // Pas de transition CSS sur la hauteur/position ici : en plein écran
+      // (expanded), top/height sont recalculés à chaque évènement
+      // visualViewport pendant la frappe (voir effet ci-dessus) — avec une
+      // transition active, chaque mise à jour relançait 150ms d'animation
+      // interpolée par le navigateur, et plusieurs de ces animations
+      // pouvaient se chevaucher en tapant vite. C'était le principal
+      // responsable des ralentissements ressentis "en utilisant beaucoup le
+      // clavier" sur iPhone : coût de repaint répété pour une transition qui
+      // n'apportait de toute façon aucun bénéfice visuel perceptible ici.
+      className={`flex flex-col border border-night-600/60 ${
         expanded ? 'rounded-none bg-night-900/95' : `rounded-2xl bg-night-900/50 ${compact ? 'h-64' : 'h-80'}`
       }`}
     >
