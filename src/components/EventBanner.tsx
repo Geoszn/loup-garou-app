@@ -71,25 +71,43 @@ export function EventBanner({ event, onExpire }: { event: GameEvent; onExpire?: 
   const bonusBadge =
     event.bonus_type === 'multiplier' ? `×${event.bonus_value}` : event.bonus_type === 'flat' ? `+${event.bonus_value}` : null
 
+  const content = (
+    <>
+      <span className="text-xl" aria-hidden="true">
+        🎉
+      </span>
+      <p className="min-w-0 flex-1 basis-full text-left text-sm font-semibold text-moon-200 sm:basis-auto">{text}</p>
+      <div className="flex shrink-0 items-center gap-2">
+        {bonusBadge && (
+          <span className="rounded-full bg-black/25 px-2.5 py-1 text-xs font-bold text-moon-200">{bonusBadge}</span>
+        )}
+        <span className="whitespace-nowrap rounded-full bg-black/20 px-2.5 py-1 text-[11px] text-moon-200/80">
+          ⏳ {formatRemaining(remaining)}
+        </span>
+      </div>
+    </>
+  )
+
   return (
     <div className={`relative mb-4 overflow-hidden rounded-2xl border backdrop-blur-sm ${BANNER_STYLES[event.banner_color]}`}>
-      {imageUrl && (
-        <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-25" aria-hidden="true" />
-      )}
-      <div className="relative flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3 sm:flex-nowrap sm:px-5">
-        <span className="text-xl" aria-hidden="true">
-          🎉
-        </span>
-        <p className="min-w-0 flex-1 basis-full text-left text-sm font-semibold text-moon-200 sm:basis-auto">{text}</p>
-        <div className="flex shrink-0 items-center gap-2">
-          {bonusBadge && (
-            <span className="rounded-full bg-black/25 px-2.5 py-1 text-xs font-bold text-moon-200">{bonusBadge}</span>
-          )}
-          <span className="whitespace-nowrap rounded-full bg-black/20 px-2.5 py-1 text-[11px] text-moon-200/80">
-            ⏳ {formatRemaining(remaining)}
-          </span>
+      {imageUrl ? (
+        // Ratio fixe (pas juste "h-full" derrière le texte) : sans ça,
+        // l'image se retrouvait étirée différemment sur mobile (bandeau plus
+        // haut, texte passant sur 2 lignes) et sur desktop (bandeau bas,
+        // texte sur une ligne) — même image, deux découpes très différentes.
+        // Un ratio fixe garde le même cadrage quelle que soit la largeur de
+        // l'écran ; le texte passe en légende superposée en bas, sur un
+        // dégradé sombre pour rester lisible sur n'importe quelle image.
+        <div className="relative aspect-[3/1] w-full">
+          <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover object-center" aria-hidden="true" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3 sm:flex-nowrap sm:px-5">
+            {content}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="relative flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3 sm:flex-nowrap sm:px-5">{content}</div>
+      )}
     </div>
   )
 }
