@@ -1314,6 +1314,7 @@ export const translations = {
   'chat.replyTo': { fr: 'Répondre', en: 'Reply' },
   'chat.replyingTo': { fr: 'Réponse à', en: 'Replying to' },
   'chat.repliedMessageUnavailable': { fr: 'Message d’origine indisponible', en: 'Original message unavailable' },
+  'chat.addReaction': { fr: 'Réagir', en: 'React' },
   'lobby.gameStartedNotifTitle': { fr: '🐺 La partie commence !', en: '🐺 The game is starting!' },
   'lobby.gameStartedNotifBody': { fr: 'Rejoignez le salon, la distribution des rôles a commencé.', en: 'Join now, roles are being handed out.' },
   'lobby.inviteMessage': {

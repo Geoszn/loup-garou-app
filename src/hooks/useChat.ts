@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import type { ChatChannel, ChatMessage } from '../types/game'
+import type { ChatChannel, ChatMessage, ChatReaction, ReactionEmoji } from '../types/game'
 
 /** Identité réelle démasquée pour un message anonyme — n'existe que pour les
  * messages que la RLS de chat_message_identities autorise le joueur courant
@@ -14,15 +14,19 @@ interface RevealedIdentity {
 export function useChat(gameId: string | null, channel: ChatChannel | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [identities, setIdentities] = useState<Record<string, RevealedIdentity>>({})
+  const [reactions, setReactions] = useState<ChatReaction[]>([])
   const [sending, setSending] = useState(false)
   const seenIds = useRef<Set<string>>(new Set())
   const seenIdentityIds = useRef<Set<string>>(new Set())
+  const seenReactionIds = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     setMessages([])
     setIdentities({})
+    setReactions([])
     seenIds.current = new Set()
     seenIdentityIds.current = new Set()
+    seenReactionIds.current = new Set()
     if (!gameId || !channel) return
 
     let cancelled = false
@@ -59,17 +63,50 @@ export function useChat(gameId: string | null, channel: ChatChannel | null) {
         })
     }
 
-    let chatChannel = supabase.channel(`chat-${gameId}-${channel}`).on(
-      'postgres_changes',
-      { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `game_id=eq.${gameId}` },
-      (payload) => {
-        const row = payload.new as ChatMessage
-        if (row.channel !== channel) return
-        if (seenIds.current.has(row.id)) return
-        seenIds.current.add(row.id)
-        setMessages((prev) => [...prev, row])
-      }
-    )
+    supabase
+      .from('chat_message_reactions')
+      .select('id, message_id, user_id, display_name, emoji')
+      .eq('game_id', gameId)
+      .eq('channel', channel)
+      .then(({ data }) => {
+        if (cancelled || !data) return
+        data.forEach((r) => seenReactionIds.current.add(r.id))
+        setReactions(data as ChatReaction[])
+      })
+
+    let chatChannel = supabase
+      .channel(`chat-${gameId}-${channel}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `game_id=eq.${gameId}` },
+        (payload) => {
+          const row = payload.new as ChatMessage
+          if (row.channel !== channel) return
+          if (seenIds.current.has(row.id)) return
+          seenIds.current.add(row.id)
+          setMessages((prev) => [...prev, row])
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_message_reactions', filter: `game_id=eq.${gameId}` },
+        (payload) => {
+          const row = payload.new as ChatReaction & { channel: ChatChannel }
+          if (row.channel !== channel) return
+          if (seenReactionIds.current.has(row.id)) return
+          seenReactionIds.current.add(row.id)
+          setReactions((prev) => [...prev, row])
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'chat_message_reactions', filter: `game_id=eq.${gameId}` },
+        (payload) => {
+          const row = payload.old as { id: string }
+          seenReactionIds.current.delete(row.id)
+          setReactions((prev) => prev.filter((r) => r.id !== row.id))
+        }
+      )
 
     if (channel === 'village') {
       chatChannel = chatChannel.on(
@@ -107,5 +144,17 @@ export function useChat(gameId: string | null, channel: ChatChannel | null) {
     return error
   }
 
-  return { messages, identities, send, sending }
+  // Pas de mise à jour optimiste locale : comme pour `send` ci-dessus, l'ajout
+  // ou le retrait réel dans `reactions` vient de l'écho realtime (INSERT ou
+  // DELETE sur chat_message_reactions), pas de cet appel — évite de dupliquer
+  // la logique d'affichage groupé ici en plus de ChatPanel.tsx.
+  async function toggleReaction(messageId: string, emoji: ReactionEmoji) {
+    const { error } = await supabase.rpc('toggle_chat_reaction', {
+      p_message_id: messageId,
+      p_emoji: emoji,
+    })
+    return error
+  }
+
+  return { messages, identities, reactions, send, sending, toggleReaction }
 }

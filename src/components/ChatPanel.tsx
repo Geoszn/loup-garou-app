@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useChat } from '../hooks/useChat'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
-import type { ChatChannel, ChatMessage } from '../types/game'
+import { REACTION_EMOJIS, type ChatChannel, type ChatMessage, type ChatReaction, type ReactionEmoji } from '../types/game'
 
 const CHANNEL_LABEL: Record<ChatChannel, { titleKey: TranslationKey; emoji: string; placeholderKey: TranslationKey }> = {
   village: { titleKey: 'chat.village.title', emoji: '💬', placeholderKey: 'chat.village.placeholder' },
@@ -32,7 +32,10 @@ export function ChatPanel({
   note?: string
 }) {
   const { t } = useLanguage()
-  const { messages, identities, send, sending } = useChat(gameId, channel)
+  const { messages, identities, reactions, send, sending, toggleReaction } = useChat(gameId, channel)
+  // Message dont le petit sélecteur de réaction est ouvert (au plus un à la
+  // fois) — purement local à l'affichage, jamais persisté.
+  const [pickerOpenFor, setPickerOpenFor] = useState<string | null>(null)
   // Message auquel on est en train de répondre (voir migration 0041) —
   // uniquement une référence à un message déjà chargé dans `messages`, pas
   // un état serveur : abandonné sans conséquence si on change d'onglet ou
@@ -73,6 +76,18 @@ export function ChatPanel({
     for (const m of messages) map.set(m.id, m)
     return map
   }, [messages])
+
+  // Réactions groupées par message — recalculé seulement quand `reactions`
+  // change, même logique que messagesById ci-dessus.
+  const reactionsByMessage = useMemo(() => {
+    const map = new Map<string, ChatReaction[]>()
+    for (const r of reactions) {
+      const list = map.get(r.message_id)
+      if (list) list.push(r)
+      else map.set(r.message_id, [r])
+    }
+    return map
+  }, [reactions])
 
   // Même règle d'affichage du nom que dans le rendu des messages plus bas
   // (auteur réel démasqué seulement si la RLS de chat_message_identities
@@ -123,6 +138,15 @@ export function ChatPanel({
           // des 200 derniers, ou salon rechargé depuis), on affiche un
           // repère générique plutôt que de masquer la citation.
           const repliedTo = m.reply_to_message_id ? messagesById.get(m.reply_to_message_id) : undefined
+          // Groupées par emoji pour l'affichage en pastilles (une par emoji
+          // utilisé, avec le compte) plutôt qu'une réaction par ligne — même
+          // idée que Slack/Discord. Autorisé même en `readOnly` (un fantôme
+          // qui suit le village peut réagir sans pouvoir écrire, voir
+          // migration 0066 : can_read_channel suffit côté serveur).
+          const messageReactions = reactionsByMessage.get(m.id) ?? []
+          const groupedReactions = REACTION_EMOJIS
+            .map((emoji) => ({ emoji, entries: messageReactions.filter((r) => r.emoji === emoji) }))
+            .filter((g) => g.entries.length > 0)
 
           return (
             <div key={m.id} className={`group animate-fade-in text-sm ${isMine ? 'text-right' : ''}`}>
@@ -141,6 +165,14 @@ export function ChatPanel({
                   ↩
                 </button>
               )}
+              <button
+                type="button"
+                onClick={() => setPickerOpenFor((cur) => (cur === m.id ? null : m.id))}
+                title={t('chat.addReaction')}
+                className="mx-1 align-middle text-xs text-moon-200/30 transition-colors hover:text-moon-300 active:text-moon-300"
+              >
+                ☺+
+              </button>
               <span
                 className={`inline-block max-w-[85%] break-words rounded-2xl px-3 py-1.5 text-left ${
                   isMine
@@ -162,6 +194,46 @@ export function ChatPanel({
                 )}
                 {m.content}
               </span>
+
+              {(groupedReactions.length > 0 || pickerOpenFor === m.id) && (
+                <div className={`mt-1 flex flex-wrap items-center gap-1 ${isMine ? 'justify-end' : ''}`}>
+                  {groupedReactions.map((g) => {
+                    const mine = g.entries.some((r) => r.user_id === selfId)
+                    return (
+                      <button
+                        key={g.emoji}
+                        type="button"
+                        onClick={() => toggleReaction(m.id, g.emoji)}
+                        title={g.entries.map((r) => r.display_name).join(', ')}
+                        className={`rounded-full border px-1.5 py-0.5 text-xs transition-colors ${
+                          mine
+                            ? 'border-blood-500/60 bg-blood-700/20 text-moon-200'
+                            : 'border-night-600/60 bg-night-800/60 text-moon-200/70 hover:border-moon-400/40'
+                        }`}
+                      >
+                        {g.emoji} {g.entries.length}
+                      </button>
+                    )
+                  })}
+                  {pickerOpenFor === m.id && (
+                    <div className="flex items-center gap-1 rounded-full border border-night-600/60 bg-night-800/80 px-1.5 py-1">
+                      {REACTION_EMOJIS.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => {
+                            toggleReaction(m.id, emoji)
+                            setPickerOpenFor(null)
+                          }}
+                          className="text-sm leading-none transition-transform hover:scale-125"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )
         })}

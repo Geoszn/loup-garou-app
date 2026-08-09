@@ -64,6 +64,20 @@ export interface ChatMessage {
   reply_to_message_id: string | null
 }
 
+// Jeu fixe de réactions (voir migration 0066, même liste côté serveur dans
+// toggle_chat_reaction) — pas de texte libre, pour rester simple à afficher
+// en pastilles groupées et ne pas ouvrir un canal de contenu arbitraire.
+export const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🔥'] as const
+export type ReactionEmoji = (typeof REACTION_EMOJIS)[number]
+
+export interface ChatReaction {
+  id: string
+  message_id: string
+  user_id: string
+  display_name: string
+  emoji: ReactionEmoji
+}
+
 export interface GameRow {
   id: string
   code: string

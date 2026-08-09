@@ -146,12 +146,14 @@ export default function GameRoom() {
   // Salon vocal piloté automatiquement par la phase de jeu (le texte, lui,
   // est géré directement dans chaque bloc de statut ci-dessous — voir
   // NightChat pour la nuit). Les morts ont toujours accès au cimetière ; les
-  // vivants au village pendant le jour. Pas de vocal la nuit.
+  // vivants au village pendant le jour, ainsi que pendant l'élection du
+  // Capitaine (captain_election, voir migration 0066) — le texte écrit reste
+  // fermé pendant l'élection, seul le vocal s'ouvre. Pas de vocal la nuit.
   let voiceChannel: VoiceChannel = null
 
   if (!alive) {
     voiceChannel = 'graveyard'
-  } else if (['day_reveal', 'day_discussion', 'day_vote'].includes(view.game.status)) {
+  } else if (['day_reveal', 'day_discussion', 'day_vote', 'captain_election'].includes(view.game.status)) {
     voiceChannel = 'village'
   }
 
@@ -226,7 +228,7 @@ export default function GameRoom() {
                       (voir le calcul de voiceChannel plus haut) : inutile de
                       proposer d'"écouter" un salon qui n'est pas encore ouvert
                       (nuit, salon d'attente entre deux manches, etc.). */}
-                  {['day_reveal', 'day_discussion', 'day_vote'].includes(view.game.status) && (
+                  {['day_reveal', 'day_discussion', 'day_vote', 'captain_election'].includes(view.game.status) && (
                     <VoiceChat
                       gameId={gameId!}
                       code={code!}
@@ -298,6 +300,12 @@ export default function GameRoom() {
               )
             ) : (
               <PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
+            )}
+            {/* Vocal ouvert pendant l'élection (voir migration 0066) pour que
+                le village puisse discuter à voix haute avant de voter — le
+                texte écrit, lui, reste fermé pendant cette phase courte. */}
+            {alive && (
+              <VoiceChat gameId={gameId!} code={code!} channel={voiceChannel} displayName={me?.display_name ?? t('common.playerFallback')} />
             )}
           </div>
         )}
