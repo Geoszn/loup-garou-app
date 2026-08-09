@@ -11,7 +11,7 @@ import { PhaseBanner, NIGHT_STEP_LABEL, NIGHT_STEP_ICON } from '../components/Ph
 import { RoleCard } from '../components/RoleCard'
 import { PlayerGrid } from '../components/PlayerGrid'
 import { ReadyGrid } from '../components/ReadyGrid'
-import { ActionPanel } from '../components/ActionPanel'
+import { ActionPanel, VotePanel, CaptainVotePanel } from '../components/ActionPanel'
 import { ChatPanel } from '../components/ChatPanel'
 import { VoteRecapModal } from '../components/VoteRecapModal'
 import { NightRecapModal } from '../components/NightRecapModal'
@@ -292,12 +292,14 @@ export default function GameRoom() {
 
         {view.game.status === 'captain_election' && (
           <div className="flex animate-fade-in flex-col gap-4">
+            {/* La grille reste affichée après le premier vote (voir
+                CaptainVotePanel — submit_captain_vote fait un upsert côté
+                serveur) plutôt que de basculer sur un écran d'attente
+                générique : ça laisse le temps de changer d'avis avant la
+                fin du chrono, avec un bandeau bien visible confirmant que
+                le vote est enregistré. */}
             {alive ? (
-              view.pending_action_required === 'captain_vote' ? (
-                <ActionPanel view={view} gameId={gameId!} selfId={user.id} />
-              ) : (
-                <WaitingCard alive={alive} myRole={view.my_role} voting />
-              )
+              <CaptainVotePanel view={view} gameId={gameId!} selfId={user.id} />
             ) : (
               <PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
             )}
@@ -332,13 +334,20 @@ export default function GameRoom() {
 
         {view.game.status === 'day_vote' && (
           <div className="flex animate-fade-in flex-col gap-4">
+            {/* 'hunter'/'captain_succession' : le vote vient d'être dépouillé
+                (avant même la fin du chrono si tout le monde avait voté) et
+                ce joueur précis a une action spéciale à jouer — la grille de
+                vote n'a alors plus lieu d'être, ActionPanel prend le relais.
+                Dans tous les autres cas (vote pas encore dépouillé, qu'on
+                ait déjà voté ou non), VotePanel reste affiché — voir son
+                bandeau "vote enregistré" une fois qu'on a voté, plutôt que
+                de basculer sur un écran d'attente qui empêchait de changer
+                d'avis. */}
             {alive ? (
-              view.pending_action_required === 'vote' ||
-              view.pending_action_required === 'hunter' ||
-              view.pending_action_required === 'captain_succession' ? (
+              view.pending_action_required === 'hunter' || view.pending_action_required === 'captain_succession' ? (
                 <ActionPanel view={view} gameId={gameId!} selfId={user.id} />
               ) : (
-                <WaitingCard alive={alive} myRole={view.my_role} voting />
+                <VotePanel view={view} gameId={gameId!} selfId={user.id} />
               )
             ) : (
               <PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
@@ -651,15 +660,17 @@ function CallVotePanel({
   )
 }
 
+// `voting` a disparu (voir day_vote/captain_election dans GameRoom : la
+// grille de vote reste maintenant affichée après un premier vote au lieu de
+// basculer sur cet écran d'attente générique) — ne reste utilisé que pour
+// la nuit (nightStep) et pour les joueurs éliminés (!alive).
 function WaitingCard({
   alive,
   myRole,
-  voting = false,
   nightStep,
 }: {
   alive: boolean
   myRole: string | null
-  voting?: boolean
   // Pendant la nuit, plutôt qu'un "en attente des autres joueurs" générique,
   // on nomme le rôle précisément en train d'agir (même texte que le
   // sous-titre du bandeau de phase — voir NIGHT_STEP_LABEL).
@@ -674,11 +685,11 @@ function WaitingCard({
   const nightLabel = nightLabelKey ? t(nightLabelKey) : null
   const nightIcon = nightStep ? NIGHT_STEP_ICON[nightStep] : null
 
-  // Pendant la nuit (vivant, pas de vote en cours) : rendu spécifique,
-  // beaucoup plus visible qu'un texte gris générique — une grande icône du
-  // rôle en train d'agir, animée, avec un halo doré. C'est le seul repère
-  // du joueur sur ce qui se passe pendant que d'autres agissent.
-  if (alive && !voting && nightLabel) {
+  // Pendant la nuit (vivant) : rendu spécifique, beaucoup plus visible qu'un
+  // texte gris générique — une grande icône du rôle en train d'agir,
+  // animée, avec un halo doré. C'est le seul repère du joueur sur ce qui se
+  // passe pendant que d'autres agissent.
+  if (alive && nightLabel) {
     return (
       <Card className="animate-fade-in flex flex-col items-center gap-3 border-moon-400/30 py-8 text-center shadow-glow">
         <span className="animate-breathe text-5xl drop-shadow-[0_0_14px_rgba(224,168,74,0.55)]" aria-hidden="true">
@@ -699,7 +710,7 @@ function WaitingCard({
             : t('game.waitingEliminatedNoRole')}
         </p>
       ) : (
-        <p className="animate-breathe text-moon-200/60">{voting ? t('game.voteInProgress') : t('game.waitingOthers')}</p>
+        <p className="animate-breathe text-moon-200/60">{t('game.waitingOthers')}</p>
       )}
     </Card>
   )

@@ -677,6 +677,15 @@ export const translations = {
     en: "You won't use any potion tonight — your remaining potions will still be usable on a future night. Once confirmed, you won't be able to go back for tonight.",
   },
   'action.vote.title': { fr: 'Votez pour éliminer un suspect', en: 'Vote to eliminate a suspect' },
+  // Réutilisée par VotePanel ET CaptainVotePanel (ActionPanel.tsx) : la
+  // grille reste affichée après un premier vote (submit_vote/
+  // submit_captain_vote font un upsert côté serveur) pour laisser le temps
+  // de changer d'avis avant la fin du chrono — ce bandeau confirme que le
+  // vote est bien enregistré pendant ce délai.
+  'action.voteRecorded': {
+    fr: 'Vote enregistré — tu peux encore le changer.',
+    en: 'Vote recorded — you can still change it.',
+  },
   'action.captainVote.title': { fr: 'Élisez votre Capitaine', en: 'Elect your Captain' },
   'action.captainVote.subtitle': {
     fr: 'Son vote comptera double, et tranchera les égalités.',

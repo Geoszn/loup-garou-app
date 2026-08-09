@@ -418,12 +418,43 @@ function SorcierePanel({ view, gameId }: { view: MyGameView; gameId: string; sel
   )
 }
 
-function VotePanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
+// Bandeau "vote enregistré" partagé par VotePanel et CaptainVotePanel —
+// bien visible (vert franc, icône, texte en gras) plutôt qu'un simple
+// changement de couleur du bouton : c'est le SEUL repère du joueur une fois
+// que la grille reste affichée après son premier vote (voir hasVoted dans
+// les deux panneaux, et GameRoom.tsx qui ne bascule plus vers un écran
+// d'attente générique dès le premier vote envoyé).
+function VoteRecordedBanner() {
+  const { t } = useLanguage()
+  return (
+    <div className="mb-4 flex items-center gap-2.5 rounded-xl border border-emerald-500/60 bg-emerald-700/15 px-3.5 py-2.5">
+      <span className="text-xl" aria-hidden="true">
+        ✅
+      </span>
+      <p className="text-sm font-semibold text-emerald-400">{t('action.voteRecorded')}</p>
+    </div>
+  )
+}
+
+// Exportée (comme CaptainVotePanel plus bas) : GameRoom.tsx l'utilise
+// directement, en dehors du switch de ActionPanel, pour continuer à
+// l'afficher même une fois pending_action_required retombé à null après le
+// premier vote (voir le commentaire sur hasVoted ci-dessous et
+// GameRoom.tsx). submit_vote fait un upsert côté serveur (migration
+// 0005) : revoter change simplement la cible tant que le vote n'a pas été
+// dépouillé, et si tout le monde a voté, la partie avance immédiatement
+// sans attendre la fin du chrono — déjà géré côté serveur, rien à faire ici.
+export function VotePanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
   const { t } = useLanguage()
   const [selected, setSelected] = useState<string | null>(view.my_vote_target)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const alive = view.players.filter((p) => p.is_alive)
+  // Un vote existe dès que le serveur ne réclame plus l'action 'vote' pour
+  // ce joueur (voir get_my_game_view) — distinct de `selected === null`, qui
+  // peut aussi bien vouloir dire "pas encore voté" que "vote pour
+  // s'abstenir".
+  const hasVoted = view.pending_action_required !== 'vote'
 
   async function vote(id: string | null) {
     setSelected(id)
@@ -435,22 +466,33 @@ function VotePanel({ view, gameId, selfId }: { view: MyGameView; gameId: string;
   }
 
   return (
-    <PanelShell emoji="🗳️" title={t('action.vote.title')}>
+    <Card
+      className={`animate-fade-in transition-colors ${hasVoted ? 'border-emerald-500/40 shadow-glow' : 'border-blood-700/40 shadow-blood-glow'}`}
+    >
+      <div className="mb-4 flex items-center gap-2.5">
+        <span className="text-2xl">🗳️</span>
+        <h3 className="font-display text-lg text-moon-200">{t('action.vote.title')}</h3>
+      </div>
+      {hasVoted && <VoteRecordedBanner />}
       <PlayerGrid players={alive} selfId={selfId} selectable selectedId={selected} onSelect={(id) => vote(id)} />
       <Button variant="ghost" className="mt-3 w-full" disabled={loading} onClick={() => vote(null)}>
         {t('common.abstain')}
       </Button>
       <ErrorText>{error}</ErrorText>
-    </PanelShell>
+    </Card>
   )
 }
 
-function CaptainVotePanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
+// Voir le commentaire sur VotePanel ci-dessus — même principe pour
+// l'élection du Capitaine (submit_captain_vote, migration 0018, upsert +
+// avance anticipée déjà gérés côté serveur).
+export function CaptainVotePanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
   const { t } = useLanguage()
   const [selected, setSelected] = useState<string | null>(view.my_captain_vote_target)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const alive = view.players.filter((p) => p.is_alive)
+  const hasVoted = view.pending_action_required !== 'captain_vote'
 
   async function vote(id: string | null) {
     setSelected(id)
@@ -462,13 +504,23 @@ function CaptainVotePanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
   }
 
   return (
-    <PanelShell emoji="🎖️" title={t('action.captainVote.title')} subtitle={t('action.captainVote.subtitle')}>
+    <Card
+      className={`animate-fade-in transition-colors ${hasVoted ? 'border-emerald-500/40 shadow-glow' : 'border-blood-700/40 shadow-blood-glow'}`}
+    >
+      <div className="mb-4 flex items-center gap-2.5">
+        <span className="text-2xl">🎖️</span>
+        <div>
+          <h3 className="font-display text-lg text-moon-200">{t('action.captainVote.title')}</h3>
+          <p className="text-xs text-moon-200/50">{t('action.captainVote.subtitle')}</p>
+        </div>
+      </div>
+      {hasVoted && <VoteRecordedBanner />}
       <PlayerGrid players={alive} selfId={selfId} selectable selectedId={selected} onSelect={(id) => vote(id)} />
       <Button variant="ghost" className="mt-3 w-full" disabled={loading} onClick={() => vote(null)}>
         {t('common.abstain')}
       </Button>
       <ErrorText>{error}</ErrorText>
-    </PanelShell>
+    </Card>
   )
 }
 
