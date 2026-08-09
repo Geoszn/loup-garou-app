@@ -9,6 +9,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        // Sans ceci, la WKWebView utilise par défaut une session audio de
+        // catégorie "ambient" : elle coupe TOUT son (effets sonores du jeu,
+        // et même l'audio du vocal Daily.co) dès que le bouton silencieux
+        // physique de l'iPhone est activé, et fait sortir la voix par
+        // l'écouteur interne (comme un appel téléphonique) plutôt que le
+        // haut-parleur. `.playAndRecord` + `.defaultToSpeaker` règle les deux
+        // problèmes : le son sort toujours par le haut-parleur et ignore le
+        // bouton silencieux, comme n'importe quelle vraie appli d'appel/jeu.
+        try? AVAudioSession.sharedInstance().setCategory(
+            .playAndRecord,
+            options: [.defaultToSpeaker, .allowBluetooth, .allowBluetoothA2DP, .mixWithOthers]
+        )
+        try? AVAudioSession.sharedInstance().setActive(true)
+
         // Demande l'autorisation du micro dès le lancement (vocal en partie,
         // voir Daily.co) plutôt que d'attendre que la personne rejoigne un
         // salon vocal — même logique que côté Android.

@@ -158,12 +158,21 @@ html.capacitor-native *::-webkit-scrollbar-thumb {
   --c-shadow-ambient-a: 0.25;
 }
 
+/* Le fond de `body` gardait encore l'ancienne palette bleu-nuit froide
+   d'avant le reskin "savane" (voir commentaire sur `:root` plus haut) alors
+   que toutes les cartes/surfaces avaient déjà basculé aux bruns chauds —
+   invisible tant que le contenu remplissait tout l'écran, mais un fond de
+   page plus court que 100vh (ex: bas de la page Mon compte) laissait
+   apparaître ce bleu-nuit oublié sous les cartes brunes, d'où la coupure de
+   teinte visible. On reprend ici les mêmes variables `--c-night-*` que le
+   reste de l'appli pour que le fond de page soit toujours raccord, y compris
+   si `.theme-day` venait un jour à s'appliquer plus haut dans l'arbre. */
 body {
   @apply bg-night-950 text-moon-200 font-body antialiased;
   background-image:
-    radial-gradient(ellipse at top, rgba(26, 34, 51, 0.8), transparent 60%),
+    radial-gradient(ellipse at top, rgb(var(--c-night-600) / 0.35), transparent 60%),
     radial-gradient(circle at 90% 0%, rgba(198, 46, 66, 0.12), transparent 45%),
-    linear-gradient(180deg, #0a0e17 0%, #111725 55%, #0a0e17 100%);
+    linear-gradient(180deg, rgb(var(--c-night-950)) 0%, rgb(var(--c-night-900)) 55%, rgb(var(--c-night-950)) 100%);
   min-height: 100vh;
 }
 
