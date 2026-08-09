@@ -19,7 +19,17 @@ import { Capacitor } from '@capacitor/core'
 //
 // Toute route "/api/..." appelée depuis le client doit donc passer par ce
 // helper plutôt que par un chemin relatif en dur.
-const PROD_ORIGIN = 'https://loupgarouafrique.com'
+//
+// IMPORTANT : on cible bien "www." et non le domaine nu. Le domaine nu
+// (apex, sans www) répond avec une redirection 308 vers www — vérifié via
+// les headers Vercel. Un fetch cross-origin qui se fait rediriger pendant le
+// preflight CORS (OPTIONS) est abandonné par le navigateur avec une erreur
+// générique ("Load failed" sur iOS/Safari), et cette redirection est servie
+// par la couche edge/DNS de Vercel AVANT toute fonction serverless — donc
+// invisible dans les Runtime Logs, ce qui a rendu ce bug particulièrement
+// difficile à diagnostiquer. www.loupgarouafrique.com ne redirige pas et
+// répond directement.
+const PROD_ORIGIN = 'https://www.loupgarouafrique.com'
 
 export function apiUrl(path: string): string {
   return Capacitor.isNativePlatform() ? `${PROD_ORIGIN}${path}` : path
