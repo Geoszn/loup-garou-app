@@ -90,8 +90,19 @@ export const ChatPanel = memo(function ChatPanel({
   const [inputFocused, setInputFocused] = useState(false)
   const [viewport, setViewport] = useState<{ height: number; top: number } | null>(null)
 
+  // Le passage en plein écran ne sert qu'à échapper au clavier virtuel
+  // tactile — sur PC (souris/trackpad), `window.visualViewport` existe
+  // pourtant aussi dans tous les navigateurs modernes, donc sans ce garde-fou
+  // le simple fait de cliquer dans le champ faisait passer tout le chat en
+  // plein écran alors qu'il n'y a aucun clavier à éviter. `pointer: coarse`
+  // détecte un pointeur tactile (doigt) plutôt qu'un pointeur fin (souris) ;
+  // calculé une seule fois, ce n'est pas censé changer pendant la session.
+  const [isTouchDevice] = useState(
+    () => typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches
+  )
+
   useEffect(() => {
-    if (!inputFocused) return
+    if (!inputFocused || !isTouchDevice) return
     const vv = window.visualViewport
     if (!vv) return
     const update = () => setViewport({ height: vv.height, top: vv.offsetTop })
@@ -102,12 +113,13 @@ export const ChatPanel = memo(function ChatPanel({
       vv.removeEventListener('resize', update)
       vv.removeEventListener('scroll', update)
     }
-  }, [inputFocused])
+  }, [inputFocused, isTouchDevice])
 
-  // true seulement pendant la frappe dans CE salon précis — les autres
-  // ChatPanel éventuellement montés en même temps (ex. village + loups la
-  // nuit) restent dans leur taille normale.
-  const expanded = inputFocused && !!viewport
+  // true seulement pendant la frappe dans CE salon précis, et seulement sur
+  // un appareil tactile (voir isTouchDevice ci-dessus) — sur PC, le champ
+  // garde sa taille normale, aucun clavier virtuel ne vient jamais masquer
+  // quoi que ce soit.
+  const expanded = isTouchDevice && inputFocused && !!viewport
 
   // Index des messages par id, recalculé seulement quand `messages` change.
   // Avant, la citation d'un message (repliedTo) était retrouvée via
