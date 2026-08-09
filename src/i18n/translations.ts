@@ -585,6 +585,18 @@ export const translations = {
   'game.endVillageWins': { fr: '🌞 Le Village triomphe !', en: '🌞 The Village triumphs!' },
   'game.endWolvesWin': { fr: '🐺 Les Loups-Garous ont gagné !', en: '🐺 The Werewolves have won!' },
   'game.endLoversWin': { fr: '💘 Les Amoureux ont gagné !', en: '💘 The Lovers have won!' },
+  'game.endVillageExplain': {
+    fr: 'Tous les Loups-Garous ont été démasqués et éliminés — {{survivors}} villageois ont survécu jusqu’au bout.',
+    en: 'All the Werewolves were unmasked and eliminated — {{survivors}} villagers made it to the end.',
+  },
+  'game.endWolvesExplain': {
+    fr: 'Les Loups-Garous ({{wolves}}) sont devenus aussi nombreux, voire plus, que le reste du village ({{others}}) : ils en prennent le contrôle.',
+    en: 'The Werewolves ({{wolves}}) became as numerous as, or more numerous than, the rest of the village ({{others}}) : they take control.',
+  },
+  'game.endLoversExplain': {
+    fr: 'Envers et contre tout, {{lover1}} et {{lover2}} sont les deux derniers survivants — leur amour l’emporte sur les deux camps.',
+    en: 'Against all odds, {{lover1}} and {{lover2}} are the last two survivors — their love triumphs over both camps.',
+  },
   'game.playAgain': { fr: '🔄 Rejouer avec ce groupe', en: '🔄 Play again with this group' },
   'game.leaveLobbyButton': { fr: '🚪 Quitter le salon', en: '🚪 Leave the lobby' },
   'game.waitHostRestart': {
@@ -1319,6 +1331,11 @@ export const translations = {
   'voiceChat.alreadyMuted': { fr: 'Déjà coupé', en: 'Already muted' },
   'voiceChat.soundOnTitle': { fr: 'Couper le son (ne plus entendre les autres)', en: 'Mute sound (stop hearing others)' },
   'voiceChat.soundOffTitle': { fr: 'Rétablir le son', en: 'Restore sound' },
+  'voiceChat.you': { fr: 'Moi', en: 'Me' },
+  'voiceChat.selfPillHint': {
+    fr: 'Ton propre micro — s’allume en vert quand ta voix est captée, pour vérifier que les autres te reçoivent.',
+    en: 'Your own microphone — turns green when your voice is picked up, so you can check others can hear you.',
+  },
   'game.extendTimeTitle': { fr: 'Prolonger le débat de 30s', en: 'Extend the debate by 30s' },
   'chat.replyTo': { fr: 'Répondre', en: 'Reply' },
   'chat.replyingTo': { fr: 'Réponse à', en: 'Replying to' },

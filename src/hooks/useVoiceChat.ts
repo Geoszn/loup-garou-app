@@ -63,6 +63,17 @@ export function useVoiceChat(
   // rendu) à chaque tick de l'observateur de niveau sonore quand rien n'a
   // changé (silence prolongé, la majorité du temps) — voir usage plus bas.
   const speakingSignatureRef = useRef('')
+  // Même principe que speakingIds mais pour SOI-MÊME : Daily ne rapporte le
+  // niveau sonore local que via un évènement séparé ('local-audio-level',
+  // et son propre observateur startLocalAudioLevelObserver) — l'observateur
+  // "remote" ci-dessus ne concerne, par construction de l'API, que les
+  // AUTRES participants. Sans ce second observateur, impossible de savoir
+  // si son propre micro est bien capté (utile pour se rassurer que les
+  // autres nous reçoivent, notamment en cours de partie). Un simple booléen
+  // suffit (pas de Map/signature nécessaire comme pour speakingIds) : React
+  // ignore déjà tout seul un setState avec la même valeur primitive, donc
+  // pas de rendu superflu à chaque tick de l'observateur en silence.
+  const [selfSpeaking, setSelfSpeaking] = useState(false)
   // "Assourdissement" : coupe ce qu'on ENTEND des autres, sans toucher à son
   // propre micro (symétrique de `muted`/toggleMute, voir toggleSound
   // ci-dessous). Appliqué à chaque <audio> distant existant ET futur.
@@ -124,6 +135,11 @@ export function useVoiceChat(
         /* ignore */
       }
       try {
+        call.stopLocalAudioLevelObserver()
+      } catch {
+        /* ignore */
+      }
+      try {
         await call.leave()
       } catch {
         /* ignore */
@@ -135,6 +151,7 @@ export function useVoiceChat(
     setCanModerate(false)
     setSpeakingIds(new Set())
     speakingSignatureRef.current = ''
+    setSelfSpeaking(false)
   }
 
   useEffect(() => {
@@ -188,6 +205,10 @@ export function useVoiceChat(
           speakingSignatureRef.current = signature
           setSpeakingIds(new Set(speaking))
         })
+        call.on('local-audio-level', (evt) => {
+          if (!evt) return
+          setSelfSpeaking(evt.audioLevel > SPEAKING_THRESHOLD)
+        })
         call.on('error', (e) => setError(e?.errorMsg ?? t('voiceChat.errorGeneric')))
 
         // Micro coupé par défaut à l'entrée dans le salon (voir aussi
@@ -209,6 +230,11 @@ export function useVoiceChat(
           await call.startRemoteParticipantsAudioLevelObserver(500)
         } catch {
           /* pas bloquant : le vocal marche quand même sans le voyant */
+        }
+        try {
+          await call.startLocalAudioLevelObserver(500)
+        } catch {
+          /* pas bloquant : le vocal marche quand même sans le voyant local */
         }
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : t('voiceChat.errorConnection'))
@@ -303,6 +329,7 @@ export function useVoiceChat(
     muteParticipant,
     retry,
     speakingIds,
+    selfSpeaking,
     deafened,
     toggleSound,
   }

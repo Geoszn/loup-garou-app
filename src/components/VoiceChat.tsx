@@ -28,6 +28,7 @@ export function VoiceChat({
     muteParticipant,
     retry,
     speakingIds,
+    selfSpeaking,
     deafened,
     toggleSound,
   } = useVoiceChat(gameId, code, channel, displayName, listenOnly)
@@ -105,8 +106,28 @@ export function VoiceChat({
         )}
       </div>
 
-      {connected && participants.length > 0 && (
+      {connected && (participants.length > 0 || !listenOnly) && (
         <ul className="flex flex-wrap gap-1.5 border-t border-night-700/60 pt-2">
+          {/* Son propre voyant, toujours affiché en premier (sauf en écoute
+              seule, où on n'a de toute façon pas de micro à surveiller) :
+              avant, useVoiceChat excluait totalement le participant local de
+              `participants` et de `speakingIds` (l'API Daily ne donne le
+              niveau sonore local que via un évènement séparé,
+              'local-audio-level') — impossible de savoir si son propre
+              micro était bien capté pendant que d'autres parlaient. */}
+          {!listenOnly && (
+            <li
+              title={t('voiceChat.selfPillHint')}
+              className={`flex items-center gap-1.5 rounded-full border py-1 pl-3 pr-3 text-xs text-moon-200/80 transition-colors ${
+                selfSpeaking
+                  ? 'border-emerald-400/70 bg-emerald-400/10 shadow-[0_0_0_1px_rgba(52,211,153,0.3)]'
+                  : 'border-night-600/60 bg-night-800/60'
+              }`}
+            >
+              <span className={selfSpeaking ? 'animate-pulse' : ''}>{muted ? '🔇' : '🎤'}</span>
+              <span className="max-w-[100px] truncate font-semibold text-moon-200">{t('voiceChat.you')}</span>
+            </li>
+          )}
           {participants.map((p) => (
             <li
               key={p.id}

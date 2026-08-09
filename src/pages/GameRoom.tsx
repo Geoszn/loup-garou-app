@@ -639,24 +639,44 @@ function CallVotePanel({
     if (rpcError) setError(rpcError.message)
   }
 
+  // Discret plutôt qu'un gros bloc avec la liste nommée de qui a répondu
+  // quoi (ReadyGrid) : juste un compte "X/Y" + une fine barre de
+  // progression anonyme, sur une seule ligne avec le bouton d'action. Le
+  // détail joueur par joueur n'apporte rien d'utile ici (contrairement au
+  // vote lui-même, où savoir QUI a voté pour QUI compte) — seul le total
+  // compte pour savoir si le débat est prêt à se terminer.
+  const progress = others.length > 0 ? agreedIds.length / others.length : 0
+
   return (
-    <Card className="border-night-700/50 bg-night-900/30">
-      <p className="mb-2 text-xs uppercase tracking-widest text-moon-200/40">
-        {t('game.callVoteTitle', { agreed: agreedIds.length, total: others.length })}
-      </p>
-      <ReadyGrid players={others} readyIds={agreedIds} />
-      {!isCaptain && (
-        <Button variant={agreed ? 'ghost' : 'primary'} className="mt-3 w-full" disabled={loading} onClick={toggleAgree}>
-          {agreed ? t('game.cancelAgreement') : t('game.agree')}
-        </Button>
-      )}
-      {isCaptain && (
-        <Button className="mt-2 w-full" disabled={!allOthersAgreed || loading} onClick={callVote}>
-          {allOthersAgreed ? t('game.callVoteButton') : t('game.callVoteButtonWaiting')}
-        </Button>
-      )}
+    <div className="flex flex-col gap-2 rounded-xl border border-night-700/40 bg-night-900/20 px-3 py-2">
+      <div className="flex items-center gap-2">
+        <span className="shrink-0 text-[11px] text-moon-200/40">
+          {t('game.callVoteTitle', { agreed: agreedIds.length, total: others.length })}
+        </span>
+        <div className="h-1 min-w-[36px] flex-1 overflow-hidden rounded-full bg-night-700/50">
+          <div
+            className="h-full rounded-full bg-moon-400/70 transition-all duration-300"
+            style={{ width: `${Math.round(progress * 100)}%` }}
+          />
+        </div>
+        {!isCaptain && (
+          <Button
+            variant={agreed ? 'ghost' : 'primary'}
+            className="shrink-0 px-3 py-1.5 text-xs"
+            disabled={loading}
+            onClick={toggleAgree}
+          >
+            {agreed ? t('game.cancelAgreement') : t('game.agree')}
+          </Button>
+        )}
+        {isCaptain && (
+          <Button className="shrink-0 px-3 py-1.5 text-xs" disabled={!allOthersAgreed || loading} onClick={callVote}>
+            {allOthersAgreed ? t('game.callVoteButton') : t('game.callVoteButtonWaiting')}
+          </Button>
+        )}
+      </div>
       <ErrorText>{error}</ErrorText>
-    </Card>
+    </div>
   )
 }
 
@@ -814,20 +834,66 @@ function EndScreen({
   const title =
     winner === 'village' ? t('game.endVillageWins') : winner === 'loups' ? t('game.endWolvesWin') : t('game.endLoversWin')
 
+  // Explication de la cause de la victoire : le serveur ne renvoie que
+  // winner_team ('village' | 'loups' | 'amoureux'), sans détail structuré —
+  // on recalcule ici les effectifs finaux à partir de final_reveal (rôle de
+  // chacun) croisé avec players.is_alive (dernier état connu, figé puisque
+  // la partie est terminée) pour donner une phrase concrète plutôt qu'un
+  // simple intitulé de camp. Voir supabase/migrations/0062 (check_and_apply_win)
+  // pour la logique serveur exacte reproduite ici côté lecture seule.
+  const alivePlayers = view.players.filter((p) => p.is_alive)
+  const aliveWolfIds = new Set(
+    (view.final_reveal ?? [])
+      .filter((r) => r.role === 'loup_garou' && alivePlayers.some((p) => p.user_id === r.user_id))
+      .map((r) => r.user_id)
+  )
+  const wolvesAliveCount = aliveWolfIds.size
+  const othersAliveCount = alivePlayers.length - wolvesAliveCount
+
+  const explanation =
+    winner === 'village'
+      ? t('game.endVillageExplain', { survivors: String(alivePlayers.length) })
+      : winner === 'loups'
+        ? t('game.endWolvesExplain', { wolves: String(wolvesAliveCount), others: String(othersAliveCount) })
+        : t('game.endLoversExplain', {
+            lover1: alivePlayers[0]?.display_name ?? '',
+            lover2: alivePlayers[1]?.display_name ?? '',
+          })
+
+  // Rôle "gagnant" pour la mise en avant visuelle de la liste ci-dessous :
+  // toute l'équipe du camp vainqueur pour village/loups, ou seulement les
+  // deux amoureux survivants pour une victoire de l'amour (un amoureux peut
+  // très bien avoir un rôle villageois ou loup au départ).
+  function isWinningEntry(userId: string, role: string): boolean {
+    if (winner === 'amoureux') return alivePlayers.some((p) => p.user_id === userId)
+    const team = ROLES[role as RoleId]?.team
+    return winner === 'loups' ? team === 'loups' : team === 'village'
+  }
+
   async function copyCode() {
     await navigator.clipboard.writeText(code)
   }
 
   return (
     <Card className="text-center">
-      <h2 className="mb-4 font-display text-2xl text-moon-200">{title}</h2>
+      <h2 className="mb-2 font-display text-2xl text-moon-200">{title}</h2>
+      <p className="mx-auto mb-5 max-w-sm text-sm text-moon-200/60">{explanation}</p>
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
         {view.final_reveal?.map((r) => {
           const p = view.players.find((pl) => pl.user_id === r.user_id)
           if (!p) return null
           const roleInfo = ROLES[r.role as RoleId]
+          const won = isWinningEntry(r.user_id, r.role)
           return (
-            <div key={r.user_id} className="rounded-xl border border-night-600/60 bg-night-900/50 p-2.5 text-xs">
+            <div
+              key={r.user_id}
+              className={`relative rounded-xl border p-2.5 text-xs ${
+                won
+                  ? 'border-moon-400/50 bg-moon-400/10 shadow-glow'
+                  : 'border-night-600/60 bg-night-900/50 opacity-60'
+              }`}
+            >
+              {won && <span className="absolute -right-1.5 -top-1.5 text-sm">👑</span>}
               <div className="mb-1 text-lg">{roleInfo?.emoji}</div>
               <p className="truncate text-moon-200/90">{p.display_name}</p>
               <p className="text-moon-200/40">{roleLabel(r.role, t)}</p>
