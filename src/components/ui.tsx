@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
 import { Link, type LinkProps } from 'react-router-dom'
 import { useLanguage } from '../i18n/LanguageContext'
@@ -49,6 +49,46 @@ export function LinkButton({
     <Link className={`${BUTTON_BASE} ${BUTTON_VARIANTS[variant]} ${className}`} {...props}>
       {children}
     </Link>
+  )
+}
+
+/** Bouton qui copie `value` dans le presse-papiers et affiche brièvement un
+ * libellé "Copié !" (voir common.copied) à la place du libellé normal — sans
+ * ça, `navigator.clipboard.writeText` ne donne AUCUN retour visuel, et un
+ * joueur qui doute retape souvent plusieurs fois par méfiance (constaté sur
+ * le lien d'invitation de Lobby.tsx et le code de partie de GameRoom.tsx,
+ * seul Friends.tsx traitait ça correctement — d'où ce composant partagé
+ * plutôt que trois implémentations légèrement différentes). */
+export function CopyButton({
+  value,
+  label,
+  variant = 'ghost',
+  className = '',
+}: {
+  value: string
+  label: ReactNode
+  variant?: ButtonVariant
+  className?: string
+}) {
+  const { t } = useLanguage()
+  const [copied, setCopied] = useState(false)
+
+  async function handleClick() {
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Presse-papiers indisponible (permission refusée, contexte non
+      // sécurisé) : pas grave, le texte reste sélectionnable à la main —
+      // pas d'erreur affichée pour un geste aussi secondaire.
+    }
+  }
+
+  return (
+    <Button type="button" variant={variant} className={className} onClick={handleClick}>
+      {copied ? t('common.copied') : label}
+    </Button>
   )
 }
 

@@ -15,6 +15,10 @@ export const translations = {
   'common.confirm': { fr: 'Confirmer', en: 'Confirm' },
   'common.back': { fr: '← Retour', en: '← Back' },
   'common.close': { fr: 'Fermer', en: 'Close' },
+  // Libellé temporaire affiché sur un CopyButton (voir ui.tsx) juste après
+  // un clic — remplace le libellé normal pendant ~2s, seul retour visuel
+  // qu'un joueur ait qu'une copie presse-papiers a bien fonctionné.
+  'common.copied': { fr: '✓ Copié !', en: '✓ Copied!' },
   'common.language': { fr: 'Langue', en: 'Language' },
   'common.playerFallback': { fr: 'Joueur', en: 'Player' },
   'common.online': { fr: 'En ligne', en: 'Online' },

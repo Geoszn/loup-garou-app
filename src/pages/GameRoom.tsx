@@ -17,7 +17,7 @@ import { VoteRecapModal } from '../components/VoteRecapModal'
 import { NightRecapModal } from '../components/NightRecapModal'
 import { ModerationPanel } from '../components/ModerationPanel'
 import { VoiceChat } from '../components/VoiceChat'
-import { BottomActionBar, Button, Card, ConfirmDialog, ErrorText, Segmented } from '../components/ui'
+import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, Modal, Segmented } from '../components/ui'
 import { ROLES, roleLabel, type RoleId } from '../lib/roles'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { MyGameView, PublicPlayer } from '../types/game'
@@ -376,30 +376,14 @@ export default function GameRoom() {
             reste tant que le statut est 'day_vote_recap'. */}
         {view.game.status === 'day_vote_recap' && <VoteRecapModal view={view} gameId={gameId!} selfId={user.id} />}
 
-        {modOpen && isHost && (
-          <div
-            className="fixed inset-0 z-50 flex animate-overlay-in items-center justify-center bg-black/60 px-4 py-8 backdrop-blur-sm"
-            onClick={() => setModOpen(false)}
-          >
-            <div
-              role="dialog"
-              aria-modal="true"
-              onClick={(e) => e.stopPropagation()}
-              className="flex max-h-[85vh] w-full max-w-sm animate-modal-in flex-col overflow-y-auto rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/95 to-night-900/95 p-6 shadow-card"
-            >
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="font-display text-lg text-moon-200">{t('moderation.title')}</h2>
-                <button
-                  type="button"
-                  onClick={() => setModOpen(false)}
-                  className="text-moon-200/50 transition-colors hover:text-moon-200"
-                >
-                  ✕
-                </button>
-              </div>
-              <ModerationPanel view={view} gameId={gameId!} selfId={user.id} />
-            </div>
-          </div>
+        {isHost && (
+          // <Modal> (voir ui.tsx) plutôt qu'un overlay/carte refaits à la
+          // main ici : même comportement (Échap, clic sur le fond, croix
+          // h-8 w-8) que toutes les autres pop-ups de l'app, sans avoir à
+          // le maintenir en double.
+          <Modal open={modOpen} onClose={() => setModOpen(false)} title={t('moderation.title')}>
+            <ModerationPanel view={view} gameId={gameId!} selfId={user.id} />
+          </Modal>
         )}
 
         {view.game.status === 'ended' && (
@@ -657,7 +641,7 @@ function CallVotePanel({
 
   return (
     <div
-      className={`flex flex-col gap-3 rounded-2xl border px-4 py-3.5 transition-colors ${
+      className={`flex animate-fade-in flex-col gap-3 rounded-2xl border px-4 py-3.5 transition-colors ${
         allOthersAgreed ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-night-600/60 bg-night-900/40'
       }`}
     >
@@ -884,10 +868,6 @@ function EndScreen({
     return winner === 'loups' ? team === 'loups' : team === 'village'
   }
 
-  async function copyCode() {
-    await navigator.clipboard.writeText(code)
-  }
-
   return (
     <Card className="text-center">
       <h2 className="mb-2 font-display text-2xl text-moon-200">{title}</h2>
@@ -940,9 +920,7 @@ function EndScreen({
             <p className="text-xs uppercase tracking-wider text-moon-200/50">{t('common.gameCodeLabel')}</p>
             <p className="font-display text-2xl tracking-[0.3em] text-moon-300">{code}</p>
           </div>
-          <Button variant="ghost" className="px-3 py-1.5 text-xs" onClick={copyCode}>
-            {t('game.copyCode')}
-          </Button>
+          <CopyButton value={code} label={t('game.copyCode')} className="px-3 py-1.5 text-xs" />
         </div>
 
         {/* Vocal du salon, comme avant le lancement (canal 'lobby', ouvert

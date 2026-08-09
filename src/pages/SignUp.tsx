@@ -70,6 +70,7 @@ export default function SignUp() {
             <Label htmlFor="signup-username">{t('signup.username')}</Label>
             <Input
               id="signup-username"
+              autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="LeChasseur42"
@@ -82,6 +83,7 @@ export default function SignUp() {
             <Input
               id="signup-email"
               type="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="vous@exemple.com"
@@ -93,6 +95,7 @@ export default function SignUp() {
             <Input
               id="signup-password"
               type="password"
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"

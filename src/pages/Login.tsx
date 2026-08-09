@@ -74,6 +74,7 @@ export default function Login() {
               <Input
                 id="login-email"
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="vous@exemple.com"
@@ -93,6 +94,7 @@ export default function Login() {
               <Input
                 id="login-password"
                 type="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"

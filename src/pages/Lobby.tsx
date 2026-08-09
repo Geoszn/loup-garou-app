@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { useGame } from '../hooks/useGame'
 import { useNotificationSound } from '../hooks/useNotificationSound'
 import { supabase } from '../lib/supabase'
-import { BottomActionBar, Button, Card, ConfirmDialog, ErrorText, SideDrawer } from '../components/ui'
+import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, SideDrawer } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { FriendRequestPopover } from '../components/FriendRequestPopover'
 import { ModerationPanel } from '../components/ModerationPanel'
@@ -216,9 +216,9 @@ export default function Lobby() {
   // Message prêt à coller (WhatsApp, SMS...) plutôt que le lien tout nu :
   // plus engageant à recevoir, et le code reste lisible même si le lien
   // n'est pas cliquable dans le message (client mail sans aperçu, etc.).
-  async function copyLink() {
-    await navigator.clipboard.writeText(t('lobby.inviteMessage', { code: code ?? '', link: inviteLink }))
-  }
+  // Copié via <CopyButton> (voir ui.tsx), qui affiche lui-même la
+  // confirmation "Copié !" — plus besoin de gérer cet état ici.
+  const inviteMessage = t('lobby.inviteMessage', { code: code ?? '', link: inviteLink })
 
   async function handleStart() {
     if (!gameId) return
@@ -289,7 +289,12 @@ export default function Lobby() {
             <p className="text-xs uppercase tracking-widest text-moon-200/40">{t('lobby.waitingRoom')}</p>
             <h1 className="font-display text-2xl text-moon-200">{t('lobby.gameTitle', { code: code ?? '' })}</h1>
           </div>
-          <div className="flex items-center gap-2">
+          {/* gap-4 (au lieu de gap-2) entre "Réglages" et "Quitter" : le
+              second est une action destructrice (quitte la partie), le
+              premier anodin — un écart plus large réduit le risque de
+              mistap sur un téléphone tenu à une main, surtout en haut
+              d'écran où le pouce vise le moins précisément. */}
+          <div className="flex items-center gap-4">
             {isHost && (
               <Button variant="ghost" onClick={() => setSettingsOpen(true)} className="relative px-3.5 py-2 text-xs">
                 {t('lobby.settingsButton')}
@@ -354,9 +359,7 @@ export default function Lobby() {
               <p className="text-xs uppercase tracking-wider text-moon-200/50">{t('common.gameCodeLabel')}</p>
               <p className="font-display text-3xl tracking-[0.3em] text-moon-300">{code}</p>
             </div>
-            <Button variant="ghost" onClick={copyLink}>
-              {t('lobby.copyInviteLink')}
-            </Button>
+            <CopyButton value={inviteMessage} label={t('lobby.copyInviteLink')} />
           </div>
         </Card>
 

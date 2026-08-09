@@ -10,10 +10,13 @@ import { AvatarIcon } from '../components/AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
 
 // Délai entre l'affichage du message de succès dans une pop-up de réglage et
-// le renvoi vers la création de salon : assez court pour ne pas faire
-// attendre, assez long pour que le joueur voie bien que ça a marché avant
-// d'être redirigé.
-const REDIRECT_DELAY_MS = 700
+// la fermeture automatique de cette pop-up : assez court pour ne pas faire
+// attendre, assez long pour que le joueur voie bien que ça a marché. On reste
+// ensuite sur "Mon compte" (avant, une redirection vers /dashboard était
+// déclenchée après CHAQUE sauvegarde — profil, mot de passe, langue —,
+// empêchant d'enchaîner plusieurs réglages sans revenir en arrière à chaque
+// fois) plutôt que de renvoyer où que ce soit.
+const CLOSE_DELAY_MS = 700
 
 // Doit rester synchronisé avec le cooldown appliqué côté serveur dans
 // update_my_profile (migration 0051) — purement informatif ici (le serveur
@@ -27,10 +30,6 @@ export default function Account() {
   const { t } = useLanguage()
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [passwordModalOpen, setPasswordModalOpen] = useState(false)
-
-  function goToGameCreation() {
-    navigate('/dashboard')
-  }
 
   return (
     <div className="min-h-screen px-4 py-10">
@@ -63,7 +62,7 @@ export default function Account() {
           </SettingsRow>
 
           <SettingsRow label={t('account.language.title')}>
-            <LanguageSwitcher onChanged={goToGameCreation} />
+            <LanguageSwitcher />
           </SettingsRow>
 
           <SettingsRow label={t('account.continent.title')} description={t('account.continent.description')}>
@@ -86,10 +85,7 @@ export default function Account() {
         profile={profile}
         onSaved={async () => {
           await refreshProfile()
-          setTimeout(() => {
-            setProfileModalOpen(false)
-            goToGameCreation()
-          }, REDIRECT_DELAY_MS)
+          setTimeout(() => setProfileModalOpen(false), CLOSE_DELAY_MS)
         }}
       />
 
@@ -97,10 +93,7 @@ export default function Account() {
         open={passwordModalOpen}
         onClose={() => setPasswordModalOpen(false)}
         onSaved={() => {
-          setTimeout(() => {
-            setPasswordModalOpen(false)
-            goToGameCreation()
-          }, REDIRECT_DELAY_MS)
+          setTimeout(() => setPasswordModalOpen(false), CLOSE_DELAY_MS)
         }}
       />
     </div>
@@ -348,6 +341,7 @@ function PasswordModal({ open, onClose, onSaved }: { open: boolean; onClose: () 
           <Input
             id="account-current-password"
             type="password"
+            autoComplete="current-password"
             value={current}
             onChange={(e) => setCurrent(e.target.value)}
             placeholder="••••••••"
@@ -359,6 +353,7 @@ function PasswordModal({ open, onClose, onSaved }: { open: boolean; onClose: () 
           <Input
             id="account-new-password"
             type="password"
+            autoComplete="new-password"
             value={next}
             onChange={(e) => setNext(e.target.value)}
             placeholder="••••••••"
@@ -370,6 +365,7 @@ function PasswordModal({ open, onClose, onSaved }: { open: boolean; onClose: () 
           <Input
             id="account-confirm-password"
             type="password"
+            autoComplete="new-password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             placeholder="••••••••"

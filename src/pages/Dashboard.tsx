@@ -273,6 +273,35 @@ export default function Dashboard() {
           </div>
         </header>
 
+        {/* Deux actions principales, côte à côte, réduites à l'essentiel :
+            chaque bouton ouvre une pop-up qui pose UNE question à la fois
+            (privé/public, recherche/code) plutôt que d'étaler tous les choix
+            et explications directement sur cette page. Placées juste sous le
+            header, AVANT les bannières conditionnelles ci-dessous
+            (événement, notice, partie désactivée, partie en cours,
+            invitations) : ce sont les deux actions les plus utilisées de
+            toute l'app, elles ne doivent jamais dépendre du nombre de
+            bannières actives ce jour-là pour rester atteignables sans
+            scroll. */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            className="flex flex-col items-center gap-2 rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/70 to-night-900/85 p-6 shadow-card transition-colors hover:border-moon-400/50"
+          >
+            <span className="text-3xl">🌕</span>
+            <span className="font-display text-sm text-moon-200 sm:text-base">{t('dashboard.createGame')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setJoinStep('choose')}
+            className="flex flex-col items-center gap-2 rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/70 to-night-900/85 p-6 shadow-card transition-colors hover:border-moon-400/50"
+          >
+            <span className="text-3xl">🔑</span>
+            <span className="font-display text-sm text-moon-200 sm:text-base">{t('dashboard.joinGame')}</span>
+          </button>
+        </div>
+
         {events.length > 0 && (
           <div>
             {events.map((e) => (
@@ -348,29 +377,6 @@ export default function Dashboard() {
             ))}
           </div>
         )}
-
-        {/* Deux actions principales, côte à côte, réduites à l'essentiel :
-            chaque bouton ouvre une pop-up qui pose UNE question à la fois
-            (privé/public, recherche/code) plutôt que d'étaler tous les choix
-            et explications directement sur cette page. */}
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={() => setCreateOpen(true)}
-            className="flex flex-col items-center gap-2 rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/70 to-night-900/85 p-6 shadow-card transition-colors hover:border-moon-400/50"
-          >
-            <span className="text-3xl">🌕</span>
-            <span className="font-display text-sm text-moon-200 sm:text-base">{t('dashboard.createGame')}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setJoinStep('choose')}
-            className="flex flex-col items-center gap-2 rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/70 to-night-900/85 p-6 shadow-card transition-colors hover:border-moon-400/50"
-          >
-            <span className="text-3xl">🔑</span>
-            <span className="font-display text-sm text-moon-200 sm:text-base">{t('dashboard.joinGame')}</span>
-          </button>
-        </div>
 
         <DashboardLeaderboard />
 
