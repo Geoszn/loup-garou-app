@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { apiUrl } from './apiUrl'
 
 /**
  * Demande une annonce vocale réaliste (ElevenLabs) au serveur pour un texte
@@ -23,7 +24,7 @@ export async function fetchNarratorAudio(gameId: string | null, text: string): P
 
   let res: Response
   try {
-    res = await fetch('/api/narrator-voice', {
+    res = await fetch(apiUrl('/api/narrator-voice'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ gameId, text }),

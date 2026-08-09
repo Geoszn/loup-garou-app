@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { apiUrl } from './apiUrl'
 
 export async function getVoiceRoomUrl(
   gameId: string,
@@ -9,7 +10,7 @@ export async function getVoiceRoomUrl(
   const token = sessionData.session?.access_token
   if (!token) throw new Error('Non authentifié.')
 
-  const res = await fetch('/api/daily-room', {
+  const res = await fetch(apiUrl('/api/daily-room'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ gameId, code, channel }),
