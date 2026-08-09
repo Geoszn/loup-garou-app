@@ -38,6 +38,14 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
         .filter((m): m is { id: string; name: string } => !!m.name)
     : []
 
+  // Potion de la Sorcière : contrairement au journal public (entries,
+  // toujours anonyme pour le soin, et noyé parmi le reste pour le poison),
+  // ces deux champs sont personnels — voir migration 0068 — et ne
+  // concernent QUE la victime elle-même, jamais affichés à qui que ce soit
+  // d'autre.
+  const witchSavedMe = view.witch_saved_me
+  const witchPoisonedMe = view.witch_poisoned_me
+
   async function handleReady() {
     setSubmitting(true)
     await supabase.rpc('submit_day_reveal_ready', { p_game_id: gameId })
@@ -62,7 +70,7 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          {(loverName || mentees.length > 0) && (
+          {(loverName || mentees.length > 0 || witchSavedMe || witchPoisonedMe) && (
             <div className="mb-3 flex flex-col gap-2">
               {loverName && (
                 <div className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2.5">
@@ -76,6 +84,23 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
                   <p className="mt-1 text-sm text-moon-200/90">{t('game.mentorReveal', { name: m.name })}</p>
                 </div>
               ))}
+              {/* Encart personnel pour la cible de la potion — jamais visible
+                  pour qui que ce soit d'autre (voir witch_saved_me/
+                  witch_poisoned_me, migration 0068). Le journal public reste
+                  anonyme (soin) ou noyé dans le reste (poison) ; ceci est un
+                  message clair adressé directement à la victime. */}
+              {witchSavedMe && (
+                <div className="animate-fade-in rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">{t('game.witchSavedMeTitle')}</p>
+                  <p className="mt-1 text-sm text-moon-200/90">{t('game.witchSavedMe')}</p>
+                </div>
+              )}
+              {witchPoisonedMe && (
+                <div className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blood-300">{t('game.witchPoisonedMeTitle')}</p>
+                  <p className="mt-1 text-sm text-moon-200/90">{t('game.witchPoisonedMe')}</p>
+                </div>
+              )}
             </div>
           )}
           {entries.length === 0 ? (

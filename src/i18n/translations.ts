@@ -561,6 +561,16 @@ export const translations = {
     fr: '{{name}} vous a choisi(e) comme mentor. Si vous mourez, {{name}} rejoindra les Loups-Garous par vengeance.',
     en: '{{name}} has chosen you as their role model. If you die, {{name}} will join the Werewolves out of revenge.',
   },
+  'game.witchSavedMeTitle': { fr: '🧪 Sauvé(e) de justesse', en: '🧪 Saved just in time' },
+  'game.witchSavedMe': {
+    fr: 'Les Loups-Garous vous avaient choisi(e) comme victime cette nuit, mais la Sorcière vous a sauvé(e) avec sa potion de vie.',
+    en: 'The Werewolves had chosen you as their victim tonight, but the Witch saved you with her life potion.',
+  },
+  'game.witchPoisonedMeTitle': { fr: '☠️ Empoisonné(e)', en: '☠️ Poisoned' },
+  'game.witchPoisonedMe': {
+    fr: 'La Sorcière vous a éliminé(e) cette nuit avec sa potion de mort.',
+    en: 'The Witch eliminated you tonight with her death potion.',
+  },
   'game.discussionHint': {
     fr: "💬 Discutez pour démasquer les Loups-Garous — le vote ouvre automatiquement dans la limite de temps, ou plus tôt si le Capitaine le lance avec l'accord de tout le village.",
     en: "💬 Discuss to unmask the Werewolves — the vote opens automatically once time runs out, or sooner if the Captain calls it with the whole village's agreement.",

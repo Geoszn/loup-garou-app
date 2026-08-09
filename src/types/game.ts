@@ -160,6 +160,12 @@ export interface MyGameView {
   // affiché à la nuit 1 par NightRecapModal — seul moment où ce choix a
   // lieu (voir next_night_step, 0052_enfant_sauvage.sql).
   mentee_ids: string[]
+  // Personnel (calculé côté serveur à partir de auth.uid(), voir migration
+  // 0068) : est-ce que MOI j'ai été la cible de la potion de vie / de mort
+  // de la Sorcière CETTE nuit — vrai uniquement pendant le récap de nuit
+  // correspondant (statut 'day_reveal'), comme lover_id/mentee_ids ci-dessus.
+  witch_saved_me: boolean
+  witch_poisoned_me: boolean
   wolf_teammates: string[]
   seer_reveals: { target_id: string; role: string; night_number: number }[]
   witch_heal_used: boolean
