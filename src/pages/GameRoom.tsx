@@ -74,13 +74,21 @@ export default function GameRoom() {
   // d'impact (voir DeathImpactModal.tsx, migration 0073) — UNE seule fois,
   // au moment précis de la mort, pas à chaque rechargement une fois déjà
   // mort (sans quoi elle réapparaîtrait à chaque retour dans la partie).
+  // Retour utilisateur : uniquement s'il y a réellement un bonus à annoncer
+  // — sans ça, la popup n'apportait rien (juste "vous n'avez rien marqué
+  // cette fois") et interrompait inutilement le joueur au moment déjà
+  // pénible de sa mort. get_my_game_view calcule my_impact_preview dans le
+  // même appel que my_alive, donc les deux sont toujours cohérents entre eux
+  // dans une même valeur de `view` — pas de risque de rater le bonus en le
+  // vérifiant ici.
   const prevAliveRef = useRef<boolean | null>(null)
 
   useEffect(() => {
     if (!view || !user) return
     const meNow = view.players.find((p) => p.user_id === user.id)
     const aliveNow = meNow?.is_alive ?? false
-    if (prevAliveRef.current === true && !aliveNow && view.game.status !== 'ended') {
+    const hasImpact = (view.my_impact_preview?.details.length ?? 0) > 0
+    if (prevAliveRef.current === true && !aliveNow && view.game.status !== 'ended' && hasImpact) {
       setShowDeathImpact(true)
     }
     prevAliveRef.current = aliveNow
