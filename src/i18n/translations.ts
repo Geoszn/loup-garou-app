@@ -867,9 +867,15 @@ export const translations = {
   },
   'help.ranking.points.title': { fr: '⚔️ Comment gagner des points', en: '⚔️ How points are earned' },
   'help.ranking.points.text': {
-    fr: 'Victoire : +30 points, plus un bonus si tu enchaînes plusieurs victoires d\'affilée (+10 par victoire consécutive au-delà de la première, jusqu\'à +50 à partir d\'une série de 6). Défaite : -15 points — mais jamais en dessous du palier le plus haut que tu as déjà atteint.',
-    en: 'Win: +30 points, plus a bonus for consecutive wins (+10 per win in a row beyond the first, up to +50 from a streak of 6). Loss: -15 points — but never below the highest tier you\'ve already reached.',
+    fr: 'Victoire : jusqu\'à +30 points, selon la part de la partie que tu as survécue (mourir tôt réduit le gain, mais jamais en dessous de 40% même à la nuit 1), plus un bonus si tu enchaînes plusieurs victoires d\'affilée (+10 par victoire consécutive au-delà de la première, jusqu\'à +50 à partir d\'une série de 6). Défaite : -15 points — mais jamais en dessous du palier le plus haut que tu as déjà atteint.',
+    en: 'Win: up to +30 points, based on how much of the game you survived (dying early reduces the gain, but never below 40% even on night 1), plus a bonus for consecutive wins (+10 per win in a row beyond the first, up to +50 from a streak of 6). Loss: -15 points — but never below the highest tier you\'ve already reached.',
   },
+  'help.ranking.impact.title': { fr: '🎯 Bonus d’impact', en: '🎯 Impact bonus' },
+  'help.ranking.impact.text': {
+    fr: 'Certains gestes marquants rapportent des points supplémentaires — que tu gagnes ou perdes la partie, dès l’instant où le geste porte ses fruits :',
+    en: 'Some standout actions earn extra points — whether you win or lose the game, as soon as the action pays off:',
+  },
+  'help.ranking.impact.seerNote': { fr: '(jusqu’à 2 fois par partie)', en: '(up to 2 times per game)' },
   'help.ranking.tiers.title': { fr: '🎖️ Les paliers', en: '🎖️ Tiers' },
   'help.ranking.tiers.text': {
     fr: 'Tes points te placent dans un palier, du plus modeste au plus prestigieux :',

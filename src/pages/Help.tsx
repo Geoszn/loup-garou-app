@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../i18n/LanguageContext'
+import type { TranslationKey } from '../i18n/translations'
 import { ROLES, ROLE_ORDER, roleTeamLabel } from '../lib/roles'
 import { RANK_TIERS } from '../lib/ranks'
 import { Button, Card } from '../components/ui'
@@ -157,6 +158,18 @@ function RulesContent() {
   )
 }
 
+/** Bonus d'impact (voir compute_impact_bonus, migration 0073) — mêmes clés
+ * de traduction que DeathImpactModal.tsx/EndScreen (GameRoom.tsx), pour ne
+ * jamais avoir deux libellés différents pour le même geste. `note` seulement
+ * pour la Voyante, seul bonus plafonné à plusieurs occurrences par partie. */
+const IMPACT_BONUSES: { key: TranslationKey; points: number; note?: TranslationKey }[] = [
+  { key: 'impact.witch_heal', points: 10 },
+  { key: 'impact.witch_poison_wolf', points: 15 },
+  { key: 'impact.hunter_shot_wolf', points: 15 },
+  { key: 'impact.seer_wolf_reveal', points: 5, note: 'help.ranking.impact.seerNote' },
+  { key: 'impact.ancien_extra_life', points: 10 },
+]
+
 /** Nouveau contenu : le système de rang (0055_ranking_system.sql) n'était
  * expliqué nulle part côté joueur jusqu'ici, seulement affiché (badge,
  * points, position). Les paliers sont générés depuis RANK_TIERS (déjà la
@@ -173,6 +186,24 @@ function RankingContent() {
       <div>
         <h3 className="mb-1.5 font-display text-sm text-moon-300">{t('help.ranking.points.title')}</h3>
         <p>{t('help.ranking.points.text')}</p>
+      </div>
+
+      <div>
+        <h3 className="mb-2 font-display text-sm text-moon-300">{t('help.ranking.impact.title')}</h3>
+        <p className="mb-2">{t('help.ranking.impact.text')}</p>
+        <div className="flex flex-col gap-1.5">
+          {IMPACT_BONUSES.map((b) => (
+            <div
+              key={b.key}
+              className="flex items-center justify-between rounded-xl border border-night-600/60 bg-night-900/50 px-3 py-2"
+            >
+              <span className="text-moon-200">
+                {t(b.key)} {b.note && <span className="text-xs text-moon-200/50">{t(b.note)}</span>}
+              </span>
+              <span className="text-xs font-semibold text-emerald-400">+{b.points}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div>
