@@ -510,6 +510,18 @@ export const translations = {
     fr: '{{name}} sera retiré de la partie (éliminé, et privé du chat pour le reste de la partie). Cette action est irréversible.',
     en: '{{name}} will be removed from the game (eliminated, and blocked from chat for the rest of the game). This action is irreversible.',
   },
+  'moderation.restartGameTitle': { fr: '🔄 Recommencer la partie', en: '🔄 Restart the game' },
+  'moderation.restartGameHint': {
+    fr: 'Interrompt la partie en cours pour tout le monde et ramène tout le groupe au salon, prêt à relancer (bug, litige, joueur à recadrer...).',
+    en: "Ends the current game for everyone and brings the whole group back to the lobby, ready to relaunch (bug, dispute, player to rein in...).",
+  },
+  'moderation.restartGameButton': { fr: 'Recommencer la partie', en: 'Restart the game' },
+  'moderation.restartConfirmTitle': { fr: 'Recommencer la partie ?', en: 'Restart the game?' },
+  'moderation.restartConfirmMessage': {
+    fr: 'La partie en cours s’arrête immédiatement pour tous les joueurs, qui reviennent au salon avec les mêmes rôles disponibles. Cette action est irréversible.',
+    en: 'The current game stops immediately for all players, who return to the lobby with the same roles available. This action is irreversible.',
+  },
+  'moderation.restarting': { fr: 'Redémarrage...', en: 'Restarting...' },
 
   // --- Onglets partagés (Segmented) -------------------------------------------
   'tabs.discuss': { fr: '💬 Discuter', en: '💬 Discuss' },

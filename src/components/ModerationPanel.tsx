@@ -17,6 +17,8 @@ export function ModerationPanel({ view, gameId, selfId }: { view: MyGameView; ga
   const [kickTarget, setKickTarget] = useState<PublicPlayer | null>(null)
   const [kicking, setKicking] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [restartConfirmOpen, setRestartConfirmOpen] = useState(false)
+  const [restarting, setRestarting] = useState(false)
 
   useEffect(() => {
     setWords(view.game.blocked_words ?? [])
@@ -58,7 +60,23 @@ export function ModerationPanel({ view, gameId, selfId }: { view: MyGameView; ga
     setKickTarget(null)
   }
 
+  // restart_game (migration 0070) accepte désormais tout statut différent
+  // de 'lobby' — y compris en pleine partie, pas seulement une fois
+  // terminée (game.playAgain sur l'écran de fin couvrait déjà ce dernier
+  // cas). Tous les joueurs, hôte compris, sont automatiquement renvoyés au
+  // salon dès que le statut repasse à 'lobby' — voir l'effet existant dans
+  // GameRoom.tsx, rien à faire ici après le succès de l'appel.
+  async function confirmRestart() {
+    setRestarting(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('restart_game', { p_game_id: gameId })
+    setRestarting(false)
+    setRestartConfirmOpen(false)
+    if (rpcError) setError(rpcError.message)
+  }
+
   const isLobbyOrEnded = view.game.status === 'lobby' || view.game.status === 'ended'
+  const canRestart = view.game.status !== 'lobby'
   const others = view.players.filter((p) => p.user_id !== selfId && !p.is_banned)
 
   return (
@@ -138,6 +156,20 @@ export function ModerationPanel({ view, gameId, selfId }: { view: MyGameView; ga
         )}
       </div>
 
+      {/* Recommencer la partie en cours : réservé à l'hôte (ce panneau
+          entier l'est déjà), masqué dans le salon (canRestart) où ça n'a pas
+          de sens. Séparé visuellement du reste (bordure rouge) vu le
+          caractère irréversible et immédiat pour tout le monde. */}
+      {canRestart && (
+        <div className="rounded-xl border border-blood-700/40 bg-blood-900/10 p-3">
+          <h3 className="mb-1 font-display text-sm text-blood-300">{t('moderation.restartGameTitle')}</h3>
+          <p className="mb-3 text-xs text-moon-200/50">{t('moderation.restartGameHint')}</p>
+          <Button variant="danger" className="w-full text-sm" onClick={() => setRestartConfirmOpen(true)}>
+            {t('moderation.restartGameButton')}
+          </Button>
+        </div>
+      )}
+
       <ConfirmDialog
         open={!!kickTarget}
         title={t('moderation.kickConfirmTitle')}
@@ -148,6 +180,16 @@ export function ModerationPanel({ view, gameId, selfId }: { view: MyGameView; ga
         danger
         onCancel={() => setKickTarget(null)}
         onConfirm={confirmKick}
+      />
+
+      <ConfirmDialog
+        open={restartConfirmOpen}
+        title={t('moderation.restartConfirmTitle')}
+        message={t('moderation.restartConfirmMessage')}
+        confirmLabel={restarting ? t('moderation.restarting') : t('moderation.restartGameButton')}
+        danger
+        onCancel={() => setRestartConfirmOpen(false)}
+        onConfirm={confirmRestart}
       />
     </div>
   )
