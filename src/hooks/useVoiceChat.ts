@@ -256,15 +256,22 @@ export function useVoiceChat(
         // start_audio_off côté room dans api/daily-room.ts) : chacun doit
         // explicitement s'activer pour parler.
         //
-        // `token: ownerToken` (null pour tout le monde sauf l'hôte, voir
-        // lib/daily.ts) — c'est la propriété `token` de join(), PAS un `?t=`
-        // concaténé à l'URL, qui doit porter le jeton "propriétaire" Daily
-        // pour un call object. Avant ce correctif, le jeton était ignoré :
-        // l'hôte rejoignait comme un participant normal et ne pouvait jamais
-        // couper le micro de personne (canModerate restait toujours faux).
+        // `token` (string pour l'hôte, absent pour tout le monde d'autre —
+        // voir lib/daily.ts) : c'est la propriété `token` de join(), PAS un
+        // `?t=` concaténé à l'URL, qui doit porter le jeton "propriétaire"
+        // Daily pour un call object.
+        //
+        // BUG corrigé (régression du correctif précédent) : passer
+        // `token: ownerToken ?? undefined` laissait la clé `token` PRÉSENTE
+        // dans l'objet avec la valeur `undefined` pour tout non-hôte — Daily
+        // valide strictement ses options et rejette ça avec l'erreur
+        // "property 'token': token should be...", faisant échouer join() pour
+        // tous les joueurs SAUF l'hôte (seul à recevoir un vrai token
+        // string). Corrigé en n'incluant la clé `token` que si un jeton
+        // existe réellement, via un spread conditionnel.
         await call.join({
           url,
-          token: ownerToken ?? undefined,
+          ...(ownerToken ? { token: ownerToken } : {}),
           userName: displayName,
           startVideoOff: true,
           startAudioOff: true,
