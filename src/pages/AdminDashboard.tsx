@@ -25,7 +25,7 @@ import type { EventBannerColor, EventBonusType, GameEvent } from '../types/event
 // l'écran "Accès refusé".
 // ============================================================================
 
-type Tab = 'stats' | 'users' | 'games' | 'content' | 'events' | 'security' | 'settings'
+type Tab = 'stats' | 'users' | 'games' | 'content' | 'events' | 'messages' | 'security' | 'settings'
 
 const TAB_ITEMS: { id: Tab; label: string; icon: string }[] = [
   { id: 'stats', label: 'Vue d’ensemble', icon: '📊' },
@@ -33,6 +33,13 @@ const TAB_ITEMS: { id: Tab; label: string; icon: string }[] = [
   { id: 'games', label: 'Salons', icon: '🎲' },
   { id: 'content', label: 'Contenu du jeu', icon: '📝' },
   { id: 'events', label: 'Événements', icon: '🎉' },
+  // Messages reçus des joueurs (bouton "feedback" en jeu, voir
+  // FeedbackButton.tsx) : jusqu'ici uniquement envoyés par email via Resend
+  // (api/feedback.ts, "best effort", pas encore configuré côté Vercel) —
+  // toujours enregistrés en base quoi qu'il arrive côté email (submit_feedback,
+  // migration 0056), il ne manquait qu'un écran pour les lire directement ici
+  // sans dépendre de l'email (voir migration 0071).
+  { id: 'messages', label: 'Messages', icon: '💬' },
   { id: 'security', label: 'Sécurité', icon: '🔒' },
   { id: 'settings', label: 'Réglages', icon: '⚙️' },
 ]
@@ -48,7 +55,18 @@ interface Stats {
   admin_users: number
   pending_deletions: number
   pending_join_requests: number
+  unread_feedback: number
   new_games_enabled: boolean
+}
+
+interface FeedbackMsg {
+  id: string
+  user_id: string
+  username: string
+  email: string
+  message: string
+  created_at: string
+  read_at: string | null
 }
 
 interface AdminUser {
@@ -273,6 +291,7 @@ export default function AdminDashboard() {
         {tab === 'games' && <GamesTab />}
         {tab === 'content' && <ContentTab />}
         {tab === 'events' && <EventsTab />}
+        {tab === 'messages' && <MessagesTab />}
         {tab === 'security' && <SecurityTab />}
         {tab === 'settings' && <SettingsTab />}
       </div>
@@ -356,6 +375,7 @@ function StatsTab({ onGoToTab }: { onGoToTab: (target: Tab, usersFilter?: Omit<U
         <StatCard label="Admins" value={stats.admin_users} onClick={() => onGoToTab('users', { admin: true })} />
         <StatCard label="Suppressions en attente" value={stats.pending_deletions} onClick={() => onGoToTab('security')} />
         <StatCard label="Demandes d’accès en attente" value={stats.pending_join_requests} />
+        <StatCard label="Messages non lus" value={stats.unread_feedback} onClick={() => onGoToTab('messages')} />
       </div>
     </div>
   )
@@ -1573,6 +1593,112 @@ function EventBannerImage({ event, onUploaded }: { event: GameEvent; onUploaded:
           }}
         />
       </label>
+    </div>
+  )
+}
+
+// ----------------------------------------------------------------------------
+// Messages reçus des joueurs (bouton "feedback" en jeu) — voir migration
+// 0071. Remplace le suivi par email (Resend, best-effort, pas encore
+// configuré côté Vercel) : les messages sont de toute façon déjà enregistrés
+// en base par submit_feedback, cet onglet en est juste la lecture. Cliquer
+// sur un message non lu le marque comme lu (même geste qu'une boîte mail
+// classique), mise à jour optimiste locale plutôt que de recharger toute la
+// page pour un simple changement de statut.
+// ----------------------------------------------------------------------------
+const MESSAGES_PAGE_SIZE = 20
+
+function MessagesTab() {
+  const [messages, setMessages] = useState<FeedbackMsg[] | null>(null)
+  const [total, setTotal] = useState(0)
+  const [unread, setUnread] = useState(0)
+  const [page, setPage] = useState(1)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = useCallback(async (p: number) => {
+    const { data, error: rpcError } = await supabase.rpc('admin_list_feedback', {
+      p_limit: MESSAGES_PAGE_SIZE,
+      p_offset: (p - 1) * MESSAGES_PAGE_SIZE,
+    })
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    setError(null)
+    const result = data as { messages: FeedbackMsg[]; total: number; unread: number }
+    setMessages(result.messages)
+    setTotal(result.total)
+    setUnread(result.unread)
+  }, [])
+
+  useEffect(() => {
+    load(page)
+  }, [load, page])
+
+  async function markRead(m: FeedbackMsg) {
+    if (m.read_at) return
+    // Optimiste : le message passe à "lu" à l'écran immédiatement, sans
+    // attendre la réponse serveur — l'appel ne peut de toute façon
+    // qu'accorder read_at, jamais échouer côté données pour un admin déjà
+    // authentifié ici.
+    setMessages((prev) => (prev ? prev.map((x) => (x.id === m.id ? { ...x, read_at: new Date().toISOString() } : x)) : prev))
+    setUnread((n) => Math.max(0, n - 1))
+    await supabase.rpc('admin_mark_feedback_read', { p_id: m.id })
+  }
+
+  const totalPages = Math.max(1, Math.ceil(total / MESSAGES_PAGE_SIZE))
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-moon-200/60">
+          {total} message(s){unread > 0 && <span className="text-blood-400"> · {unread} non lu(s)</span>}
+        </p>
+      </div>
+
+      <ErrorText>{error}</ErrorText>
+
+      {messages === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
+      {messages !== null && messages.length === 0 && <p className="text-sm text-moon-200/50">Aucun message reçu pour l’instant.</p>}
+
+      <div className="flex flex-col gap-2">
+        {messages?.map((m) => {
+          const isUnread = !m.read_at
+          return (
+            <Card
+              key={m.id}
+              className={`cursor-pointer p-4 transition-colors ${
+                isUnread ? 'border-blood-600/60 bg-blood-900/10 hover:border-blood-500/70' : 'hover:border-moon-400/40'
+              }`}
+              onClick={() => markRead(m)}
+            >
+              <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                <p className="flex items-center gap-2 text-sm font-semibold text-moon-200">
+                  {isUnread && <span className="h-2 w-2 shrink-0 rounded-full bg-blood-500" aria-hidden="true" />}
+                  {m.username}
+                </p>
+                <p className="text-xs text-moon-200/40">{fmtDate(m.created_at)}</p>
+              </div>
+              <p className="mb-1 text-xs text-moon-200/40">{m.email}</p>
+              <p className="whitespace-pre-wrap text-sm text-moon-200/85">{m.message}</p>
+            </Card>
+          )
+        })}
+      </div>
+
+      {total > 0 && (
+        <div className="flex items-center justify-between gap-3 text-xs text-moon-200/50">
+          <span>Page {page} / {totalPages}</span>
+          <div className="flex gap-2">
+            <Button variant="ghost" className="px-3 py-1.5 text-xs" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+              ← Précédent
+            </Button>
+            <Button variant="ghost" className="px-3 py-1.5 text-xs" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+              Suivant →
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
