@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { Button, Card, ConfirmDialog, ErrorText, Input, Label, Modal, Segmented, SideDrawer, SuccessText } from '../components/ui'
@@ -356,28 +356,58 @@ function StatsTab({ onGoToTab }: { onGoToTab: (target: Tab, usersFilter?: Omit<U
   if (!stats) return <p className="text-sm text-moon-200/50">Chargement...</p>
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       {!stats.new_games_enabled && (
         <ErrorText>Les nouvelles parties sont actuellement désactivées (voir onglet Réglages).</ErrorText>
       )}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+
+      <StatSection title="👤 Utilisateurs">
         <StatCard label="Utilisateurs" value={stats.total_users} onClick={() => onGoToTab('users')} />
         <StatCard
           label="Nouveaux aujourd’hui"
           value={stats.new_users_today}
           onClick={() => onGoToTab('users', { createdFrom: new Date().toISOString().slice(0, 10) })}
         />
+        <StatCard label="Comptes suspendus" value={stats.banned_users} onClick={() => onGoToTab('users', { banned: true })} />
+        <StatCard label="Admins" value={stats.admin_users} onClick={() => onGoToTab('users', { admin: true })} />
+      </StatSection>
+
+      <StatSection title="🎲 Parties">
         <StatCard label="Parties (total)" value={stats.total_games} />
         <StatCard label="Parties en cours" value={stats.active_games} onClick={() => onGoToTab('games')} />
         <StatCard label="Parties créées aujourd’hui" value={stats.games_today} />
-        <StatCard label="Messages aujourd’hui" value={stats.messages_today} />
-        <StatCard label="Comptes suspendus" value={stats.banned_users} onClick={() => onGoToTab('users', { banned: true })} />
-        <StatCard label="Admins" value={stats.admin_users} onClick={() => onGoToTab('users', { admin: true })} />
-        <StatCard label="Suppressions en attente" value={stats.pending_deletions} onClick={() => onGoToTab('security')} />
         <StatCard label="Demandes d’accès en attente" value={stats.pending_join_requests} />
-        <StatCard label="Messages non lus" value={stats.unread_feedback} onClick={() => onGoToTab('messages')} />
-      </div>
+      </StatSection>
+
+      {/* Deux compteurs qui portent tous les deux le mot "message" mais qui
+          n'ont rien à voir : l'un compte les messages du chat EN PARTIE
+          (village/loups/cimetière) envoyés aujourd'hui — une simple mesure
+          d'activité, sans action à faire dessus. L'autre compte les retours
+          joueurs (bouton feedback) pas encore lus, cliquable vers l'onglet
+          Messages (voir migration 0071). Regroupés dans la même section mais
+          avec des libellés qui ne peuvent plus se confondre. */}
+      <StatSection title="💬 Activité & messages">
+        <StatCard label="Messages de chat (aujourd’hui)" value={stats.messages_today} />
+        <StatCard label="Retours joueurs non lus" value={stats.unread_feedback} onClick={() => onGoToTab('messages')} />
+      </StatSection>
+
+      <StatSection title="🔒 Compte & sécurité">
+        <StatCard label="Suppressions en attente" value={stats.pending_deletions} onClick={() => onGoToTab('security')} />
+      </StatSection>
     </div>
+  )
+}
+
+/** Petit regroupement titré de StatCard — juste un titre + une grille,
+ * réutilisé par chaque catégorie de StatsTab (voir retour utilisateur :
+ * la grille unique de 11 cartes était difficile à parcourir d'un coup
+ * d'œil, en particulier pour distinguer les deux compteurs "message..."). */
+function StatSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section>
+      <h2 className="mb-2 font-display text-sm uppercase tracking-wide text-moon-200/50">{title}</h2>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{children}</div>
+    </section>
   )
 }
 
