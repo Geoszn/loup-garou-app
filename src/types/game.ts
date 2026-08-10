@@ -213,4 +213,52 @@ export interface MyGameView {
   // hôte, tant que la partie est publique et encore en salon (voir
   // respond_join_request, migration 0033).
   join_requests: JoinRequest[] | null
+  // Bonus d'impact déjà acquis (voir migration 0073) — rempli uniquement
+  // pour MOI, une fois mort, tant que la partie continue (game.status !==
+  // 'ended'). Sert à la popup de mort : jamais le résultat final
+  // (victoire/défaite), seulement ce qui est déjà gagné et ne peut plus
+  // changer. null tant qu'on est vivant, ou une fois la partie terminée
+  // (voir my_game_result ci-dessous, qui prend le relai).
+  my_impact_preview: ImpactBonus | null
+  // Détail complet de mon résultat pour cette partie (voir migration 0073) —
+  // rempli uniquement une fois game.status === 'ended', lu depuis
+  // game_results (permanent, jamais recalculé). Alimente la section
+  // personnelle de l'écran de fin.
+  my_game_result: MyGameResult | null
+}
+
+// Un geste de rôle mesurable ayant rapporté des points, quel que soit le
+// résultat final de la partie (voir compute_impact_bonus, migration 0073).
+// `count` uniquement pour les bonus qui peuvent se répéter (voir Voyante).
+export type ImpactKind =
+  | 'witch_heal'
+  | 'witch_poison_wolf'
+  | 'hunter_shot_wolf'
+  | 'seer_wolf_reveal'
+  | 'ancien_extra_life'
+
+export interface ImpactDetail {
+  kind: ImpactKind
+  points: number
+  count?: number
+}
+
+export interface ImpactBonus {
+  bonus: number
+  details: ImpactDetail[]
+}
+
+export interface MyGameResult {
+  // Delta de points de classement réellement appliqué pour cette partie
+  // (déjà écrêté par rank_floor le cas échéant côté serveur — voir
+  // apply_rank_result, migration 0073). Peut être négatif.
+  points_gained: number
+  // Part de la partie effectivement vécue (0.4 à 1.0) — voir
+  // apply_rank_updates_for_game, migration 0073.
+  participation_ratio: number
+  impact_bonus: number
+  impact_details: ImpactDetail[]
+  new_rank_points: number
+  new_rank_tier: string
+  won: boolean
 }

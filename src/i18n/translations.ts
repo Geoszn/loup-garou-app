@@ -541,6 +541,30 @@ export const translations = {
     fr: '👻 Vous avez été éliminé. Vous pouvez suivre le chat du village en direct (sans y participer), et discuter librement avec les autres joueurs éliminés au cimetière.',
     en: "👻 You've been eliminated. You can follow the village chat live (without taking part), and chat freely with other eliminated players in the graveyard.",
   },
+  // --- Popup de mort (DeathImpactModal.tsx, migration 0073) ------------------
+  // Affichée juste après une élimination en cours de partie : montre
+  // uniquement ce qui est DÉJÀ acquis (bonus d'impact), jamais le résultat
+  // final (victoire/défaite) qui n'est connu qu'à la fin de la partie — voir
+  // my_impact_preview / my_game_result dans types/game.ts.
+  'deathImpact.title': { fr: '💀 Vous avez été éliminé(e)', en: '💀 You have been eliminated' },
+  'deathImpact.role': { fr: 'Vous étiez {{role}}.', en: 'You were {{role}}.' },
+  'deathImpact.noImpact': {
+    fr: "Vous n'avez pas eu l'occasion de marquer la partie cette fois. Ce n'est que partie remise !",
+    en: "You didn't get the chance to make your mark this time. There's always next game!",
+  },
+  'deathImpact.impactIntro': { fr: 'Déjà acquis, quel que soit le résultat final :', en: 'Already earned, whatever the final result:' },
+  'deathImpact.pendingNote': {
+    fr: 'Le résultat de la partie (victoire ou défaite) s’ajoutera à votre total dès qu’elle sera terminée.',
+    en: "The game's outcome (win or loss) will be added to your total once it ends.",
+  },
+  'deathImpact.continue': { fr: 'Continuer', en: 'Continue' },
+  'impact.witch_heal': { fr: '🧪 Sauvetage réussi', en: '🧪 Successful save' },
+  'impact.witch_poison_wolf': { fr: '☠️ Loup-Garou empoisonné', en: '☠️ Werewolf poisoned' },
+  'impact.hunter_shot_wolf': { fr: '🏹 Tir décisif sur un Loup-Garou', en: '🏹 Decisive shot on a Werewolf' },
+  'impact.seer_wolf_reveal': { fr: '🔮 Loup-Garou démasqué', en: '🔮 Werewolf unmasked' },
+  'impact.seer_wolf_reveal_count': { fr: '🔮 Loups-Garous démasqués ({{count}})', en: '🔮 Werewolves unmasked ({{count}})' },
+  'impact.ancien_extra_life': { fr: '👴 Résilience de l’Ancien', en: '👴 Elder’s resilience' },
+
   'game.yourRole': { fr: 'Votre rôle', en: 'Your role' },
   'game.readyHint': {
     fr: 'Mémorisez bien votre rôle. Dès que tout le monde est prêt, la partie démarre immédiatement.',
@@ -629,6 +653,19 @@ export const translations = {
     fr: 'Envers et contre tout, {{lover1}} et {{lover2}} sont les deux derniers survivants — leur amour l’emporte sur les deux camps.',
     en: 'Against all odds, {{lover1}} and {{lover2}} are the last two survivors — their love triumphs over both camps.',
   },
+  // --- Section personnelle de l'écran de fin (EndScreen, migration 0073) -----
+  // Détail du calcul de points pour CE joueur sur cette partie — lu depuis
+  // my_game_result (game_results, permanent). "Résultat de la partie" =
+  // points_gained - impact_bonus (survie + victoire/série/événement),
+  // toujours calculable exactement par soustraction, sans avoir à stocker
+  // séparément chaque composante.
+  'game.myResultTitle': { fr: 'Tes points cette partie', en: 'Your points this game' },
+  'game.myResultOutcome': { fr: 'Résultat de la partie', en: 'Game outcome' },
+  'game.myResultOutcomeSurvival': { fr: '(survie {{percent}}% de la partie)', en: '(survived {{percent}}% of the game)' },
+  'game.myResultImpactLabel': { fr: 'Bonus d’impact', en: 'Impact bonus' },
+  'game.myResultTotal': { fr: 'Total', en: 'Total' },
+  'game.myResultNewTotal': { fr: 'Nouveau total', en: 'New total' },
+  'game.myResultTierUp': { fr: '🎉 Nouveau palier !', en: '🎉 New tier!' },
   'game.playAgain': { fr: '🔄 Rejouer avec ce groupe', en: '🔄 Play again with this group' },
   'game.leaveLobbyButton': { fr: '🚪 Quitter le salon', en: '🚪 Leave the lobby' },
   'game.waitHostRestart': {

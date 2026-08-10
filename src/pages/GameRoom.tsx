@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useGame } from '../hooks/useGame'
@@ -15,10 +15,13 @@ import { ActionPanel, VotePanel, CaptainVotePanel, WolfPanel } from '../componen
 import { ChatPanel } from '../components/ChatPanel'
 import { VoteRecapModal } from '../components/VoteRecapModal'
 import { NightRecapModal } from '../components/NightRecapModal'
+import { DeathImpactModal, impactLabel } from '../components/DeathImpactModal'
 import { ModerationPanel } from '../components/ModerationPanel'
 import { VoiceChat } from '../components/VoiceChat'
 import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, Modal, Segmented } from '../components/ui'
 import { ROLES, roleLabel, type RoleId } from '../lib/roles'
+import { RankTierBadge } from '../components/RankTierBadge'
+import { tierForPoints, tierLabel, type RankTier } from '../lib/ranks'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { MyGameView, PublicPlayer } from '../types/game'
 import type { VoiceChannel } from '../hooks/useVoiceChat'
@@ -66,6 +69,22 @@ export default function GameRoom() {
   const [logOpen, setLogOpen] = useState(false)
   const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false)
   const [modOpen, setModOpen] = useState(false)
+  const [showDeathImpact, setShowDeathImpact] = useState(false)
+  // Détecte le passage vivant → mort pour déclencher la popup de bonus
+  // d'impact (voir DeathImpactModal.tsx, migration 0073) — UNE seule fois,
+  // au moment précis de la mort, pas à chaque rechargement une fois déjà
+  // mort (sans quoi elle réapparaîtrait à chaque retour dans la partie).
+  const prevAliveRef = useRef<boolean | null>(null)
+
+  useEffect(() => {
+    if (!view || !user) return
+    const meNow = view.players.find((p) => p.user_id === user.id)
+    const aliveNow = meNow?.is_alive ?? false
+    if (prevAliveRef.current === true && !aliveNow && view.game.status !== 'ended') {
+      setShowDeathImpact(true)
+    }
+    prevAliveRef.current = aliveNow
+  }, [view, user])
 
   useEffect(() => {
     if (view && view.game.status === 'lobby') {
@@ -393,6 +412,14 @@ export default function GameRoom() {
           <Modal open={modOpen} onClose={() => setModOpen(false)} title={t('moderation.title')}>
             <ModerationPanel view={view} gameId={gameId!} selfId={user.id} />
           </Modal>
+        )}
+
+        {showDeathImpact && (
+          <DeathImpactModal
+            myRole={view.my_role}
+            impact={view.my_impact_preview}
+            onClose={() => setShowDeathImpact(false)}
+          />
         )}
 
         {view.game.status === 'ended' && (
@@ -884,10 +911,82 @@ function EndScreen({
     return winner === 'loups' ? team === 'loups' : team === 'village'
   }
 
+  // Détail personnel de mon résultat pour cette partie (voir game_results,
+  // migration 0073) — null si absent (ex. profil sans historique, cas
+  // limite). "Résultat de la partie" = points_gained - impact_bonus,
+  // toujours calculable exactement par soustraction plutôt que stocké en
+  // double : c'est la part liée à la survie + victoire/série/événement.
+  const myResult = view.my_game_result
+  const myOutcomePoints = myResult ? myResult.points_gained - myResult.impact_bonus : 0
+  // Palier "d'avant" recalculé à partir des points d'avant (new_rank_points -
+  // points_gained), pour détecter un changement de palier sans avoir besoin
+  // d'une colonne serveur dédiée — voir tierForPoints (lib/ranks.ts).
+  const myPreviousPoints = myResult ? myResult.new_rank_points - myResult.points_gained : 0
+  const myPreviousTier = myResult ? tierForPoints(myPreviousPoints) : null
+  const myTierChanged = myResult ? myResult.new_rank_tier !== myPreviousTier?.id : false
+
   return (
     <Card className="text-center">
       <h2 className="mb-2 font-display text-2xl text-moon-200">{title}</h2>
       <p className="mx-auto mb-5 max-w-sm text-sm text-moon-200/60">{explanation}</p>
+
+      {/* Section personnelle : mon calcul de points pour cette partie précise
+          (voir my_game_result, migration 0073) — jamais affichée avant la fin
+          de la partie (contrairement au bonus d'impact seul, déjà montré via
+          la popup de mort). */}
+      {myResult && (
+        <div className="mx-auto mb-5 max-w-sm animate-fade-in rounded-2xl border border-night-600/60 bg-night-900/50 p-4 text-left">
+          <p className="mb-3 text-center text-xs uppercase tracking-widest text-moon-200/40">{t('game.myResultTitle')}</p>
+
+          <div className="flex flex-col gap-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-moon-200/70">
+                {t('game.myResultOutcome')}{' '}
+                <span className="text-xs text-moon-200/40">
+                  {t('game.myResultOutcomeSurvival', { percent: String(Math.round(myResult.participation_ratio * 100)) })}
+                </span>
+              </span>
+              <span className={`font-display font-semibold ${myOutcomePoints >= 0 ? 'text-emerald-300' : 'text-blood-400'}`}>
+                {myOutcomePoints >= 0 ? '+' : ''}
+                {myOutcomePoints}
+              </span>
+            </div>
+
+            {myResult.impact_details.length > 0 && (
+              <div className="flex flex-col gap-1.5 border-t border-night-700/50 pt-2">
+                {myResult.impact_details.map((d, i) => (
+                  <div key={`${d.kind}-${i}`} className="flex items-center justify-between text-xs">
+                    <span className="text-moon-200/60">{impactLabel(d, t)}</span>
+                    <span className="font-semibold text-emerald-300">+{d.points}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between border-t border-night-700/50 pt-2 text-sm">
+              <span className="font-semibold text-moon-200/80">{t('game.myResultTotal')}</span>
+              <span className={`font-display font-bold ${myResult.points_gained >= 0 ? 'text-emerald-300' : 'text-blood-400'}`}>
+                {myResult.points_gained >= 0 ? '+' : ''}
+                {myResult.points_gained}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between rounded-xl bg-night-800/60 px-3 py-2.5">
+            <div className="flex items-center gap-2">
+              <RankTierBadge tier={myResult.new_rank_tier as RankTier} size={24} />
+              <div>
+                <p className="text-xs text-moon-200/50">{t('game.myResultNewTotal')}</p>
+                <p className="font-display text-sm text-moon-200">
+                  {myResult.new_rank_points} · {tierLabel(myResult.new_rank_tier, t)}
+                </p>
+              </div>
+            </div>
+            {myTierChanged && <span className="text-xs font-semibold text-moon-300">{t('game.myResultTierUp')}</span>}
+          </div>
+        </div>
+      )}
+
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
         {view.final_reveal?.map((r) => {
           const p = view.players.find((pl) => pl.user_id === r.user_id)
