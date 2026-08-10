@@ -228,6 +228,11 @@ export const ChatPanel = memo(function ChatPanel({
       // réduite pour lui laisser plus de place — le chat étant l'endroit
       // où se passe vraiment la partie, il doit rester la zone la plus
       // visible de l'écran.
+      // h-96→h-[65vh] (retour utilisateur suivant : encore trop court sur
+      // mobile, ~4 messages suffisaient à devoir défiler). Une hauteur
+      // relative au viewport s'adapte mieux d'un téléphone à l'autre qu'une
+      // valeur fixe en px — plafonnée à 30rem pour ne pas devenir démesurée
+      // sur un grand écran desktop.
       // Pas de transition CSS sur la hauteur/position ici : en plein écran
       // (expanded), top/height sont recalculés à chaque évènement
       // visualViewport pendant la frappe (voir effet ci-dessus) — avec une
@@ -238,7 +243,7 @@ export const ChatPanel = memo(function ChatPanel({
       // clavier" sur iPhone : coût de repaint répété pour une transition qui
       // n'apportait de toute façon aucun bénéfice visuel perceptible ici.
       className={`flex flex-col border border-night-600/60 ${
-        expanded ? 'rounded-none bg-night-900/95' : `rounded-2xl bg-night-900/50 ${compact ? 'h-64' : 'h-96'}`
+        expanded ? 'rounded-none bg-night-900/95' : `rounded-2xl bg-night-900/50 ${compact ? 'h-64' : 'h-[65vh] max-h-[30rem]'}`
       }`}
     >
       <div className="flex items-center gap-2 border-b border-night-600/50 px-4 py-2.5">
