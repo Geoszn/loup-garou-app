@@ -576,6 +576,11 @@ export const translations = {
     fr: 'La Sorcière vous a éliminé(e) cette nuit avec sa potion de mort.',
     en: 'The Witch eliminated you tonight with her death potion.',
   },
+  'game.wildChildTurnedTitle': { fr: '🐺 Rongé(e) par la vengeance', en: '🐺 Consumed by revenge' },
+  'game.wildChildTurned': {
+    fr: 'Votre mentor est mort cette nuit. Rongé(e) par la vengeance, vous rejoignez désormais les Loups-Garous — personne d’autre que vous ne le sait.',
+    en: 'Your role model died tonight. Consumed by revenge, you now join the Werewolves — no one else knows this.',
+  },
   'game.discussionHint': {
     fr: "💬 Discutez pour démasquer les Loups-Garous — le vote ouvre automatiquement dans la limite de temps, ou plus tôt si le Capitaine le lance avec l'accord de tout le village.",
     en: "💬 Discuss to unmask the Werewolves — the vote opens automatically once time runs out, or sooner if the Captain calls it with the whole village's agreement.",

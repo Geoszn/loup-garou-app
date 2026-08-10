@@ -46,6 +46,14 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
   const witchSavedMe = view.witch_saved_me
   const witchPoisonedMe = view.witch_poisoned_me
 
+  // Conversion de l'Enfant Sauvage à la mort de son mentor : peut survenir
+  // n'importe quelle nuit (contrairement à Cupidon/mentee_ids, réservés à la
+  // nuit 1), donc pas de garde `isFirstNight` ici. Strictement personnel
+  // (voir migration 0069) — avant ce correctif, kill_player annonçait ce
+  // changement en clair dans le journal public, révélant l'identité de
+  // l'Enfant Sauvage à tout le village.
+  const wildChildTurnedWolf = view.wild_child_turned_wolf
+
   async function handleReady() {
     setSubmitting(true)
     await supabase.rpc('submit_day_reveal_ready', { p_game_id: gameId })
@@ -70,7 +78,7 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          {(loverName || mentees.length > 0 || witchSavedMe || witchPoisonedMe) && (
+          {(loverName || mentees.length > 0 || witchSavedMe || witchPoisonedMe || wildChildTurnedWolf) && (
             <div className="mb-3 flex flex-col gap-2">
               {loverName && (
                 <div className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2.5">
@@ -99,6 +107,16 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
                 <div className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2.5">
                   <p className="text-xs font-semibold uppercase tracking-wide text-blood-300">{t('game.witchPoisonedMeTitle')}</p>
                   <p className="mt-1 text-sm text-moon-200/90">{t('game.witchPoisonedMe')}</p>
+                </div>
+              )}
+              {/* Encart personnel pour l'Enfant Sauvage dont le mentor vient
+                  de mourir — jamais visible pour qui que ce soit d'autre
+                  (voir wild_child_turned_wolf, migration 0069). Le journal
+                  public ne mentionne plus du tout cet événement. */}
+              {wildChildTurnedWolf && (
+                <div className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blood-300">{t('game.wildChildTurnedTitle')}</p>
+                  <p className="mt-1 text-sm text-moon-200/90">{t('game.wildChildTurned')}</p>
                 </div>
               )}
             </div>

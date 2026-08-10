@@ -166,6 +166,14 @@ export interface MyGameView {
   // correspondant (statut 'day_reveal'), comme lover_id/mentee_ids ci-dessus.
   witch_saved_me: boolean
   witch_poisoned_me: boolean
+  // Personnel (calculé côté serveur, voir migration 0069) : est-ce que MOI
+  // j'ai perdu mon mentor et rejoint les Loups-Garous CETTE nuit — vrai
+  // uniquement pendant le récap de la nuit concernée (statut 'day_reveal'),
+  // même principe que witch_saved_me/witch_poisoned_me ci-dessus. Jamais
+  // révélé à qui que ce soit d'autre : avant cette migration, kill_player
+  // écrivait ce changement en clair dans le journal public, ce qui révélait
+  // l'identité de l'Enfant Sauvage à tout le village.
+  wild_child_turned_wolf: boolean
   wolf_teammates: string[]
   seer_reveals: { target_id: string; role: string; night_number: number }[]
   witch_heal_used: boolean

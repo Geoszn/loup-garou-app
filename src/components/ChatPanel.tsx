@@ -223,6 +223,11 @@ export const ChatPanel = memo(function ChatPanel({
           ? { position: 'fixed', left: 0, right: 0, top: viewport!.top, height: viewport!.height, zIndex: 60 }
           : undefined
       }
+      // h-80→h-96 (voir retour utilisateur) : la carte de statut au-dessus
+      // du chat pendant la nuit (WaitingCard, GameRoom.tsx) vient d'être
+      // réduite pour lui laisser plus de place — le chat étant l'endroit
+      // où se passe vraiment la partie, il doit rester la zone la plus
+      // visible de l'écran.
       // Pas de transition CSS sur la hauteur/position ici : en plein écran
       // (expanded), top/height sont recalculés à chaque évènement
       // visualViewport pendant la frappe (voir effet ci-dessus) — avec une
@@ -233,7 +238,7 @@ export const ChatPanel = memo(function ChatPanel({
       // clavier" sur iPhone : coût de repaint répété pour une transition qui
       // n'apportait de toute façon aucun bénéfice visuel perceptible ici.
       className={`flex flex-col border border-night-600/60 ${
-        expanded ? 'rounded-none bg-night-900/95' : `rounded-2xl bg-night-900/50 ${compact ? 'h-64' : 'h-80'}`
+        expanded ? 'rounded-none bg-night-900/95' : `rounded-2xl bg-night-900/50 ${compact ? 'h-64' : 'h-96'}`
       }`}
     >
       <div className="flex items-center gap-2 border-b border-night-600/50 px-4 py-2.5">

@@ -11,7 +11,7 @@ import { PhaseBanner, NIGHT_STEP_LABEL, NIGHT_STEP_ICON } from '../components/Ph
 import { RoleCard } from '../components/RoleCard'
 import { PlayerGrid } from '../components/PlayerGrid'
 import { ReadyGrid } from '../components/ReadyGrid'
-import { ActionPanel, VotePanel, CaptainVotePanel } from '../components/ActionPanel'
+import { ActionPanel, VotePanel, CaptainVotePanel, WolfPanel } from '../components/ActionPanel'
 import { ChatPanel } from '../components/ChatPanel'
 import { VoteRecapModal } from '../components/VoteRecapModal'
 import { NightRecapModal } from '../components/NightRecapModal'
@@ -260,7 +260,16 @@ export default function GameRoom() {
 
         {view.game.status === 'night' && alive && (
           <div className="flex animate-fade-in flex-col gap-4">
-            {view.pending_action_required && view.pending_action_required !== 'vote' ? (
+            {/* Loups-Garous : panneau affiché directement pendant toute la
+                fenêtre de vote (comme VotePanel/CaptainVotePanel plus bas),
+                plutôt que de basculer sur WaitingCard dès le premier vote
+                envoyé — submit_wolf_vote accepte déjà de changer la cible
+                tant que tous les loups vivants n'ont pas voté (upsert côté
+                serveur, migration 0035), mais l'écran d'attente empêchait
+                jusqu'ici de revenir modifier son choix. */}
+            {view.my_role === 'loup_garou' && view.game.night_step === 'loup_garou' ? (
+              <WolfPanel view={view} gameId={gameId!} selfId={user.id} />
+            ) : view.pending_action_required && view.pending_action_required !== 'vote' ? (
               <ActionPanel view={view} gameId={gameId!} selfId={user.id} />
             ) : (
               <WaitingCard alive={alive} myRole={view.my_role} nightStep={view.game.night_step} />
@@ -708,13 +717,20 @@ function WaitingCard({
   // animée, avec un halo doré. C'est le seul repère du joueur sur ce qui se
   // passe pendant que d'autres agissent.
   if (alive && nightLabel) {
+    // Réduit (voir retour utilisateur) : cette carte n'affiche qu'un statut
+    // passif ("X agit, patiente") pendant que le chat en dessous, lui, est
+    // l'endroit où se passe vraiment la partie pendant la nuit — elle ne
+    // doit pas dominer l'écran au point de reléguer le chat à une bande
+    // riquiqui en bas de page.
     return (
-      <Card className="animate-fade-in flex flex-col items-center gap-3 border-moon-400/30 py-8 text-center shadow-glow">
-        <span className="animate-breathe text-5xl drop-shadow-[0_0_14px_rgba(224,168,74,0.55)]" aria-hidden="true">
+      <Card className="animate-fade-in flex flex-row items-center gap-3 border-moon-400/30 py-3 text-left shadow-glow">
+        <span className="animate-breathe text-3xl drop-shadow-[0_0_14px_rgba(224,168,74,0.55)]" aria-hidden="true">
           {nightIcon}
         </span>
-        <p className="font-display text-base text-moon-200 sm:text-lg">{nightLabel}</p>
-        <p className="text-[11px] uppercase tracking-[0.2em] text-moon-200/40">{t('game.waitingOthers')}</p>
+        <div>
+          <p className="font-display text-sm text-moon-200 sm:text-base">{nightLabel}</p>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-moon-200/40">{t('game.waitingOthers')}</p>
+        </div>
       </Card>
     )
   }

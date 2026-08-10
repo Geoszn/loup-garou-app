@@ -200,11 +200,19 @@ function EnfantSauvagePanel({ view, gameId, selfId }: { view: MyGameView; gameId
   )
 }
 
-function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
+// Exportée (comme VotePanel/CaptainVotePanel plus bas) : GameRoom.tsx
+// l'affiche directement pendant toute la fenêtre de vote des loups, en
+// dehors du switch de ActionPanel, au lieu de basculer sur WaitingCard dès
+// le premier vote envoyé. submit_wolf_vote fait déjà un upsert côté serveur
+// (migration 0035) — revoter change simplement la cible tant que tous les
+// loups vivants n'ont pas voté ; seul l'affichage bloquait ce comportement
+// pourtant déjà supporté par le serveur.
+export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
   const { t } = useLanguage()
   const myVote = view.wolf_current_votes?.find((v) => v.actor_id === selfId)
   const [selected, setSelected] = useState<string | null>(myVote?.target_id ?? null)
   const [localAbstain, setLocalAbstain] = useState(myVote !== undefined && myVote.target_id === null)
+  const hasVoted = myVote !== undefined
   const [confirmAbstainOpen, setConfirmAbstainOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -232,6 +240,7 @@ function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string;
 
   return (
     <PanelShell emoji="🐺" title={t('action.wolf.title')} subtitle={t('action.wolf.subtitle')}>
+      {hasVoted && <VoteRecordedBanner />}
       <PlayerGrid
         players={alive}
         selfId={selfId}
