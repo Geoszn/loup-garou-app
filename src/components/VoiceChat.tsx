@@ -113,7 +113,7 @@ export function VoiceChat({
           continuait d'afficher "Actif". S'efface tout seul après quelques
           secondes, ou dès qu'on clique le bouton micro pour reparler. */}
       {connected && forcedMuteNotice && (
-        <p className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2 text-xs text-blood-300">
+        <p className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2 text-xs text-blood-400">
           {t('voiceChat.mutedByModeratorNotice')}
         </p>
       )}
@@ -171,7 +171,7 @@ export function VoiceChat({
                   <button
                     onClick={() => muteParticipant(p.id)}
                     title={t('voiceChat.muteParticipantTitle', { name: p.name })}
-                    className="ml-0.5 flex shrink-0 items-center gap-1 rounded-full bg-blood-700/40 px-2 py-0.5 text-[10px] font-semibold text-blood-300 transition-colors hover:bg-blood-700/60"
+                    className="ml-0.5 flex shrink-0 items-center gap-1 rounded-full bg-blood-700/40 px-2 py-0.5 text-[10px] font-semibold text-blood-400 transition-colors hover:bg-blood-700/60"
                   >
                     🔇 {t('voiceChat.muteAction')}
                   </button>

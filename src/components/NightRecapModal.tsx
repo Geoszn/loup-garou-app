@@ -82,7 +82,7 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
             <div className="mb-3 flex flex-col gap-2">
               {loverName && (
                 <div className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2.5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-blood-300">{t('game.loverRevealTitle')}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blood-400">{t('game.loverRevealTitle')}</p>
                   <p className="mt-1 text-sm text-moon-200/90">{t('game.loverReveal', { name: loverName })}</p>
                 </div>
               )}
@@ -105,7 +105,7 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
               )}
               {witchPoisonedMe && (
                 <div className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2.5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-blood-300">{t('game.witchPoisonedMeTitle')}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blood-400">{t('game.witchPoisonedMeTitle')}</p>
                   <p className="mt-1 text-sm text-moon-200/90">{t('game.witchPoisonedMe')}</p>
                 </div>
               )}
@@ -115,7 +115,7 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
                   public ne mentionne plus du tout cet événement. */}
               {wildChildTurnedWolf && (
                 <div className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2.5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-blood-300">{t('game.wildChildTurnedTitle')}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blood-400">{t('game.wildChildTurnedTitle')}</p>
                   <p className="mt-1 text-sm text-moon-200/90">{t('game.wildChildTurned')}</p>
                 </div>
               )}

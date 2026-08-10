@@ -50,7 +50,7 @@ export default function Login() {
         {isAdminHost && (
           <div className="mb-4 rounded-2xl border-2 border-blood-600/70 bg-gradient-to-b from-blood-700/30 to-blood-900/20 px-5 py-4 text-center shadow-[0_0_30px_-8px_rgba(185,28,28,0.6)]">
             <p className="text-3xl">🛡️</p>
-            <h1 className="mt-1 font-display text-2xl font-bold uppercase tracking-wide text-blood-300">
+            <h1 className="mt-1 font-display text-2xl font-bold uppercase tracking-wide text-blood-400">
               Espace Administrateur
             </h1>
             <p className="mt-1 text-xs uppercase tracking-widest text-blood-400/80">

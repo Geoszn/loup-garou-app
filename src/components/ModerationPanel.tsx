@@ -162,7 +162,7 @@ export function ModerationPanel({ view, gameId, selfId }: { view: MyGameView; ga
           caractère irréversible et immédiat pour tout le monde. */}
       {canRestart && (
         <div className="rounded-xl border border-blood-700/40 bg-blood-900/10 p-3">
-          <h3 className="mb-1 font-display text-sm text-blood-300">{t('moderation.restartGameTitle')}</h3>
+          <h3 className="mb-1 font-display text-sm text-blood-400">{t('moderation.restartGameTitle')}</h3>
           <p className="mb-3 text-xs text-moon-200/50">{t('moderation.restartGameHint')}</p>
           <Button variant="danger" className="w-full text-sm" onClick={() => setRestartConfirmOpen(true)}>
             {t('moderation.restartGameButton')}
