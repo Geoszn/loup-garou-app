@@ -45,6 +45,25 @@ export function useVoiceChat(
   // call.join() ci-dessous) : l'état local doit refléter ça dès le départ,
   // sinon le bouton affiche "Actif" alors que personne ne nous entend.
   const [muted, setMuted] = useState(true)
+  // Ce qu'on a NOUS-MÊME demandé en dernier pour notre micro (true = actif) —
+  // sert uniquement à distinguer, dans le handler 'participant-updated' plus
+  // bas, un changement qu'on a soi-même déclenché (toggleMute) d'un
+  // changement venu d'ailleurs. Le seul autre acteur possible est le
+  // modérateur via muteParticipant (à sens unique, il ne peut que couper —
+  // voir plus bas) : si notre micro devient coupé sans qu'on l'ait demandé,
+  // c'est forcément lui.
+  const desiredAudioRef = useRef(false)
+  // BUG corrigé : le micro coupé à distance par le modérateur ne se
+  // reflétait jamais sur l'écran de la victime elle-même — son bouton
+  // continuait d'afficher "Actif" alors que plus personne ne l'entendait,
+  // sans aucun moyen de savoir qu'elle avait été coupée ni de se réactiver
+  // en connaissance de cause. `muted` est désormais resynchronisé depuis le
+  // véritable état Daily (voir 'participant-updated' plus bas) au lieu
+  // d'être une pure valeur locale gérée uniquement par toggleMute.
+  // `forcedMuteNotice` déclenche un avertissement ponctuel côté victime,
+  // affiché quelques secondes (voir l'effet de nettoyage automatique
+  // plus bas et VoiceChat.tsx).
+  const [forcedMuteNotice, setForcedMuteNotice] = useState(false)
   const [participants, setParticipants] = useState<VoiceParticipant[]>([])
   // true si l'utilisateur local a rejoint avec un jeton "propriétaire" Daily
   // (voir api/daily-room.ts, réservé à l'hôte de la partie) : lui seul peut
@@ -152,6 +171,13 @@ export function useVoiceChat(
     setSpeakingIds(new Set())
     speakingSignatureRef.current = ''
     setSelfSpeaking(false)
+    setForcedMuteNotice(false)
+    // Remis à zéro à chaque déconnexion (changement de salon, démontage...) :
+    // sans ça, une valeur `true` restée d'une session précédente (micro
+    // activé avant de changer de canal) déclencherait à tort un avertissement
+    // "coupé par le modérateur" dès la prochaine connexion, où le micro
+    // redémarre pourtant normalement coupé (startAudioOff, voir connect()).
+    desiredAudioRef.current = false
   }
 
   useEffect(() => {
@@ -164,6 +190,21 @@ export function useVoiceChat(
         .map((p) => ({ id: p.session_id, name: p.user_name || t('common.playerFallback'), audioOn: !!p.audio }))
       setParticipants(list)
       setCanModerate(!!all.local?.owner)
+
+      // Resynchronise `muted` depuis le véritable état Daily du participant
+      // LOCAL — et pas seulement depuis nos propres appels à toggleMute
+      // (voir desiredAudioRef ci-dessus). C'est ce qui permet à la victime
+      // d'un mute à distance par le modérateur de voir son propre état
+      // basculer correctement, plutôt que de rester bloquée sur "Actif".
+      const audioOn = !!all.local?.audio
+      if (!audioOn && desiredAudioRef.current) {
+        // On voulait un micro actif, mais il vient de se couper sans qu'on
+        // l'ait demandé : ne peut venir que du modérateur (muteParticipant
+        // est strictement à sens unique — voir plus bas).
+        setForcedMuteNotice(true)
+      }
+      desiredAudioRef.current = audioOn
+      setMuted(!audioOn)
     }
 
     async function connect() {
@@ -293,11 +334,30 @@ export function useVoiceChat(
     }
   }, [])
 
+  // Efface l'avertissement "coupé par le modérateur" tout seul après
+  // quelques secondes — pas besoin d'un bouton "fermer" pour un message
+  // ponctuel, et il réapparaîtra de toute façon si le modérateur recoupe le
+  // micro une nouvelle fois plus tard (voir setForcedMuteNotice(true) plus
+  // haut, redéclenché à chaque transition active → coupée non demandée).
+  useEffect(() => {
+    if (!forcedMuteNotice) return
+    const id = setTimeout(() => setForcedMuteNotice(false), 6000)
+    return () => clearTimeout(id)
+  }, [forcedMuteNotice])
+
   function toggleMute() {
     if (listenOnly) return // le micro d'un fantôme en écoute n'est jamais publié
     const call = callRef.current
     if (!call) return
     const next = !muted
+    // On enregistre ce qu'on vient nous-même de demander AVANT d'appeler
+    // Daily (voir desiredAudioRef plus haut) : sinon le 'participant-updated'
+    // qui suit immédiatement ce changement pourrait le confondre avec une
+    // coupure venue du modérateur. Réactiver son micro ici efface aussi
+    // l'avertissement affiché suite à un mute forcé — reprendre la parole
+    // vaut confirmation qu'on a bien vu qu'on avait été coupé.
+    desiredAudioRef.current = !next
+    setForcedMuteNotice(false)
     call.setLocalAudio(!next)
     setMuted(next)
   }
@@ -345,5 +405,6 @@ export function useVoiceChat(
     selfSpeaking,
     deafened,
     toggleSound,
+    forcedMuteNotice,
   }
 }

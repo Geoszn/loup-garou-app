@@ -31,6 +31,7 @@ export function VoiceChat({
     selfSpeaking,
     deafened,
     toggleSound,
+    forcedMuteNotice,
   } = useVoiceChat(gameId, code, channel, displayName, listenOnly)
   const { t } = useLanguage()
 
@@ -106,6 +107,17 @@ export function VoiceChat({
         )}
       </div>
 
+      {/* Avertissement ponctuel (voir forcedMuteNotice, useVoiceChat.ts) :
+          jusqu'ici, se faire couper le micro par le modérateur ne laissait
+          absolument aucune trace visible côté victime — son propre bouton
+          continuait d'afficher "Actif". S'efface tout seul après quelques
+          secondes, ou dès qu'on clique le bouton micro pour reparler. */}
+      {connected && forcedMuteNotice && (
+        <p className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2 text-xs text-blood-300">
+          {t('voiceChat.mutedByModeratorNotice')}
+        </p>
+      )}
+
       {connected && (participants.length > 0 || !listenOnly) && (
         <ul className="flex flex-wrap gap-1.5 border-t border-night-700/60 pt-2">
           {/* Son propre voyant, toujours affiché en premier (sauf en écoute
@@ -146,20 +158,31 @@ export function VoiceChat({
               <span className="max-w-[100px] truncate">{p.name}</span>
               {/* Toujours affiché dès qu'on modère (pas seulement si le
                   micro est actif) : sinon rien ne prouve que la fonction
-                  existe tant que personne ne s'est activé — juste désactivé
-                  (griser) une fois le micro déjà coupé, plutôt que de
-                  disparaître entièrement. */}
+                  existe tant que personne ne s'est activé.
+                  Retour utilisateur : un bouton icône seule (🔇), collé au
+                  même emoji déjà utilisé juste à gauche pour le statut
+                  actuel du micro, prêtait à confusion — impossible de dire
+                  d'un coup d'œil "c'est l'état" ou "c'est le bouton". Un vrai
+                  bouton texte tant qu'il y a une action possible, remplacé
+                  par une étiquette figée (pas de bouton du tout) une fois
+                  coupé — l'état est sans ambiguïté. */}
               {canModerate && (
-                <button
-                  onClick={() => p.audioOn && muteParticipant(p.id)}
-                  disabled={!p.audioOn}
-                  title={p.audioOn ? t('voiceChat.muteParticipantTitle', { name: p.name }) : t('voiceChat.alreadyMuted')}
-                  className={`flex h-5 w-5 items-center justify-center rounded-full transition-colors ${
-                    p.audioOn ? 'text-blood-400 hover:bg-blood-700/30' : 'cursor-default text-moon-200/15'
-                  }`}
-                >
-                  🔇
-                </button>
+                p.audioOn ? (
+                  <button
+                    onClick={() => muteParticipant(p.id)}
+                    title={t('voiceChat.muteParticipantTitle', { name: p.name })}
+                    className="ml-0.5 flex shrink-0 items-center gap-1 rounded-full bg-blood-700/40 px-2 py-0.5 text-[10px] font-semibold text-blood-300 transition-colors hover:bg-blood-700/60"
+                  >
+                    🔇 {t('voiceChat.muteAction')}
+                  </button>
+                ) : (
+                  <span
+                    title={t('voiceChat.alreadyMuted')}
+                    className="ml-0.5 shrink-0 rounded-full bg-night-700/50 px-2 py-0.5 text-[10px] font-semibold text-moon-200/30"
+                  >
+                    {t('voiceChat.mutedTag')}
+                  </span>
+                )
               )}
             </li>
           ))}

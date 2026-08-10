@@ -1404,6 +1404,22 @@ export const translations = {
     en: 'You can remotely mute any player’s mic here.',
   },
   'voiceChat.alreadyMuted': { fr: 'Déjà coupé', en: 'Already muted' },
+  // Bouton d'action du modérateur, distinct du simple indicateur 🎤/🔇 déjà
+  // affiché pour chaque joueur (voir p.audioOn) : avant, les deux étaient un
+  // même emoji 🔇 côte à côte, difficile à distinguer entre "statut actuel"
+  // et "bouton pour couper" — retour utilisateur. Désormais un vrai bouton
+  // texte tant que le micro est actif, remplacé par une étiquette figée une
+  // fois coupé (jamais de retour en arrière, voir muteParticipant).
+  'voiceChat.muteAction': { fr: 'Couper', en: 'Mute' },
+  'voiceChat.mutedTag': { fr: 'Coupé', en: 'Muted' },
+  // Avertissement affiché au joueur lui-même dès que son micro est coupé à
+  // distance par le modérateur (voir forcedMuteNotice, useVoiceChat.ts) —
+  // avant ce correctif, rien ne le lui indiquait : son propre bouton
+  // continuait d'afficher "Actif" alors que plus personne ne l'entendait.
+  'voiceChat.mutedByModeratorNotice': {
+    fr: '🔇 Le modérateur a coupé votre micro. Cliquez sur le bouton micro quand vous voulez reparler.',
+    en: '🔇 The moderator muted your microphone. Tap the mic button whenever you want to speak again.',
+  },
   'voiceChat.soundOnTitle': { fr: 'Couper le son (ne plus entendre les autres)', en: 'Mute sound (stop hearing others)' },
   'voiceChat.soundOffTitle': { fr: 'Rétablir le son', en: 'Restore sound' },
   'voiceChat.you': { fr: 'Moi', en: 'Me' },
