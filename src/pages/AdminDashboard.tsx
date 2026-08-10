@@ -90,6 +90,12 @@ interface AdminGame {
   last_activity_at: string
   host_name: string
   player_count: number
+  // Demandes de joueurs voulant rejoindre CETTE partie pendant qu'elle est
+  // en cours (voir migration 0038) — en attente que l'hôte y réponde une
+  // fois revenu en salon (JoinRequestsPanel, Lobby.tsx). L'admin les voit
+  // ici (migration 0072) mais ne peut pas y répondre à sa place : c'est
+  // uniquement pour repérer une partie où ça bloque.
+  pending_join_requests: number
 }
 
 const USERS_PAGE_SIZE = 10
@@ -376,7 +382,16 @@ function StatsTab({ onGoToTab }: { onGoToTab: (target: Tab, usersFilter?: Omit<U
         <StatCard label="Parties (total)" value={stats.total_games} />
         <StatCard label="Parties en cours" value={stats.active_games} onClick={() => onGoToTab('games')} />
         <StatCard label="Parties créées aujourd’hui" value={stats.games_today} />
-        <StatCard label="Demandes d’accès en attente" value={stats.pending_join_requests} />
+        {/* Joueurs qui essaient de rejoindre une partie déjà en cours (ou
+            privée rejointe par code pendant qu'elle tourne, voir migration
+            0038) : la demande reste en attente jusqu'à ce que l'HÔTE de
+            cette partie précise y réponde, une fois revenu en salon — pas
+            une file d'attente globale que l'admin traite lui-même. Ce
+            compteur n'avait jusqu'ici aucune action associée (pas de clic) ;
+            il renvoie maintenant vers l'onglet Parties, qui affiche
+            désormais laquelle a des demandes en attente (migration 0072).
+            (Question fréquente, réponse : c'est géré par l'hôte, pas ici.) */}
+        <StatCard label="Demandes d’accès en attente" value={stats.pending_join_requests} onClick={() => onGoToTab('games')} />
       </StatSection>
 
       {/* Deux compteurs qui portent tous les deux le mot "message" mais qui
@@ -835,6 +850,15 @@ function GamesTab() {
                 Hôte : {g.host_name} · {g.player_count} joueur(s) · créée le {fmtDate(g.created_at)}
               </p>
               <p className="text-xs text-moon-200/40">Dernière activité : {timeSince(g.last_activity_at)} (ferme automatiquement après 2h)</p>
+              {/* Demandes de joueurs voulant rejoindre CETTE partie en cours
+                  (voir migration 0038/0072) — seul l'hôte peut y répondre
+                  (JoinRequestsPanel, une fois revenu en salon), affiché ici
+                  juste pour repérer une partie où ça bloque. */}
+              {g.pending_join_requests > 0 && (
+                <p className="mt-1 text-xs text-moon-300">
+                  🔔 {g.pending_join_requests} demande(s) d’accès en attente — à valider par l’hôte, une fois revenu au salon.
+                </p>
+              )}
             </div>
             <Button variant="danger" className="px-3 py-1.5 text-xs" disabled={busyId === g.id} onClick={() => setEndTarget(g)}>
               Arrêter
