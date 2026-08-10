@@ -177,7 +177,7 @@ export function useVoiceChat(
       setError(null)
 
       try {
-        const url = await getVoiceRoomUrl(gameId, code, channel)
+        const { url, token: ownerToken } = await getVoiceRoomUrl(gameId, code, channel)
         if (cancelled) return
 
         const call = DailyIframe.createCallObject({ subscribeToTracksAutomatically: true })
@@ -214,7 +214,20 @@ export function useVoiceChat(
         // Micro coupé par défaut à l'entrée dans le salon (voir aussi
         // start_audio_off côté room dans api/daily-room.ts) : chacun doit
         // explicitement s'activer pour parler.
-        await call.join({ url, userName: displayName, startVideoOff: true, startAudioOff: true })
+        //
+        // `token: ownerToken` (null pour tout le monde sauf l'hôte, voir
+        // lib/daily.ts) — c'est la propriété `token` de join(), PAS un `?t=`
+        // concaténé à l'URL, qui doit porter le jeton "propriétaire" Daily
+        // pour un call object. Avant ce correctif, le jeton était ignoré :
+        // l'hôte rejoignait comme un participant normal et ne pouvait jamais
+        // couper le micro de personne (canModerate restait toujours faux).
+        await call.join({
+          url,
+          token: ownerToken ?? undefined,
+          userName: displayName,
+          startVideoOff: true,
+          startAudioOff: true,
+        })
         if (cancelled) {
           await call.leave()
           call.destroy()

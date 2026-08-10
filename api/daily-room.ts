@@ -109,21 +109,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return
   }
 
-  // L'hôte de la partie reçoit un jeton Daily "propriétaire" (is_owner) pour
-  // ce salon précis : c'est ce qui lui permet ensuite, côté client, de
-  // couper à distance le micro d'un autre joueur via updateParticipant().
+  // is_host détermine qui reçoit le jeton "propriétaire" Daily plus bas
+  // (voir ownerToken) — seul lui pourra couper à distance le micro des
+  // autres joueurs de ce salon. display_name récupéré ici aussi : depuis que
+  // le jeton est réellement appliqué (voir plus bas), sa propriété
+  // `user_name` prend le pas sur le `userName` passé côté client à join() —
+  // sans ça, l'hôte apparaîtrait comme "Hôte" au lieu de son vrai pseudo dans
+  // la liste des participants du salon vocal.
   const {
     data: { user },
   } = await supabase.auth.getUser()
   let isHost = false
+  let hostDisplayName = 'Hôte'
   if (user) {
     const { data: me } = await supabase
       .from('game_players')
-      .select('is_host')
+      .select('is_host, display_name')
       .eq('game_id', gameId)
       .eq('user_id', user.id)
       .maybeSingle()
     isHost = !!me?.is_host
+    if (me?.display_name) hostDisplayName = me.display_name
   }
 
   const roomName = `wg-${String(code).toLowerCase()}-${channel}`.slice(0, 41)
@@ -132,8 +138,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ce salon précis : c'est ce qui lui permet ensuite, côté client, de
   // couper à distance le micro d'un autre joueur via updateParticipant().
   // Les autres joueurs rejoignent la même URL publique sans jeton.
-  async function withOwnerToken(url: string): Promise<string> {
-    if (!isHost) return url
+  //
+  // BUG corrigé : ce jeton était jusqu'ici concaténé à l'URL en `?t=...`,
+  // dans l'idée (répandue dans la doc/les exemples Daily côté Prebuilt/
+  // iframe) qu'un call object le lirait tout seul depuis l'URL. En pratique,
+  // avec `DailyIframe.createCallObject()` (mode "call object", pas Prebuilt),
+  // ce n'est PAS fiable : Daily documente explicitement que la seule façon
+  // recommandée de fournir un jeton est la propriété `token` de `join()`
+  // (voir https://docs.daily.co/reference/rest-api/meeting-tokens#using-meeting-tokens).
+  // Le jeton "propriétaire" était donc silencieusement ignoré à la connexion
+  // — l'hôte rejoignait comme un participant normal, `canModerate` restait
+  // toujours faux côté client, et les boutons de coupure de micro n'apparaissaient
+  // jamais. Corrigé en renvoyant le jeton à part (voir useVoiceChat.ts, qui le
+  // passe désormais explicitement à `call.join({ url, token })`).
+  async function ownerToken(): Promise<string | null> {
+    if (!isHost) return null
     try {
       const tokenRes = await fetch(DAILY_TOKENS_URL, {
         method: 'POST',
@@ -145,19 +164,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           properties: {
             room_name: roomName,
             is_owner: true,
-            user_name: 'Hôte',
+            user_name: hostDisplayName,
             exp: Math.floor(Date.now() / 1000) + 60 * 60 * 6,
           },
         }),
       })
-      if (!tokenRes.ok) return url
+      if (!tokenRes.ok) return null
       const tokenData = await tokenRes.json()
-      return `${url}?t=${tokenData.token}`
+      return tokenData.token as string
     } catch {
       // En cas de souci avec l'émission du jeton, l'hôte rejoint quand même
       // le salon vocal normalement — il perd juste la capacité de couper le
       // micro des autres, plutôt que de bloquer complètement le vocal.
-      return url
+      return null
     }
   }
 
@@ -167,7 +186,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
     if (existing.ok) {
       const data = await existing.json()
-      res.status(200).json({ url: await withOwnerToken(data.url) })
+      res.status(200).json({ url: data.url, token: await ownerToken() })
       return
     }
 
@@ -215,7 +234,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         })
         if (retry.ok) {
           const data = await retry.json()
-          res.status(200).json({ url: await withOwnerToken(data.url) })
+          res.status(200).json({ url: data.url, token: await ownerToken() })
           return
         }
       }
@@ -225,7 +244,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const data = await created.json()
-    res.status(200).json({ url: await withOwnerToken(data.url) })
+    res.status(200).json({ url: data.url, token: await ownerToken() })
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue' })
   }
