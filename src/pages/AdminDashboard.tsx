@@ -1286,8 +1286,16 @@ const dateTimeSelectClass =
 function eventStatus(e: GameEvent): { label: string; className: string } {
   if (!e.is_enabled) return { label: 'Désactivé', className: 'bg-night-600 text-moon-200/60' }
   const now = Date.now()
+  const previewStart = e.preview_starts_at ? new Date(e.preview_starts_at).getTime() : null
   const start = new Date(e.starts_at).getTime()
   const end = new Date(e.ends_at).getTime()
+  // Distingue "bannière déjà visible mais bonus pas encore actif" (aperçu,
+  // voir migration 0075) de "rien n'est encore visible" — sans ça, un admin
+  // pourrait croire qu'un événement en aperçu n'apparaît nulle part côté
+  // joueur alors que sa bannière tourne déjà.
+  if (previewStart !== null && now >= previewStart && now < start) {
+    return { label: 'Aperçu (bannière visible)', className: 'bg-moon-400/20 text-moon-300' }
+  }
   if (now < start) return { label: 'Programmé', className: 'bg-night-600 text-moon-200/70' }
   if (now > end) return { label: 'Terminé', className: 'bg-night-600 text-moon-200/50' }
   return { label: 'En cours', className: 'bg-emerald-700/30 text-emerald-400' }
@@ -1303,6 +1311,9 @@ interface EventFormState {
   name: string
   starts_at: string
   ends_at: string
+  // Vide = pas d'aperçu (comportement d'avant, voir migration 0075) —
+  // distinct de starts_at/ends_at qui, eux, sont obligatoires.
+  preview_starts_at: string
   bonus_type: EventBonusType
   bonus_value: string
   banner_text_fr: string
@@ -1315,6 +1326,7 @@ const EMPTY_EVENT_FORM: EventFormState = {
   name: '',
   starts_at: '',
   ends_at: '',
+  preview_starts_at: '',
   bonus_type: 'none',
   bonus_value: '0',
   banner_text_fr: '',
@@ -1368,6 +1380,11 @@ function EventsTab() {
       p_banner_text_en: e.banner_text_en,
       p_banner_color: e.banner_color,
       p_is_enabled: !e.is_enabled,
+      // admin_upsert_event réécrit toutes les colonnes à chaque appel (pas
+      // une mise à jour partielle) — omettre ce champ le remettrait
+      // silencieusement à null (sa valeur par défaut) à chaque bascule
+      // Activer/Désactiver, effaçant un aperçu déjà configuré.
+      p_preview_starts_at: e.preview_starts_at,
     })
     setBusyId(null)
     if (rpcError) {
@@ -1421,6 +1438,9 @@ function EventsTab() {
                     Du {fmtDate(e.starts_at)} au {fmtDate(e.ends_at)}
                     {bonus && <span className="text-moon-300"> · {bonus}</span>}
                   </p>
+                  {e.preview_starts_at && (
+                    <p className="mt-0.5 text-xs text-moon-300/70">🔜 Bannière visible dès {fmtDate(e.preview_starts_at)}</p>
+                  )}
                   {(e.banner_text_fr || e.banner_text_en) && (
                     <p className="mt-1 text-xs text-moon-200/40">
                       🇫🇷 {e.banner_text_fr || '—'} · 🇬🇧 {e.banner_text_en || '—'}
@@ -1494,6 +1514,7 @@ function EventFormDrawer({
         name: event.name,
         starts_at: toDatetimeLocal(event.starts_at),
         ends_at: toDatetimeLocal(event.ends_at),
+        preview_starts_at: event.preview_starts_at ? toDatetimeLocal(event.preview_starts_at) : '',
         bonus_type: event.bonus_type,
         bonus_value: String(event.bonus_value),
         banner_text_fr: event.banner_text_fr,
@@ -1513,6 +1534,12 @@ function EventFormDrawer({
       setError('Nom et période requis.')
       return
     }
+    if (form.preview_starts_at && form.preview_starts_at > form.starts_at) {
+      // Comparaison de chaînes valide ici : même format "AAAA-MM-JJTHH:mm"
+      // des deux côtés (ordre lexicographique = ordre chronologique).
+      setError('L’aperçu doit commencer avant (ou en même temps que) le début de l’événement.')
+      return
+    }
     setBusy(true)
     setError(null)
     const { error: rpcError } = await supabase.rpc('admin_upsert_event', {
@@ -1520,6 +1547,7 @@ function EventFormDrawer({
       p_name: form.name,
       p_starts_at: new Date(form.starts_at).toISOString(),
       p_ends_at: new Date(form.ends_at).toISOString(),
+      p_preview_starts_at: form.preview_starts_at ? new Date(form.preview_starts_at).toISOString() : null,
       p_bonus_type: form.bonus_type,
       p_bonus_value: Number(form.bonus_value) || 0,
       p_banner_text_fr: form.banner_text_fr,
@@ -1642,6 +1670,69 @@ function EventFormDrawer({
               <p className="mt-1 text-[11px] text-moon-200/40">→ {formatDatetimeLocalReadable(form.ends_at)}</p>
             )}
           </div>
+        </div>
+
+        <div>
+          <div className="flex items-baseline justify-between">
+            <Label>Aperçu (optionnel)</Label>
+            {form.preview_starts_at && (
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, preview_starts_at: '' }))}
+                className="text-[11px] text-moon-300 underline underline-offset-2"
+              >
+                Retirer l’aperçu
+              </button>
+            )}
+          </div>
+          <p className="mb-1.5 text-[11px] text-moon-200/40">
+            Rend la bannière visible avant le début officiel, pour teaser l’événement — le bonus de points, lui, ne
+            s’active toujours qu’à partir de « Début » ci-dessus.
+          </p>
+          <div className="flex gap-1.5">
+            <Input
+              type="date"
+              className="flex-1"
+              value={splitDatetimeLocal(form.preview_starts_at).date}
+              onChange={(ev) => {
+                const { hour, minute } = splitDatetimeLocal(form.preview_starts_at)
+                setForm((f) => ({ ...f, preview_starts_at: combineDatetimeLocal(ev.target.value, hour, minute) }))
+              }}
+            />
+            <select
+              aria-label="Heure de l’aperçu (24h)"
+              className={dateTimeSelectClass}
+              value={splitDatetimeLocal(form.preview_starts_at).hour}
+              onChange={(ev) => {
+                const { date, minute } = splitDatetimeLocal(form.preview_starts_at)
+                setForm((f) => ({ ...f, preview_starts_at: combineDatetimeLocal(date, ev.target.value, minute) }))
+              }}
+            >
+              {HOURS_24.map((h) => (
+                <option key={h} value={h}>
+                  {h}h
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Minute de l’aperçu"
+              className={dateTimeSelectClass}
+              value={splitDatetimeLocal(form.preview_starts_at).minute}
+              onChange={(ev) => {
+                const { date, hour } = splitDatetimeLocal(form.preview_starts_at)
+                setForm((f) => ({ ...f, preview_starts_at: combineDatetimeLocal(date, hour, ev.target.value) }))
+              }}
+            >
+              {MINUTES_ALL.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </div>
+          {formatDatetimeLocalReadable(form.preview_starts_at) && (
+            <p className="mt-1 text-[11px] text-moon-200/40">→ {formatDatetimeLocalReadable(form.preview_starts_at)}</p>
+          )}
         </div>
 
         <div>

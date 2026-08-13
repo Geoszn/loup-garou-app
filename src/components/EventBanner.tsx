@@ -29,36 +29,54 @@ function formatRemaining(ms: number): string {
   return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
 }
 
-/** Compte à rebours jusqu'à `endsAt`, remis à jour chaque seconde.
- * `onExpire` (facultatif) est appelé une fois dès que le temps restant
- * atteint zéro — utilisé pour forcer un refresh immédiat de la liste des
- * événements actifs (voir useActiveEvents) plutôt que d'attendre jusqu'à
- * 30s que le polling normal fasse disparaître la bannière tout seul. */
-function useCountdown(endsAt: string, onExpire?: () => void) {
-  const [remaining, setRemaining] = useState(() => new Date(endsAt).getTime() - Date.now())
+// Texte du petit badge "aperçu" — la bannière peut désormais être visible
+// avant même le début officiel de l'événement (voir preview_starts_at,
+// migration 0075), un cas que ce composant n'affichait pas du tout avant :
+// pas de traduction complète via i18n/translations.ts pour ces deux mots,
+// mais un simple repli bilingue local, même principe que le repli FR/EN déjà
+// utilisé juste en dessous pour banner_text_fr/en.
+const PREVIEW_LABEL: Record<'fr' | 'en', string> = { fr: 'Bientôt', en: 'Coming soon' }
+
+/** Compte à rebours en deux phases : tant que l'événement n'a pas
+ * officiellement commencé (now < starts_at), vers son DÉBUT ; une fois
+ * commencé, vers sa FIN, comme avant. `onEnd` (facultatif) n'est appelé
+ * qu'une fois que la vraie fin (ends_at) est atteinte — pas à la bascule
+ * aperçu → actif, qui ne fait que changer l'affichage local sans que la
+ * bannière doive disparaître ni se recharger depuis le serveur. */
+function useEventCountdown(startsAt: string, endsAt: string, onEnd?: () => void) {
+  const startMs = new Date(startsAt).getTime()
+  const endMs = new Date(endsAt).getTime()
+
+  function computePhase() {
+    const now = Date.now()
+    const started = now >= startMs
+    return { started, remaining: (started ? endMs : startMs) - now }
+  }
+
+  const [state, setState] = useState(computePhase)
 
   useEffect(() => {
-    let expired = false
+    let ended = false
     const tick = () => {
-      const next = new Date(endsAt).getTime() - Date.now()
-      setRemaining(next)
-      if (next <= 0 && !expired) {
-        expired = true
-        onExpire?.()
+      const next = computePhase()
+      setState(next)
+      if (next.started && next.remaining <= 0 && !ended) {
+        ended = true
+        onEnd?.()
       }
     }
     tick()
     const interval = setInterval(tick, 1000)
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [endsAt])
+  }, [startsAt, endsAt])
 
-  return remaining
+  return state
 }
 
 export function EventBanner({ event, onExpire }: { event: GameEvent; onExpire?: () => void }) {
   const { lang } = useLanguage()
-  const remaining = useCountdown(event.ends_at, onExpire)
+  const { started, remaining } = useEventCountdown(event.starts_at, event.ends_at, onExpire)
   // Retombe sur l'autre langue si celle du joueur n'a pas été renseignée par
   // l'admin, plutôt que d'afficher un bandeau vide.
   const text = (lang === 'fr' ? event.banner_text_fr : event.banner_text_en) || event.banner_text_fr || event.banner_text_en
@@ -68,13 +86,21 @@ export function EventBanner({ event, onExpire }: { event: GameEvent; onExpire?: 
     ? supabase.storage.from('event-banners').getPublicUrl(event.banner_image_path).data.publicUrl
     : null
 
+  // Le bonus de points ne s'active qu'à partir du vrai début (apply_rank_result
+  // ne regarde que starts_at/ends_at, jamais preview_starts_at) — l'annoncer
+  // pendant l'aperçu induirait en erreur (donnerait l'impression qu'il compte
+  // déjà) : masqué tant que `started` est faux.
   const bonusBadge =
-    event.bonus_type === 'multiplier' ? `×${event.bonus_value}` : event.bonus_type === 'flat' ? `+${event.bonus_value}` : null
+    started && event.bonus_type === 'multiplier'
+      ? `×${event.bonus_value}`
+      : started && event.bonus_type === 'flat'
+        ? `+${event.bonus_value}`
+        : null
 
   const content = (
     <>
       <span className="text-xl" aria-hidden="true">
-        🎉
+        {started ? '🎉' : '🔜'}
       </span>
       <p className="min-w-0 flex-1 basis-full text-left text-sm font-semibold text-moon-200 sm:basis-auto">{text}</p>
       <div className="flex shrink-0 items-center gap-2">
@@ -82,7 +108,7 @@ export function EventBanner({ event, onExpire }: { event: GameEvent; onExpire?: 
           <span className="rounded-full bg-black/25 px-2.5 py-1 text-xs font-bold text-moon-200">{bonusBadge}</span>
         )}
         <span className="whitespace-nowrap rounded-full bg-black/20 px-2.5 py-1 text-[11px] text-moon-200/80">
-          ⏳ {formatRemaining(remaining)}
+          {started ? '⏳' : PREVIEW_LABEL[lang]} {formatRemaining(remaining)}
         </span>
       </div>
     </>

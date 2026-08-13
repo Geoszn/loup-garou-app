@@ -9,6 +9,14 @@ export interface GameEvent {
   name: string
   starts_at: string
   ends_at: string
+  // Date optionnelle à partir de laquelle la bannière devient visible AVANT
+  // le vrai début de l'événement (voir migration 0075) — pour "hyper" un
+  // événement à venir sans activer son bonus de points en avance (le bonus,
+  // lui, continue de se déclencher exactement entre starts_at et ends_at,
+  // voir apply_rank_result, jamais affecté par ce champ). null = pas
+  // d'aperçu, comportement d'avant (bannière visible seulement une fois
+  // l'événement réellement commencé).
+  preview_starts_at: string | null
   bonus_type: EventBonusType
   bonus_value: number
   banner_text_fr: string
