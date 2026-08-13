@@ -82,9 +82,12 @@ export function EventBanner({ event, onExpire }: { event: GameEvent; onExpire?: 
   const text = (lang === 'fr' ? event.banner_text_fr : event.banner_text_en) || event.banner_text_fr || event.banner_text_en
   if (!text) return null
 
-  const imageUrl = event.banner_image_path
-    ? supabase.storage.from('event-banners').getPublicUrl(event.banner_image_path).data.publicUrl
-    : null
+  // Même repli que le texte juste au-dessus (voir migration 0076) : une
+  // image anglaise dédiée si elle existe, sinon l'image FR/par défaut —
+  // jamais de bannière sans image simplement parce que l'admin n'a importé
+  // qu'une seule version.
+  const imagePath = (lang === 'en' ? event.banner_image_path_en : event.banner_image_path) || event.banner_image_path || event.banner_image_path_en
+  const imageUrl = imagePath ? supabase.storage.from('event-banners').getPublicUrl(imagePath).data.publicUrl : null
 
   // Le bonus de points ne s'active qu'à partir du vrai début (apply_rank_result
   // ne regarde que starts_at/ends_at, jamais preview_starts_at) — l'annoncer

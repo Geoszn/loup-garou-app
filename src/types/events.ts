@@ -24,8 +24,15 @@ export interface GameEvent {
   banner_color: EventBannerColor
   // Chemin de l'objet dans le bucket "event-banners", pas l'URL complète —
   // voir supabase.storage.from('event-banners').getPublicUrl(...) côté
-  // client (EventBanner.tsx / AdminDashboard.tsx).
+  // client (EventBanner.tsx / AdminDashboard.tsx). Image "FR / par défaut" :
+  // sert de repli si banner_image_path_en n'est pas renseignée (voir
+  // migration 0076) — même principe que banner_text_fr/en juste au-dessus.
   banner_image_path: string | null
+  // Image spécifique au public anglophone (voir migration 0076) — utile
+  // quand le titre de l'événement est dessiné DANS l'image (pas juste en
+  // texte superposé), donc forcément dans une seule langue à la fois. null
+  // = pas d'image dédiée, EventBanner.tsx retombe alors sur banner_image_path.
+  banner_image_path_en: string | null
   is_enabled?: boolean
   created_at?: string
 }

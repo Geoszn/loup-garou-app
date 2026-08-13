@@ -1459,7 +1459,7 @@ function EventsTab() {
                   </Button>
                 </div>
               </div>
-              <EventBannerImage event={e} onUploaded={load} />
+              <EventBannerImages event={e} onUploaded={load} />
             </Card>
           )
         })}
@@ -1819,23 +1819,59 @@ function EventFormDrawer({
   )
 }
 
-/** Image de bannière optionnelle — même principe que RoleImagesSection :
- * upload direct dans le bucket "event-banners" (nommé "{id}.jpg" quel que
- * soit le format importé), puis admin_set_event_banner_image associe le
- * chemin à l'événement. Séparé du formulaire principal car il n'a de sens
- * qu'une fois l'événement créé (a besoin de son id pour le nom du fichier). */
-function EventBannerImage({ event, onUploaded }: { event: GameEvent; onUploaded: () => void }) {
+/** Les deux images de bannière (FR et EN), l'une sous l'autre — une image
+ * unique ne suffisait plus dès qu'elle contient un titre DESSINÉ dedans (ex.
+ * "LE WEEKEND DES ROIS"), donc forcément lisible dans une seule langue à la
+ * fois (voir migration 0076). L'image EN est optionnelle : tant qu'elle
+ * n'est pas importée, EventBanner.tsx retombe sur l'image FR pour les
+ * joueurs anglophones aussi — mieux qu'une bannière sans image du tout. */
+function EventBannerImages({ event, onUploaded }: { event: GameEvent; onUploaded: () => void }) {
+  return (
+    <div className="flex flex-col gap-2 border-t border-night-600/50 pt-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+        <EventBannerImageUpload event={event} lang="fr" label="Image FR" onUploaded={onUploaded} />
+        <EventBannerImageUpload event={event} lang="en" label="Image EN (optionnel, sinon reprend l’image FR)" onUploaded={onUploaded} />
+      </div>
+      {/* Format attendu par l'affichage réel (voir EventBanner.tsx : le
+          bandeau est toujours découpé en ratio 3:1 via aspect-[3/1] +
+          object-cover, quelle que soit la taille de l'image importée) —
+          précisé ici pour éviter un import au hasard qui recadrerait mal un
+          visuel important sur les bords gauche/droite. */}
+      <p className="text-[10px] leading-snug text-moon-200/40">
+        Format recommandé : ratio 3:1 (ex. 1500 × 500 px), JPG ou PNG. L’image est automatiquement recadrée à ce
+        ratio et centrée — gardez l’essentiel du visuel au centre, les bords gauche/droite peuvent être coupés.
+      </p>
+    </div>
+  )
+}
+
+/** Upload direct dans le bucket "event-banners" (nommé "{id}-{lang}.jpg"
+ * pour distinguer les deux versions, même principe que RoleImagesSection),
+ * puis admin_set_event_banner_image associe le chemin à la bonne colonne
+ * (banner_image_path ou banner_image_path_en selon `lang`). Séparé du
+ * formulaire principal car il n'a de sens qu'une fois l'événement créé (a
+ * besoin de son id pour le nom du fichier). */
+function EventBannerImageUpload({
+  event,
+  lang,
+  label,
+  onUploaded,
+}: {
+  event: GameEvent
+  lang: 'fr' | 'en'
+  label: string
+  onUploaded: () => void
+}) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const currentUrl = event.banner_image_path
-    ? supabase.storage.from('event-banners').getPublicUrl(event.banner_image_path).data.publicUrl
-    : null
+  const path = lang === 'fr' ? event.banner_image_path : event.banner_image_path_en
+  const currentUrl = path ? supabase.storage.from('event-banners').getPublicUrl(path).data.publicUrl : null
 
   async function handleUpload(file: File) {
     setBusy(true)
     setError(null)
-    const path = `${event.id}.jpg`
+    const path = `${event.id}-${lang}.jpg`
     const { error: uploadError } = await supabase.storage.from('event-banners').upload(path, file, {
       upsert: true,
       contentType: file.type || 'image/jpeg',
@@ -1846,7 +1882,7 @@ function EventBannerImage({ event, onUploaded }: { event: GameEvent; onUploaded:
       setError(uploadError.message)
       return
     }
-    const { error: rpcError } = await supabase.rpc('admin_set_event_banner_image', { p_id: event.id, p_path: path })
+    const { error: rpcError } = await supabase.rpc('admin_set_event_banner_image', { p_id: event.id, p_path: path, p_lang: lang })
     setBusy(false)
     if (rpcError) {
       setError(rpcError.message)
@@ -1856,7 +1892,8 @@ function EventBannerImage({ event, onUploaded }: { event: GameEvent; onUploaded:
   }
 
   return (
-    <div className="flex flex-col gap-1.5 border-t border-night-600/50 pt-3">
+    <div className="flex flex-1 flex-col gap-1.5">
+      <p className="text-[10px] uppercase tracking-wide text-moon-200/40">{label}</p>
       <div className="flex items-center gap-3">
         {currentUrl ? (
           <img src={currentUrl} alt="" className="h-12 w-24 rounded-lg border border-night-600/60 object-cover" />
@@ -1865,9 +1902,8 @@ function EventBannerImage({ event, onUploaded }: { event: GameEvent; onUploaded:
             Aucune image
           </span>
         )}
-        <ErrorText>{error}</ErrorText>
         <label className="cursor-pointer rounded-lg border border-night-600/70 bg-night-800/50 px-3 py-1.5 text-[11px] font-semibold text-moon-200/80 transition-colors hover:border-moon-400/40">
-          {busy ? '...' : currentUrl ? '📤 Changer l’image' : '📤 Ajouter une image'}
+          {busy ? '...' : currentUrl ? '📤 Changer' : '📤 Ajouter'}
           <input
             type="file"
             accept="image/*"
@@ -1881,15 +1917,7 @@ function EventBannerImage({ event, onUploaded }: { event: GameEvent; onUploaded:
           />
         </label>
       </div>
-      {/* Format attendu par l'affichage réel (voir EventBanner.tsx : le
-          bandeau est toujours découpé en ratio 3:1 via aspect-[3/1] +
-          object-cover, quelle que soit la taille de l'image importée) —
-          précisé ici pour éviter un import au hasard qui recadrerait mal un
-          visuel important sur les bords gauche/droite. */}
-      <p className="text-[10px] leading-snug text-moon-200/40">
-        Format recommandé : ratio 3:1 (ex. 1500 × 500 px), JPG ou PNG. L’image est automatiquement recadrée à ce
-        ratio et centrée — gardez l’essentiel du visuel au centre, les bords gauche/droite peuvent être coupés.
-      </p>
+      <ErrorText>{error}</ErrorText>
     </div>
   )
 }
