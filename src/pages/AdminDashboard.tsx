@@ -1226,6 +1226,27 @@ function toDatetimeLocal(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+// Relecture explicite en 24h, affichée sous chaque champ Début/Fin (voir
+// EventForm ci-dessous) — retour utilisateur : le picker natif Safari
+// affiche l'heure au format 12h sans AM/PM clairement visible, impossible
+// de vérifier avant d'enregistrer si "12:00" est midi ou minuit. Recalculée
+// depuis la même valeur "AAAA-MM-JJTHH:mm" que l'input (jamais reparsée
+// séparément), donc toujours cohérente avec ce qui sera réellement
+// enregistré — pas un simple habillage visuel déconnecté de la vraie donnée.
+function formatDatetimeLocalReadable(value: string): string | null {
+  if (!value) return null
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return null
+  return new Intl.DateTimeFormat('fr-FR', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(d)
+}
+
 function eventStatus(e: GameEvent): { label: string; className: string } {
   if (!e.is_enabled) return { label: 'Désactivé', className: 'bg-night-600 text-moon-200/60' }
   const now = Date.now()
@@ -1496,10 +1517,17 @@ function EventFormDrawer({
               value={form.starts_at}
               onChange={(ev) => setForm((f) => ({ ...f, starts_at: ev.target.value }))}
             />
+            {/* Relecture 24h sans ambiguïté AM/PM (voir formatDatetimeLocalReadable) */}
+            {formatDatetimeLocalReadable(form.starts_at) && (
+              <p className="mt-1 text-[11px] text-moon-200/40">→ {formatDatetimeLocalReadable(form.starts_at)}</p>
+            )}
           </div>
           <div>
             <Label>Fin</Label>
             <Input type="datetime-local" value={form.ends_at} onChange={(ev) => setForm((f) => ({ ...f, ends_at: ev.target.value }))} />
+            {formatDatetimeLocalReadable(form.ends_at) && (
+              <p className="mt-1 text-[11px] text-moon-200/40">→ {formatDatetimeLocalReadable(form.ends_at)}</p>
+            )}
           </div>
         </div>
 
