@@ -283,11 +283,23 @@ export default function Dashboard() {
             toute l'app, elles ne doivent jamais dépendre du nombre de
             bannières actives ce jour-là pour rester atteignables sans
             scroll. */}
+        {/* Style "verre dépoli" (fond très translucide + backdrop-blur, fine
+            bordure quasi-blanche) plutôt que le dégradé opaque du Card
+            générique — direction esthétique demandée par l'admin
+            ("liquid glass" à la Apple), amorcée sur EventBanner.tsx et
+            étendue ici progressivement. Volontairement PAS reporté sur le
+            composant Card partagé lui-même (ui.tsx) : il est réutilisé ~45
+            fois dans l'appli, souvent plusieurs cartes empilées en même
+            temps pendant une partie, et backdrop-blur coûte une couche de
+            composition GPU par élément sur WKWebView iOS — un coût déjà
+            identifié et évité ailleurs (voir le commentaire de Card). Ces
+            deux boutons sont en revanche uniques sur cette page, sans
+            empilement ni répétition : aucun risque de fluidité comparable. */}
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
             onClick={() => setCreateOpen(true)}
-            className="flex flex-col items-center gap-2 rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/70 to-night-900/85 p-6 shadow-card transition-colors hover:border-moon-400/50"
+            className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-moon-400/5 p-6 shadow-card backdrop-blur-xl transition-colors hover:border-moon-400/50 hover:bg-moon-400/10"
           >
             <span className="text-3xl">🌕</span>
             <span className="font-display text-sm text-moon-200 sm:text-base">{t('dashboard.createGame')}</span>
@@ -295,7 +307,7 @@ export default function Dashboard() {
           <button
             type="button"
             onClick={() => setJoinStep('choose')}
-            className="flex flex-col items-center gap-2 rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/70 to-night-900/85 p-6 shadow-card transition-colors hover:border-moon-400/50"
+            className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-moon-400/5 p-6 shadow-card backdrop-blur-xl transition-colors hover:border-moon-400/50 hover:bg-moon-400/10"
           >
             <span className="text-3xl">🔑</span>
             <span className="font-display text-sm text-moon-200 sm:text-base">{t('dashboard.joinGame')}</span>
