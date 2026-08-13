@@ -5,6 +5,30 @@ import { FriendRequestPopover } from './FriendRequestPopover'
 import { AvatarIcon } from './AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
 
+// Cadre visuel autour de l'avatar, qui monte en gamme avec le palier de rang
+// (voir p.rank_tier, migration 0074) — même principe de progression que
+// RankTierBadge (Stats.tsx), mais un simple anneau CSS plutôt qu'un second
+// glyphe SVG : l'avatar ici affiche déjà sa propre icône, superposer un
+// second dessin (le badge complet) l'aurait rendu illisible en si petit.
+// Visible par tous les AUTRES joueurs pendant la partie, pas seulement sur
+// sa propre page de compte — c'est ce qui donne l'effet de statut social.
+// Rien avant Éclaireur : un cadre dès le tout premier palier aurait rendu
+// "avoir un cadre" banal plutôt que gratifiant.
+function tierRingClass(tier: string | null | undefined): string {
+  switch (tier) {
+    case 'chasseur':
+      return 'ring-2 ring-moon-300/70'
+    case 'ancien':
+      return 'ring-2 ring-moon-300 shadow-[0_0_8px_rgba(217,154,63,0.5)]'
+    case 'sage':
+      return 'ring-[3px] ring-moon-400 shadow-[0_0_10px_rgba(224,168,74,0.6)]'
+    case 'legende':
+      return 'ring-[3px] ring-moon-400 shadow-[0_0_14px_rgba(224,168,74,0.85)]'
+    default:
+      return ''
+  }
+}
+
 interface Props {
   players: PublicPlayer[]
   selfId?: string
@@ -79,7 +103,9 @@ export function PlayerGrid({
                   thèmes, contrairement à night-950 qui deviendrait blanc de jour. */}
               <span className="relative inline-flex">
                 <span
-                  className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-[#05070d]"
+                  className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-[#05070d] ring-offset-2 ${
+                    p.rank_tier ? `ring-offset-night-900 ${tierRingClass(p.rank_tier)}` : ''
+                  }`}
                   style={{ backgroundColor: p.avatar_color }}
                 >
                   {p.avatar_icon ? <AvatarIcon icon={p.avatar_icon} className="h-5 w-5" /> : p.display_name.slice(0, 1).toUpperCase()}

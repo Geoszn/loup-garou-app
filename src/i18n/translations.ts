@@ -898,6 +898,13 @@ export const translations = {
   'account.profile.username': { fr: 'Pseudo', en: 'Username' },
   'account.profile.avatarIcon': { fr: 'Icône d’avatar', en: 'Avatar icon' },
   'account.profile.chooseIcon': { fr: "Choisir l'icône {{icon}}", en: 'Choose icon {{icon}}' },
+  // Icônes verrouillées tant qu'un palier de rang n'est pas atteint (voir
+  // AVATAR_ICON_MIN_POINTS, lib/avatars.ts, et avatar_icon_min_points côté
+  // serveur, migration 0074) — grisées avec un cadenas plutôt que masquées :
+  // ça donne un objectif visible ("encore X points") plutôt qu'une liste qui
+  // s'allonge sans prévenir.
+  'account.profile.iconLocked': { fr: 'Se débloque à {{points}} points de rang (palier {{tier}}).', en: 'Unlocks at {{points}} rank points ({{tier}} tier).' },
+  'account.profile.iconLockedShort': { fr: '🔒 {{points}} pts', en: '🔒 {{points}} pts' },
   'account.profile.usernameTooShort': { fr: 'Choisissez un pseudo d’au moins 2 caractères.', en: 'Choose a username of at least 2 characters.' },
   'account.profile.updated': { fr: 'Profil mis à jour.', en: 'Profile updated.' },
   'account.profile.editButton': { fr: 'Modifier mon profil', en: 'Edit my profile' },
@@ -1029,6 +1036,17 @@ export const translations = {
   'stats.rank.firstTier': { fr: 'Début', en: 'Start' },
   'stats.rank.maxTier': { fr: 'Max', en: 'Max' },
   'stats.rank.streak': { fr: '{{count}} victoires d’affilée', en: '{{count}}-game win streak' },
+  // Titres de volume (voir lib/volumeTitles.ts, migration 0074) : liés au
+  // nombre de parties JOUÉES, indépendants des points de rang — un joueur
+  // assidu débloque quelque chose même sans forcément gagner.
+  'volume.title.recrue': { fr: 'Recrue', en: 'Recruit' },
+  'volume.title.habitue': { fr: 'Habitué du village', en: 'Village regular' },
+  'volume.title.pilier': { fr: 'Pilier du village', en: 'Village pillar' },
+  'volume.title.veteran': { fr: 'Vétéran', en: 'Veteran' },
+  'volume.title.legende_assidue': { fr: 'Légende assidue', en: 'Devoted legend' },
+  'stats.volume.label': { fr: 'Titre d’assiduité', en: 'Dedication title' },
+  'stats.volume.nextTitle': { fr: 'encore {{count}} partie{{s}} avant « {{title}} »', en: '{{count}} more game{{s}} to reach “{{title}}”' },
+  'stats.volume.maxTitle': { fr: 'Titre le plus élevé atteint', en: 'Highest title reached' },
   'stats.rank.globalPosition': { fr: '#{{position}} mondial', en: '#{{position}} global' },
   'stats.rank.continentPosition': { fr: '#{{position}} continent', en: '#{{position}} continent' },
   // Noms de paliers volontairement distincts des noms de rôles (role.villageois

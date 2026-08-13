@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { roleLabel, ROLES, type RoleId } from '../lib/roles'
 import { tierInfo, tierLabel, pointsToNextTier, previousTierOf, type RankTierInfo } from '../lib/ranks'
+import { volumeTitleForGames, nextVolumeTitle } from '../lib/volumeTitles'
 import { continentEmoji, continentName } from '../lib/continents'
 import { Button, Card, ErrorText, Segmented } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
@@ -203,6 +204,8 @@ export default function Stats() {
               <StatBox label={t('stats.winRate')} value={`${winRate}%`} />
             </div>
 
+            <VolumeTitleCard gamesPlayed={stats.games_played} />
+
             <Card>
               <h2 className="mb-1 font-display text-lg text-moon-200">{t('stats.byRole.title')}</h2>
               {bestRole && (
@@ -338,6 +341,31 @@ function TierNeighbor({ tier, placeholder }: { tier: RankTierInfo | null; placeh
         {tier ? tierLabel(tier.id, t) : placeholder}
       </span>
     </div>
+  )
+}
+
+/** Titre d'assiduité (voir lib/volumeTitles.ts, migration 0074) : lié au
+ * nombre de parties JOUÉES, séparé du palier de rang — un joueur assidu qui
+ * ne gagne pas forcément débloque quand même quelque chose. Toujours
+ * calculable côté client depuis stats.games_played (déjà chargé), pas
+ * besoin d'un champ serveur dédié. */
+function VolumeTitleCard({ gamesPlayed }: { gamesPlayed: number }) {
+  const { t } = useLanguage()
+  const title = volumeTitleForGames(gamesPlayed)
+  const next = nextVolumeTitle(gamesPlayed)
+
+  return (
+    <Card className="flex items-center justify-between gap-3">
+      <div>
+        <p className="text-[11px] uppercase tracking-wider text-moon-200/50">{t('stats.volume.label')}</p>
+        <p className="font-display text-lg text-moon-200">🎖️ {t(title.nameKey)}</p>
+      </div>
+      <p className="max-w-[45%] text-right text-xs text-moon-200/40">
+        {next
+          ? t('stats.volume.nextTitle', { count: next.remaining, s: next.remaining > 1 ? 's' : '', title: t(next.next.nameKey) })
+          : t('stats.volume.maxTitle')}
+      </p>
+    </Card>
   )
 }
 

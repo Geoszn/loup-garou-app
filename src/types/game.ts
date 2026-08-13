@@ -142,6 +142,14 @@ export interface PublicPlayer {
   avatar_color: string
   avatar_icon: string | null
   joined_at: string
+  // Palier de rang ACTUEL du joueur (voir get_my_game_view, migration 0074)
+  // — calculé en direct depuis profiles.rank_points à chaque lecture, pas
+  // stocké sur la ligne game_players : reflète toujours le rang à l'instant
+  // présent, même s'il a changé depuis le début de la partie. Sert au cadre
+  // affiché autour de l'avatar (voir PlayerGrid.tsx) — visible par les
+  // AUTRES joueurs, pas seulement sur son propre profil. null si le profil a
+  // été supprimé entre-temps (cas limite, RLS empêchant normalement ça).
+  rank_tier: string | null
 }
 
 export interface MyGameView {
