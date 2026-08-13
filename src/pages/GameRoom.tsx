@@ -16,6 +16,7 @@ import { ChatPanel } from '../components/ChatPanel'
 import { VoteRecapModal } from '../components/VoteRecapModal'
 import { NightRecapModal } from '../components/NightRecapModal'
 import { DeathImpactModal, impactLabel } from '../components/DeathImpactModal'
+import { TierUpModal } from '../components/TierUpModal'
 import { ModerationPanel } from '../components/ModerationPanel'
 import { VoiceChat } from '../components/VoiceChat'
 import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, Modal, Segmented } from '../components/ui'
@@ -933,8 +934,26 @@ function EndScreen({
   const myPreviousTier = myResult ? tierForPoints(myPreviousPoints) : null
   const myTierChanged = myResult ? myResult.new_rank_tier !== myPreviousTier?.id : false
 
+  // Popup dédiée célébrant le changement de palier (voir TierUpModal.tsx),
+  // en plus du petit tag "Palier atteint !" déjà présent dans la section
+  // personnelle ci-dessous. EndScreen n'est monté qu'une fois par partie
+  // terminée (view.game.status reste 'ended' une fois atteint), donc un
+  // simple état initialisé paresseusement depuis myTierChanged suffit — pas
+  // besoin d'un effet de transition comme pour la popup de mort (qui, elle,
+  // doit détecter un changement en cours de partie encore active).
+  const [showTierUp, setShowTierUp] = useState(myTierChanged)
+
   return (
     <Card className="text-center">
+      {showTierUp && myResult && (
+        <TierUpModal
+          newTier={myResult.new_rank_tier as RankTier}
+          previousPoints={myPreviousPoints}
+          newPoints={myResult.new_rank_points}
+          onClose={() => setShowTierUp(false)}
+        />
+      )}
+
       <h2 className="mb-2 font-display text-2xl text-moon-200">{title}</h2>
       <p className="mx-auto mb-5 max-w-sm text-sm text-moon-200/60">{explanation}</p>
 
