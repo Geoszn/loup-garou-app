@@ -1247,6 +1247,42 @@ function formatDatetimeLocalReadable(value: string): string | null {
   }).format(d)
 }
 
+// Heure saisie via deux <select> 24h (00-23 / 00-15-30-45) plutôt que le
+// widget natif <input type="time">/"datetime-local" — retour utilisateur :
+// même avec la relecture en toutes lettres ajoutée sous le champ, le picker
+// natif Safari lui-même reste au format 12h (roue avec bascule AM/PM), donc
+// l'ambiguïté restait entière PENDANT la saisie, avant même de regarder la
+// relecture. Un menu déroulant "00".."23" n'a tout simplement pas de notion
+// AM/PM à confondre — plus robuste qu'un simple indice textuel à côté d'un
+// widget qui reste, lui, ambigu.
+const HOURS_24 = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
+// Toutes les minutes (pas seulement les quarts d'heure) : un événement déjà
+// enregistré avec une minute "impaire" (ex. 09:18) doit pouvoir se réafficher
+// tel quel dans ce menu sans qu'aucune option ne corresponde — ce qui
+// laisserait le menu paraître vide côté écran tout en gardant la valeur
+// réelle inchangée en mémoire, donc trompeur à l'affichage.
+const MINUTES_ALL = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'))
+
+function splitDatetimeLocal(value: string): { date: string; hour: string; minute: string } {
+  if (!value) return { date: '', hour: '18', minute: '00' }
+  const [date, time] = value.split('T')
+  const [hour, minute] = (time ?? '18:00').split(':')
+  return { date, hour: hour ?? '18', minute: minute ?? '00' }
+}
+
+// Ne recombine que si une date a déjà été choisie : changer l'heure/minute
+// avant la date ne doit pas faire apparaître silencieusement une valeur par
+// défaut aujourd'hui non voulue pour un événement futur — le champ Début/Fin
+// reste vide (donc le formulaire refuse d'enregistrer, voir plus bas) tant
+// que la date n'a pas été explicitement posée.
+function combineDatetimeLocal(date: string, hour: string, minute: string): string {
+  if (!date) return ''
+  return `${date}T${hour}:${minute}`
+}
+
+const dateTimeSelectClass =
+  'rounded-xl border border-night-500 bg-night-800/80 px-2 py-3 text-sm text-moon-200 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20'
+
 function eventStatus(e: GameEvent): { label: string; className: string } {
   if (!e.is_enabled) return { label: 'Désactivé', className: 'bg-night-600 text-moon-200/60' }
   const now = Date.now()
@@ -1512,19 +1548,96 @@ function EventFormDrawer({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <Label>Début</Label>
-            <Input
-              type="datetime-local"
-              value={form.starts_at}
-              onChange={(ev) => setForm((f) => ({ ...f, starts_at: ev.target.value }))}
-            />
-            {/* Relecture 24h sans ambiguïté AM/PM (voir formatDatetimeLocalReadable) */}
+            <div className="flex gap-1.5">
+              <Input
+                type="date"
+                className="flex-1"
+                value={splitDatetimeLocal(form.starts_at).date}
+                onChange={(ev) => {
+                  const { hour, minute } = splitDatetimeLocal(form.starts_at)
+                  setForm((f) => ({ ...f, starts_at: combineDatetimeLocal(ev.target.value, hour, minute) }))
+                }}
+              />
+              <select
+                aria-label="Heure de début (24h)"
+                className={dateTimeSelectClass}
+                value={splitDatetimeLocal(form.starts_at).hour}
+                onChange={(ev) => {
+                  const { date, minute } = splitDatetimeLocal(form.starts_at)
+                  setForm((f) => ({ ...f, starts_at: combineDatetimeLocal(date, ev.target.value, minute) }))
+                }}
+              >
+                {HOURS_24.map((h) => (
+                  <option key={h} value={h}>
+                    {h}h
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Minute de début"
+                className={dateTimeSelectClass}
+                value={splitDatetimeLocal(form.starts_at).minute}
+                onChange={(ev) => {
+                  const { date, hour } = splitDatetimeLocal(form.starts_at)
+                  setForm((f) => ({ ...f, starts_at: combineDatetimeLocal(date, hour, ev.target.value) }))
+                }}
+              >
+                {MINUTES_ALL.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* Relecture en toutes lettres, en plus des menus 24h déjà sans
+                ambiguïté — double confirmation avant d'enregistrer. */}
             {formatDatetimeLocalReadable(form.starts_at) && (
               <p className="mt-1 text-[11px] text-moon-200/40">→ {formatDatetimeLocalReadable(form.starts_at)}</p>
             )}
           </div>
           <div>
             <Label>Fin</Label>
-            <Input type="datetime-local" value={form.ends_at} onChange={(ev) => setForm((f) => ({ ...f, ends_at: ev.target.value }))} />
+            <div className="flex gap-1.5">
+              <Input
+                type="date"
+                className="flex-1"
+                value={splitDatetimeLocal(form.ends_at).date}
+                onChange={(ev) => {
+                  const { hour, minute } = splitDatetimeLocal(form.ends_at)
+                  setForm((f) => ({ ...f, ends_at: combineDatetimeLocal(ev.target.value, hour, minute) }))
+                }}
+              />
+              <select
+                aria-label="Heure de fin (24h)"
+                className={dateTimeSelectClass}
+                value={splitDatetimeLocal(form.ends_at).hour}
+                onChange={(ev) => {
+                  const { date, minute } = splitDatetimeLocal(form.ends_at)
+                  setForm((f) => ({ ...f, ends_at: combineDatetimeLocal(date, ev.target.value, minute) }))
+                }}
+              >
+                {HOURS_24.map((h) => (
+                  <option key={h} value={h}>
+                    {h}h
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Minute de fin"
+                className={dateTimeSelectClass}
+                value={splitDatetimeLocal(form.ends_at).minute}
+                onChange={(ev) => {
+                  const { date, hour } = splitDatetimeLocal(form.ends_at)
+                  setForm((f) => ({ ...f, ends_at: combineDatetimeLocal(date, hour, ev.target.value) }))
+                }}
+              >
+                {MINUTES_ALL.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
             {formatDatetimeLocalReadable(form.ends_at) && (
               <p className="mt-1 text-[11px] text-moon-200/40">→ {formatDatetimeLocalReadable(form.ends_at)}</p>
             )}
