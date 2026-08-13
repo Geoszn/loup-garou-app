@@ -116,24 +116,22 @@ export function EventBanner({ event, onExpire }: { event: GameEvent; onExpire?: 
 
   return (
     <div className={`relative mb-4 overflow-hidden rounded-2xl border backdrop-blur-sm ${BANNER_STYLES[event.banner_color]}`}>
-      {imageUrl ? (
-        // Ratio fixe (pas juste "h-full" derrière le texte) : sans ça,
-        // l'image se retrouvait étirée différemment sur mobile (bandeau plus
-        // haut, texte passant sur 2 lignes) et sur desktop (bandeau bas,
-        // texte sur une ligne) — même image, deux découpes très différentes.
-        // Un ratio fixe garde le même cadrage quelle que soit la largeur de
-        // l'écran ; le texte passe en légende superposée en bas, sur un
-        // dégradé sombre pour rester lisible sur n'importe quelle image.
-        <div className="relative aspect-[3/1] w-full">
-          <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover object-center" aria-hidden="true" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3 sm:flex-nowrap sm:px-5">
-            {content}
-          </div>
+      {/* Retour utilisateur : le texte (légende + badges) superposé EN BAS de
+          l'image sur un dégradé cachait une partie du visuel importé sur
+          mobile — d'autant plus gênant que ces images contiennent souvent
+          déjà leur propre titre dessiné (ex. "LE WEEKEND DES ROIS"), donc le
+          texte se retrouvait à recouvrir un autre texte. L'image occupe
+          maintenant sa propre ligne, entièrement visible, sans rien dessus ;
+          la légende + le compte à rebours vivent dans une bande séparée en
+          dessous, sur le fond de couleur de l'événement (jamais sur l'image
+          elle-même) — plus de conflit possible quelle que soit la taille de
+          l'écran ou le contenu de l'image. */}
+      {imageUrl && (
+        <div className="aspect-[3/1] w-full">
+          <img src={imageUrl} alt="" className="h-full w-full object-cover object-center" aria-hidden="true" />
         </div>
-      ) : (
-        <div className="relative flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3 sm:flex-nowrap sm:px-5">{content}</div>
       )}
+      <div className="relative flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3 sm:flex-nowrap sm:px-5">{content}</div>
     </div>
   )
 }
