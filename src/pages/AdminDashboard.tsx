@@ -1624,29 +1624,40 @@ function EventBannerImage({ event, onUploaded }: { event: GameEvent; onUploaded:
   }
 
   return (
-    <div className="flex items-center gap-3 border-t border-night-600/50 pt-3">
-      {currentUrl ? (
-        <img src={currentUrl} alt="" className="h-12 w-24 rounded-lg border border-night-600/60 object-cover" />
-      ) : (
-        <span className="flex h-12 w-24 items-center justify-center rounded-lg border border-dashed border-night-600/60 text-[10px] text-moon-200/30">
-          Aucune image
-        </span>
-      )}
-      <ErrorText>{error}</ErrorText>
-      <label className="cursor-pointer rounded-lg border border-night-600/70 bg-night-800/50 px-3 py-1.5 text-[11px] font-semibold text-moon-200/80 transition-colors hover:border-moon-400/40">
-        {busy ? '...' : currentUrl ? '📤 Changer l’image' : '📤 Ajouter une image'}
-        <input
-          type="file"
-          accept="image/*"
-          className="hidden"
-          disabled={busy}
-          onChange={(ev) => {
-            const file = ev.target.files?.[0]
-            if (file) handleUpload(file)
-            ev.target.value = ''
-          }}
-        />
-      </label>
+    <div className="flex flex-col gap-1.5 border-t border-night-600/50 pt-3">
+      <div className="flex items-center gap-3">
+        {currentUrl ? (
+          <img src={currentUrl} alt="" className="h-12 w-24 rounded-lg border border-night-600/60 object-cover" />
+        ) : (
+          <span className="flex h-12 w-24 items-center justify-center rounded-lg border border-dashed border-night-600/60 text-[10px] text-moon-200/30">
+            Aucune image
+          </span>
+        )}
+        <ErrorText>{error}</ErrorText>
+        <label className="cursor-pointer rounded-lg border border-night-600/70 bg-night-800/50 px-3 py-1.5 text-[11px] font-semibold text-moon-200/80 transition-colors hover:border-moon-400/40">
+          {busy ? '...' : currentUrl ? '📤 Changer l’image' : '📤 Ajouter une image'}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            disabled={busy}
+            onChange={(ev) => {
+              const file = ev.target.files?.[0]
+              if (file) handleUpload(file)
+              ev.target.value = ''
+            }}
+          />
+        </label>
+      </div>
+      {/* Format attendu par l'affichage réel (voir EventBanner.tsx : le
+          bandeau est toujours découpé en ratio 3:1 via aspect-[3/1] +
+          object-cover, quelle que soit la taille de l'image importée) —
+          précisé ici pour éviter un import au hasard qui recadrerait mal un
+          visuel important sur les bords gauche/droite. */}
+      <p className="text-[10px] leading-snug text-moon-200/40">
+        Format recommandé : ratio 3:1 (ex. 1500 × 500 px), JPG ou PNG. L’image est automatiquement recadrée à ce
+        ratio et centrée — gardez l’essentiel du visuel au centre, les bords gauche/droite peuvent être coupés.
+      </p>
     </div>
   )
 }
