@@ -49,7 +49,10 @@ const DEFAULT_DURATIONS: PhaseDurations = {
   role_reveal_intro_seconds: 60,
   discussion_seconds: 300,
   vote_seconds: 45,
-  vote_recap_seconds: 90,
+  // 30s par défaut, alignée sur le récap de nuit (role_reveal_seconds, déjà
+  // à 30s côté serveur) — voir migration 0077 : les deux écrans de récap
+  // doivent avoir la même durée par défaut, que ce soit la nuit ou le jour.
+  vote_recap_seconds: 30,
   night_step_seconds: 70,
   wolf_chat_seconds: 180,
 }

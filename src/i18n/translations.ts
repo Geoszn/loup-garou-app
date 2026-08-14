@@ -575,6 +575,7 @@ export const translations = {
   'impact.ancien_extra_life': { fr: '👴 Résilience de l’Ancien', en: '👴 Elder’s resilience' },
 
   'game.yourRole': { fr: 'Votre rôle', en: 'Your role' },
+  'role.wolfPack.title': { fr: 'Votre meute', en: 'Your pack' },
   'game.readyHint': {
     fr: 'Mémorisez bien votre rôle. Dès que tout le monde est prêt, la partie démarre immédiatement.',
     en: 'Make sure you remember your role. As soon as everyone is ready, the game starts immediately.',

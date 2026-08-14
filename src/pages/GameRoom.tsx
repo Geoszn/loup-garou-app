@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { PhaseBanner, NIGHT_STEP_LABEL, NIGHT_STEP_ICON } from '../components/PhaseBanner'
 import { RoleCard } from '../components/RoleCard'
+import { AvatarIcon } from '../components/AvatarIcon'
 import { PlayerGrid } from '../components/PlayerGrid'
 import { ReadyGrid } from '../components/ReadyGrid'
 import { ActionPanel, VotePanel, CaptainVotePanel, WolfPanel } from '../components/ActionPanel'
@@ -282,6 +283,7 @@ export default function GameRoom() {
           <div className="flex animate-fade-in flex-col items-center gap-4 pt-6">
             <p className="text-sm uppercase tracking-widest text-moon-200/40">{t('game.yourRole')}</p>
             <RoleCard roleId={view.my_role} />
+            <WolfPackList view={view} myRole={view.my_role} />
             <ReadyPanel view={view} gameId={gameId!} selfId={user.id} />
           </div>
         )}
@@ -317,6 +319,7 @@ export default function GameRoom() {
               nightTab={nightTab}
               setNightTab={setNightTab}
             />
+            <WolfPackList view={view} myRole={view.my_role} />
             <RolePanel myRole={view.my_role} />
           </div>
         )}
@@ -843,6 +846,38 @@ function RolePanel({ myRole }: { myRole: string | null }) {
       </div>
       {open && <p className="mt-2 text-xs text-moon-200/50">{t(role.descriptionKey)}</p>}
     </button>
+  )
+}
+
+/** Liste des coéquipiers Loups-Garous — affichée dès la révélation du rôle
+ * (voir status 'role_reveal' plus haut), donc dès la toute première nuit et
+ * bien avant que le chat des loups ou leur vote ne s'ouvrent (retour
+ * utilisateur : la meute doit se connaître d'entrée de jeu, pas seulement
+ * découvrir ses coéquipiers au moment d'agir). wolf_teammates est déjà
+ * calculé par get_my_game_view pour n'importe quel Loup-Garou à tout moment
+ * de la partie, sans condition de phase (voir get_my_game_view) — ce
+ * composant ne fait qu'afficher une donnée déjà disponible côté client,
+ * aucun changement serveur nécessaire. */
+function WolfPackList({ view, myRole }: { view: MyGameView; myRole: string | null }) {
+  const { t } = useLanguage()
+  if (myRole !== 'loup_garou') return null
+  const teammates = view.players.filter((p) => (view.wolf_teammates ?? []).includes(p.user_id))
+  if (teammates.length === 0) return null
+  return (
+    <div className="animate-fade-in rounded-xl border border-blood-700/40 bg-blood-900/10 px-3 py-2.5">
+      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-blood-400">🐺 {t('role.wolfPack.title')}</p>
+      <div className="flex flex-wrap gap-2">
+        {teammates.map((p) => (
+          <span
+            key={p.user_id}
+            className="flex items-center gap-1.5 rounded-full border border-night-600/60 bg-night-900/50 px-2.5 py-1 text-xs text-moon-200/90"
+          >
+            <AvatarIcon icon={p.avatar_icon} className="h-3.5 w-3.5" />
+            {p.display_name}
+          </span>
+        ))}
+      </div>
+    </div>
   )
 }
 
