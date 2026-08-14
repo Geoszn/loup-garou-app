@@ -455,8 +455,13 @@ export const translations = {
   'lobby.duration.discussion': { fr: '💬 Débat', en: '💬 Discussion' },
   'lobby.duration.vote': { fr: '🗳️ Vote', en: '🗳️ Vote' },
   'lobby.duration.voteRecap': { fr: '📋 Récap du vote', en: '📋 Vote recap' },
-  'lobby.duration.nightSteps': { fr: '🌙 Étapes de nuit', en: '🌙 Night steps' },
+  // Depuis la migration 0080, ce réglage ne couvre plus que Voleur/Cupidon/
+  // Enfant Sauvage : la Voyante et la Sorcière ont désormais leur propre
+  // réglage dédié (voir lobby.duration.voyante / .sorciere ci-dessous).
+  'lobby.duration.nightSteps': { fr: '🌙 Autres étapes de nuit', en: '🌙 Other night steps' },
   'lobby.duration.wolfChat': { fr: '🐺 Discussion des loups', en: '🐺 Wolf discussion' },
+  'lobby.duration.voyante': { fr: '🔮 Voyante (consultation)', en: '🔮 Seer (card check)' },
+  'lobby.duration.sorciere': { fr: '🧪 Sorcière (potions)', en: '🧪 Witch (potions)' },
   'lobby.joinRequestNotifTitle': { fr: '🔔 Nouvelle demande', en: '🔔 New request' },
   'lobby.joinRequestNotifBody': {
     fr: 'Un joueur souhaite rejoindre votre partie publique.',

@@ -43,6 +43,12 @@ interface PhaseDurations {
   vote_recap_seconds: number
   night_step_seconds: number
   wolf_chat_seconds: number
+  // Réglages dédiés Voyante/Sorcière (migration 0080) : avant, ces deux rôles
+  // partageaient night_step_seconds avec Voleur/Cupidon/Enfant Sauvage, sans
+  // pouvoir leur donner plus de temps individuellement — retour utilisateur,
+  // la Voyante n'avait pas assez de temps pour bien regarder sa carte.
+  voyante_seconds: number
+  sorciere_seconds: number
 }
 
 const DEFAULT_DURATIONS: PhaseDurations = {
@@ -55,6 +61,8 @@ const DEFAULT_DURATIONS: PhaseDurations = {
   vote_recap_seconds: 30,
   night_step_seconds: 70,
   wolf_chat_seconds: 180,
+  voyante_seconds: 70,
+  sorciere_seconds: 70,
 }
 
 function formatDuration(totalSeconds: number): string {
@@ -534,6 +542,18 @@ export default function Lobby() {
                   value={durations.vote_recap_seconds}
                   min={15} max={180} step={15}
                   onChange={(v) => { setDurations((d) => ({ ...d, vote_recap_seconds: v })); setCustomized(true) }}
+                />
+                <DurationStepper
+                  label={t('lobby.duration.voyante')}
+                  value={durations.voyante_seconds}
+                  min={20} max={180} step={10}
+                  onChange={(v) => { setDurations((d) => ({ ...d, voyante_seconds: v })); setCustomized(true) }}
+                />
+                <DurationStepper
+                  label={t('lobby.duration.sorciere')}
+                  value={durations.sorciere_seconds}
+                  min={20} max={180} step={10}
+                  onChange={(v) => { setDurations((d) => ({ ...d, sorciere_seconds: v })); setCustomized(true) }}
                 />
                 <DurationStepper
                   label={t('lobby.duration.nightSteps')}
