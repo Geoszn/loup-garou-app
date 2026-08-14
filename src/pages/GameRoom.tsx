@@ -113,12 +113,14 @@ export default function GameRoom() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameError, navigate])
 
-  // Dès que la fenêtre des loups se referme (ou qu'on n'est plus loup), on
-  // revient sur l'onglet "Village" pour ne pas rester bloqué sur un onglet
-  // "Loups" devenu inaccessible.
+  // Dès qu'on quitte la nuit (ou qu'on n'est plus loup), on revient sur
+  // l'onglet "Village" pour ne pas rester bloqué sur un onglet "Loups" devenu
+  // inaccessible. Volontairement PAS conditionné à `night_step === 'loup_garou'`
+  // (voir wolfWindowOpen plus bas dans le JSX, et migration 0078 côté
+  // serveur) : l'onglet "Loups" reste ouvert toute la nuit, pas seulement
+  // pendant le tour de vote des loups.
   useEffect(() => {
-    const wolfWindowOpen =
-      view && view.game.status === 'night' && view.game.night_step === 'loup_garou' && view.my_role === 'loup_garou'
+    const wolfWindowOpen = view && view.game.status === 'night' && view.my_role === 'loup_garou'
     if (!wolfWindowOpen) setNightTab('village')
   }, [view])
 
@@ -315,7 +317,6 @@ export default function GameRoom() {
               gameId={gameId!}
               selfId={user.id}
               isWolf={view.my_role === 'loup_garou'}
-              wolfWindowOpen={view.game.night_step === 'loup_garou'}
               nightTab={nightTab}
               setNightTab={setNightTab}
             />
@@ -563,20 +564,28 @@ function NightChat({
   gameId,
   selfId,
   isWolf,
-  wolfWindowOpen,
   nightTab,
   setNightTab,
 }: {
   gameId: string
   selfId: string
   isWolf: boolean
-  wolfWindowOpen: boolean
   nightTab: 'village' | 'wolves'
   setNightTab: (t: 'village' | 'wolves') => void
 }) {
   const { t } = useLanguage()
 
-  if (!(isWolf && wolfWindowOpen)) {
+  // Ouvert dès le début de la nuit pour toute la meute (plus seulement
+  // pendant `night_step === 'loup_garou'`, leur propre tour de vote) —
+  // retour utilisateur : les loups doivent pouvoir se concerter pendant que
+  // d'autres rôles (Voyante...) jouent le leur, pas juste au moment de
+  // choisir leur victime. Ce composant n'est de toute façon monté que
+  // pendant `status === 'night'` (voir GameRoom.tsx) : `isWolf` suffit donc
+  // seul, plus besoin d'une fenêtre distincte. Le panneau de VOTE
+  // (WolfPanel, ailleurs dans GameRoom.tsx) reste lui bien limité à
+  // `night_step === 'loup_garou'`, inchangé. Voir migration 0078 côté
+  // serveur (can_access_channel/can_read_channel pour le salon 'wolves').
+  if (!isWolf) {
     return <ChatPanel gameId={gameId} channel="village" selfId={selfId} note={t('game.nightChatNote')} />
   }
 

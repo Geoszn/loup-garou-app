@@ -85,10 +85,16 @@ export function VoiceChat({
           // toggleSound, useVoiceChat.ts). Utile aussi pour un fantôme en
           // écoute seule (listenOnly) : lui n'a pas de bouton micro, mais
           // peut quand même vouloir se couper le son un instant.
+          //
+          // Icône seule (pas de texte) et plus petit qu'avant (rond h-8 w-8
+          // plutôt qu'un pavé px-3 py-2) — retour utilisateur : ces deux
+          // boutons (celui-ci et le suivant) prenaient trop de place à côté
+          // du statut de connexion, surtout sur mobile où l'en-tête doit déjà
+          // partager la largeur avec le badge modérateur.
           <button
             onClick={toggleSound}
             title={deafened ? t('voiceChat.soundOffTitle') : t('voiceChat.soundOnTitle')}
-            className={`shrink-0 rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm transition-colors ${
               deafened ? 'bg-blood-700/40 text-blood-400' : 'bg-night-700/70 text-moon-200'
             }`}
           >
@@ -98,11 +104,12 @@ export function VoiceChat({
         {connected && !listenOnly && (
           <button
             onClick={toggleMute}
-            className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+            title={muted ? t('voiceChat.muted') : t('voiceChat.active')}
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm transition-colors ${
               muted ? 'bg-blood-700/40 text-blood-400' : 'bg-night-700/70 text-moon-200'
             }`}
           >
-            {muted ? t('voiceChat.muted') : t('voiceChat.active')}
+            {muted ? '🔇' : '🎤'}
           </button>
         )}
       </div>
@@ -119,7 +126,14 @@ export function VoiceChat({
       )}
 
       {connected && (participants.length > 0 || !listenOnly) && (
-        <ul className="flex flex-wrap gap-1.5 border-t border-night-700/60 pt-2">
+        // Grille à colonnes fixes plutôt qu'une liste de pills en
+        // `flex-wrap` (ancien design) : avec beaucoup de joueurs, des pills
+        // de largeurs différentes s'empilaient sur des lignes irrégulières,
+        // difficile à parcourir d'un coup d'œil pour le modérateur. Chaque
+        // case a désormais la même taille, alignée en colonnes — propre et
+        // lisible même à 10+ joueurs, sans que la hauteur totale explose
+        // (2-3 colonnes selon la largeur d'écran, cases basses et denses).
+        <ul className="grid grid-cols-2 gap-1 border-t border-night-700/60 pt-2 sm:grid-cols-3">
           {/* Son propre voyant, toujours affiché en premier (sauf en écoute
               seule, où on n'a de toute façon pas de micro à surveiller) :
               avant, useVoiceChat excluait totalement le participant local de
@@ -130,20 +144,20 @@ export function VoiceChat({
           {!listenOnly && (
             <li
               title={t('voiceChat.selfPillHint')}
-              className={`flex items-center gap-1.5 rounded-full border py-1 pl-3 pr-3 text-xs text-moon-200/80 transition-colors ${
+              className={`flex min-w-0 items-center gap-1 rounded-lg border px-2 py-1 text-xs text-moon-200/80 transition-colors ${
                 selfSpeaking
                   ? 'border-emerald-400/70 bg-emerald-400/10 shadow-[0_0_0_1px_rgba(52,211,153,0.3)]'
                   : 'border-night-600/60 bg-night-800/60'
               }`}
             >
-              <span className={selfSpeaking ? 'animate-pulse' : ''}>{muted ? '🔇' : '🎤'}</span>
-              <span className="max-w-[100px] truncate font-semibold text-moon-200">{t('voiceChat.you')}</span>
+              <span className={`shrink-0 text-[11px] ${selfSpeaking ? 'animate-pulse' : ''}`}>{muted ? '🔇' : '🎤'}</span>
+              <span className="min-w-0 flex-1 truncate font-semibold text-moon-200">{t('voiceChat.you')}</span>
             </li>
           )}
           {participants.map((p) => (
             <li
               key={p.id}
-              className={`flex items-center gap-1.5 rounded-full border py-1 pl-3 pr-1 text-xs text-moon-200/80 transition-colors ${
+              className={`flex min-w-0 items-center gap-1 rounded-lg border px-2 py-1 text-xs text-moon-200/80 transition-colors ${
                 speakingIds.has(p.id)
                   ? 'border-emerald-400/70 bg-emerald-400/10 shadow-[0_0_0_1px_rgba(52,211,153,0.3)]'
                   : 'border-night-600/60 bg-night-800/60'
@@ -154,36 +168,34 @@ export function VoiceChat({
                   startRemoteParticipantsAudioLevelObserver) est le seul vrai
                   indicateur de qui parle réellement en ce moment, pas juste
                   qui a le droit de parler. */}
-              <span className={speakingIds.has(p.id) ? 'animate-pulse' : ''}>{p.audioOn ? '🎤' : '🔇'}</span>
-              <span className="max-w-[100px] truncate">{p.name}</span>
-              {/* Toujours affiché dès qu'on modère (pas seulement si le
-                  micro est actif) : sinon rien ne prouve que la fonction
-                  existe tant que personne ne s'est activé.
-                  Retour utilisateur : un bouton icône seule (🔇), collé au
-                  même emoji déjà utilisé juste à gauche pour le statut
-                  actuel du micro, prêtait à confusion — impossible de dire
-                  d'un coup d'œil "c'est l'état" ou "c'est le bouton". Un vrai
-                  bouton texte tant qu'il y a une action possible, remplacé
-                  par une étiquette figée (pas de bouton du tout) une fois
-                  coupé — l'état est sans ambiguïté. */}
-              {canModerate && (
-                p.audioOn ? (
+              <span className={`shrink-0 text-[11px] ${speakingIds.has(p.id) ? 'animate-pulse' : ''}`}>
+                {p.audioOn ? '🎤' : '🔇'}
+              </span>
+              <span className="min-w-0 flex-1 truncate">{p.name}</span>
+              {/* Bouton icône seule (plus de libellé "Couper"/"Coupé" en
+                  toutes lettres, voir titre pour l'explicite) : dans une case
+                  de grille déjà étroite, un bouton texte forçait soit à
+                  tronquer le nom du joueur, soit à faire déborder la case.
+                  Le distinguo "état" vs "action" reste porté par la couleur
+                  (rouge = action possible, gris = déjà coupé, rien à faire)
+                  plutôt que par du texte. */}
+              {canModerate &&
+                (p.audioOn ? (
                   <button
                     onClick={() => muteParticipant(p.id)}
                     title={t('voiceChat.muteParticipantTitle', { name: p.name })}
-                    className="ml-0.5 flex shrink-0 items-center gap-1 rounded-full bg-blood-700/40 px-2 py-0.5 text-[10px] font-semibold text-blood-400 transition-colors hover:bg-blood-700/60"
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blood-700/40 text-[10px] text-blood-400 transition-colors hover:bg-blood-700/60"
                   >
-                    🔇 {t('voiceChat.muteAction')}
+                    🔇
                   </button>
                 ) : (
                   <span
                     title={t('voiceChat.alreadyMuted')}
-                    className="ml-0.5 shrink-0 rounded-full bg-night-700/50 px-2 py-0.5 text-[10px] font-semibold text-moon-200/30"
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-night-700/50 text-[10px] text-moon-200/30"
                   >
-                    {t('voiceChat.mutedTag')}
+                    🔇
                   </span>
-                )
-              )}
+                ))}
             </li>
           ))}
         </ul>

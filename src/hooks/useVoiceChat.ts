@@ -186,7 +186,16 @@ export function useVoiceChat(
     function refreshParticipants(call: DailyCall) {
       const all = call.participants()
       const list: VoiceParticipant[] = Object.values(all)
-        .filter((p) => !p.local)
+        // Un fantôme qui écoute le village (listenOnly, voir GameRoom.tsx —
+        // GhostTabs) rejoint le MÊME salon Daily que les vivants pour pouvoir
+        // entendre, mais ne doit jamais apparaître dans la liste des
+        // participants affichée aux vivants : retour utilisateur, ça portait
+        // à confusion (un joueur déjà éliminé semblait toujours "présent"
+        // dans le vocal du village). Marqué côté join() via `userData: {
+        // ghost: true }` (voir plus bas) — répliqué automatiquement à tous
+        // les autres participants par Daily, donc filtrable ici sans aucun
+        // aller-retour serveur supplémentaire.
+        .filter((p) => !p.local && !(p.userData as { ghost?: boolean } | undefined)?.ghost)
         .map((p) => ({ id: p.session_id, name: p.user_name || t('common.playerFallback'), audioOn: !!p.audio }))
       setParticipants(list)
       setCanModerate(!!all.local?.owner)
@@ -272,6 +281,13 @@ export function useVoiceChat(
         await call.join({
           url,
           ...(ownerToken ? { token: ownerToken } : {}),
+          // Même piège que `token` juste au-dessus (voir le commentaire du
+          // BUG corrigé plus bas) : ne poser la clé `userData` que pour un
+          // fantôme en écoute, jamais avec une valeur `undefined` explicite
+          // pour tout le monde d'autre. Sert uniquement à se signaler comme
+          // "fantôme" aux autres clients (voir refreshParticipants ci-dessus),
+          // pour être exclu de la liste des participants affichée.
+          ...(listenOnly ? { userData: { ghost: true } } : {}),
           userName: displayName,
           startVideoOff: true,
           startAudioOff: true,
