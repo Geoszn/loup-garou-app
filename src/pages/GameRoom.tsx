@@ -265,6 +265,7 @@ export default function GameRoom() {
                       code={code!}
                       channel="village"
                       displayName={me?.display_name ?? t('common.playerFallback')}
+                      selfUserId={user.id}
                       listenOnly
                     />
                   )}
@@ -273,7 +274,13 @@ export default function GameRoom() {
               }
               graveyard={
                 <div className="flex flex-col gap-3">
-                  <VoiceChat gameId={gameId!} code={code!} channel={voiceChannel} displayName={me?.display_name ?? t('common.playerFallback')} />
+                  <VoiceChat
+                    gameId={gameId!}
+                    code={code!}
+                    channel={voiceChannel}
+                    displayName={me?.display_name ?? t('common.playerFallback')}
+                    selfUserId={user.id}
+                  />
                   <ChatPanel gameId={gameId!} channel="graveyard" selfId={user.id} compact />
                 </div>
               }
@@ -348,7 +355,13 @@ export default function GameRoom() {
                 le village puisse discuter à voix haute avant de voter — le
                 texte écrit, lui, reste fermé pendant cette phase courte. */}
             {alive && (
-              <VoiceChat gameId={gameId!} code={code!} channel={voiceChannel} displayName={me?.display_name ?? t('common.playerFallback')} />
+              <VoiceChat
+                gameId={gameId!}
+                code={code!}
+                channel={voiceChannel}
+                displayName={me?.display_name ?? t('common.playerFallback')}
+                selfUserId={user.id}
+              />
             )}
           </div>
         )}
@@ -361,7 +374,13 @@ export default function GameRoom() {
                 dayTab={dayTab}
                 setDayTab={setDayTab}
                 voice={
-                  <VoiceChat gameId={gameId!} code={code!} channel={voiceChannel} displayName={me?.display_name ?? t('common.playerFallback')} />
+                  <VoiceChat
+                    gameId={gameId!}
+                    code={code!}
+                    channel={voiceChannel}
+                    displayName={me?.display_name ?? t('common.playerFallback')}
+                    selfUserId={user.id}
+                  />
                 }
                 chat={<ChatPanel gameId={gameId!} channel="village" selfId={user.id} />}
                 grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />}
@@ -403,7 +422,13 @@ export default function GameRoom() {
                 dayTab={dayTab}
                 setDayTab={setDayTab}
                 voice={
-                  <VoiceChat gameId={gameId!} code={code!} channel={voiceChannel} displayName={me?.display_name ?? t('common.playerFallback')} />
+                  <VoiceChat
+                    gameId={gameId!}
+                    code={code!}
+                    channel={voiceChannel}
+                    displayName={me?.display_name ?? t('common.playerFallback')}
+                    selfUserId={user.id}
+                  />
                 }
                 chat={<ChatPanel gameId={gameId!} channel="village" selfId={user.id} compact />}
                 grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />}
@@ -1114,7 +1139,7 @@ function EndScreen({
             0039) : le salon reste ouvert entre deux parties, autant pouvoir
             continuer à discuter en attendant que l'hôte relance. */}
         <div className="mb-4">
-          <VoiceChat gameId={gameId} code={code} channel="lobby" displayName={displayName} />
+          <VoiceChat gameId={gameId} code={code} channel="lobby" displayName={displayName} selfUserId={selfId} />
         </div>
 
         <p className="mb-2 text-xs uppercase tracking-widest text-moon-200/40">

@@ -12,9 +12,19 @@ const SPEAKING_THRESHOLD = 0.02
 export type VoiceChannel = 'lobby' | 'village' | 'graveyard' | null
 
 interface VoiceParticipant {
+  // Identifiant d'affichage stable pour ce JOUEUR (pas cette connexion) —
+  // voir la déduplication dans refreshParticipants ci-dessous.
   id: string
   name: string
   audioOn: boolean
+  // Toutes les connexions Daily (session_id) actuellement associées à ce
+  // même joueur — normalement une seule, mais un rechargement de page/app
+  // en arrière-plan (fréquent sur mobile) peut laisser une ancienne
+  // connexion vivre quelques instants en parallèle de la nouvelle avant que
+  // Daily ne la coupe pour inactivité. muteParticipant doit couper TOUTES
+  // ces connexions à la fois, et le voyant "en train de parler" doit
+  // s'allumer si N'IMPORTE LAQUELLE d'entre elles émet du son.
+  sessionIds: string[]
 }
 
 export function useVoiceChat(
@@ -22,6 +32,16 @@ export function useVoiceChat(
   code: string | null,
   channel: VoiceChannel,
   displayName: string,
+  // Identifiant Supabase du joueur local (auth.uid()) : injecté dans
+  // `userData` à la connexion (voir call.join() plus bas) pour donner à
+  // chaque participant Daily une identité STABLE, propre à l'appli, plutôt
+  // que le seul session_id généré par Daily à chaque connexion. Sert
+  // uniquement à dédupliquer l'affichage (voir refreshParticipants) quand un
+  // même joueur se retrouve brièvement avec deux connexions simultanées —
+  // aucune vérification cryptographique, un client pourrait mentir sur cette
+  // valeur, mais l'enjeu ici est purement cosmétique (éviter un nom en
+  // double dans la liste), pas la sécurité.
+  selfUserId: string | null,
   // Fantôme qui écoute le village (voir VoiceChat.tsx) : rejoint le salon
   // normalement (même URL, mêmes autorisations serveur — can_listen_channel,
   // migration 0041) mais toggleMute() ci-dessous devient un no-op, et le
@@ -185,19 +205,41 @@ export function useVoiceChat(
 
     function refreshParticipants(call: DailyCall) {
       const all = call.participants()
-      const list: VoiceParticipant[] = Object.values(all)
+      // Regroupé par joueur (voir selfUserId ci-dessus), PAS par connexion
+      // Daily brute : un rechargement de page/app en arrière-plan peut créer
+      // une deuxième connexion pour le même joueur avant que Daily ne coupe
+      // l'ancienne pour inactivité — sans ce regroupement, ce même joueur
+      // apparaissait deux fois dans la liste (retour utilisateur, capture
+      // d'écran à l'appui). Clé de regroupement : `userData.uid` (fiable,
+      // posé par nos propres clients à la connexion) avec repli sur le nom
+      // affiché pour les connexions plus anciennes qui ne le posaient pas
+      // encore (déploiement en cours) — jamais le session_id, qui est
+      // justement ce qu'on veut arrêter d'utiliser comme identité.
+      const byPlayer = new Map<string, VoiceParticipant>()
+      for (const p of Object.values(all)) {
+        if (p.local) continue
         // Un fantôme qui écoute le village (listenOnly, voir GameRoom.tsx —
         // GhostTabs) rejoint le MÊME salon Daily que les vivants pour pouvoir
         // entendre, mais ne doit jamais apparaître dans la liste des
         // participants affichée aux vivants : retour utilisateur, ça portait
         // à confusion (un joueur déjà éliminé semblait toujours "présent"
-        // dans le vocal du village). Marqué côté join() via `userData: {
-        // ghost: true }` (voir plus bas) — répliqué automatiquement à tous
-        // les autres participants par Daily, donc filtrable ici sans aucun
-        // aller-retour serveur supplémentaire.
-        .filter((p) => !p.local && !(p.userData as { ghost?: boolean } | undefined)?.ghost)
-        .map((p) => ({ id: p.session_id, name: p.user_name || t('common.playerFallback'), audioOn: !!p.audio }))
-      setParticipants(list)
+        // dans le vocal du village). Marqué côté join() via `userData.ghost`
+        // (voir plus bas) — répliqué automatiquement à tous les autres
+        // participants par Daily, donc filtrable ici sans aucun aller-retour
+        // serveur supplémentaire.
+        const userData = p.userData as { uid?: string; ghost?: boolean } | undefined
+        if (userData?.ghost) continue
+        const name = p.user_name || t('common.playerFallback')
+        const key = userData?.uid || name
+        const existing = byPlayer.get(key)
+        if (existing) {
+          existing.audioOn = existing.audioOn || !!p.audio
+          existing.sessionIds.push(p.session_id)
+        } else {
+          byPlayer.set(key, { id: key, name, audioOn: !!p.audio, sessionIds: [p.session_id] })
+        }
+      }
+      setParticipants(Array.from(byPlayer.values()))
       setCanModerate(!!all.local?.owner)
 
       // Resynchronise `muted` depuis le véritable état Daily du participant
@@ -281,13 +323,15 @@ export function useVoiceChat(
         await call.join({
           url,
           ...(ownerToken ? { token: ownerToken } : {}),
-          // Même piège que `token` juste au-dessus (voir le commentaire du
-          // BUG corrigé plus bas) : ne poser la clé `userData` que pour un
-          // fantôme en écoute, jamais avec une valeur `undefined` explicite
-          // pour tout le monde d'autre. Sert uniquement à se signaler comme
-          // "fantôme" aux autres clients (voir refreshParticipants ci-dessus),
-          // pour être exclu de la liste des participants affichée.
-          ...(listenOnly ? { userData: { ghost: true } } : {}),
+          // Toujours posé quand on connaît l'identité locale (uid), en plus
+          // du marqueur `ghost` pour un fantôme en écoute — voir
+          // refreshParticipants ci-dessus, qui s'en sert pour dédupliquer
+          // l'affichage et pour exclure les fantômes. Même piège que `token`
+          // juste au-dessus (voir le commentaire du BUG corrigé plus bas) :
+          // ne jamais poser une clé avec une valeur `undefined` explicite.
+          ...(selfUserId || listenOnly
+            ? { userData: { ...(selfUserId ? { uid: selfUserId } : {}), ...(listenOnly ? { ghost: true } : {}) } }
+            : {}),
           userName: displayName,
           startVideoOff: true,
           startAudioOff: true,
@@ -403,8 +447,17 @@ export function useVoiceChat(
   // sinon Daily ignore silencieusement la demande. Volontairement à sens
   // unique : on ne propose pas de rallumer le micro de quelqu'un d'autre,
   // pour éviter d'activer un micro sans le consentement du joueur.
-  function muteParticipant(sessionId: string) {
-    callRef.current?.updateParticipant(sessionId, { setAudio: false })
+  //
+  // Prend TOUTES les connexions du joueur (voir VoiceParticipant.sessionIds)
+  // et pas un seul session_id : depuis la déduplication par joueur, un même
+  // joueur peut avoir deux connexions actives en parallèle (rechargement de
+  // page pas encore nettoyé côté Daily) — n'en couper qu'une laisserait
+  // l'autre continuer à émettre, avec un bouton modérateur qui semble
+  // pourtant avoir fonctionné.
+  function muteParticipant(sessionIds: string[]) {
+    for (const sessionId of sessionIds) {
+      callRef.current?.updateParticipant(sessionId, { setAudio: false })
+    }
   }
 
   // Nouvel essai manuel après un échec de connexion (voir retryToken

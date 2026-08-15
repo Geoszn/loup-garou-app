@@ -6,6 +6,12 @@ export function VoiceChat({
   code,
   channel,
   displayName,
+  // Identifiant Supabase du joueur local — voir useVoiceChat.ts, sert à
+  // dédupliquer l'affichage quand ce même joueur se retrouve brièvement avec
+  // deux connexions Daily simultanées (rechargement de page/app en arrière-
+  // plan). `null` accepté (ex. écran de fin de partie où `user` peut ne pas
+  // être encore chargé) : dans ce cas, repli sur le nom affiché uniquement.
+  selfUserId,
   // Fantôme qui écoute le village sans y participer (voir GameRoom.tsx,
   // onglet "Village" des fantômes) : pas de bouton pour s'activer, juste un
   // badge "écoute seule". Toujours `false` pour un salon normal.
@@ -15,6 +21,7 @@ export function VoiceChat({
   code: string
   channel: VoiceChannel
   displayName: string
+  selfUserId: string | null
   listenOnly?: boolean
 }) {
   const {
@@ -32,7 +39,7 @@ export function VoiceChat({
     deafened,
     toggleSound,
     forcedMuteNotice,
-  } = useVoiceChat(gameId, code, channel, displayName, listenOnly)
+  } = useVoiceChat(gameId, code, channel, displayName, selfUserId, listenOnly)
   const { t } = useLanguage()
 
   if (!channel) return null
@@ -158,7 +165,7 @@ export function VoiceChat({
             <li
               key={p.id}
               className={`flex min-w-0 items-center gap-1 rounded-lg border px-2 py-1 text-xs text-moon-200/80 transition-colors ${
-                speakingIds.has(p.id)
+                p.sessionIds.some((id) => speakingIds.has(id))
                   ? 'border-emerald-400/70 bg-emerald-400/10 shadow-[0_0_0_1px_rgba(52,211,153,0.3)]'
                   : 'border-night-600/60 bg-night-800/60'
               }`}
@@ -167,8 +174,12 @@ export function VoiceChat({
                   l'anneau vert (speakingIds, niveau sonore réel via
                   startRemoteParticipantsAudioLevelObserver) est le seul vrai
                   indicateur de qui parle réellement en ce moment, pas juste
-                  qui a le droit de parler. */}
-              <span className={`shrink-0 text-[11px] ${speakingIds.has(p.id) ? 'animate-pulse' : ''}`}>
+                  qui a le droit de parler. Un même joueur peut avoir
+                  plusieurs connexions Daily simultanées (reconnexion) — on le
+                  considère "en train de parler" si l'UNE d'elles l'est. */}
+              <span
+                className={`shrink-0 text-[11px] ${p.sessionIds.some((id) => speakingIds.has(id)) ? 'animate-pulse' : ''}`}
+              >
                 {p.audioOn ? '🎤' : '🔇'}
               </span>
               <span className="min-w-0 flex-1 truncate">{p.name}</span>
@@ -182,7 +193,7 @@ export function VoiceChat({
               {canModerate &&
                 (p.audioOn ? (
                   <button
-                    onClick={() => muteParticipant(p.id)}
+                    onClick={() => muteParticipant(p.sessionIds)}
                     title={t('voiceChat.muteParticipantTitle', { name: p.name })}
                     className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blood-700/40 text-[10px] text-blood-400 transition-colors hover:bg-blood-700/60"
                   >

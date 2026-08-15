@@ -377,7 +377,13 @@ export default function Lobby() {
         {/* Vocal du salon : ouvert à tous les joueurs déjà présents, avant
             même le lancement de la partie, pour discuter en attendant les
             retardataires (voir can_access_channel, migration 0034). */}
-        <VoiceChat gameId={gameId!} code={code!} channel="lobby" displayName={view.players.find((p) => p.user_id === user?.id)?.display_name ?? t('common.playerFallback')} />
+        <VoiceChat
+          gameId={gameId!}
+          code={code!}
+          channel="lobby"
+          displayName={view.players.find((p) => p.user_id === user?.id)?.display_name ?? t('common.playerFallback')}
+          selfUserId={user?.id ?? null}
+        />
 
         <Card>
           <div className="mb-3 flex items-center justify-between gap-2">
