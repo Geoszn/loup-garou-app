@@ -278,11 +278,14 @@ export default function Dashboard() {
             (privé/public, recherche/code) plutôt que d'étaler tous les choix
             et explications directement sur cette page. Placées juste sous le
             header, AVANT les bannières conditionnelles ci-dessous
-            (événement, notice, partie désactivée, partie en cours,
+            (partie en cours, événement, notice, partie désactivée,
             invitations) : ce sont les deux actions les plus utilisées de
             toute l'app, elles ne doivent jamais dépendre du nombre de
             bannières actives ce jour-là pour rester atteignables sans
-            scroll. */}
+            scroll. Le rappel "partie en cours" juste après suit désormais le
+            même principe (voir son commentaire dédié) — seuls la bannière
+            d'événement, la notice ponctuelle et le reste peuvent encore
+            s'empiler en dessous. */}
         {/* Style "verre dépoli" (fond très translucide + backdrop-blur, fine
             bordure quasi-blanche) plutôt que le dégradé opaque du Card
             générique — direction esthétique demandée par l'admin
@@ -313,6 +316,29 @@ export default function Dashboard() {
             <span className="font-display text-sm text-moon-200 sm:text-base">{t('dashboard.joinGame')}</span>
           </button>
         </div>
+
+        {/* Partie en cours (voir get_my_active_game) : reste discret mais
+            visible tant que la partie n'est pas terminée, pour ne jamais
+            perdre le fil d'un salon quitté "à la légère" via le bouton 🏠.
+            Signalement utilisateur : placé plus bas (après la bannière
+            d'événement), ce rappel finissait poussé hors de l'écran sur
+            mobile dès qu'un événement était actif — le bouton "reprendre"
+            semblait avoir disparu. Remonté juste sous Créer/Rejoindre, sur le
+            même principe déjà en place pour ces deux boutons (voir
+            commentaire plus haut) : ne doit jamais dépendre du nombre de
+            bannières actives pour rester atteignable sans scroll. Même poids
+            visuel qu'avant (pas réduit à une puce discrète) : ce n'est pas
+            moins important qu'un événement, juste rangé au bon endroit. */}
+        {activeGame && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-moon-400/40 bg-moon-400/5 px-4 py-3">
+            <p className="text-sm text-moon-200/90">
+              🎮 {t('dashboard.activeGame')} — <strong className="text-moon-200">{activeGame.code}</strong>
+            </p>
+            <Button className="px-3.5 py-1.5 text-xs" onClick={resumeActiveGame}>
+              {t('dashboard.resume')}
+            </Button>
+          </div>
+        )}
 
         {events.length > 0 && (
           <div>
@@ -349,20 +375,6 @@ export default function Dashboard() {
         )}
 
         <ErrorText>{error}</ErrorText>
-
-        {/* Partie en cours (voir get_my_active_game) : reste discret mais
-            visible tant que la partie n'est pas terminée, pour ne jamais
-            perdre le fil d'un salon quitté "à la légère" via le bouton 🏠. */}
-        {activeGame && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-moon-400/40 bg-moon-400/5 px-4 py-3">
-            <p className="text-sm text-moon-200/90">
-              🎮 {t('dashboard.activeGame')} — <strong className="text-moon-200">{activeGame.code}</strong>
-            </p>
-            <Button className="px-3.5 py-1.5 text-xs" onClick={resumeActiveGame}>
-              {t('dashboard.resume')}
-            </Button>
-          </div>
-        )}
 
         {invites.length > 0 && (
           <div className="flex flex-col gap-3">
