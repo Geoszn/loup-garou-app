@@ -1471,6 +1471,86 @@ export const translations = {
     fr: 'Rejoins ma partie de Loup Garou d’Afrique ! 🐺 Code : {{code}} — {{link}}',
     en: 'Join my Loup Garou d’Afrique game! 🐺 Code: {{code}} — {{link}}',
   },
+
+  // --- Journal de partie (game_log) ------------------------------------------
+  // Signalement utilisateur : "le game log dans la partie n'est pas traduit en
+  // anglais". Les messages sont générés en français côté SQL (game_log.message,
+  // historique de ~84 migrations) — les retraduire tous en base demanderait de
+  // retoucher ~22 fonctions du moteur de jeu, un risque disproportionné sur une
+  // partie en cours avec de vrais joueurs. Solution retenue : une couche de
+  // reconnaissance de motifs côté client (voir lib/gameLogTranslate.ts) qui
+  // reconnaît les phrases françaises connues et les restitue via ces clés —
+  // le français d'origine reste affiché tel quel si aucun motif ne correspond
+  // (dégradation sans casse, jamais un message vide ou une erreur).
+  'gameLog.nightFalls': { fr: '🌙 La nuit {{n}} tombe sur le village. Tout le monde ferme les yeux...', en: '🌙 Night {{n}} falls on the village. Everyone closes their eyes...' },
+  'gameLog.villageWins': { fr: '🌞 Le village a éliminé tous les Loups-Garous. Le village gagne !', en: '🌞 The village has eliminated every Werewolf. The village wins!' },
+  'gameLog.wolvesWin': { fr: '🐺 Les Loups-Garous ont dévoré assez de villageois pour prendre le contrôle. Les loups gagnent !', en: '🐺 The Werewolves have devoured enough villagers to take control. The wolves win!' },
+  'gameLog.loversWin': { fr: '💘 Il ne reste que les deux amoureux... L’amour triomphe !', en: '💘 Only the two lovers remain... Love triumphs!' },
+  'gameLog.playerJoined': { fr: '{{name}} a rejoint la partie.', en: '{{name}} joined the game.' },
+  'gameLog.playerKicked': { fr: '{{name}} a été retiré(e) du salon par l’hôte.', en: '{{name}} was removed from the room by the host.' },
+  'gameLog.playerLeft': { fr: '{{name}} a quitté le salon.', en: '{{name}} left the room.' },
+  'gameLog.gameStoppedByAdmin': { fr: 'La partie a été arrêtée par un administrateur.', en: 'The game was stopped by an administrator.' },
+  'gameLog.gameCreated': { fr: 'La partie a été créée. En attente des joueurs...', en: 'The game has been created. Waiting for players...' },
+  'gameLog.ancienSurvives': { fr: '{{name}} (Ancien) encaisse l’attaque des Loups-Garous et s’accroche à la vie !', en: '{{name}} (Elder) takes the Werewolves’ attack and clings to life!' },
+  'gameLog.ancienLynchedPowersOff': {
+    fr: '⚖️ Le village a eu tort de lyncher l’Ancien : ses pouvoirs spéciaux s’éteignent pour le reste de la partie...',
+    en: '⚖️ The village was wrong to lynch the Elder: its special powers are extinguished for the rest of the game...',
+  },
+  'gameLog.wildChildConverted': {
+    fr: '🌑 Une ombre a changé de camp cette nuit... un villageois a secrètement rejoint les Loups-Garous.',
+    en: '🌑 A shadow switched sides tonight... a villager secretly joined the Werewolves.',
+  },
+  'gameLog.captainDyingSuccession': { fr: '{{name}} était le Capitaine : il ou elle désigne son successeur dans son dernier souffle.', en: '{{name}} was the Captain: with their last breath, they name a successor.' },
+  'gameLog.deathLine': { fr: '{{name}} ({{role}}) {{cause}}', en: '{{name}} ({{role}}) {{cause}}' },
+  'gameLog.death.loup_garou': { fr: 'a été dévoré par les Loups-Garous cette nuit.', en: 'was devoured by the Werewolves tonight.' },
+  'gameLog.death.sorciere': { fr: 'a été empoisonné par la Sorcière cette nuit.', en: 'was poisoned by the Witch tonight.' },
+  'gameLog.death.chagrin': { fr: 'est mort de chagrin, son amoureux ayant péri.', en: 'died of grief after their lover perished.' },
+  'gameLog.death.chasseur': { fr: 'a été abattu par le Chasseur.', en: 'was shot by the Hunter.' },
+  'gameLog.death.vote': { fr: 'a été éliminé par le vote du village.', en: 'was eliminated by the village vote.' },
+  'gameLog.death.petite_fille_surprise': { fr: 'a été surprise en train d’espionner les loups... et en a payé le prix.', en: 'was caught spying on the wolves... and paid the price.' },
+  'gameLog.death.parti': { fr: 'a quitté la partie.', en: 'left the game.' },
+  'gameLog.death.exclu': { fr: 'a été exclu(e) de la partie par l’hôte.', en: 'was removed from the game by the host.' },
+  'gameLog.death.default': { fr: 'est mort.', en: 'died.' },
+  'gameLog.captainElected': { fr: '🎖️ {{name}} est élu(e) Capitaine du village !', en: '🎖️ {{name}} is elected Captain of the village!' },
+  'gameLog.captainElectionNoVotes': {
+    fr: '🗳️ Aucun vote exprimé pour l’élection du Capitaine : la partie se jouera sans lui.',
+    en: '🗳️ No votes cast for the Captain election: the game will go on without one.',
+  },
+  'gameLog.witchHealed': { fr: '🧪 La Sorcière a utilisé sa potion de guérison pour sauver la victime des loups.', en: '🧪 The Witch used her healing potion to save the wolves’ victim.' },
+  'gameLog.noOneDiedTonight': { fr: '☀️ Le village se réveille : personne n’est mort cette nuit !', en: '☀️ The village wakes up: no one died last night!' },
+  'gameLog.restartSameGroup': { fr: '🔄 Une nouvelle partie va commencer avec le même groupe !', en: '🔄 A new game is about to start with the same group!' },
+  'gameLog.rolesDistributed': { fr: '🎭 Les rôles ont été distribués en secret. Regardez votre carte...', en: '🎭 Roles have been secretly handed out. Check your card...' },
+  'gameLog.captainSuccession': { fr: '🎖️ {{name}} devient le nouveau Capitaine.', en: '🎖️ {{name}} becomes the new Captain.' },
+  'gameLog.cupidonArrows': { fr: '💘 Cupidon a décoché ses flèches...', en: '💘 Cupid has loosed his arrows...' },
+  'gameLog.wildChildChoseMentor': { fr: '🐾 L’Enfant Sauvage a choisi son mentor en secret.', en: '🐾 The Wild Child has secretly chosen their mentor.' },
+  'gameLog.hunterNoShot': { fr: '{{name}} (Chasseur) choisit de ne tirer sur personne.', en: '{{name}} (Hunter) chooses not to shoot anyone.' },
+  'gameLog.mayorSuccession': { fr: '🏛️ {{name}} devient le nouveau Maire.', en: '🏛️ {{name}} becomes the new Mayor.' },
+  'gameLog.witchChoseSecret': { fr: '🧪 La Sorcière a fait son choix en secret.', en: '🧪 The Witch has secretly made her choice.' },
+  'gameLog.thiefChoseSecret': { fr: '🃏 Le Voleur a fait son choix en secret.', en: '🃏 The Thief has secretly made their choice.' },
+  'gameLog.seerScried': { fr: '🔮 La Voyante a sondé un joueur en secret.', en: '🔮 The Seer has secretly scried a player.' },
+  'gameLog.captainElectionCall': { fr: '🎖️ Élisez votre Capitaine avant que la nuit ne tombe !', en: '🎖️ Elect your Captain before night falls!' },
+  'gameLog.hunterTimeout': { fr: '{{name}} (Chasseur) n’a pas tiré à temps.', en: '{{name}} (Hunter) didn’t shoot in time.' },
+  'gameLog.captainRandomSuccessor': {
+    fr: '🎖️ Personne n’a désigné de successeur à temps : le sort en a décidé — {{name}} devient le nouveau Capitaine !',
+    en: '🎖️ No one named a successor in time: fate has decided — {{name}} becomes the new Captain!',
+  },
+  'gameLog.captainSuccessionTimeout': {
+    fr: '{{name}} (ancien Capitaine) n’a pas désigné de successeur à temps : le titre est perdu.',
+    en: '{{name}} (former Captain) didn’t name a successor in time: the title is lost.',
+  },
+  'gameLog.debateOpen': { fr: '💬 Le village débat. Qui soupçonnez-vous ?', en: '💬 The village is debating. Who do you suspect?' },
+  'gameLog.voteOpen': { fr: '🗳️ Le vote est ouvert !', en: '🗳️ Voting is open!' },
+  'gameLog.voteNoVotes': { fr: '🗳️ Aucun vote exprimé : personne n’est éliminé aujourd’hui.', en: '🗳️ No votes cast: no one is eliminated today.' },
+  'gameLog.voteTie': { fr: '🗳️ Égalité des voix : personne n’est éliminé aujourd’hui.', en: '🗳️ Tied vote: no one is eliminated today.' },
+  'gameLog.captainCallsVote': { fr: '🎖️ {{name}} (Capitaine) lance le vote, avec l’accord de tout le village !', en: '🎖️ {{name}} (Captain) calls the vote, with the whole village’s agreement!' },
+  // Nouveau message (voir submit_host_call_vote, migration 0085) : pendant du
+  // précédent pour une partie SANS Capitaine — l'hôte lance le vote une fois
+  // que tous les autres joueurs vivants sont d'accord.
+  'gameLog.hostCallsVote': { fr: '🛠️ {{name}} (Modérateur) lance le vote, avec l’accord de tout le village !', en: '🛠️ {{name}} (Moderator) calls the vote, with the whole village’s agreement!' },
+
+  // --- Vote forcé par le modérateur (sans Capitaine) -------------------------
+  'game.hostCallVoteButton': { fr: 'Lancer le vote', en: 'Call the vote' },
+  'game.hostCallVoteButtonWaiting': { fr: 'En attente du village...', en: 'Waiting for the village...' },
 } as const satisfies Record<string, Record<Lang, string>>
 
 export type TranslationKey = keyof typeof translations

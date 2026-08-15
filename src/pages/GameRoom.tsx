@@ -24,6 +24,7 @@ import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, Mo
 import { ROLES, roleLabel, type RoleId } from '../lib/roles'
 import { RankTierBadge } from '../components/RankTierBadge'
 import { tierForPoints, tierLabel, type RankTier } from '../lib/ranks'
+import { translateGameLogMessage } from '../lib/gameLogTranslate'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { MyGameView, PublicPlayer } from '../types/game'
 import type { VoiceChannel } from '../hooks/useVoiceChat'
@@ -392,8 +393,12 @@ export default function GameRoom() {
                 utilisateur) : on discute d'abord, on décide de voter ensuite
                 — une vraie carte plutôt qu'une ligne fine, pour bien la
                 distinguer comme un appel à l'action une fois la discussion
-                déjà sous les yeux. */}
-            {alive && <CallVotePanel view={view} gameId={gameId!} selfId={user.id} me={me} />}
+                déjà sous les yeux. `alive || isHost` (et non plus seulement
+                `alive`, voir migration 0085) : sans Capitaine, l'hôte garde
+                ce contrôle même mort, comme le reste de ses outils de
+                modération — CallVotePanel se masque lui-même dans tous les
+                autres cas où il n'a rien à afficher. */}
+            {(alive || isHost) && <CallVotePanel view={view} gameId={gameId!} selfId={user.id} me={me} isHost={isHost} />}
           </div>
         )}
 
@@ -664,35 +669,56 @@ function ReadyPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string
   )
 }
 
-/** Pendant le débat : chaque joueur vivant (hors Capitaine) peut se
- * déclarer d'accord pour passer au vote. Le Capitaine n'a pas besoin de se
- * déclarer d'accord lui-même — dès que tous les AUTRES joueurs encore en
- * vie le sont, son bouton "Lancer le vote" s'active tout seul, sans étape
- * de confirmation supplémentaire pour lui (il reste le seul à pouvoir
- * appuyer dessus). N'apparaît que si le rôle de Capitaine est activé. */
+/** Pendant le débat : chaque joueur vivant (hors acteur) peut se déclarer
+ * d'accord pour passer au vote. L'acteur n'a pas besoin de se déclarer
+ * d'accord lui-même — dès que tous les AUTRES joueurs encore en vie le
+ * sont, son bouton "Lancer le vote" s'active tout seul, sans étape de
+ * confirmation supplémentaire pour lui (il reste le seul à pouvoir appuyer
+ * dessus).
+ *
+ * Deux variantes selon que le rôle de Capitaine est activé pour cette
+ * partie ou non (voir migration 0085, demande utilisateur : "quand il n'y a
+ * aucun capitaine dans le jeu, donne la possibilité au modérateur de faire
+ * passer le jeu au vote quand tous les autres joueurs sont d'accord") :
+ *   - Capitaine activé : l'acteur est le Capitaine, exclu des "autres" —
+ *     comportement inchangé.
+ *   - Capitaine désactivé : l'acteur est l'hôte du salon (modérateur), qui
+ *     garde ce contrôle même mort (comme le reste de ses outils de
+ *     modération, voir ModerationPanel) — c'est pourquoi ce composant est
+ *     désormais aussi rendu pour un hôte non vivant (voir son appel plus
+ *     bas, `alive || isHost`), pas seulement pour les joueurs vivants. */
 function CallVotePanel({
   view,
   gameId,
   selfId,
   me,
+  isHost,
 }: {
   view: MyGameView
   gameId: string
   selfId: string
   me: PublicPlayer | undefined
+  isHost: boolean
 }) {
   const { t } = useLanguage()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  if (!view.game.settings.role_counts?.capitaine) return null
+  const hasCaptainRole = !!view.game.settings.role_counts?.capitaine
+  const iAmAlive = !!me?.is_alive
+
+  // Capitaine activé : réservé aux joueurs vivants (comportement inchangé).
+  // Capitaine désactivé : réservé aux joueurs vivants ET à l'hôte, même mort
+  // (seul lui peut agir dans ce cas, voir commentaire ci-dessus).
+  if (hasCaptainRole ? !iAmAlive : !iAmAlive && !isHost) return null
 
   const alivePlayers = view.players.filter((p) => p.is_alive)
-  const others = alivePlayers.filter((p) => !p.is_captain)
+  const excludedId = hasCaptainRole ? alivePlayers.find((p) => p.is_captain)?.user_id : view.game.host_id
+  const others = alivePlayers.filter((p) => p.user_id !== excludedId)
   const agreedIds = view.vote_call_agreed_ids
   const agreed = agreedIds.includes(selfId)
   const allOthersAgreed = others.length > 0 && others.every((p) => agreedIds.includes(p.user_id))
-  const isCaptain = !!me?.is_captain
+  const isActor = hasCaptainRole ? !!me?.is_captain : isHost
 
   async function toggleAgree() {
     setLoading(true)
@@ -705,7 +731,10 @@ function CallVotePanel({
   async function callVote() {
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_captain_call_vote', { p_game_id: gameId })
+    const { error: rpcError } = await supabase.rpc(
+      hasCaptainRole ? 'submit_captain_call_vote' : 'submit_host_call_vote',
+      { p_game_id: gameId }
+    )
     setLoading(false)
     if (rpcError) setError(rpcError.message)
   }
@@ -745,14 +774,16 @@ function CallVotePanel({
           style={{ width: `${Math.round(progress * 100)}%` }}
         />
       </div>
-      {!isCaptain && (
+      {!isActor && (
         <Button variant={agreed ? 'ghost' : 'primary'} className="w-full" disabled={loading} onClick={toggleAgree}>
           {agreed ? t('game.cancelAgreement') : t('game.agree')}
         </Button>
       )}
-      {isCaptain && (
+      {isActor && (
         <Button className="w-full" disabled={!allOthersAgreed || loading} onClick={callVote}>
-          {allOthersAgreed ? t('game.callVoteButton') : t('game.callVoteButtonWaiting')}
+          {allOthersAgreed
+            ? t(hasCaptainRole ? 'game.callVoteButton' : 'game.hostCallVoteButton')
+            : t(hasCaptainRole ? 'game.callVoteButtonWaiting' : 'game.hostCallVoteButtonWaiting')}
         </Button>
       )}
       <ErrorText>{error}</ErrorText>
@@ -916,13 +947,13 @@ function WolfPackList({ view, myRole }: { view: MyGameView; myRole: string | nul
 }
 
 function LogList({ entries, compact = false }: { entries: { id: string; message: string }[]; compact?: boolean }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   if (entries.length === 0) return <p className="text-sm text-moon-200/40">{t('game.logEmpty')}</p>
   return (
     <ul className={`flex flex-col gap-1.5 ${compact ? 'max-h-48 overflow-y-auto scrollbar-thin' : ''}`}>
       {entries.map((e) => (
         <li key={e.id} className={`animate-fade-in text-sm text-moon-200/70 ${compact ? 'text-xs' : ''}`}>
-          {e.message}
+          {translateGameLogMessage(e.message, lang, t)}
         </li>
       ))}
     </ul>

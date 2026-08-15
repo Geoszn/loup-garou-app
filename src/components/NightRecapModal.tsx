@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useCountdown } from './Timer'
 import { useLanguage } from '../i18n/LanguageContext'
+import { translateGameLogMessage } from '../lib/gameLogTranslate'
 import type { MyGameView } from '../types/game'
 
 /** Pop-up affichée juste après la résolution d'une nuit (statut
@@ -11,7 +12,7 @@ import type { MyGameView } from '../types/game'
  * mais se ferme dès que tous les joueurs vivants cliquent sur "Continuer" —
  * même patron que VoteRecapModal / submit_vote_recap_ready. */
 export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const [submitting, setSubmitting] = useState(false)
   const remaining = useCountdown(view.game.phase_deadline)
 
@@ -129,7 +130,7 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
             <ul className="flex flex-col gap-1.5">
               {entries.map((e) => (
                 <li key={e.id} className="animate-fade-in text-sm text-moon-200/80">
-                  {e.message}
+                  {translateGameLogMessage(e.message, lang, t)}
                 </li>
               ))}
             </ul>
