@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { LinkButton } from '../components/ui'
 import { LeaderboardWidget } from '../components/LeaderboardWidget'
 import { EventBanner } from '../components/EventBanner'
+import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { useActiveEvents } from '../hooks/useActiveEvents'
 import { useLanguage } from '../i18n/LanguageContext'
 
@@ -33,6 +34,13 @@ export default function Landing() {
           </span>
         </div>
         <nav className="flex items-center gap-2 sm:gap-3">
+          {/* Sélecteur FR/EN visible dès la page publique (avant même de
+              créer un compte) : jusqu'ici seule la détection automatique
+              (langue du navigateur, voir detectInitialLang) s'appliquait
+              ici — un visiteur mal détecté n'avait aucun moyen de corriger
+              la langue avant d'atteindre l'inscription. Non connecté, le
+              choix reste en localStorage (voir LanguageSwitcher). */}
+          {!session && <LanguageSwitcher />}
           {/* Icône seule sur mobile (sinon, avec "Connexion"/"Créer un
               compte" à côté, la rangée dépasse et tout le nav retombe sur
               sa propre ligne, mal aligné sous le logo) — le libellé
