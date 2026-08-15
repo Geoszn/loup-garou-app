@@ -7,6 +7,7 @@ import { DEFAULT_ROLE_IMAGES } from '../components/RoleCard'
 import { ROLES, ROLE_ORDER, type RoleId } from '../lib/roles'
 import { translations, type TranslationKey } from '../i18n/translations'
 import type { EventBannerColor, EventBonusType, GameEvent } from '../types/events'
+import { continentEmoji, continentName } from '../lib/continents'
 
 // ============================================================================
 // Dashboard administrateur. Volontairement en français uniquement, pas
@@ -124,6 +125,7 @@ interface RecentGameStat {
   winner_team: string
   role: string | null
   won: boolean
+  points_gained: number
   created_at: string
 }
 
@@ -140,6 +142,19 @@ interface AdminUserDetail {
   avatar_icon: string
   friend_code: string
   last_sign_in_at: string | null
+  // Enrichissement demandé par l'admin ("plus d'informations sur le
+  // compte") — déjà en base (profiles/auth.users), simplement pas encore
+  // exposé ici avant migration 0084.
+  email_confirmed_at: string | null
+  rank_points: number
+  rank_floor: number
+  current_streak: number
+  best_streak: number
+  continent: string | null
+  last_role: string | null
+  role_streak: number
+  username_changed_at: string | null
+  friends_count: number
   stats: {
     games_played: number
     games_won: number
@@ -743,20 +758,55 @@ function UserDetailModal({ userId, onClose }: { userId: string; onClose: () => v
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
             <span className="text-moon-200/40">Email</span>
-            <span className="text-moon-200">{detail.email}</span>
+            <span className="text-moon-200">
+              {detail.email}
+              {detail.email_confirmed_at ? (
+                <span className="ml-1 text-emerald-400" title={`Confirmé le ${fmtDate(detail.email_confirmed_at)}`}>
+                  ✓
+                </span>
+              ) : (
+                <span className="ml-1 text-blood-400" title="Email non confirmé">
+                  ✕
+                </span>
+              )}
+            </span>
             <span className="text-moon-200/40">Inscrit le</span>
             <span className="text-moon-200">{fmtDate(detail.created_at)}</span>
             <span className="text-moon-200/40">Dernière connexion</span>
             <span className="text-moon-200">{detail.last_sign_in_at ? fmtDate(detail.last_sign_in_at) : '—'}</span>
             <span className="text-moon-200/40">Langue</span>
             <span className="text-moon-200">{detail.lang}</span>
+            <span className="text-moon-200/40">Continent</span>
+            <span className="text-moon-200">
+              {detail.continent ? `${continentEmoji(detail.continent)} ${continentName(detail.continent, 'fr')}` : '—'}
+            </span>
             <span className="text-moon-200/40">Code ami</span>
             <span className="text-moon-200">{detail.friend_code}</span>
+            <span className="text-moon-200/40">Amis</span>
+            <span className="text-moon-200">{detail.friends_count}</span>
+            <span className="text-moon-200/40">Pseudo modifié</span>
+            <span className="text-moon-200">{detail.username_changed_at ? fmtDate(detail.username_changed_at) : 'Jamais'}</span>
             <span className="text-moon-200/40">Statut</span>
             <span className="text-moon-200">
               {detail.is_admin && 'Admin '}
               {detail.is_banned ? `Suspendu${detail.banned_reason ? ` (${detail.banned_reason})` : ''}` : 'Actif'}
             </span>
+          </div>
+
+          <div className="border-t border-night-600/60 pt-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-moon-200/50">Classement</p>
+            <div className="mb-3 grid grid-cols-2 gap-2">
+              <StatCard label="Points" value={detail.rank_points} />
+              <StatCard label="Plancher de palier" value={detail.rank_floor} />
+              <StatCard label="Série en cours" value={detail.current_streak} />
+              <StatCard label="Meilleure série" value={detail.best_streak} />
+            </div>
+            {detail.last_role && (
+              <p className="text-xs text-moon-200/60">
+                Dernier rôle joué : <span className="text-moon-200">{detail.last_role}</span>
+                {detail.role_streak > 1 && ` (${detail.role_streak} fois de suite)`}
+              </p>
+            )}
           </div>
 
           <div className="border-t border-night-600/60 pt-3">
@@ -785,7 +835,10 @@ function UserDetailModal({ userId, onClose }: { userId: string; onClose: () => v
                     <span>
                       {g.code} · {g.role ?? '?'}
                     </span>
-                    <span className={g.won ? 'text-emerald-400' : 'text-blood-400'}>{g.won ? 'Gagné' : 'Perdu'}</span>
+                    <span className={g.won ? 'text-emerald-400' : 'text-blood-400'}>
+                      {g.won ? 'Gagné' : 'Perdu'} ({g.points_gained >= 0 ? '+' : ''}
+                      {g.points_gained})
+                    </span>
                   </div>
                 ))}
               </div>
