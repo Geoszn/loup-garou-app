@@ -341,8 +341,8 @@ export const translations = {
   },
   'role.loup_alpha.name': { fr: 'Loup Alpha', en: 'Alpha Wolf' },
   'role.loup_alpha.description': {
-    fr: "Nécessite au moins 10 joueurs et au plus 2 Loups-Garous simples. Vous votez chaque nuit avec le reste de la meute, mais votre vote compte double — comme celui du Capitaine en journée. Si la majorité des loups est d'accord, vous pouvez choisir d'infecter la victime au lieu de l'éliminer, pour la faire rejoindre les loups (une seule infection par partie, et vous ne décidez jamais seul).",
-    en: "Requires at least 10 players and at most 2 regular Werewolves. You vote each night with the rest of the pack, but your vote counts double — like the Captain's during the day. If the majority of wolves agree, you can choose to infect the victim instead of eliminating them, making them join the wolves (one infection per game, and you never decide alone).",
+    fr: "Nécessite au moins 10 joueurs. Vous votez chaque nuit avec le reste de la meute, mais votre vote compte double — comme celui du Capitaine en journée. Si la majorité des loups est d'accord, vous pouvez choisir d'infecter la victime au lieu de l'éliminer, pour la faire rejoindre les loups (une seule infection par partie, et vous ne décidez jamais seul).",
+    en: "Requires at least 10 players. You vote each night with the rest of the pack, but your vote counts double — like the Captain's during the day. If the majority of wolves agree, you can choose to infect the victim instead of eliminating them, making them join the wolves (one infection per game, and you never decide alone).",
   },
   'role.loup_alpha.nightAction': {
     fr: 'Votez avec votre meute (votre voix compte double). Si la majorité des loups est d’accord, vous pouvez infecter la victime au lieu de l’éliminer.',
@@ -456,12 +456,12 @@ export const translations = {
     en: 'Too many special roles for the current number of players.',
   },
   'lobby.alphaToggleHint': {
-    fr: 'Nécessite au moins 10 joueurs et au plus 2 Loups-Garous simples — remplace le vote collectif de la meute par une décision solo (éliminer ou infecter) tant que le Loup Alpha est en vie.',
-    en: "Requires at least 10 players and at most 2 regular Werewolves — replaces the pack's collective vote with a solo decision (eliminate or infect) while the Alpha Wolf is alive.",
+    fr: "Nécessite au moins 10 joueurs. Vote avec le reste de la meute (son vote compte double) ; si la majorité des loups est d'accord, il peut infecter une victime au lieu de l'éliminer (une seule fois par partie).",
+    en: "Requires at least 10 players. Votes with the rest of the pack (their vote counts double); if the majority of wolves agree, they can infect a victim instead of eliminating them (once per game).",
   },
   'lobby.alphaConstraintViolated': {
-    fr: 'Le Loup Alpha nécessite au moins 10 joueurs et au plus 2 Loups-Garous simples.',
-    en: 'The Alpha Wolf requires at least 10 players and at most 2 regular Werewolves.',
+    fr: 'Le Loup Alpha nécessite au moins 10 joueurs.',
+    en: 'The Alpha Wolf requires at least 10 players.',
   },
   'lobby.captainToggleHint': {
     fr: 'Élu par le village juste avant la première nuit (garde son vrai rôle) — vote compte double, et tranche les égalités. Ne prend pas de place de rôle spécial.',

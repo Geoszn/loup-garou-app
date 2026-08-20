@@ -15,7 +15,7 @@ export interface VoiceRoom {
 export async function getVoiceRoomUrl(
   gameId: string,
   code: string,
-  channel: 'lobby' | 'village' | 'graveyard'
+  channel: 'lobby' | 'village' | 'wolves' | 'graveyard'
 ): Promise<VoiceRoom> {
   const { data: sessionData } = await supabase.auth.getSession()
   const token = sessionData.session?.access_token

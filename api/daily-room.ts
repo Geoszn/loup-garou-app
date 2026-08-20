@@ -81,7 +81,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
   const { gameId, channel, code } = body ?? {}
 
-  if (!gameId || !code || (channel !== 'lobby' && channel !== 'village' && channel !== 'graveyard')) {
+  // 'wolves' ajouté à la demande utilisateur : vocal de nuit réservé à la
+  // meute — can_listen_channel (appelé plus bas) délègue déjà à
+  // can_access_channel pour ce canal, qui restreint l'accès aux loups
+  // vivants pendant la nuit (migration 0091), donc aucun changement
+  // supplémentaire n'est nécessaire côté vérification serveur.
+  if (!gameId || !code || (channel !== 'lobby' && channel !== 'village' && channel !== 'wolves' && channel !== 'graveyard')) {
     res.status(400).json({ error: 'Requête invalide.' })
     return
   }

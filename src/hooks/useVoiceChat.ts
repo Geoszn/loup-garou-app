@@ -9,7 +9,12 @@ import { useLanguage } from '../i18n/LanguageContext'
 // fond — à ajuster si trop sensible/pas assez en usage réel.
 const SPEAKING_THRESHOLD = 0.02
 
-export type VoiceChannel = 'lobby' | 'village' | 'graveyard' | null
+// 'wolves' ajouté à la demande utilisateur : vocal de nuit réservé à la
+// meute (même salon Daily que le texte 'wolves', déjà autorisé côté
+// can_access_channel/can_read_channel depuis la migration 0091 — et
+// can_listen_channel délègue à can_access_channel pour tout canal autre que
+// 'village', donc rien à changer côté SQL pour ce salon précis).
+export type VoiceChannel = 'lobby' | 'village' | 'wolves' | 'graveyard' | null
 
 interface VoiceParticipant {
   // Identifiant d'affichage stable pour ce JOUEUR (pas cette connexion) —

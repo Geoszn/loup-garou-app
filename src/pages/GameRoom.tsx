@@ -180,7 +180,12 @@ export default function GameRoom() {
   // NightChat pour la nuit). Les morts ont toujours accès au cimetière ; les
   // vivants au village pendant le jour, ainsi que pendant l'élection du
   // Capitaine (captain_election, voir migration 0066) — le texte écrit reste
-  // fermé pendant l'élection, seul le vocal s'ouvre. Pas de vocal la nuit.
+  // fermé pendant l'élection, seul le vocal s'ouvre. Pas de vocal de village
+  // la nuit — le vocal des Loups pendant la nuit est géré séparément, à
+  // l'intérieur de NightChat (onglet "Loups" uniquement), pas ici : ce
+  // `voiceChannel` unique ne peut représenter qu'un seul salon à la fois,
+  // alors que la nuit peut voir village (texte, sans vocal) ET loups (texte
+  // + vocal) coexister selon le rôle du joueur.
   let voiceChannel: VoiceChannel = null
 
   if (!alive) {
@@ -323,7 +328,9 @@ export default function GameRoom() {
             <NightResultPanel view={view} />
             <NightChat
               gameId={gameId!}
+              code={code!}
               selfId={user.id}
+              displayName={me?.display_name ?? t('common.playerFallback')}
               isWolf={isWolfTeam(view.my_role)}
               nightTab={nightTab}
               setNightTab={setNightTab}
@@ -589,16 +596,27 @@ function GhostTabs({
  * privé et nominatif pour se concerter et choisir leur victime. Même patron
  * que DayTabs / GhostTabs, mais l'onglet "Loups" n'apparaît que s'il est
  * pertinent — pas la peine d'imposer un sélecteur à tout le monde pour un
- * choix qui n'existe que pour les loups. */
+ * choix qui n'existe que pour les loups.
+ *
+ * Demande utilisateur : vocal actif dans l'onglet "Loups", réservé à la
+ * meute — VoiceChat n'est monté que dans cette branche (jamais pour le
+ * village de nuit, resté texte seul). L'accès réel est déjà verrouillé côté
+ * serveur (can_listen_channel → can_access_channel, migration 0091) : même
+ * si quelqu'un forçait ce composant à s'afficher, seul un loup vivant en
+ * pleine nuit obtiendrait effectivement une salle Daily de l'API. */
 function NightChat({
   gameId,
+  code,
   selfId,
+  displayName,
   isWolf,
   nightTab,
   setNightTab,
 }: {
   gameId: string
+  code: string
   selfId: string
+  displayName: string
   isWolf: boolean
   nightTab: 'village' | 'wolves'
   setNightTab: (t: 'village' | 'wolves') => void
@@ -632,7 +650,10 @@ function NightChat({
       {nightTab === 'village' ? (
         <ChatPanel gameId={gameId} channel="village" selfId={selfId} note={t('game.nightChatNote')} />
       ) : (
-        <ChatPanel gameId={gameId} channel="wolves" selfId={selfId} />
+        <div className="flex flex-col gap-3">
+          <VoiceChat gameId={gameId} code={code} channel="wolves" displayName={displayName} selfUserId={selfId} />
+          <ChatPanel gameId={gameId} channel="wolves" selfId={selfId} />
+        </div>
       )}
     </div>
   )
