@@ -307,7 +307,7 @@ export default function GameRoom() {
                 tant que tous les loups vivants n'ont pas voté (upsert côté
                 serveur, migration 0035), mais l'écran d'attente empêchait
                 jusqu'ici de revenir modifier son choix. */}
-            {view.my_role === 'loup_garou' && view.game.night_step === 'loup_garou' ? (
+            {isWolfTeam(view.my_role) && view.game.night_step === 'loup_garou' ? (
               <WolfPanel view={view} gameId={gameId!} selfId={user.id} />
             ) : view.pending_action_required && view.pending_action_required !== 'vote' ? (
               <ActionPanel view={view} gameId={gameId!} selfId={user.id} />

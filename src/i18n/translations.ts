@@ -341,12 +341,12 @@ export const translations = {
   },
   'role.loup_alpha.name': { fr: 'Loup Alpha', en: 'Alpha Wolf' },
   'role.loup_alpha.description': {
-    fr: "Nécessite au moins 10 joueurs et au plus 2 Loups-Garous simples. Chaque nuit, c'est vous seul qui décidez du sort de la meute : éliminer une victime, ou l'infecter pour la faire rejoindre les loups (une seule infection par partie).",
-    en: 'Requires at least 10 players and at most 2 regular Werewolves. Each night, you alone decide the pack\'s fate: eliminate a victim, or infect them to make them join the wolves (one infection per game).',
+    fr: "Nécessite au moins 10 joueurs et au plus 2 Loups-Garous simples. Vous votez chaque nuit avec le reste de la meute, mais votre vote compte double — comme celui du Capitaine en journée. Si la majorité des loups est d'accord, vous pouvez choisir d'infecter la victime au lieu de l'éliminer, pour la faire rejoindre les loups (une seule infection par partie, et vous ne décidez jamais seul).",
+    en: "Requires at least 10 players and at most 2 regular Werewolves. You vote each night with the rest of the pack, but your vote counts double — like the Captain's during the day. If the majority of wolves agree, you can choose to infect the victim instead of eliminating them, making them join the wolves (one infection per game, and you never decide alone).",
   },
   'role.loup_alpha.nightAction': {
-    fr: 'Choisissez une cible, puis éliminez-la ou infectez-la (infection utilisable une seule fois).',
-    en: 'Choose a target, then eliminate or infect them (infection usable once).',
+    fr: 'Votez avec votre meute (votre voix compte double). Si la majorité des loups est d’accord, vous pouvez infecter la victime au lieu de l’éliminer.',
+    en: 'Vote with your pack (your vote counts double). If the majority of wolves agree, you can infect the victim instead of eliminating them.',
   },
   'role.loup_garou.nightAction': {
     fr: 'Choisissez avec votre meute la victime de la nuit.',
@@ -503,10 +503,6 @@ export const translations = {
   'turnNotif.default': { fr: "C'est à vous de jouer.", en: "It's your turn to play." },
   'turnNotif.cupidon': { fr: '💘 Cupidon, désignez les deux amoureux.', en: '💘 Cupid, choose the two lovers.' },
   'turnNotif.voyante': { fr: '🔮 Voyante, sondez un joueur.', en: '🔮 Seer, take a look at a player.' },
-  'turnNotif.loup_alpha': {
-    fr: '👑 Loup Alpha, décidez du sort de votre proie.',
-    en: '👑 Alpha Wolf, decide your prey\'s fate.',
-  },
   'turnNotif.loup_garou': {
     fr: '🐺 Loups-Garous, choisissez votre victime.',
     en: '🐺 Werewolves, choose your victim.',
@@ -728,7 +724,6 @@ export const translations = {
   'nightStep.cupidon': { fr: 'Cupidon décoche ses flèches...', en: 'Cupid is shooting their arrows...' },
   'nightStep.voyante': { fr: 'La Voyante consulte son destin...', en: 'The Seer is consulting fate...' },
   'nightStep.loup_garou': { fr: 'Les Loups-Garous choisissent leur victime...', en: 'The Werewolves are choosing their victim...' },
-  'nightStep.loup_alpha': { fr: 'Le Loup Alpha décide du sort de sa proie...', en: "The Alpha Wolf is deciding its prey's fate..." },
   'nightStep.sorciere': { fr: 'La Sorcière prépare ses potions...', en: 'The Witch is preparing her potions...' },
   'nightStep.resolve': { fr: 'Le sort en est jeté...', en: 'The die is cast...' },
   'phase.lobby': { fr: 'Salon', en: 'Lobby' },
@@ -763,17 +758,6 @@ export const translations = {
   'action.voyante.title': { fr: "Sondez l'identité d'un joueur", en: "Probe a player's identity" },
   'action.voyante.pastVisions': { fr: 'Vos visions passées', en: 'Your past visions' },
   'action.voyante.confirm': { fr: 'Sonder ce joueur', en: 'Probe this player' },
-  'action.loupAlpha.title': { fr: 'Décidez du sort de votre proie', en: "Decide your prey's fate" },
-  'action.loupAlpha.subtitle': {
-    fr: 'Choisissez une cible, puis éliminez-la ou infectez-la.',
-    en: 'Choose a target, then eliminate or infect them.',
-  },
-  'action.loupAlpha.eliminate': { fr: 'Éliminer', en: 'Eliminate' },
-  'action.loupAlpha.infect': { fr: 'Infecter', en: 'Infect' },
-  'action.loupAlpha.infectUsedHint': {
-    fr: 'Infection déjà utilisée cette partie — vous ne pouvez plus qu’éliminer.',
-    en: 'Infection already used this game — you can now only eliminate.',
-  },
   'action.wolf.title': { fr: 'Choisissez votre victime', en: 'Choose your victim' },
   'action.wolf.subtitle': { fr: 'Concertez-vous avec votre meute.', en: 'Coordinate with your pack.' },
   'action.wolf.abstainTally': { fr: 'Abstention ({{n}})', en: 'Abstained ({{n}})' },
@@ -786,6 +770,40 @@ export const translations = {
     en: "You won't designate anyone. Your vote won't count towards the pack's choice — if every Werewolf still alive also abstains (or if the votes are tied), no one will be devoured tonight. You can still pick a player afterwards, as long as the pack hasn't finished its turn.",
   },
   'action.wolf.abstainConfirmLabel': { fr: "Confirmer l'abstention", en: 'Confirm abstention' },
+  // Refonte du Loup Alpha (migration 0093) : son vote pèse double dans
+  // WolfPanel ci-dessus — affiché uniquement à lui-même.
+  'action.wolf.alphaDoubleVoteHint': {
+    fr: '👑 Votre vote de Loup Alpha compte double dans le dépouillement de la meute.',
+    en: "👑 Your Alpha Wolf vote counts double in the pack's tally.",
+  },
+  'action.wolf.alphaInfectSectionTitle': { fr: "Infecter plutôt qu'éliminer ?", en: 'Infect instead of eliminate?' },
+  'action.wolf.alphaInfectSectionSubtitle': {
+    fr: "Si la majorité de la meute est d'accord, le Loup Alpha pourra infecter la victime pour la faire rejoindre les loups, au lieu de l'éliminer.",
+    en: 'If the majority of the pack agrees, the Alpha Wolf will be able to infect the victim to make them join the wolves, instead of eliminating them.',
+  },
+  'action.wolf.alphaInfectAgreeButton': { fr: "Je suis d'accord pour infecter", en: 'I agree to infect' },
+  'action.wolf.alphaInfectAgreed': { fr: "✅ Vous êtes d'accord pour infecter", en: '✅ You agree to infect' },
+  'action.wolf.alphaInfectProgress': {
+    fr: '{{agreed}} / {{needed}} loups d’accord',
+    en: '{{agreed}} / {{needed}} wolves agree',
+  },
+  'action.wolf.alphaConfirmInfectButton': { fr: "🧬 Confirmer l'infection", en: '🧬 Confirm infection' },
+  'action.wolf.alphaConfirmInfectCancel': {
+    fr: "🩸 Annuler l'infection, éliminer à la place",
+    en: '🩸 Cancel infection, eliminate instead',
+  },
+  'action.wolf.alphaConfirmInfectHint': {
+    fr: "En attente de la majorité de la meute avant de pouvoir infecter.",
+    en: 'Waiting for the pack majority before you can infect.',
+  },
+  'action.wolf.alphaInfectConfirmedBanner': {
+    fr: '🧬 Vous infecterez la victime désignée au lieu de l’éliminer.',
+    en: "🧬 You'll infect the chosen victim instead of eliminating them.",
+  },
+  'action.wolf.alphaInfectUsedHint': {
+    fr: 'Infection déjà utilisée cette partie — la meute ne peut plus qu’éliminer.',
+    en: 'Infection already used this game — the pack can now only eliminate.',
+  },
   'action.witch.title': { fr: 'Vos potions', en: 'Your potions' },
   'action.witch.victimKnown': {
     fr: 'Cette nuit, les loups s’apprêtent à dévorer {{name}}.',

@@ -21,8 +21,6 @@ export function ActionPanel({ view, gameId, selfId }: { view: MyGameView; gameId
       return <VoyantePanel view={view} gameId={gameId} selfId={selfId} />
     case 'loup_garou':
       return <WolfPanel view={view} gameId={gameId} selfId={selfId} />
-    case 'loup_alpha':
-      return <LoupAlphaPanel view={view} gameId={gameId} selfId={selfId} />
     case 'sorciere':
       return <SorcierePanel view={view} gameId={gameId} selfId={selfId} />
     case 'vote':
@@ -216,6 +214,24 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
     votesByTarget.set(v.target_id, (votesByTarget.get(v.target_id) ?? 0) + 1)
   })
 
+  // Refonte du Loup Alpha (migration 0093, demande utilisateur : "il faut que
+  // la majorité des loups choississent d'infecter pour que l'alpha ai acces
+  // a cette option") : l'Alpha vote désormais avec le reste de la meute
+  // ci-dessus (son vote pèse double côté serveur, get_wolf_target) — la
+  // seule chose spécifique à afficher ici est la section d'accord de meute
+  // pour infecter, visible tant qu'un Loup Alpha vivant n'a pas encore
+  // utilisé son infection (view.alpha_infect_available), et le bouton de
+  // confirmation réservé à l'Alpha lui-même une fois la majorité atteinte.
+  const isAlpha = view.my_role === 'loup_alpha'
+  const aliveWolfIds = alive.filter((p) => teammates.has(p.user_id) || p.user_id === selfId).map((p) => p.user_id)
+  const agreedIds = new Set(view.alpha_infect_agreed_ids ?? [])
+  const agreedCount = aliveWolfIds.filter((id) => agreedIds.has(id)).length
+  const neededAgreements = aliveWolfIds.length === 0 ? 0 : Math.floor(aliveWolfIds.length / 2) + 1
+  const myAgreed = agreedIds.has(selfId)
+  const majorityReached = agreedCount >= neededAgreements
+  const [alphaLoading, setAlphaLoading] = useState(false)
+  const [alphaError, setAlphaError] = useState<string | null>(null)
+
   async function submit(id: string | null) {
     setSelected(id)
     setLocalAbstain(id === null)
@@ -226,8 +242,30 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
     if (rpcError) setError(rpcError.message)
   }
 
+  async function toggleAgreement() {
+    setAlphaLoading(true)
+    setAlphaError(null)
+    const { error: rpcError } = await supabase.rpc('submit_alpha_infect_agreement', { p_game_id: gameId, p_agree: !myAgreed })
+    setAlphaLoading(false)
+    if (rpcError) setAlphaError(rpcError.message)
+  }
+
+  async function toggleAlphaConfirm() {
+    setAlphaLoading(true)
+    setAlphaError(null)
+    const { error: rpcError } = await supabase.rpc('submit_loup_alpha_confirm_infect', {
+      p_game_id: gameId,
+      p_confirm: !view.alpha_infect_confirmed,
+    })
+    setAlphaLoading(false)
+    if (rpcError) setAlphaError(rpcError.message)
+  }
+
   return (
     <PanelShell emoji="🐺" title={t('action.wolf.title')} subtitle={t('action.wolf.subtitle')}>
+      {isAlpha && !view.alpha_infect_used && (
+        <p className="mb-3 text-xs text-moon-300">{t('action.wolf.alphaDoubleVoteHint')}</p>
+      )}
       {hasVoted && <VoteRecordedBanner />}
       <PlayerGrid
         players={alive}
@@ -279,58 +317,60 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
           submit(null)
         }}
       />
-    </PanelShell>
-  )
-}
 
-// Carte "Loup Alpha" (voir migration 0088, demande utilisateur) : tant qu'il
-// est vivant, remplace le vote collectif classique de la meute (WolfPanel
-// ci-dessus) — lui seul décide chaque nuit. Contrairement à WolfPanel, c'est
-// un acteur SOLO (comme la Voyante/la Sorcière) : pas besoin d'un panneau
-// persistant qui change de cible tant que "tout le monde n'a pas voté",
-// l'envoi est définitif pour la nuit. Choix cible via PlayerGrid, puis
-// Éliminer (comme un loup classique) ou Infecter (une seule fois par
-// partie — bouton désactivé une fois alpha_infect_used à true).
-function LoupAlphaPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
-  const { t } = useLanguage()
-  const [selected, setSelected] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
-  const teammates = new Set(view.wolf_teammates ?? [])
-  const alive = view.players.filter((p) => p.is_alive)
-  const infectUsed = view.alpha_infect_used === true
+      {/* Accord de meute pour infecter (migration 0093) : visible tant qu'un
+          Loup Alpha vivant n'a pas encore utilisé son infection. Chaque loup
+          (Alpha compris) bascule librement son accord ; l'Alpha voit en plus
+          un bouton de confirmation, actif seulement une fois la majorité
+          atteinte — le serveur revérifie tout à la résolution de toute
+          façon, cet affichage n'est qu'un guide. */}
+      {view.alpha_infect_available && (
+        <div className="mt-4 border-t border-night-600/60 pt-4">
+          <p className="mb-1 text-sm font-semibold text-moon-200">{t('action.wolf.alphaInfectSectionTitle')}</p>
+          <p className="mb-3 text-xs text-moon-200/50">{t('action.wolf.alphaInfectSectionSubtitle')}</p>
 
-  async function submit(mode: 'eliminate' | 'infect', target: string | null) {
-    setLoading(true)
-    setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_loup_alpha', { p_game_id: gameId, p_target: target, p_mode: mode })
-    setLoading(false)
-    if (rpcError) setError(rpcError.message)
-  }
+          <button
+            type="button"
+            onClick={toggleAgreement}
+            disabled={alphaLoading}
+            className={`w-full rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+              myAgreed
+                ? 'border-emerald-500/60 bg-emerald-700/15 text-emerald-400'
+                : 'border-night-600 text-moon-200/60 hover:border-night-500 hover:text-moon-200'
+            }`}
+          >
+            {myAgreed ? t('action.wolf.alphaInfectAgreed') : t('action.wolf.alphaInfectAgreeButton')}
+          </button>
+          <p className="mt-2 text-xs text-moon-200/50">
+            {t('action.wolf.alphaInfectProgress', { agreed: agreedCount, needed: neededAgreements })}
+          </p>
 
-  return (
-    <PanelShell emoji="👑" title={t('action.loupAlpha.title')} subtitle={t('action.loupAlpha.subtitle')}>
-      <PlayerGrid
-        players={alive}
-        selfId={selfId}
-        selectable
-        selectedId={selected}
-        disabledIds={alive.filter((p) => teammates.has(p.user_id) || p.user_id === selfId).map((p) => p.user_id)}
-        onSelect={(id) => setSelected(id)}
-      />
-      <ErrorText>{error}</ErrorText>
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        <Button variant="danger" disabled={loading || !selected} onClick={() => submit('eliminate', selected)}>
-          🩸 {t('action.loupAlpha.eliminate')}
-        </Button>
-        <Button disabled={loading || !selected || infectUsed} onClick={() => submit('infect', selected)}>
-          🧬 {t('action.loupAlpha.infect')}
-        </Button>
-      </div>
-      {infectUsed && <p className="mt-2 text-xs text-moon-200/40">{t('action.loupAlpha.infectUsedHint')}</p>}
-      <Button variant="ghost" className="mt-3 w-full" disabled={loading} onClick={() => submit('eliminate', null)}>
-        🤷 {t('action.wolf.abstainButton')}
-      </Button>
+          {isAlpha && (
+            <>
+              {view.alpha_infect_confirmed && (
+                <p className="mt-3 text-xs text-moon-300">{t('action.wolf.alphaInfectConfirmedBanner')}</p>
+              )}
+              <Button
+                className="mt-3 w-full"
+                variant={view.alpha_infect_confirmed ? 'ghost' : 'primary'}
+                disabled={alphaLoading || (!majorityReached && !view.alpha_infect_confirmed)}
+                onClick={toggleAlphaConfirm}
+              >
+                {view.alpha_infect_confirmed ? t('action.wolf.alphaConfirmInfectCancel') : t('action.wolf.alphaConfirmInfectButton')}
+              </Button>
+              {!majorityReached && !view.alpha_infect_confirmed && (
+                <p className="mt-2 text-xs text-moon-200/40">{t('action.wolf.alphaConfirmInfectHint')}</p>
+              )}
+            </>
+          )}
+          <ErrorText>{alphaError}</ErrorText>
+        </div>
+      )}
+      {isAlpha && view.alpha_infect_used && (
+        <p className="mt-4 border-t border-night-600/60 pt-4 text-xs text-moon-200/40">
+          {t('action.wolf.alphaInfectUsedHint')}
+        </p>
+      )}
     </PanelShell>
   )
 }

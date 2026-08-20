@@ -28,8 +28,9 @@ export const NIGHT_STEP_LABEL: Record<string, TranslationKey> = {
   voleur: 'nightStep.voleur',
   cupidon: 'nightStep.cupidon',
   voyante: 'nightStep.voyante',
+  // Refonte 0093 : le Loup Alpha n'a plus d'étape de nuit dédiée, il vote
+  // avec le reste de la meute pendant 'loup_garou'.
   loup_garou: 'nightStep.loup_garou',
-  loup_alpha: 'nightStep.loup_alpha',
   sorciere: 'nightStep.sorciere',
   resolve: 'nightStep.resolve',
 }
@@ -45,7 +46,6 @@ export const NIGHT_STEP_ICON: Record<string, string> = {
   cupidon: '💘',
   voyante: '🔮',
   loup_garou: '🐺',
-  loup_alpha: '👑',
   sorciere: '🧪',
   resolve: '🌙',
 }

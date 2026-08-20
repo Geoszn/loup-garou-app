@@ -7,8 +7,10 @@ const STORAGE_KEY = 'lg-turn-notifications'
 const ACTION_LABEL_KEYS: Record<string, TranslationKey> = {
   cupidon: 'turnNotif.cupidon',
   voyante: 'turnNotif.voyante',
+  // Refonte 0093 : le Loup Alpha vote désormais avec le reste de la meute
+  // pendant l'étape 'loup_garou' (pending_action_required vaut 'loup_garou'
+  // pour lui aussi) — plus d'étape dédiée, turnNotif.loup_garou suffit.
   loup_garou: 'turnNotif.loup_garou',
-  loup_alpha: 'turnNotif.loup_alpha',
   sorciere: 'turnNotif.sorciere',
   vote: 'turnNotif.vote',
   hunter: 'turnNotif.hunter',

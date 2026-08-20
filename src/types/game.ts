@@ -15,16 +15,16 @@ export type NightStep =
   | 'enfant_sauvage'
   | 'voyante'
   | 'loup_garou'
-  | 'loup_alpha'
   | 'sorciere'
   | 'resolve'
   | null
 
 export interface RoleCounts {
   loup_garou: number
-  // Carte avancée (voir migration 0088) : nécessite >= 10 joueurs et au plus
-  // 2 loup_garou "simples" — remplace le vote collectif classique de la
-  // meute par une action solo (éliminer ou infecter) tant qu'il est vivant.
+  // Carte avancée (voir migration 0088, refonte 0093) : nécessite >= 10
+  // joueurs et au plus 2 loup_garou "simples". Vote avec le reste de la
+  // meute pendant l'étape collective classique 'loup_garou' (son vote compte
+  // double, comme le Capitaine en journée) — pas d'étape de nuit dédiée.
   loup_alpha: boolean
   voyante: boolean
   sorciere: boolean
@@ -206,6 +206,20 @@ export interface MyGameView {
   // consommé mon infection (une seule par partie) ? Sert à désactiver le
   // bouton "Infecter" côté client sans attendre un refus serveur.
   alpha_infect_used: boolean | null
+  // Refonte 0093 : visible par toute la meute (loup_garou ou loup_alpha)
+  // pendant l'étape de nuit 'loup_garou', uniquement si un Loup Alpha est en
+  // jeu et n'a pas encore utilisé son infection — conditionne l'affichage
+  // même de la section "accord pour infecter" côté client.
+  alpha_infect_available: boolean
+  // Loups (identifiants user_id) déjà déclarés d'accord pour infecter cette
+  // nuit (voir submit_alpha_infect_agreement) — sert à afficher le décompte
+  // "X / majorité nécessaire" et le badge ✓ sur chaque loup dans la liste.
+  alpha_infect_agreed_ids: string[]
+  // Est-ce que le Loup Alpha a déjà confirmé vouloir infecter cette nuit
+  // (submit_loup_alpha_confirm_infect) ? Peut redevenir false si un loup
+  // retire son accord et fait retomber le total sous la majorité — revérifié
+  // par le serveur au moment de resolve_night_deaths de toute façon.
+  alpha_infect_confirmed: boolean
   wolf_teammates: string[]
   seer_reveals: { target_id: string; role: string; night_number: number }[]
   witch_heal_used: boolean
