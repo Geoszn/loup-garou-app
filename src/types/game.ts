@@ -197,6 +197,14 @@ export interface MyGameView {
   // d'annonce ponctuel.
   thief_stole_my_card: boolean
   thief_stole_my_new_role: string | null
+  // Personnel (voir migration 0097) : symétrique aux deux champs ci-dessus,
+  // mais pour MOI en tant qu'ACTEUR du vol (le Voleur lui-même) -- retour
+  // utilisateur : sans ça, il n'avait aucune confirmation de son action, le
+  // panneau disparaissant juste immédiatement après le clic (submit_voleur
+  // fait avancer la phase dans la foulée). thief_my_new_role est mon nouveau
+  // rôle (celui que la victime avait avant l'échange).
+  thief_i_stole: boolean
+  thief_my_new_role: string | null
   // Personnel (voir migration 0088) : ai-je été infecté(e) par le Loup Alpha
   // CETTE nuit (même principe que wild_child_turned_wolf plus haut, gated
   // 'day_reveal') ? my_role reflète déjà mon nouveau rôle en temps réel, ce

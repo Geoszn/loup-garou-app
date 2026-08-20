@@ -926,6 +926,28 @@ function NightResultPanel({ view }: { view: MyGameView }) {
     )
   }
 
+  // Retour utilisateur (voir migration 0097) : symétrique au bloc ci-dessus,
+  // mais pour le Voleur lui-même (l'ACTEUR du vol) -- avant cette migration,
+  // il n'avait aucune confirmation de son action : le panneau ActionPanel
+  // disparaissait juste sans rien afficher (submit_voleur fait avancer la
+  // phase dans la foulée), donnant l'impression que "le système a sauté son
+  // tour" alors qu'il avait bien agi.
+  if (view.thief_i_stole && nightNumber === 1) {
+    return (
+      <Card className="animate-fade-in border-blood-700/40 bg-gradient-to-b from-blood-900/20 to-night-900/40">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">🃏</span>
+          <div>
+            <p className="font-display text-sm text-moon-200">{t('game.thiefIStoleTitle')}</p>
+            <p className="text-sm text-moon-200/70">
+              {t('game.thiefIStole', { role: roleLabel(view.thief_my_new_role ?? '', t) })}
+            </p>
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
   if (view.my_role === 'voyante') {
     const current = view.seer_reveals.find((r) => r.night_number === nightNumber)
     if (!current) return null

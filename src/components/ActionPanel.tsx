@@ -261,50 +261,65 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
     if (rpcError) setAlphaError(rpcError.message)
   }
 
+  // Barre de progression de l'accord de meute (0 à 100%) — repère visuel
+  // rapide en plus du texte "X / Y", demande utilisateur : rendre la
+  // condition de majorité immédiatement lisible d'un coup d'œil.
+  const agreementPct = neededAgreements === 0 ? 0 : Math.min(100, Math.round((agreedCount / neededAgreements) * 100))
+
   return (
     <PanelShell emoji="🐺" title={t('action.wolf.title')} subtitle={t('action.wolf.subtitle')}>
       {isAlpha && !view.alpha_infect_used && (
         <p className="mb-3 text-xs text-moon-300">{t('action.wolf.alphaDoubleVoteHint')}</p>
       )}
       {hasVoted && <VoteRecordedBanner />}
-      <PlayerGrid
-        players={alive}
-        selfId={selfId}
-        selectable
-        selectedId={selected}
-        disabledIds={alive.filter((p) => teammates.has(p.user_id) || p.user_id === selfId).map((p) => p.user_id)}
-        onSelect={(id) => submit(id)}
-      />
-      {(votesByTarget.size > 0 || abstainCount > 0) && (
-        <p className="mt-3 text-xs text-moon-200/50">
-          {[...votesByTarget.entries()]
-            .map(([id, n]) => `${view.players.find((p) => p.user_id === id)?.display_name ?? '?'} (${n})`)
-            .concat(abstainCount > 0 ? [t('action.wolf.abstainTally', { n: abstainCount })] : [])
-            .join(' · ')}
-        </p>
-      )}
-      <ErrorText>{error}</ErrorText>
-      {loading && <p className="mt-2 text-xs text-moon-200/40">{t('action.wolf.sendingVote')}</p>}
 
-      {/* Possibilité de ne désigner personne : get_wolf_target (migration
-          0022/0035) ignore déjà les votes à cible nulle dans son
-          dépouillement, donc si toute la meute encore en vie s'abstient
-          (ou se partage les voix à égalité), personne n'est dévoré cette
-          nuit — comme un cas d'égalité classique. Toujours confirmé via
-          pop-up pour éviter un clic accidentel sur un choix qui engage
-          toute la meute. */}
-      <button
-        type="button"
-        onClick={() => setConfirmAbstainOpen(true)}
-        disabled={loading}
-        className={`mt-3 w-full rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-          localAbstain
-            ? 'border-moon-400/60 bg-night-800/70 text-moon-200'
-            : 'border-night-600 text-moon-200/60 hover:border-night-500 hover:text-moon-200'
-        }`}
-      >
-        {localAbstain ? `✅ ${t('action.wolf.abstained')}` : `🤷 ${t('action.wolf.abstainButton')}`}
-      </button>
+      {/* Bloc 1 : cible à éliminer — toujours affiché, c'est le vote
+          "principal". Réorganisation (retour utilisateur, migration 0097) :
+          titre numéroté + bloc visuellement isolé, pour que ce soit bien
+          distinct de l'option d'infection ci-dessous quand elle existe. */}
+      <div className="rounded-xl border border-night-600/60 bg-night-900/40 p-3">
+        <p className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-moon-200/60">
+          {t('action.wolf.stepTargetTitle')}
+        </p>
+        <PlayerGrid
+          players={alive}
+          selfId={selfId}
+          selectable
+          selectedId={selected}
+          disabledIds={alive.filter((p) => teammates.has(p.user_id) || p.user_id === selfId).map((p) => p.user_id)}
+          onSelect={(id) => submit(id)}
+        />
+        {(votesByTarget.size > 0 || abstainCount > 0) && (
+          <p className="mt-3 text-xs text-moon-200/50">
+            {[...votesByTarget.entries()]
+              .map(([id, n]) => `${view.players.find((p) => p.user_id === id)?.display_name ?? '?'} (${n})`)
+              .concat(abstainCount > 0 ? [t('action.wolf.abstainTally', { n: abstainCount })] : [])
+              .join(' · ')}
+          </p>
+        )}
+        <ErrorText>{error}</ErrorText>
+        {loading && <p className="mt-2 text-xs text-moon-200/40">{t('action.wolf.sendingVote')}</p>}
+
+        {/* Possibilité de ne désigner personne : get_wolf_target (migration
+            0022/0035) ignore déjà les votes à cible nulle dans son
+            dépouillement, donc si toute la meute encore en vie s'abstient
+            (ou se partage les voix à égalité), personne n'est dévoré cette
+            nuit — comme un cas d'égalité classique. Toujours confirmé via
+            pop-up pour éviter un clic accidentel sur un choix qui engage
+            toute la meute. */}
+        <button
+          type="button"
+          onClick={() => setConfirmAbstainOpen(true)}
+          disabled={loading}
+          className={`mt-3 w-full rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+            localAbstain
+              ? 'border-moon-400/60 bg-night-800/70 text-moon-200'
+              : 'border-night-600 text-moon-200/60 hover:border-night-500 hover:text-moon-200'
+          }`}
+        >
+          {localAbstain ? `✅ ${t('action.wolf.abstained')}` : `🤷 ${t('action.wolf.abstainButton')}`}
+        </button>
+      </div>
 
       <ConfirmDialog
         open={confirmAbstainOpen}
@@ -318,15 +333,21 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
         }}
       />
 
-      {/* Accord de meute pour infecter (migration 0093) : visible tant qu'un
-          Loup Alpha vivant n'a pas encore utilisé son infection. Chaque loup
-          (Alpha compris) bascule librement son accord ; l'Alpha voit en plus
-          un bouton de confirmation, actif seulement une fois la majorité
-          atteinte — le serveur revérifie tout à la résolution de toute
-          façon, cet affichage n'est qu'un guide. */}
+      {/* Bloc 2 : accord de meute pour infecter (migration 0093), visible
+          tant qu'un Loup Alpha vivant n'a pas encore utilisé son infection.
+          Bloc à part entière (bordure + fond distincts) plutôt qu'une simple
+          suite de texte après un séparateur — pour qu'on comprenne d'un
+          coup d'œil que c'est une option SÉPARÉE du choix de cible ci-dessus,
+          pas une suite obligatoire. Chaque loup (Alpha compris) bascule
+          librement son accord ; l'Alpha voit en plus un bouton de
+          confirmation, actif seulement une fois la majorité atteinte — le
+          serveur revérifie tout à la résolution de toute façon, cet
+          affichage n'est qu'un guide. */}
       {view.alpha_infect_available && (
-        <div className="mt-4 border-t border-night-600/60 pt-4">
-          <p className="mb-1 text-sm font-semibold text-moon-200">{t('action.wolf.alphaInfectSectionTitle')}</p>
+        <div className="mt-4 rounded-xl border border-emerald-600/30 bg-emerald-900/10 p-3">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-400/80">
+            {t('action.wolf.stepInfectTitle')}
+          </p>
           <p className="mb-3 text-xs text-moon-200/50">{t('action.wolf.alphaInfectSectionSubtitle')}</p>
 
           <button
@@ -341,9 +362,20 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
           >
             {myAgreed ? t('action.wolf.alphaInfectAgreed') : t('action.wolf.alphaInfectAgreeButton')}
           </button>
-          <p className="mt-2 text-xs text-moon-200/50">
-            {t('action.wolf.alphaInfectProgress', { agreed: agreedCount, needed: neededAgreements })}
-          </p>
+
+          {/* Barre de progression + texte, plus lisible d'un coup d'œil que
+              le texte seul pour juger si la majorité est proche. */}
+          <div className="mt-2.5">
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-night-800/80">
+              <div
+                className="h-full rounded-full bg-emerald-500 transition-[width]"
+                style={{ width: `${agreementPct}%` }}
+              />
+            </div>
+            <p className="mt-1.5 text-xs text-moon-200/50">
+              {t('action.wolf.alphaInfectProgress', { agreed: agreedCount, needed: neededAgreements })}
+            </p>
+          </div>
 
           {isAlpha && (
             <>

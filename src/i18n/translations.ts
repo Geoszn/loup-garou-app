@@ -649,6 +649,14 @@ export const translations = {
     fr: 'Le Voleur vous a choisi(e) au hasard cette nuit et a échangé sa carte contre la vôtre. Votre nouveau rôle : {{role}}.',
     en: 'The Thief randomly picked you tonight and swapped their card for yours. Your new role: {{role}}.',
   },
+  // Retour utilisateur (migration 0097) : confirmation pour le Voleur
+  // lui-même, symétrique au message ci-dessus adressé à sa victime — avant
+  // ça, il n'avait aucun retour après avoir cliqué "Voler une carte".
+  'game.thiefIStoleTitle': { fr: '🃏 Votre vol est terminé', en: '🃏 Your theft is complete' },
+  'game.thiefIStole': {
+    fr: 'Vous avez volé la carte d’un joueur au hasard cette nuit et échangé la vôtre contre la sienne. Votre nouveau rôle : {{role}}.',
+    en: 'You stole a random player’s card tonight and swapped yours for theirs. Your new role: {{role}}.',
+  },
   'game.wildChildTurnedTitle': { fr: '🐺 Rongé(e) par la vengeance', en: '🐺 Consumed by revenge' },
   'game.wildChildTurned': {
     fr: 'Votre mentor est mort cette nuit. Rongé(e) par la vengeance, vous rejoignez désormais les Loups-Garous — personne d’autre que vous ne le sait.',
@@ -760,6 +768,12 @@ export const translations = {
   'action.voyante.confirm': { fr: 'Sonder ce joueur', en: 'Probe this player' },
   'action.wolf.title': { fr: 'Choisissez votre victime', en: 'Choose your victim' },
   'action.wolf.subtitle': { fr: 'Concertez-vous avec votre meute.', en: 'Coordinate with your pack.' },
+  // Réorganisation du panneau (retour utilisateur : "réorganise le tableau
+  // des votes, que ce soit plus simple, bien ordonné, une facilité de
+  // compréhension") : deux blocs bien distincts et numérotés — la cible à
+  // éliminer, puis (si applicable) l'option d'infecter à la place.
+  'action.wolf.stepTargetTitle': { fr: '1. Choisissez une cible', en: '1. Choose a target' },
+  'action.wolf.stepInfectTitle': { fr: '2. Infecter au lieu d’éliminer ?', en: '2. Infect instead of eliminate?' },
   'action.wolf.abstainTally': { fr: 'Abstention ({{n}})', en: 'Abstained ({{n}})' },
   'action.wolf.sendingVote': { fr: 'Envoi du vote...', en: 'Sending vote...' },
   'action.wolf.abstained': { fr: 'Vous vous êtes abstenu(e)', en: "You've abstained" },
