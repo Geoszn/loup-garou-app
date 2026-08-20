@@ -123,7 +123,12 @@ export default function Lobby() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code])
 
-  const { view, error: gameError } = useGame(gameId)
+  // userId passé en 2e argument (voir useGame.ts) pour activer le suivi de
+  // présence Realtime : signalement utilisateur — le salon n'affichait aucun
+  // indicateur en ligne/hors ligne, empêchant l'hôte de repérer les joueurs
+  // déconnectés avant de lancer la partie (contrairement à la grille en jeu,
+  // qui l'a déjà via PlayerGrid).
+  const { view, error: gameError, onlineUserIds } = useGame(gameId, user?.id)
 
   // Son + notification navigateur (si l'onglet n'est pas au premier plan)
   // juste avant de rediriger tout le monde vers la partie : sans ça, un
@@ -437,11 +442,24 @@ export default function Lobby() {
                       isSelf ? '' : 'cursor-pointer hover:border-moon-400/50 hover:bg-night-800/60'
                     }`}
                   >
-                    <span
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-night-950"
-                      style={{ backgroundColor: p.avatar_color }}
-                    >
-                      {p.display_name.slice(0, 1).toUpperCase()}
+                    <span className="relative inline-flex shrink-0">
+                      <span
+                        className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-night-950"
+                        style={{ backgroundColor: p.avatar_color }}
+                      >
+                        {p.display_name.slice(0, 1).toUpperCase()}
+                      </span>
+                      {/* Voyant en ligne/hors ligne (voir onlineUserIds
+                          ci-dessus) : permet à l'hôte de repérer d'un coup
+                          d'œil qui a vraiment l'appli ouverte avant de
+                          lancer la partie, plutôt que de découvrir un
+                          joueur absent une fois la partie commencée. */}
+                      <span
+                        title={onlineUserIds.has(p.user_id) ? t('common.online') : t('common.offline')}
+                        className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-night-900 ${
+                          onlineUserIds.has(p.user_id) ? 'bg-emerald-400' : 'bg-night-500'
+                        }`}
+                      />
                     </span>
                     <span className="min-w-0 flex-1 truncate text-moon-200/90">{p.display_name}</span>
                     {p.is_host && <span className="shrink-0" title={t('common.host')}>👑</span>}

@@ -104,8 +104,8 @@ const NAME_SUFFIX_RULES: { suffix: string; key: TranslationKey; prefix?: string 
   { prefix: '🎖️ ', suffix: ' devient le nouveau Capitaine.', key: 'gameLog.captainSuccession' },
   { prefix: '🏛️ ', suffix: ' devient le nouveau Maire.', key: 'gameLog.mayorSuccession' },
   { prefix: '🎖️ ', suffix: ' est élu(e) Capitaine du village !', key: 'gameLog.captainElected' },
-  { prefix: '🎖️ ', suffix: ' (Capitaine) lance le vote, avec l’accord de tout le village !', key: 'gameLog.captainCallsVote' },
-  { prefix: '🛠️ ', suffix: ' (Modérateur) lance le vote, avec l’accord de tout le village !', key: 'gameLog.hostCallsVote' },
+  { prefix: '🎖️ ', suffix: ' (Capitaine) lance le vote, avec l’accord de la majorité du village !', key: 'gameLog.captainCallsVote' },
+  { prefix: '🛠️ ', suffix: ' (Modérateur) lance le vote, avec l’accord de la majorité du village !', key: 'gameLog.hostCallsVote' },
   {
     prefix: '🎖️ Personne n’a désigné de successeur à temps : le sort en a décidé — ',
     suffix: ' devient le nouveau Capitaine !',

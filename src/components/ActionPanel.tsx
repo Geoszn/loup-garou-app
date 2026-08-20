@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
-import { roleLabel, ROLES, type RoleId } from '../lib/roles'
+import { roleLabel } from '../lib/roles'
 import { PlayerGrid } from './PlayerGrid'
 import { Button, Card, ConfirmDialog, ErrorText } from './ui'
 import { useLanguage } from '../i18n/LanguageContext'
@@ -51,42 +51,28 @@ function PanelShell({ emoji, title, subtitle, children }: { emoji: string; title
   )
 }
 
-function VoleurPanel({ view, gameId }: { view: MyGameView; gameId: string }) {
+// Refonte du Voleur (voir migration 0087, demande utilisateur : "il choisit
+// juste un joueur au hasard sans connaître sa carte") : plus de choix entre 2
+// cartes connues à l'avance — un unique bouton de confirmation, le serveur
+// tire la victime au sort et échange les deux cartes à l'aveugle.
+function VoleurPanel({ gameId }: { view: MyGameView; gameId: string }) {
   const { t } = useLanguage()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const extras = view.thief_extra_roles ?? []
 
-  async function choose(swapRole: string | null) {
+  async function steal() {
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_voleur', { p_game_id: gameId, p_swap_role: swapRole })
+    const { error: rpcError } = await supabase.rpc('submit_voleur', { p_game_id: gameId })
     setLoading(false)
     if (rpcError) setError(rpcError.message)
   }
 
   return (
     <PanelShell emoji="🃏" title={t('action.voleur.title')} subtitle={t('action.voleur.subtitle')}>
-      <div className="mb-4 grid grid-cols-2 gap-3">
-        {extras.map((r, i) => {
-          const role = ROLES[r as RoleId]
-          return (
-            <button
-              key={i}
-              type="button"
-              disabled={loading}
-              onClick={() => choose(r)}
-              className="flex flex-col items-center gap-2 rounded-xl border border-night-600/60 bg-night-900/50 p-4 text-center transition-colors hover:border-moon-400/50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <span className="text-3xl">{role?.emoji ?? '❔'}</span>
-              <span className="text-sm text-moon-200/90">{roleLabel(r, t)}</span>
-            </button>
-          )
-        })}
-      </div>
       <ErrorText>{error}</ErrorText>
-      <Button variant="ghost" className="w-full" disabled={loading} onClick={() => choose(null)}>
-        {loading ? t('common.sending') : t('action.voleur.keepCard')}
+      <Button className="w-full" disabled={loading} onClick={steal}>
+        {loading ? t('common.sending') : t('action.voleur.steal')}
       </Button>
     </PanelShell>
   )

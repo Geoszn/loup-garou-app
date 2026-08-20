@@ -717,7 +717,13 @@ function CallVotePanel({
   const others = alivePlayers.filter((p) => p.user_id !== excludedId)
   const agreedIds = view.vote_call_agreed_ids
   const agreed = agreedIds.includes(selfId)
-  const allOthersAgreed = others.length > 0 && others.every((p) => agreedIds.includes(p.user_id))
+  // Majorité stricte des AUTRES joueurs vivants, pas la totalité (voir
+  // migration 0086, demande utilisateur : "pas besoin d'attendre la
+  // totalité des accords") — même formule que submit_captain_call_vote /
+  // submit_host_call_vote côté serveur, pour que le bouton s'active
+  // exactement quand l'appel RPC va réussir.
+  const relevantAgreedCount = others.filter((p) => agreedIds.includes(p.user_id)).length
+  const majorityAgreed = others.length === 0 || relevantAgreedCount * 2 > others.length
   const isActor = hasCaptainRole ? !!me?.is_captain : isHost
 
   async function toggleAgree() {
@@ -748,12 +754,18 @@ function CallVotePanel({
   // l'ordre naturel "on discute d'abord, on décide de voter ensuite", et une
   // vraie carte (icône, titre, compte, bouton pleine largeur) plutôt qu'une
   // simple ligne fine, pour bien la distinguer comme un appel à l'action.
-  const progress = others.length > 0 ? agreedIds.length / others.length : 0
+  // BUG corrigé au passage : la barre de progression comptait agreedIds.length
+  // brut (tous les accords enregistrés ce jour-là), pas seulement ceux des
+  // joueurs actuellement pertinents (others) — un joueur mort depuis, ou
+  // l'acteur lui-même s'il avait un accord orphelin, pouvait fausser
+  // l'affichage. relevantAgreedCount (déjà calculé ci-dessus pour la
+  // majorité) est la valeur correcte dans tous les cas.
+  const progress = others.length > 0 ? relevantAgreedCount / others.length : 0
 
   return (
     <div
       className={`flex animate-fade-in flex-col gap-3 rounded-2xl border px-4 py-3.5 transition-colors ${
-        allOthersAgreed ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-night-600/60 bg-night-900/40'
+        majorityAgreed ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-night-600/60 bg-night-900/40'
       }`}
     >
       <div className="flex items-center gap-3">
@@ -761,11 +773,11 @@ function CallVotePanel({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-moon-200">{t('game.callVoteHeading')}</p>
           <p className="text-xs text-moon-200/50">
-            {t('game.callVoteProgress', { agreed: agreedIds.length, total: others.length })}
+            {t('game.callVoteProgress', { agreed: relevantAgreedCount, total: others.length })}
           </p>
         </div>
         <span className="shrink-0 font-display text-sm tabular-nums text-moon-200/60">
-          {agreedIds.length}/{others.length}
+          {relevantAgreedCount}/{others.length}
         </span>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-night-700/50">
@@ -780,8 +792,8 @@ function CallVotePanel({
         </Button>
       )}
       {isActor && (
-        <Button className="w-full" disabled={!allOthersAgreed || loading} onClick={callVote}>
-          {allOthersAgreed
+        <Button className="w-full" disabled={!majorityAgreed || loading} onClick={callVote}>
+          {majorityAgreed
             ? t(hasCaptainRole ? 'game.callVoteButton' : 'game.hostCallVoteButton')
             : t(hasCaptainRole ? 'game.callVoteButtonWaiting' : 'game.hostCallVoteButtonWaiting')}
         </Button>
@@ -861,6 +873,29 @@ function WaitingCard({
 function NightResultPanel({ view }: { view: MyGameView }) {
   const { t } = useLanguage()
   const nightNumber = view.game.night_number
+
+  // Voleur (voir migration 0087) : la victime doit être prévenue
+  // "immédiatement lors de la première nuit" (demande utilisateur) — ce
+  // panneau est déjà monté uniquement pendant view.game.status === 'night'
+  // (voir le call site plus haut), donc restreindre à night_number === 1
+  // suffit à ne l'afficher que pendant la nuit où le vol a lieu, sans avoir
+  // besoin d'un état "déjà vu" côté client (même principe que le reste de ce
+  // composant : la donnée serveur disparaît naturellement d'elle-même).
+  if (view.thief_stole_my_card && nightNumber === 1) {
+    return (
+      <Card className="animate-fade-in border-blood-700/40 bg-gradient-to-b from-blood-900/20 to-night-900/40">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">🃏</span>
+          <div>
+            <p className="font-display text-sm text-moon-200">{t('game.thiefStoleMyCardTitle')}</p>
+            <p className="text-sm text-moon-200/70">
+              {t('game.thiefStoleMyCard', { role: roleLabel(view.thief_stole_my_new_role ?? '', t) })}
+            </p>
+          </div>
+        </div>
+      </Card>
+    )
+  }
 
   if (view.my_role === 'voyante') {
     const current = view.seer_reveals.find((r) => r.night_number === nightNumber)

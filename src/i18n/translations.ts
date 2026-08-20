@@ -387,12 +387,12 @@ export const translations = {
   },
   'role.voleur.name': { fr: 'Voleur', en: 'Thief' },
   'role.voleur.description': {
-    fr: "Deux cartes supplémentaires ont été mises de côté (un Loup-Garou et un Villageois). Dès la première nuit, avant tout le monde, vous pouvez échanger votre rôle contre l'une d'elles — ou garder le vôtre.",
-    en: 'Two extra cards have been set aside (a Werewolf and a Villager). On the very first night, before anyone else, you may swap your role for one of them — or keep your own.',
+    fr: "Dès la première nuit, avant tout le monde, vous volez la carte d'un joueur choisi au hasard, sans savoir laquelle. Vous héritez de son rôle et de son camp — et lui hérite du vôtre.",
+    en: "On the very first night, before anyone else, you steal the card of a randomly chosen player without knowing which one. You inherit their role and team — and they inherit yours.",
   },
   'role.voleur.nightAction': {
-    fr: "Gardez votre carte ou échangez-la contre l'une des deux cartes proposées (uniquement la première nuit).",
-    en: 'Keep your card or swap it for one of the two offered cards (first night only).',
+    fr: 'Confirmez le vol : le serveur tire au sort un autre joueur et échange vos cartes (uniquement la première nuit).',
+    en: 'Confirm the theft: the server randomly picks another player and swaps your cards (first night only).',
   },
   'role.enfant_sauvage.name': { fr: 'Enfant Sauvage', en: 'Wild Child' },
   'role.enfant_sauvage.description': {
@@ -627,6 +627,11 @@ export const translations = {
     fr: 'La Sorcière vous a éliminé(e) cette nuit avec sa potion de mort.',
     en: 'The Witch eliminated you tonight with her death potion.',
   },
+  'game.thiefStoleMyCardTitle': { fr: '🃏 Votre carte a été volée', en: '🃏 Your card was stolen' },
+  'game.thiefStoleMyCard': {
+    fr: 'Le Voleur vous a choisi(e) au hasard cette nuit et a échangé sa carte contre la vôtre. Votre nouveau rôle : {{role}}.',
+    en: 'The Thief randomly picked you tonight and swapped their card for yours. Your new role: {{role}}.',
+  },
   'game.wildChildTurnedTitle': { fr: '🐺 Rongé(e) par la vengeance', en: '🐺 Consumed by revenge' },
   'game.wildChildTurned': {
     fr: 'Votre mentor est mort cette nuit. Rongé(e) par la vengeance, vous rejoignez désormais les Loups-Garous — personne d’autre que vous ne le sait.',
@@ -693,7 +698,7 @@ export const translations = {
     fr: "D'autres joueurs peuvent encore rejoindre en donnant ce code avant que l'hôte ne relance.",
     en: 'Other players can still join with this code before the host restarts.',
   },
-  'nightStep.voleur': { fr: 'Le Voleur choisit sa carte...', en: 'The Thief is choosing their card...' },
+  'nightStep.voleur': { fr: 'Le Voleur vole une carte...', en: 'The Thief is stealing a card...' },
   'nightStep.cupidon': { fr: 'Cupidon décoche ses flèches...', en: 'Cupid is shooting their arrows...' },
   'nightStep.voyante': { fr: 'La Voyante consulte son destin...', en: 'The Seer is consulting fate...' },
   'nightStep.loup_garou': { fr: 'Les Loups-Garous choisissent leur victime...', en: 'The Werewolves are choosing their victim...' },
@@ -713,12 +718,12 @@ export const translations = {
   'menu.notifications': { fr: 'Notifs "à vous de jouer"', en: '"Your turn" notifications' },
 
   // --- Panneaux d'action (ActionPanel.tsx) -------------------------------------
-  'action.voleur.title': { fr: 'Deux cartes ont été mises de côté', en: 'Two cards have been set aside' },
+  'action.voleur.title': { fr: 'Volez une carte au hasard', en: 'Steal a random card' },
   'action.voleur.subtitle': {
-    fr: "Gardez votre rôle actuel, ou échangez-le contre l'une d'elles.",
-    en: 'Keep your current role, or swap it for one of them.',
+    fr: "Vous ne savez pas qui, ni ce qu'il ou elle a. Le serveur choisit et échange vos cartes.",
+    en: "You don't know who, or what they have. The server picks and swaps your cards.",
   },
-  'action.voleur.keepCard': { fr: 'Garder ma carte', en: 'Keep my card' },
+  'action.voleur.steal': { fr: 'Voler une carte', en: 'Steal a card' },
   'action.cupidon.title': { fr: 'Désignez les deux amoureux', en: 'Choose the two lovers' },
   'action.cupidon.subtitle': { fr: "Cette action n'a lieu que la première nuit.", en: 'This action only happens on the first night.' },
   'action.cupidon.confirm': { fr: 'Confirmer le couple', en: 'Confirm the couple' },
@@ -1542,11 +1547,15 @@ export const translations = {
   'gameLog.voteOpen': { fr: '🗳️ Le vote est ouvert !', en: '🗳️ Voting is open!' },
   'gameLog.voteNoVotes': { fr: '🗳️ Aucun vote exprimé : personne n’est éliminé aujourd’hui.', en: '🗳️ No votes cast: no one is eliminated today.' },
   'gameLog.voteTie': { fr: '🗳️ Égalité des voix : personne n’est éliminé aujourd’hui.', en: '🗳️ Tied vote: no one is eliminated today.' },
-  'gameLog.captainCallsVote': { fr: '🎖️ {{name}} (Capitaine) lance le vote, avec l’accord de tout le village !', en: '🎖️ {{name}} (Captain) calls the vote, with the whole village’s agreement!' },
+  // "de la majorité" (pas "de tout le village") depuis la migration 0086 :
+  // le seuil est passé de l'unanimité à la majorité stricte des autres
+  // joueurs vivants (demande utilisateur : pas besoin d'attendre tout le
+  // monde).
+  'gameLog.captainCallsVote': { fr: '🎖️ {{name}} (Capitaine) lance le vote, avec l’accord de la majorité du village !', en: '🎖️ {{name}} (Captain) calls the vote, with the village’s majority agreement!' },
   // Nouveau message (voir submit_host_call_vote, migration 0085) : pendant du
   // précédent pour une partie SANS Capitaine — l'hôte lance le vote une fois
-  // que tous les autres joueurs vivants sont d'accord.
-  'gameLog.hostCallsVote': { fr: '🛠️ {{name}} (Modérateur) lance le vote, avec l’accord de tout le village !', en: '🛠️ {{name}} (Moderator) calls the vote, with the whole village’s agreement!' },
+  // que la majorité des autres joueurs vivants sont d'accord.
+  'gameLog.hostCallsVote': { fr: '🛠️ {{name}} (Modérateur) lance le vote, avec l’accord de la majorité du village !', en: '🛠️ {{name}} (Moderator) calls the vote, with the village’s majority agreement!' },
 
   // --- Vote forcé par le modérateur (sans Capitaine) -------------------------
   'game.hostCallVoteButton': { fr: 'Lancer le vote', en: 'Call the vote' },

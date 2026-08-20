@@ -182,6 +182,16 @@ export interface MyGameView {
   // écrivait ce changement en clair dans le journal public, ce qui révélait
   // l'identité de l'Enfant Sauvage à tout le village.
   wild_child_turned_wolf: boolean
+  // Personnel (voir migration 0087) : est-ce que MOI j'ai été la victime du
+  // Voleur (échange de carte à l'aveugle) — pas de restriction de phase
+  // côté serveur (contrairement à witch_saved_me etc.), le client limite
+  // lui-même l'affichage à la nuit 1 (voir NightResultPanel, GameRoom.tsx).
+  // thief_stole_my_new_role est mon nouveau rôle après l'échange (toujours
+  // 'voleur' en pratique, puisque le Voleur me prend en échange de sa propre
+  // carte) — déjà reflété dans my_role aussi, ce champ sert juste au message
+  // d'annonce ponctuel.
+  thief_stole_my_card: boolean
+  thief_stole_my_new_role: string | null
   wolf_teammates: string[]
   seer_reveals: { target_id: string; role: string; night_number: number }[]
   witch_heal_used: boolean
@@ -216,7 +226,6 @@ export interface MyGameView {
     captain_random_notice: string | null
   } | null
   final_reveal: { user_id: string; role: string }[] | null
-  thief_extra_roles: string[] | null
   // Demandes en attente pour une partie publique — uniquement rempli côté
   // hôte, tant que la partie est publique et encore en salon (voir
   // respond_join_request, migration 0033).
