@@ -58,6 +58,7 @@ export function PhaseBanner({
   players,
   roleCounts,
   onlineUserIds,
+  infectionOccurred = false,
   narratorEnabled,
   onToggleNarrator,
   narratorSupported = true,
@@ -80,6 +81,9 @@ export function PhaseBanner({
   players?: PublicPlayer[]
   roleCounts?: RoleCounts | null
   onlineUserIds?: Set<string>
+  /** Voir RosterSummary.tsx — transmis tel quel, transparent pour ce
+   * composant. */
+  infectionOccurred?: boolean
   selfId?: string
   narratorEnabled?: boolean
   onToggleNarrator?: () => void
@@ -170,7 +174,13 @@ export function PhaseBanner({
           🏠
         </Link>
         {players && players.length > 0 && (
-          <RosterSummary players={players} roleCounts={roleCounts} selfId={selfId} onlineUserIds={onlineUserIds} />
+          <RosterSummary
+            players={players}
+            roleCounts={roleCounts}
+            selfId={selfId}
+            onlineUserIds={onlineUserIds}
+            infectionOccurred={infectionOccurred}
+          />
         )}
         <Timer deadline={deadline} />
         {isHost && status === 'day_discussion' && onExtendTime && (

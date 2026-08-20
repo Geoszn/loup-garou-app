@@ -34,6 +34,7 @@ export function RosterSummary({
   roleCounts,
   selfId,
   onlineUserIds,
+  infectionOccurred = false,
 }: {
   players: PublicPlayer[]
   roleCounts: RoleCounts | null | undefined
@@ -42,6 +43,12 @@ export function RosterSummary({
    * Realtime) — si fourni, affiche un petit voyant vert/gris devant chaque
    * nom dans la liste des joueurs. */
   onlineUserIds?: Set<string>
+  /** Une infection du Loup Alpha a-t-elle eu lieu dans cette partie (voir
+   * MyGameView.alpha_infection_occurred, migration 0095) ? Fait public déjà
+   * annoncé à tout le monde dans le journal — ne révèle rien de plus. Permet
+   * de corriger `totalWolves` ci-dessous, qui sinon reste figé sur la
+   * composition initiale même après une conversion réussie. */
+  infectionOccurred?: boolean
 }) {
   const { t } = useLanguage()
   const [open, setOpen] = useState(false)
@@ -81,10 +88,11 @@ export function RosterSummary({
   const alive = players.filter((p) => p.is_alive)
   // Loup Alpha compté à part (voir migration 0088) : +1 au total s'il est
   // activé, et ses morts comptent comme des morts loups au même titre que
-  // 'loup_garou' — même limite déjà connue pour l'Enfant Sauvage converti :
-  // ce total reste celui de la composition INITIALE (role_counts), pas du
-  // nombre réel de loups une fois une infection survenue en cours de partie.
-  const totalWolves = (roleCounts?.loup_garou ?? 0) + (roleCounts?.loup_alpha ? 1 : 0)
+  // 'loup_garou'. +1 supplémentaire si une infection a réussi (voir
+  // infectionOccurred, migration 0095) — corrige la limite notée ici
+  // auparavant : ce total restait figé sur la composition INITIALE
+  // (role_counts) même une fois un villageois converti en cours de partie.
+  const totalWolves = (roleCounts?.loup_garou ?? 0) + (roleCounts?.loup_alpha ? 1 : 0) + (infectionOccurred ? 1 : 0)
   const deadWolves = players.filter(
     (p) => !p.is_alive && (p.revealed_role === 'loup_garou' || p.revealed_role === 'loup_alpha')
   ).length

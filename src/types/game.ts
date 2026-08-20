@@ -202,6 +202,15 @@ export interface MyGameView {
   // 'day_reveal') ? my_role reflète déjà mon nouveau rôle en temps réel, ce
   // champ ne sert qu'à déclencher l'annonce ponctuelle.
   alpha_infected_me: boolean
+  // Public (voir migration 0095) : une infection a-t-elle eu lieu quelque
+  // part dans la partie (n'importe quand, pas juste cette nuit) ? Ne révèle
+  // ni qui a été infecté ni qui est l'Alpha — déjà annoncé publiquement dans
+  // le journal au moment des faits ("un villageois a secrètement rejoint les
+  // Loups-Garous"). Un Loup Alpha ne pouvant infecter qu'une seule fois par
+  // partie, ce booléen suffit (jamais plus d'une conversion possible). Sert
+  // à corriger le total de loups affiché par RosterSummary.tsx, qui sinon
+  // reste figé sur la composition initiale (role_counts).
+  alpha_infection_occurred: boolean
   // Personnel, uniquement rempli si my_role === 'loup_alpha' : ai-je déjà
   // consommé mon infection (une seule par partie) ? Sert à désactiver le
   // bouton "Infecter" côté client sans attendre un refus serveur.

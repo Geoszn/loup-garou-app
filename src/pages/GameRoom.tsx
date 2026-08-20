@@ -217,6 +217,7 @@ export default function GameRoom() {
         players={view.players}
         roleCounts={view.game.settings.role_counts}
         onlineUserIds={onlineUserIds}
+        infectionOccurred={view.alpha_infection_occurred}
         selfId={user.id}
         narratorEnabled={narrator.enabled}
         narratorSupported={narrator.supported}
