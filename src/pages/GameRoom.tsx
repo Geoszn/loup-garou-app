@@ -600,11 +600,20 @@ function GhostTabs({
  * choix qui n'existe que pour les loups.
  *
  * Demande utilisateur : vocal actif dans l'onglet "Loups", réservé à la
- * meute — VoiceChat n'est monté que dans cette branche (jamais pour le
- * village de nuit, resté texte seul). L'accès réel est déjà verrouillé côté
- * serveur (can_listen_channel → can_access_channel, migration 0091) : même
- * si quelqu'un forçait ce composant à s'afficher, seul un loup vivant en
- * pleine nuit obtiendrait effectivement une salle Daily de l'API. */
+ * meute — VoiceChat n'est monté que quand `isWolf` (jamais pour le village
+ * de nuit, resté texte seul). L'accès réel est déjà verrouillé côté serveur
+ * (can_listen_channel → can_access_channel, migration 0091) : même si
+ * quelqu'un forçait ce composant à s'afficher, seul un loup vivant en pleine
+ * nuit obtiendrait effectivement une salle Daily de l'API.
+ *
+ * IMPORTANT : VoiceChat reste monté au-dessus des deux onglets (pas
+ * seulement dans la branche `nightTab === 'wolves'`) — retour utilisateur :
+ * un loup qui passe sur l'onglet "Village" pour lire/écrire dans le chat
+ * villageois doit continuer à entendre et parler à sa meute, sans coupure.
+ * Le composant unmount coupait la connexion Daily (useVoiceChat.ts quitte le
+ * salon au démontage) à chaque changement d'onglet — corrigé en sortant
+ * VoiceChat du `nightTab === 'wolves' ? ... : ...`, seul le ChatPanel texte
+ * change avec l'onglet actif. */
 function NightChat({
   gameId,
   code,
@@ -640,6 +649,7 @@ function NightChat({
 
   return (
     <div className="flex flex-col gap-3">
+      <VoiceChat gameId={gameId} code={code} channel="wolves" displayName={displayName} selfUserId={selfId} />
       <Segmented
         tabs={[
           { id: 'village', label: t('tabs.village') },
@@ -651,10 +661,7 @@ function NightChat({
       {nightTab === 'village' ? (
         <ChatPanel gameId={gameId} channel="village" selfId={selfId} note={t('game.nightChatNote')} />
       ) : (
-        <div className="flex flex-col gap-3">
-          <VoiceChat gameId={gameId} code={code} channel="wolves" displayName={displayName} selfUserId={selfId} />
-          <ChatPanel gameId={gameId} channel="wolves" selfId={selfId} />
-        </div>
+        <ChatPanel gameId={gameId} channel="wolves" selfId={selfId} />
       )}
     </div>
   )
