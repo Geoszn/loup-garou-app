@@ -113,56 +113,74 @@ const files = readdirSync(MIGRATIONS_DIR)
  * encore à la fin de la relecture des migrations. */
 const functions = new Map()
 
+// IMPORTANT : les 4 types d'instructions (create/drop/revoke-all/grant) sont
+// collectées puis rejouées dans leur ORDRE RÉEL D'APPARITION, y compris à
+// l'intérieur d'un même fichier — pas "toutes les create du fichier, puis
+// toutes les drop, puis tous les grant" comme une version précédente de ce
+// script le faisait. Ce détail compte : le patron `drop function ... ;
+// create or replace function ... ; grant execute ... ;` (même signature,
+// utilisé par ex. en 0057 pour renommer un paramètre par défaut) est
+// parfaitement valide en SQL et laisse la fonction bel et bien exécutable en
+// production. Mais traité en 3 passes séparées, le drop (retrouvé n'importe
+// où dans le fichier) supprimait de la map l'entrée tout juste créée avant
+// même que le grant ne puisse s'y accrocher — faux positif ("n'existe dans
+// aucune migration") sur une fonction pourtant bien présente et accordée.
 for (const file of files) {
   const raw = readFileSync(join(MIGRATIONS_DIR, file), 'utf8')
   const sql = stripComments(raw)
 
-  // create (or replace) function public.name(...)
-  const createRe = /create\s+(?:or\s+replace\s+)?function\s+public\.(\w+)\s*\(/gi
+  const events = []
   let m
+
+  const createRe = /create\s+(?:or\s+replace\s+)?function\s+public\.(\w+)\s*\(/gi
   while ((m = createRe.exec(sql))) {
-    const name = m[1]
     const openIdx = m.index + m[0].length - 1
     const closeIdx = findMatchingParen(sql, openIdx)
     if (closeIdx === -1) continue
-    const rawParams = sql.slice(openIdx + 1, closeIdx)
-    const types = paramsToTypes(rawParams)
-    const paramNames = paramsToNames(rawParams)
-    const key = signatureKey(name, types)
-    if (!functions.has(key)) {
-      functions.set(key, { name, types, paramNames, grantedTo: new Set() })
-    }
-    // Une nouvelle create-or-replace sur une signature déjà vue ne change
-    // pas ses grants (Postgres conserve les ACL existantes à travers un
-    // `create or replace`) — on ne touche donc pas grantedTo ici.
+    events.push({ index: m.index, type: 'create', name: m[1], rawParams: sql.slice(openIdx + 1, closeIdx) })
   }
 
-  // drop function public.name(...)
   const dropRe = /drop\s+function\s+(?:if\s+exists\s+)?public\.(\w+)\s*\(([^)]*)\)/gi
   while ((m = dropRe.exec(sql))) {
-    const name = m[1]
-    const types = paramsToTypes(m[2])
-    const key = signatureKey(name, types)
-    functions.delete(key)
+    events.push({ index: m.index, type: 'drop', name: m[1], rawParams: m[2] })
   }
 
-  // revoke execute on all functions in schema public from ...
-  if (/revoke\s+execute\s+on\s+all\s+functions\s+in\s+schema\s+public\s+from/i.test(sql)) {
-    for (const fn of functions.values()) fn.grantedTo.clear()
+  const revokeAllRe = /revoke\s+execute\s+on\s+all\s+functions\s+in\s+schema\s+public\s+from/gi
+  while ((m = revokeAllRe.exec(sql))) {
+    events.push({ index: m.index, type: 'revoke-all' })
   }
 
-  // grant execute on function public.name(...) to role1, role2;
   const grantRe = /grant\s+execute\s+on\s+function\s+public\.(\w+)\s*\(([^)]*)\)\s+to\s+([a-z_, ]+);/gi
   while ((m = grantRe.exec(sql))) {
-    const name = m[1]
-    const types = paramsToTypes(m[2])
-    const key = signatureKey(name, types)
-    const roles = m[3].split(',').map((r) => r.trim())
-    const fn = functions.get(key)
-    if (fn) for (const r of roles) fn.grantedTo.add(r)
-    // Si la fonction n'existe pas (typo, ou grant avant le create dans le
-    // même fichier — rare), on l'ignore silencieusement ici ; ce n'est pas
-    // le genre de bug que ce script cherche à attraper.
+    events.push({ index: m.index, type: 'grant', name: m[1], rawParams: m[2], roles: m[3].split(',').map((r) => r.trim()) })
+  }
+
+  events.sort((a, b) => a.index - b.index)
+
+  for (const ev of events) {
+    if (ev.type === 'create') {
+      const types = paramsToTypes(ev.rawParams)
+      const paramNames = paramsToNames(ev.rawParams)
+      const key = signatureKey(ev.name, types)
+      if (!functions.has(key)) {
+        functions.set(key, { name: ev.name, types, paramNames, grantedTo: new Set() })
+      }
+      // Une nouvelle create-or-replace sur une signature déjà vue ne change
+      // pas ses grants (Postgres conserve les ACL existantes à travers un
+      // `create or replace`) — on ne touche donc pas grantedTo ici.
+    } else if (ev.type === 'drop') {
+      const types = paramsToTypes(ev.rawParams)
+      functions.delete(signatureKey(ev.name, types))
+    } else if (ev.type === 'revoke-all') {
+      for (const fn of functions.values()) fn.grantedTo.clear()
+    } else if (ev.type === 'grant') {
+      const types = paramsToTypes(ev.rawParams)
+      const fn = functions.get(signatureKey(ev.name, types))
+      if (fn) for (const r of ev.roles) fn.grantedTo.add(r)
+      // Si la fonction n'existe pas à ce point précis (typo, ou grant avant
+      // le create) : ignoré ici, ce n'est pas le genre de bug que ce script
+      // cherche à attraper.
+    }
   }
 }
 
