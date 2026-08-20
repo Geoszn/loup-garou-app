@@ -3,6 +3,7 @@ import type { TranslationKey } from '../i18n/translations'
 export type RoleId =
   | 'villageois'
   | 'loup_garou'
+  | 'loup_alpha'
   | 'voyante'
   | 'sorciere'
   | 'chasseur'
@@ -44,6 +45,15 @@ export const ROLES: Record<RoleId, RoleInfo> = {
     nameKey: 'role.loup_garou.name',
     descriptionKey: 'role.loup_garou.description',
     nightActionKey: 'role.loup_garou.nightAction',
+  },
+  loup_alpha: {
+    id: 'loup_alpha',
+    team: 'loups',
+    emoji: '👑',
+    color: '#a4283f',
+    nameKey: 'role.loup_alpha.name',
+    descriptionKey: 'role.loup_alpha.description',
+    nightActionKey: 'role.loup_alpha.nightAction',
   },
   voyante: {
     id: 'voyante',
@@ -123,6 +133,7 @@ export const ROLES: Record<RoleId, RoleInfo> = {
 
 export const ROLE_ORDER: RoleId[] = [
   'loup_garou',
+  'loup_alpha',
   'voyante',
   'sorciere',
   'chasseur',
@@ -161,4 +172,17 @@ export function roleNightAction(id: RoleId, t: Translate): string | undefined {
 
 export function roleTeamLabel(team: 'village' | 'loups', t: Translate): string {
   return team === 'loups' ? t('role.team.loups') : t('role.team.village')
+}
+
+/** true si l'id de rôle donné appartient au camp des Loups (Loup-Garou
+ * classique OU Loup Alpha, voir migration 0088) — remplace les comparaisons
+ * `=== 'loup_garou'` disséminées dans le client, qui ignoraient le Loup
+ * Alpha (coéquipiers, chat des loups, impossibilité de se cibler entre
+ * loups, décompte de fin de partie...). Un villageois infecté devient
+ * réellement 'loup_garou' côté serveur, donc déjà couvert sans changement
+ * ici. */
+export function isWolfTeam(roleId: string | null | undefined): boolean {
+  if (!roleId) return false
+  const role = ROLES[roleId as RoleId]
+  return role?.team === 'loups'
 }

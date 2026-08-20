@@ -79,8 +79,15 @@ export function RosterSummary({
   }, [open])
 
   const alive = players.filter((p) => p.is_alive)
-  const totalWolves = roleCounts?.loup_garou ?? 0
-  const deadWolves = players.filter((p) => !p.is_alive && p.revealed_role === 'loup_garou').length
+  // Loup Alpha compté à part (voir migration 0088) : +1 au total s'il est
+  // activé, et ses morts comptent comme des morts loups au même titre que
+  // 'loup_garou' — même limite déjà connue pour l'Enfant Sauvage converti :
+  // ce total reste celui de la composition INITIALE (role_counts), pas du
+  // nombre réel de loups une fois une infection survenue en cours de partie.
+  const totalWolves = (roleCounts?.loup_garou ?? 0) + (roleCounts?.loup_alpha ? 1 : 0)
+  const deadWolves = players.filter(
+    (p) => !p.is_alive && (p.revealed_role === 'loup_garou' || p.revealed_role === 'loup_alpha')
+  ).length
   const remainingWolves = Math.max(totalWolves - deadWolves, 0)
   const remainingVillage = Math.max(alive.length - remainingWolves, 0)
   const specialRoles = SPECIAL_ROLE_KEYS.filter((k) => roleCounts?.[k as keyof RoleCounts])

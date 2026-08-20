@@ -8,6 +8,7 @@ const ACTION_LABEL_KEYS: Record<string, TranslationKey> = {
   cupidon: 'turnNotif.cupidon',
   voyante: 'turnNotif.voyante',
   loup_garou: 'turnNotif.loup_garou',
+  loup_alpha: 'turnNotif.loup_alpha',
   sorciere: 'turnNotif.sorciere',
   vote: 'turnNotif.vote',
   hunter: 'turnNotif.hunter',

@@ -21,6 +21,8 @@ export function ActionPanel({ view, gameId, selfId }: { view: MyGameView; gameId
       return <VoyantePanel view={view} gameId={gameId} selfId={selfId} />
     case 'loup_garou':
       return <WolfPanel view={view} gameId={gameId} selfId={selfId} />
+    case 'loup_alpha':
+      return <LoupAlphaPanel view={view} gameId={gameId} selfId={selfId} />
     case 'sorciere':
       return <SorcierePanel view={view} gameId={gameId} selfId={selfId} />
     case 'vote':
@@ -277,6 +279,58 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
           submit(null)
         }}
       />
+    </PanelShell>
+  )
+}
+
+// Carte "Loup Alpha" (voir migration 0088, demande utilisateur) : tant qu'il
+// est vivant, remplace le vote collectif classique de la meute (WolfPanel
+// ci-dessus) — lui seul décide chaque nuit. Contrairement à WolfPanel, c'est
+// un acteur SOLO (comme la Voyante/la Sorcière) : pas besoin d'un panneau
+// persistant qui change de cible tant que "tout le monde n'a pas voté",
+// l'envoi est définitif pour la nuit. Choix cible via PlayerGrid, puis
+// Éliminer (comme un loup classique) ou Infecter (une seule fois par
+// partie — bouton désactivé une fois alpha_infect_used à true).
+function LoupAlphaPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
+  const { t } = useLanguage()
+  const [selected, setSelected] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const teammates = new Set(view.wolf_teammates ?? [])
+  const alive = view.players.filter((p) => p.is_alive)
+  const infectUsed = view.alpha_infect_used === true
+
+  async function submit(mode: 'eliminate' | 'infect', target: string | null) {
+    setLoading(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('submit_loup_alpha', { p_game_id: gameId, p_target: target, p_mode: mode })
+    setLoading(false)
+    if (rpcError) setError(rpcError.message)
+  }
+
+  return (
+    <PanelShell emoji="👑" title={t('action.loupAlpha.title')} subtitle={t('action.loupAlpha.subtitle')}>
+      <PlayerGrid
+        players={alive}
+        selfId={selfId}
+        selectable
+        selectedId={selected}
+        disabledIds={alive.filter((p) => teammates.has(p.user_id) || p.user_id === selfId).map((p) => p.user_id)}
+        onSelect={(id) => setSelected(id)}
+      />
+      <ErrorText>{error}</ErrorText>
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <Button variant="danger" disabled={loading || !selected} onClick={() => submit('eliminate', selected)}>
+          🩸 {t('action.loupAlpha.eliminate')}
+        </Button>
+        <Button disabled={loading || !selected || infectUsed} onClick={() => submit('infect', selected)}>
+          🧬 {t('action.loupAlpha.infect')}
+        </Button>
+      </div>
+      {infectUsed && <p className="mt-2 text-xs text-moon-200/40">{t('action.loupAlpha.infectUsedHint')}</p>}
+      <Button variant="ghost" className="mt-3 w-full" disabled={loading} onClick={() => submit('eliminate', null)}>
+        🤷 {t('action.wolf.abstainButton')}
+      </Button>
     </PanelShell>
   )
 }

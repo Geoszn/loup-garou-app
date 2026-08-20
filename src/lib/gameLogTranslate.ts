@@ -37,6 +37,7 @@ type Match = { key: TranslationKey; vars?: Vars }
 const ROLE_NAME_FR_TO_ID: Record<string, RoleId> = {
   Villageois: 'villageois',
   'Loup-Garou': 'loup_garou',
+  'Loup Alpha': 'loup_alpha',
   Voyante: 'voyante',
   Sorcière: 'sorciere',
   Chasseur: 'chasseur',
@@ -71,6 +72,15 @@ const EXACT_MATCHES: Record<string, TranslationKey> = {
   '⚖️ Le village a eu tort de lyncher l’Ancien : ses pouvoirs spéciaux s’éteignent pour le reste de la partie...':
     'gameLog.ancienLynchedPowersOff',
   '🌑 Une ombre a changé de camp cette nuit... un villageois a secrètement rejoint les Loups-Garous.': 'gameLog.wildChildConverted',
+  // Apostrophe DROITE volontaire (') et non typographique (') : ce message a
+  // été inséré via l'échappement SQL '' (voir migration 0088/infect_player),
+  // qui produit un caractère ' (U+0027) en base — contrairement aux messages
+  // plus anciens de ce fichier qui utilisent l'apostrophe typographique '
+  // (U+2019) telle qu'écrite directement dans le SQL d'origine. Vérifié par
+  // requête directe en base avant d'écrire cette entrée (voir aussi le
+  // correctif apporté juste en dessous pour captainCallsVote/hostCallsVote,
+  // qui souffraient du même problème).
+  '🧬 Une infection s\'est propagée cette nuit... un villageois a secrètement rejoint les Loups-Garous.': 'gameLog.alphaInfectionSpread',
   '🗳️ Aucun vote exprimé pour l’élection du Capitaine : la partie se jouera sans lui.': 'gameLog.captainElectionNoVotes',
   '🧪 La Sorcière a utilisé sa potion de guérison pour sauver la victime des loups.': 'gameLog.witchHealed',
   '☀️ Le village se réveille : personne n’est mort cette nuit !': 'gameLog.noOneDiedTonight',
@@ -104,8 +114,14 @@ const NAME_SUFFIX_RULES: { suffix: string; key: TranslationKey; prefix?: string 
   { prefix: '🎖️ ', suffix: ' devient le nouveau Capitaine.', key: 'gameLog.captainSuccession' },
   { prefix: '🏛️ ', suffix: ' devient le nouveau Maire.', key: 'gameLog.mayorSuccession' },
   { prefix: '🎖️ ', suffix: ' est élu(e) Capitaine du village !', key: 'gameLog.captainElected' },
-  { prefix: '🎖️ ', suffix: ' (Capitaine) lance le vote, avec l’accord de la majorité du village !', key: 'gameLog.captainCallsVote' },
-  { prefix: '🛠️ ', suffix: ' (Modérateur) lance le vote, avec l’accord de la majorité du village !', key: 'gameLog.hostCallsVote' },
+  // Apostrophes droites (') volontaires ici, pas typographiques (’) : ces
+  // deux messages ont été insérés via l'échappement SQL '' (migration 0086),
+  // qui produit un caractère ' (U+0027) en base — vérifié par requête
+  // directe en base (select ascii(...) sur le message réel). Un mismatch
+  // avec l'apostrophe typographique ici aurait empêché silencieusement toute
+  // traduction en anglais de ces deux messages depuis leur introduction.
+  { prefix: '🎖️ ', suffix: ' (Capitaine) lance le vote, avec l\'accord de la majorité du village !', key: 'gameLog.captainCallsVote' },
+  { prefix: '🛠️ ', suffix: ' (Modérateur) lance le vote, avec l\'accord de la majorité du village !', key: 'gameLog.hostCallsVote' },
   {
     prefix: '🎖️ Personne n’a désigné de successeur à temps : le sort en a décidé — ',
     suffix: ' devient le nouveau Capitaine !',

@@ -29,6 +29,7 @@ export const NIGHT_STEP_LABEL: Record<string, TranslationKey> = {
   cupidon: 'nightStep.cupidon',
   voyante: 'nightStep.voyante',
   loup_garou: 'nightStep.loup_garou',
+  loup_alpha: 'nightStep.loup_alpha',
   sorciere: 'nightStep.sorciere',
   resolve: 'nightStep.resolve',
 }
@@ -44,6 +45,7 @@ export const NIGHT_STEP_ICON: Record<string, string> = {
   cupidon: '💘',
   voyante: '🔮',
   loup_garou: '🐺',
+  loup_alpha: '👑',
   sorciere: '🧪',
   resolve: '🌙',
 }

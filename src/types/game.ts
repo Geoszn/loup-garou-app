@@ -15,12 +15,17 @@ export type NightStep =
   | 'enfant_sauvage'
   | 'voyante'
   | 'loup_garou'
+  | 'loup_alpha'
   | 'sorciere'
   | 'resolve'
   | null
 
 export interface RoleCounts {
   loup_garou: number
+  // Carte avancée (voir migration 0088) : nécessite >= 10 joueurs et au plus
+  // 2 loup_garou "simples" — remplace le vote collectif classique de la
+  // meute par une action solo (éliminer ou infecter) tant qu'il est vivant.
+  loup_alpha: boolean
   voyante: boolean
   sorciere: boolean
   chasseur: boolean
@@ -192,6 +197,15 @@ export interface MyGameView {
   // d'annonce ponctuel.
   thief_stole_my_card: boolean
   thief_stole_my_new_role: string | null
+  // Personnel (voir migration 0088) : ai-je été infecté(e) par le Loup Alpha
+  // CETTE nuit (même principe que wild_child_turned_wolf plus haut, gated
+  // 'day_reveal') ? my_role reflète déjà mon nouveau rôle en temps réel, ce
+  // champ ne sert qu'à déclencher l'annonce ponctuelle.
+  alpha_infected_me: boolean
+  // Personnel, uniquement rempli si my_role === 'loup_alpha' : ai-je déjà
+  // consommé mon infection (une seule par partie) ? Sert à désactiver le
+  // bouton "Infecter" côté client sans attendre un refus serveur.
+  alpha_infect_used: boolean | null
   wolf_teammates: string[]
   seer_reveals: { target_id: string; role: string; night_number: number }[]
   witch_heal_used: boolean

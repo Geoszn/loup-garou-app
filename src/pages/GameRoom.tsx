@@ -21,7 +21,7 @@ import { TierUpModal } from '../components/TierUpModal'
 import { ModerationPanel } from '../components/ModerationPanel'
 import { VoiceChat } from '../components/VoiceChat'
 import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, Modal, Segmented } from '../components/ui'
-import { ROLES, roleLabel, type RoleId } from '../lib/roles'
+import { ROLES, roleLabel, isWolfTeam, type RoleId } from '../lib/roles'
 import { RankTierBadge } from '../components/RankTierBadge'
 import { tierForPoints, tierLabel, type RankTier } from '../lib/ranks'
 import { translateGameLogMessage } from '../lib/gameLogTranslate'
@@ -121,7 +121,7 @@ export default function GameRoom() {
   // serveur) : l'onglet "Loups" reste ouvert toute la nuit, pas seulement
   // pendant le tour de vote des loups.
   useEffect(() => {
-    const wolfWindowOpen = view && view.game.status === 'night' && view.my_role === 'loup_garou'
+    const wolfWindowOpen = view && view.game.status === 'night' && isWolfTeam(view.my_role)
     if (!wolfWindowOpen) setNightTab('village')
   }, [view])
 
@@ -324,7 +324,7 @@ export default function GameRoom() {
             <NightChat
               gameId={gameId!}
               selfId={user.id}
-              isWolf={view.my_role === 'loup_garou'}
+              isWolf={isWolfTeam(view.my_role)}
               nightTab={nightTab}
               setNightTab={setNightTab}
             />
@@ -960,7 +960,7 @@ function RolePanel({ myRole }: { myRole: string | null }) {
  * aucun changement serveur nécessaire. */
 function WolfPackList({ view, myRole }: { view: MyGameView; myRole: string | null }) {
   const { t } = useLanguage()
-  if (myRole !== 'loup_garou') return null
+  if (!isWolfTeam(myRole)) return null
   const teammates = view.players.filter((p) => (view.wolf_teammates ?? []).includes(p.user_id))
   if (teammates.length === 0) return null
   return (
@@ -1029,7 +1029,7 @@ function EndScreen({
   const alivePlayers = view.players.filter((p) => p.is_alive)
   const aliveWolfIds = new Set(
     (view.final_reveal ?? [])
-      .filter((r) => r.role === 'loup_garou' && alivePlayers.some((p) => p.user_id === r.user_id))
+      .filter((r) => isWolfTeam(r.role) && alivePlayers.some((p) => p.user_id === r.user_id))
       .map((r) => r.user_id)
   )
   const wolvesAliveCount = aliveWolfIds.size

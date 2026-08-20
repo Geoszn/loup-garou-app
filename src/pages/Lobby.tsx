@@ -20,6 +20,7 @@ import type { RoleCounts } from '../types/game'
 // Chasseur et Cupidon désactivés par défaut (à activer volontairement).
 const DEFAULT_COUNTS: RoleCounts = {
   loup_garou: 2,
+  loup_alpha: false,
   voyante: true,
   sorciere: true,
   chasseur: false,
@@ -286,6 +287,7 @@ export default function Lobby() {
   const invitableFriends = friends.filter((f) => !view.players.some((p) => p.user_id === f.user_id))
   const specialTotal =
     counts.loup_garou +
+    Number(counts.loup_alpha) +
     Number(counts.voyante) +
     Number(counts.sorciere) +
     Number(counts.chasseur) +
@@ -295,6 +297,13 @@ export default function Lobby() {
     Number(counts.voleur) +
     Number(counts.enfant_sauvage)
   const rolesOverflow = customized && specialTotal > playerCount
+  // Contraintes du Loup Alpha (voir migration 0088, demande utilisateur) :
+  // au moins 10 joueurs, au plus 2 Loups-Garous simples. Vérifiée aussi côté
+  // serveur (start_game) — ceci n'est qu'un avertissement anticipé, même
+  // registre que rolesOverflow ci-dessus (pas de blocage dur du toggle,
+  // cohérent avec le reste des réglages qui ne grisent jamais un rôle selon
+  // le nombre de joueurs).
+  const alphaConstraintViolated = counts.loup_alpha && (playerCount < 10 || counts.loup_garou > 2)
 
   return (
     <div className="relative min-h-screen px-4 py-6 pb-28 sm:py-10">
@@ -514,18 +523,30 @@ export default function Lobby() {
               {playerCount - specialTotal >= 0 ? t('lobby.villagersSuffix', { count: playerCount - specialTotal }) : '.'}
             </p>
             {rolesOverflow && <ErrorText>{t('lobby.rolesOverflow')}</ErrorText>}
+            {alphaConstraintViolated && <ErrorText>{t('lobby.alphaConstraintViolated')}</ErrorText>}
 
             <div className="flex flex-col gap-4">
               <RoleStepper
                 label={`🐺 ${t(ROLES.loup_garou.nameKey)}`}
                 value={counts.loup_garou}
                 min={1}
-                max={Math.max(1, Math.floor(playerCount / 2))}
+                max={counts.loup_alpha ? Math.min(2, Math.max(1, Math.floor(playerCount / 2))) : Math.max(1, Math.floor(playerCount / 2))}
                 onChange={(v) => {
                   setCounts((c) => ({ ...c, loup_garou: v }))
                   setCustomized(true)
                 }}
               />
+              <div>
+                <RoleToggle
+                  label={`👑 ${t(ROLES.loup_alpha.nameKey)}`}
+                  checked={counts.loup_alpha}
+                  onChange={(v) => {
+                    setCounts((c) => ({ ...c, loup_alpha: v, loup_garou: v ? Math.min(c.loup_garou, 2) : c.loup_garou }))
+                    setCustomized(true)
+                  }}
+                />
+                <p className="mt-1.5 text-xs text-moon-200/40">{t('lobby.alphaToggleHint')}</p>
+              </div>
               <RoleToggle label={`🔮 ${t(ROLES.voyante.nameKey)}`} checked={counts.voyante} onChange={(v) => { setCounts((c) => ({ ...c, voyante: v })); setCustomized(true) }} />
               <RoleToggle label={`🧪 ${t(ROLES.sorciere.nameKey)}`} checked={counts.sorciere} onChange={(v) => { setCounts((c) => ({ ...c, sorciere: v })); setCustomized(true) }} />
               <RoleToggle label={`🏹 ${t(ROLES.chasseur.nameKey)}`} checked={counts.chasseur} onChange={(v) => { setCounts((c) => ({ ...c, chasseur: v })); setCustomized(true) }} />

@@ -339,6 +339,15 @@ export const translations = {
     fr: 'Chaque nuit, vous vous réveillez avec les autres loups pour dévorer un villageois. Le jour, faites profil bas pour ne pas être démasqué.',
     en: "Each night, you wake up with the other wolves to devour a villager. During the day, keep a low profile so you don't get unmasked.",
   },
+  'role.loup_alpha.name': { fr: 'Loup Alpha', en: 'Alpha Wolf' },
+  'role.loup_alpha.description': {
+    fr: "Nécessite au moins 10 joueurs et au plus 2 Loups-Garous simples. Chaque nuit, c'est vous seul qui décidez du sort de la meute : éliminer une victime, ou l'infecter pour la faire rejoindre les loups (une seule infection par partie).",
+    en: 'Requires at least 10 players and at most 2 regular Werewolves. Each night, you alone decide the pack\'s fate: eliminate a victim, or infect them to make them join the wolves (one infection per game).',
+  },
+  'role.loup_alpha.nightAction': {
+    fr: 'Choisissez une cible, puis éliminez-la ou infectez-la (infection utilisable une seule fois).',
+    en: 'Choose a target, then eliminate or infect them (infection usable once).',
+  },
   'role.loup_garou.nightAction': {
     fr: 'Choisissez avec votre meute la victime de la nuit.',
     en: "Choose the night's victim together with your pack.",
@@ -446,6 +455,14 @@ export const translations = {
     fr: 'Trop de rôles spéciaux pour le nombre de joueurs actuel.',
     en: 'Too many special roles for the current number of players.',
   },
+  'lobby.alphaToggleHint': {
+    fr: 'Nécessite au moins 10 joueurs et au plus 2 Loups-Garous simples — remplace le vote collectif de la meute par une décision solo (éliminer ou infecter) tant que le Loup Alpha est en vie.',
+    en: "Requires at least 10 players and at most 2 regular Werewolves — replaces the pack's collective vote with a solo decision (eliminate or infect) while the Alpha Wolf is alive.",
+  },
+  'lobby.alphaConstraintViolated': {
+    fr: 'Le Loup Alpha nécessite au moins 10 joueurs et au plus 2 Loups-Garous simples.',
+    en: 'The Alpha Wolf requires at least 10 players and at most 2 regular Werewolves.',
+  },
   'lobby.captainToggleHint': {
     fr: 'Élu par le village juste avant la première nuit (garde son vrai rôle) — vote compte double, et tranche les égalités. Ne prend pas de place de rôle spécial.',
     en: "Elected by the village just before the first night (keeps their real role) — their vote counts double and breaks ties. Doesn't take up a special role slot.",
@@ -486,6 +503,10 @@ export const translations = {
   'turnNotif.default': { fr: "C'est à vous de jouer.", en: "It's your turn to play." },
   'turnNotif.cupidon': { fr: '💘 Cupidon, désignez les deux amoureux.', en: '💘 Cupid, choose the two lovers.' },
   'turnNotif.voyante': { fr: '🔮 Voyante, sondez un joueur.', en: '🔮 Seer, take a look at a player.' },
+  'turnNotif.loup_alpha': {
+    fr: '👑 Loup Alpha, décidez du sort de votre proie.',
+    en: '👑 Alpha Wolf, decide your prey\'s fate.',
+  },
   'turnNotif.loup_garou': {
     fr: '🐺 Loups-Garous, choisissez votre victime.',
     en: '🐺 Werewolves, choose your victim.',
@@ -637,6 +658,11 @@ export const translations = {
     fr: 'Votre mentor est mort cette nuit. Rongé(e) par la vengeance, vous rejoignez désormais les Loups-Garous — personne d’autre que vous ne le sait.',
     en: 'Your role model died tonight. Consumed by revenge, you now join the Werewolves — no one else knows this.',
   },
+  'game.alphaInfectedMeTitle': { fr: '🧬 Infecté(e) en secret', en: '🧬 Secretly infected' },
+  'game.alphaInfectedMe': {
+    fr: 'Le Loup Alpha vous a mordu(e) cette nuit. Vous rejoignez désormais les Loups-Garous — personne d’autre que vous ne le sait.',
+    en: 'The Alpha Wolf bit you tonight. You now join the Werewolves — no one else knows this.',
+  },
   'game.discussionHint': {
     fr: "💬 Discutez pour démasquer les Loups-Garous — le vote ouvre automatiquement dans la limite de temps, ou plus tôt si le Capitaine le lance avec l'accord de tout le village.",
     en: "💬 Discuss to unmask the Werewolves — the vote opens automatically once time runs out, or sooner if the Captain calls it with the whole village's agreement.",
@@ -702,6 +728,7 @@ export const translations = {
   'nightStep.cupidon': { fr: 'Cupidon décoche ses flèches...', en: 'Cupid is shooting their arrows...' },
   'nightStep.voyante': { fr: 'La Voyante consulte son destin...', en: 'The Seer is consulting fate...' },
   'nightStep.loup_garou': { fr: 'Les Loups-Garous choisissent leur victime...', en: 'The Werewolves are choosing their victim...' },
+  'nightStep.loup_alpha': { fr: 'Le Loup Alpha décide du sort de sa proie...', en: "The Alpha Wolf is deciding its prey's fate..." },
   'nightStep.sorciere': { fr: 'La Sorcière prépare ses potions...', en: 'The Witch is preparing her potions...' },
   'nightStep.resolve': { fr: 'Le sort en est jeté...', en: 'The die is cast...' },
   'phase.lobby': { fr: 'Salon', en: 'Lobby' },
@@ -736,6 +763,17 @@ export const translations = {
   'action.voyante.title': { fr: "Sondez l'identité d'un joueur", en: "Probe a player's identity" },
   'action.voyante.pastVisions': { fr: 'Vos visions passées', en: 'Your past visions' },
   'action.voyante.confirm': { fr: 'Sonder ce joueur', en: 'Probe this player' },
+  'action.loupAlpha.title': { fr: 'Décidez du sort de votre proie', en: "Decide your prey's fate" },
+  'action.loupAlpha.subtitle': {
+    fr: 'Choisissez une cible, puis éliminez-la ou infectez-la.',
+    en: 'Choose a target, then eliminate or infect them.',
+  },
+  'action.loupAlpha.eliminate': { fr: 'Éliminer', en: 'Eliminate' },
+  'action.loupAlpha.infect': { fr: 'Infecter', en: 'Infect' },
+  'action.loupAlpha.infectUsedHint': {
+    fr: 'Infection déjà utilisée cette partie — vous ne pouvez plus qu’éliminer.',
+    en: 'Infection already used this game — you can now only eliminate.',
+  },
   'action.wolf.title': { fr: 'Choisissez votre victime', en: 'Choose your victim' },
   'action.wolf.subtitle': { fr: 'Concertez-vous avec votre meute.', en: 'Coordinate with your pack.' },
   'action.wolf.abstainTally': { fr: 'Abstention ({{n}})', en: 'Abstained ({{n}})' },
@@ -1504,6 +1542,10 @@ export const translations = {
   'gameLog.wildChildConverted': {
     fr: '🌑 Une ombre a changé de camp cette nuit... un villageois a secrètement rejoint les Loups-Garous.',
     en: '🌑 A shadow switched sides tonight... a villager secretly joined the Werewolves.',
+  },
+  'gameLog.alphaInfectionSpread': {
+    fr: '🧬 Une infection s\'est propagée cette nuit... un villageois a secrètement rejoint les Loups-Garous.',
+    en: '🧬 An infection spread tonight... a villager secretly joined the Werewolves.',
   },
   'gameLog.captainDyingSuccession': { fr: '{{name}} était le Capitaine : il ou elle désigne son successeur dans son dernier souffle.', en: '{{name}} was the Captain: with their last breath, they name a successor.' },
   'gameLog.deathLine': { fr: '{{name}} ({{role}}) {{cause}}', en: '{{name}} ({{role}}) {{cause}}' },
