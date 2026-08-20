@@ -354,12 +354,12 @@ export const translations = {
   },
   'role.voyante.name': { fr: 'Voyante', en: 'Seer' },
   'role.voyante.description': {
-    fr: "Chaque nuit, vous pouvez sonder l'identité véritable d'un joueur de votre choix.",
-    en: 'Each night, you can probe the true identity of a player of your choice.',
+    fr: "Chaque nuit, vous pouvez sonder un joueur de votre choix pour découvrir son camp : Loup-Garou ou Villageois. Pas son rôle précis, juste son camp.",
+    en: "Each night, you can probe a player of your choice to reveal their side: Werewolf or Villager. Not their exact role, just their side.",
   },
   'role.voyante.nightAction': {
-    fr: 'Choisissez un joueur dont vous voulez découvrir le rôle.',
-    en: "Choose a player whose role you want to discover.",
+    fr: 'Choisissez un joueur pour découvrir son camp (Loup-Garou ou Villageois).',
+    en: "Choose a player to reveal their side (Werewolf or Villager).",
   },
   'role.sorciere.name': { fr: 'Sorcière', en: 'Witch' },
   'role.sorciere.description': {
@@ -763,7 +763,7 @@ export const translations = {
     en: 'If this player dies, you will become a Werewolf. This action only happens on the first night.',
   },
   'action.enfantSauvage.confirm': { fr: 'Confirmer mon mentor', en: 'Confirm my mentor' },
-  'action.voyante.title': { fr: "Sondez l'identité d'un joueur", en: "Probe a player's identity" },
+  'action.voyante.title': { fr: "Sondez le camp d'un joueur", en: "Probe a player's side" },
   'action.voyante.pastVisions': { fr: 'Vos visions passées', en: 'Your past visions' },
   'action.voyante.confirm': { fr: 'Sonder ce joueur', en: 'Probe this player' },
   'action.wolf.title': { fr: 'Choisissez votre victime', en: 'Choose your victim' },
