@@ -248,7 +248,13 @@ export interface MyGameView {
   // retire son accord et fait retomber le total sous la majorité — revérifié
   // par le serveur au moment de resolve_night_deaths de toute façon.
   alpha_infect_confirmed: boolean
+  // Coéquipiers loups (loup_garou ET loup_alpha, tous les deux confondus
+  // désormais) — visible pour un loup simple ET pour l'Alpha lui-même.
   wolf_teammates: string[]
+  // Identifiant du Loup Alpha parmi wolf_teammates ci-dessus (ou soi-même),
+  // null si cette partie n'a pas de Loup Alpha. Sert à le distinguer
+  // visuellement dans la liste (badge).
+  wolf_alpha_id: string | null
   seer_reveals: { target_id: string; role: string; night_number: number }[]
   witch_heal_used: boolean
   witch_poison_used: boolean
