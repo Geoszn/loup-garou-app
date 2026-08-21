@@ -821,6 +821,16 @@ export const translations = {
     fr: "En attente de la majorité de la meute avant de pouvoir infecter.",
     en: 'Waiting for the pack majority before you can infect.',
   },
+  // Retour utilisateur : lors d'un test, la majorité a été atteinte mais
+  // l'Alpha n'a jamais cliqué sur "Confirmer l'infection" avant la fin de
+  // son tour — rien n'attirait l'œil au moment précis où le bouton devenait
+  // cliquable, noyé sous le reste du panneau. Bannière bien visible,
+  // affichée UNIQUEMENT pendant la fenêtre où une action est vraiment
+  // possible (majorité atteinte, pas encore confirmé).
+  'action.wolf.alphaConfirmInfectReady': {
+    fr: '⚡ Majorité atteinte ! Vous pouvez confirmer l’infection ci-dessous.',
+    en: '⚡ Majority reached! You can confirm the infection below.',
+  },
   'action.wolf.alphaInfectConfirmedBanner': {
     fr: '🧬 Vous infecterez la victime désignée au lieu de l’éliminer.',
     en: "🧬 You'll infect the chosen victim instead of eliminating them.",

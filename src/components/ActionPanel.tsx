@@ -383,8 +383,23 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
               {view.alpha_infect_confirmed && (
                 <p className="mt-3 text-xs text-moon-300">{t('action.wolf.alphaInfectConfirmedBanner')}</p>
               )}
+              {/* BUG CORRIGÉ (retour utilisateur, partie test) : la majorité
+                  était atteinte mais l'Alpha n'a jamais cliqué sur
+                  "Confirmer l'infection" avant la fin de son tour — rien
+                  n'attirait l'attention au moment précis où l'action
+                  devenait possible, noyé sous le reste du panneau (grille de
+                  cible, tally, bouton d'abstention...). Bannière + halo
+                  animé sur le bouton, visibles UNIQUEMENT pendant cette
+                  fenêtre (majorité atteinte, pas encore confirmé). */}
+              {majorityReached && !view.alpha_infect_confirmed && (
+                <p className="mt-3 animate-pulse text-xs font-semibold text-emerald-400">
+                  {t('action.wolf.alphaConfirmInfectReady')}
+                </p>
+              )}
               <Button
-                className="mt-3 w-full"
+                className={`mt-3 w-full ${
+                  majorityReached && !view.alpha_infect_confirmed ? 'ring-2 ring-emerald-400/70 animate-pulse' : ''
+                }`}
                 variant={view.alpha_infect_confirmed ? 'ghost' : 'primary'}
                 disabled={alphaLoading || (!majorityReached && !view.alpha_infect_confirmed)}
                 onClick={toggleAlphaConfirm}
