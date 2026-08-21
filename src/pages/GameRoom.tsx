@@ -28,6 +28,7 @@ import { translateGameLogMessage } from '../lib/gameLogTranslate'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { MyGameView, PublicPlayer } from '../types/game'
 import type { VoiceChannel } from '../hooks/useVoiceChat'
+import { useChannelPresence } from '../hooks/useChannelPresence'
 
 export default function GameRoom() {
   const { code } = useParams()
@@ -65,7 +66,6 @@ export default function GameRoom() {
   // les phases de jour : évite d'empiler chat, vocal et grille de joueurs
   // les uns sous les autres, un seul écran focalisé à la fois.
   const [dayTab, setDayTab] = useState<'discuss' | 'village'>('discuss')
-  const [ghostTab, setGhostTab] = useState<'village' | 'graveyard'>('village')
   // Onglet "Village" (anonyme) / "Loups" (nominatif, uniquement pour les
   // Loups-Garous pendant leur tour) pour la phase de nuit — voir NightChat.
   const [nightTab, setNightTab] = useState<'village' | 'wolves'>('village')
@@ -277,40 +277,12 @@ export default function GameRoom() {
                 ? t('game.eliminatedNoticeWithRole', { role: roleLabel(view.my_role, t) })
                 : t('game.eliminatedNoticeNoRole')}
             </p>
-            <GhostTabs
-              ghostTab={ghostTab}
-              setGhostTab={setGhostTab}
-              village={
-                <div className="flex flex-col gap-3">
-                  {/* Le vocal des vivants n'existe que pendant ces phases-là
-                      (voir le calcul de voiceChannel plus haut) : inutile de
-                      proposer d'"écouter" un salon qui n'est pas encore ouvert
-                      (nuit, salon d'attente entre deux manches, etc.). */}
-                  {['day_reveal', 'day_discussion', 'day_vote', 'captain_election'].includes(view.game.status) && (
-                    <VoiceChat
-                      gameId={gameId!}
-                      code={code!}
-                      channel="village"
-                      displayName={me?.display_name ?? t('common.playerFallback')}
-                      selfUserId={user.id}
-                      listenOnly
-                    />
-                  )}
-                  <ChatPanel gameId={gameId!} channel="village" selfId={user.id} compact readOnly />
-                </div>
-              }
-              graveyard={
-                <div className="flex flex-col gap-3">
-                  <VoiceChat
-                    gameId={gameId!}
-                    code={code!}
-                    channel={voiceChannel}
-                    displayName={me?.display_name ?? t('common.playerFallback')}
-                    selfUserId={user.id}
-                  />
-                  <ChatPanel gameId={gameId!} channel="graveyard" selfId={user.id} compact />
-                </div>
-              }
+            <GhostPanel
+              gameId={gameId!}
+              code={code!}
+              selfId={user.id}
+              displayName={me?.display_name ?? t('common.playerFallback')}
+              gameStatus={view.game.status}
             />
           </div>
         )}
@@ -583,32 +555,121 @@ function DayTabs({
   )
 }
 
-/** Bascule pour les fantômes entre "Village" (chat du village en lecture
- * seule, pour suivre la partie sans y participer) et "Cimetière" (vocal +
- * chat interactif entre joueurs éliminés) — même patron que DayTabs. */
-function GhostTabs({
-  ghostTab,
-  setGhostTab,
-  village,
-  graveyard,
+/** Écran fantôme fusionné (demande utilisateur, remplace l'ancien
+ * GhostTabs à onglets exclusifs) : le village s'affiche EN PERMANENCE en
+ * haut (lecture seule) et le cimetière EN PERMANENCE en bas (chat toujours
+ * actif, on peut y écrire à tout moment, quel que soit le canal vocal
+ * choisi) — un fantôme peut ainsi suivre le village tout en restant
+ * disponible pour ses camarades décédés.
+ *
+ * Seul le VOCAL reste "talkie-walkie" (un seul salon Daily réellement
+ * ouvert à la fois, voir useVoiceChat.ts) : un bouton bascule où sont les
+ * oreilles/la voix du fantôme, entre "Village" (écoute seule, comme avant)
+ * et "Cimetière" (parler avec les autres fantômes). Un petit point animé
+ * sur le bouton du canal INACTIF signale que ça y parle en ce moment
+ * (voir useChannelPresence — sonde silencieuse, aucun son téléchargé) pour
+ * inviter à basculer. */
+function GhostPanel({
+  gameId,
+  code,
+  selfId,
+  displayName,
+  gameStatus,
 }: {
-  ghostTab: 'village' | 'graveyard'
-  setGhostTab: (t: 'village' | 'graveyard') => void
-  village: ReactNode
-  graveyard: ReactNode
+  gameId: string
+  code: string
+  selfId: string
+  displayName: string
+  gameStatus: MyGameView['game']['status']
 }) {
   const { t } = useLanguage()
+  // "Village" par défaut : reprend le comportement précédent, où un fantôme
+  // arrivait toujours en écoute du village avant de devoir basculer
+  // manuellement sur "Cimetière" pour parler.
+  const [audioChannel, setAudioChannel] = useState<'village' | 'graveyard'>('village')
+
+  // Le vocal des vivants n'existe que pendant ces phases-là (voir le calcul
+  // de `voiceChannel` plus haut dans GameRoom pour les vivants) : inutile de
+  // proposer d'"écouter" un salon qui n'est pas encore ouvert (nuit, salon
+  // d'attente entre deux manches, etc.).
+  const villageVoiceAvailable = ['day_reveal', 'day_discussion', 'day_vote', 'captain_election'].includes(gameStatus)
+
+  // Sondes silencieuses : seulement pour le canal qu'on n'écoute PAS en ce
+  // moment (celui qu'on écoute déjà a son propre indicateur "en train de
+  // parler" via VoiceChat/speakingIds, pas besoin d'une sonde en plus).
+  const villagePresence = useChannelPresence(gameId, code, 'village', villageVoiceAvailable && audioChannel !== 'village')
+  const graveyardPresence = useChannelPresence(gameId, code, 'graveyard', audioChannel !== 'graveyard')
+
   return (
     <div className="flex flex-col gap-3">
-      <Segmented
-        tabs={[
-          { id: 'village', label: t('tabs.village') },
-          { id: 'graveyard', label: t('tabs.graveyard') },
-        ]}
-        active={ghostTab}
-        onChange={setGhostTab}
-      />
-      {ghostTab === 'village' ? village : graveyard}
+      {/* Bandeau "talkie-walkie" : où sont les oreilles/la voix. */}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => setAudioChannel('village')}
+          className={`relative flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+            audioChannel === 'village' ? 'bg-blood-600 text-[#fdf6e3]' : 'bg-night-800/60 text-moon-200/70'
+          }`}
+        >
+          {t('ghost.villageToggle')}
+          {audioChannel !== 'village' && villagePresence.active && (
+            <span
+              title={t('ghost.talkingHint')}
+              className="absolute -right-1 -top-1 h-3 w-3 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_0_2px_rgba(0,0,0,0.4)]"
+            />
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setAudioChannel('graveyard')}
+          className={`relative flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
+            audioChannel === 'graveyard' ? 'bg-blood-600 text-[#fdf6e3]' : 'bg-night-800/60 text-moon-200/70'
+          }`}
+        >
+          {t('ghost.graveyardToggle')}
+          {audioChannel !== 'graveyard' && graveyardPresence.active && (
+            <span
+              title={t('ghost.talkingHint')}
+              className="absolute -right-1 -top-1 h-3 w-3 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_0_2px_rgba(0,0,0,0.4)]"
+            />
+          )}
+        </button>
+      </div>
+
+      {/* Haut : ce qui se passe au village — toujours affiché. */}
+      <div className="flex flex-col gap-2">
+        {villageVoiceAvailable &&
+          (audioChannel === 'village' ? (
+            <VoiceChat gameId={gameId} code={code} channel="village" displayName={displayName} selfUserId={selfId} listenOnly />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAudioChannel('village')}
+              className="rounded-xl border border-night-600/60 bg-night-900/40 px-3 py-2 text-left text-xs text-moon-200/50 transition-colors hover:bg-night-800/50"
+            >
+              {t('ghost.villagePaused')}
+            </button>
+          ))}
+        <ChatPanel gameId={gameId} channel="village" selfId={selfId} compact readOnly />
+      </div>
+
+      {/* Bas : le cimetière — chat TOUJOURS actif, quel que soit le canal
+          vocal choisi (demande utilisateur : ne jamais couper la
+          possibilité d'écrire aux autres fantômes). */}
+      <div className="flex flex-col gap-2">
+        {audioChannel === 'graveyard' ? (
+          <VoiceChat gameId={gameId} code={code} channel="graveyard" displayName={displayName} selfUserId={selfId} />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setAudioChannel('graveyard')}
+            className="rounded-xl border border-night-600/60 bg-night-900/40 px-3 py-2 text-left text-xs text-moon-200/50 transition-colors hover:bg-night-800/50"
+          >
+            {t('ghost.graveyardPaused')}
+          </button>
+        )}
+        <ChatPanel gameId={gameId} channel="graveyard" selfId={selfId} compact />
+      </div>
     </div>
   )
 }
@@ -617,7 +678,7 @@ function GhostTabs({
  * joueurs sans action en cours ne s'ennuient pas en silence) et, en plus,
  * uniquement pour les Loups-Garous pendant leur tour, un onglet "Loups"
  * privé et nominatif pour se concerter et choisir leur victime. Même patron
- * que DayTabs / GhostTabs, mais l'onglet "Loups" n'apparaît que s'il est
+ * que DayTabs, mais l'onglet "Loups" n'apparaît que s'il est
  * pertinent — pas la peine d'imposer un sélecteur à tout le monde pour un
  * choix qui n'existe que pour les loups.
  *
