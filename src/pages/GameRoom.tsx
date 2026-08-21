@@ -295,6 +295,7 @@ export default function GameRoom() {
               selfId={user.id}
               displayName={me?.display_name ?? t('common.playerFallback')}
               gameStatus={view.game.status}
+              players={view.players}
             />
           </div>
         )}
@@ -339,6 +340,7 @@ export default function GameRoom() {
               isWolf={isWolfTeam(view.my_role)}
               nightTab={nightTab}
               setNightTab={setNightTab}
+              players={view.players}
             />
             <WolfPackList view={view} myRole={view.my_role} />
             <RolePanel myRole={view.my_role} />
@@ -374,6 +376,7 @@ export default function GameRoom() {
                 channel={voiceChannel}
                 displayName={me?.display_name ?? t('common.playerFallback')}
                 selfUserId={user.id}
+                players={view.players}
               />
             )}
           </div>
@@ -393,6 +396,7 @@ export default function GameRoom() {
                     channel={voiceChannel}
                     displayName={me?.display_name ?? t('common.playerFallback')}
                     selfUserId={user.id}
+                    players={view.players}
                   />
                 }
                 chat={<ChatPanel gameId={gameId!} channel="village" selfId={user.id} />}
@@ -445,6 +449,7 @@ export default function GameRoom() {
                     channel={voiceChannel}
                     displayName={me?.display_name ?? t('common.playerFallback')}
                     selfUserId={user.id}
+                    players={view.players}
                   />
                 }
                 chat={<ChatPanel gameId={gameId!} channel="village" selfId={user.id} compact />}
@@ -579,19 +584,21 @@ function GhostPanel({
   selfId,
   displayName,
   gameStatus,
+  players,
 }: {
   gameId: string
   code: string
   selfId: string
   displayName: string
   gameStatus: MyGameView['game']['status']
+  players: PublicPlayer[]
 }) {
   const villageVoiceAvailable = ['day_reveal', 'day_discussion', 'day_vote', 'captain_election'].includes(gameStatus)
 
   return (
     <div className="flex flex-col gap-2">
       {villageVoiceAvailable && (
-        <VoiceChat gameId={gameId} code={code} channel="village" displayName={displayName} selfUserId={selfId} listenOnly />
+        <VoiceChat gameId={gameId} code={code} channel="village" displayName={displayName} selfUserId={selfId} listenOnly players={players} />
       )}
       <ChatPanel gameId={gameId} channel="village" selfId={selfId} compact readOnly />
       <ChatPanel gameId={gameId} channel="graveyard" selfId={selfId} compact />
@@ -630,6 +637,7 @@ function NightChat({
   isWolf,
   nightTab,
   setNightTab,
+  players,
 }: {
   gameId: string
   code: string
@@ -638,6 +646,7 @@ function NightChat({
   isWolf: boolean
   nightTab: 'village' | 'wolves'
   setNightTab: (t: 'village' | 'wolves') => void
+  players: PublicPlayer[]
 }) {
   const { t } = useLanguage()
 
@@ -657,7 +666,7 @@ function NightChat({
 
   return (
     <div className="flex flex-col gap-3">
-      <VoiceChat gameId={gameId} code={code} channel="wolves" displayName={displayName} selfUserId={selfId} />
+      <VoiceChat gameId={gameId} code={code} channel="wolves" displayName={displayName} selfUserId={selfId} players={players} />
       <Segmented
         tabs={[
           { id: 'village', label: t('tabs.village') },
@@ -1269,7 +1278,7 @@ function EndScreen({
             0039) : le salon reste ouvert entre deux parties, autant pouvoir
             continuer à discuter en attendant que l'hôte relance. */}
         <div className="mb-4">
-          <VoiceChat gameId={gameId} code={code} channel="lobby" displayName={displayName} selfUserId={selfId} />
+          <VoiceChat gameId={gameId} code={code} channel="lobby" displayName={displayName} selfUserId={selfId} players={view.players} />
         </div>
 
         <p className="mb-2 text-xs uppercase tracking-widest text-moon-200/40">

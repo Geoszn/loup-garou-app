@@ -399,6 +399,7 @@ export default function Lobby() {
           channel="lobby"
           displayName={view.players.find((p) => p.user_id === user?.id)?.display_name ?? t('common.playerFallback')}
           selfUserId={user?.id ?? null}
+          players={view.players}
         />
 
         <Card>
