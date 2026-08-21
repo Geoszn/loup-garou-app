@@ -82,13 +82,14 @@ export function VoiceChat({
     statusParts.push(error)
   }
 
-  function avatarBubble(icon: string | null | undefined, color: string | undefined, fallback: string, size: string) {
+  // Demande utilisateur : fond UNIFORME pour toutes les icônes (une seule
+  // couleur commune), seul le glyphe change d'un joueur à l'autre — avant,
+  // chaque bulle reprenait la couleur d'avatar choisie par le joueur
+  // (avatar_color), ce qui faisait un patchwork de couleurs différentes.
+  function avatarBubble(icon: string | null | undefined, fallback: string, size: string) {
     return (
-      <span
-        className={`flex ${size} shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-[#05070d]`}
-        style={{ backgroundColor: color ?? '#4a3524' }}
-      >
-        {icon ? <AvatarIcon icon={icon} className="h-3 w-3" /> : fallback.slice(0, 1).toUpperCase()}
+      <span className={`flex ${size} shrink-0 items-center justify-center rounded-full bg-night-700 text-moon-200`}>
+        {icon ? <AvatarIcon icon={icon} className="h-4 w-4" /> : <span className="text-[10px] font-bold">{fallback.slice(0, 1).toUpperCase()}</span>}
       </span>
     )
   }
@@ -154,50 +155,68 @@ export function VoiceChat({
       )}
 
       {connected && (participants.length > 0 || !listenOnly) && (
-        <div className="flex flex-wrap gap-1 border-t border-night-700/60 pt-1.5">
+        // Grille (pas des pastilles en flex-wrap, largeur variable selon la
+        // longueur du nom) : demande utilisateur — chaque case doit avoir
+        // EXACTEMENT la même taille. Colonnes égales (grid-cols-N) : toutes
+        // les cases d'une même rangée font automatiquement la même largeur,
+        // et le contenu identique (avatar + 1 ligne de nom) leur donne aussi
+        // la même hauteur.
+        <div className="grid grid-cols-4 gap-1.5 border-t border-night-700/60 pt-2 sm:grid-cols-5">
           {!listenOnly && (
-            <span
+            <div
               title={t('voiceChat.selfPillHint')}
-              className={`flex items-center gap-1 rounded-full border py-0.5 pl-0.5 pr-2 text-[11px] text-moon-200/90 transition-colors ${
+              className={`flex flex-col items-center gap-1 rounded-xl border px-1 py-1.5 text-center transition-colors ${
                 selfSpeaking ? 'border-emerald-400/70 bg-emerald-400/10' : 'border-night-600/60 bg-night-800/60'
               }`}
             >
-              {avatarBubble(me?.avatar_icon, me?.avatar_color, displayName, 'h-5 w-5')}
-              <span className="max-w-[72px] truncate font-semibold">{t('voiceChat.you')}</span>
-              <span className={selfSpeaking ? 'animate-pulse' : ''}>{muted ? '🔇' : '🎤'}</span>
-            </span>
+              <span className="relative inline-flex">
+                {avatarBubble(me?.avatar_icon, displayName, 'h-8 w-8')}
+                <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border border-night-900 bg-night-800 text-[8px]">
+                  {muted ? '🔇' : '🎤'}
+                </span>
+              </span>
+              <span className="max-w-full truncate text-[10px] font-semibold text-moon-200">{t('voiceChat.you')}</span>
+            </div>
           )}
           {participants.map((p) => {
             const info = byId.get(p.id)
             const speaking = p.sessionIds.some((id) => speakingIds.has(id))
             return (
-              <span
+              <div
                 key={p.id}
-                className={`flex items-center gap-1 rounded-full border py-0.5 pl-0.5 pr-2 text-[11px] text-moon-200/80 transition-colors ${
+                className={`relative flex flex-col items-center gap-1 rounded-xl border px-1 py-1.5 text-center transition-colors ${
                   speaking ? 'border-emerald-400/70 bg-emerald-400/10' : 'border-night-600/60 bg-night-800/60'
                 }`}
               >
-                {avatarBubble(info?.avatar_icon, info?.avatar_color, p.name, 'h-5 w-5')}
-                <span className="max-w-[72px] truncate">{p.name}</span>
-                <span className={speaking ? 'animate-pulse' : ''}>{p.audioOn ? '🎤' : '🔇'}</span>
                 {canModerate &&
                   (p.audioOn ? (
                     <button
                       onClick={() => muteParticipant(p.sessionIds)}
                       title={t('voiceChat.muteParticipantTitle', { name: p.name })}
-                      className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blood-700/40 text-[9px] text-blood-400 transition-colors hover:bg-blood-700/60"
+                      className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-blood-700/60 text-[9px] text-blood-200 transition-colors hover:bg-blood-700/80"
                     >
                       🔇
                     </button>
                   ) : (
                     <span
                       title={t('voiceChat.alreadyMuted')}
-                      className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-night-700/50 text-[9px] text-moon-200/30"
+                      className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-night-700/70 text-[9px] text-moon-200/30"
                     >
                       🔇
                     </span>
                   ))}
-              </span>
+                <span className="relative inline-flex">
+                  {avatarBubble(info?.avatar_icon, p.name, 'h-8 w-8')}
+                  <span
+                    className={`absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border border-night-900 bg-night-800 text-[8px] ${
+                      speaking ? 'animate-pulse' : ''
+                    }`}
+                  >
+                    {p.audioOn ? '🎤' : '🔇'}
+                  </span>
+                </span>
+                <span className="max-w-full truncate text-[10px] text-moon-200/80">{p.name}</span>
+              </div>
             )
           })}
         </div>
