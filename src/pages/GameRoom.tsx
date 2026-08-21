@@ -265,8 +265,21 @@ export default function GameRoom() {
             ci-dessous, sans quoi il ne s'affiche jamais pour la personne
             censée cliquer dessus. Affiché en dehors de tout statut/alive,
             au-dessus de l'écran fantôme, pour rester visible quelle que soit
-            la phase où la mort est survenue. */}
-        {view.pending_action_required === 'captain_succession' && (
+            la phase où la mort est survenue.
+
+            BUG CORRIGÉ (retour utilisateur : "vérifie si la carte du
+            chasseur fonctionne bien") : exactement le même piège touchait le
+            Chasseur — `hunter_pending` n'est lui aussi posé qu'APRÈS que
+            kill_player l'ait déjà marqué mort (is_alive = false), donc les
+            blocs "night"/"day_vote" ci-dessous, tous les deux conditionnés à
+            `alive`, ne pouvaient physiquement JAMAIS afficher son panneau de
+            tir — son tour expirait systématiquement au bout du délai
+            (message "n'a pas tiré à temps"), sans que le bouton n'apparaisse
+            une seule fois. Même correctif que pour `captain_succession` :
+            affiché ici, hors de toute condition `alive`. Aucun risque de
+            double affichage avec les blocs plus bas : `alive` y est de toute
+            façon toujours faux à ce moment précis. */}
+        {(view.pending_action_required === 'captain_succession' || view.pending_action_required === 'hunter') && (
           <ActionPanel view={view} gameId={gameId!} selfId={user.id} />
         )}
 
