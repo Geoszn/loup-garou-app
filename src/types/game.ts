@@ -187,6 +187,12 @@ export interface MyGameView {
   // écrivait ce changement en clair dans le journal public, ce qui révélait
   // l'identité de l'Enfant Sauvage à tout le village.
   wild_child_turned_wolf: boolean
+  // Public (voir migration 0099), même patron que alpha_infection_occurred
+  // plus bas : au moins un Enfant Sauvage a-t-il rejoint les Loups-Garous à
+  // un moment de la partie ? Ne révèle ni qui ni quand -- sert juste à
+  // corriger totalWolves dans RosterSummary.tsx, qui sinon reste figé sur
+  // role_counts (composition initiale).
+  wild_child_conversion_occurred: boolean
   // Personnel (voir migration 0087) : est-ce que MOI j'ai été la victime du
   // Voleur (échange de carte à l'aveugle) — pas de restriction de phase
   // côté serveur (contrairement à witch_saved_me etc.), le client limite

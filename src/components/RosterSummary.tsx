@@ -35,6 +35,7 @@ export function RosterSummary({
   selfId,
   onlineUserIds,
   infectionOccurred = false,
+  wildChildConversionOccurred = false,
 }: {
   players: PublicPlayer[]
   roleCounts: RoleCounts | null | undefined
@@ -49,6 +50,12 @@ export function RosterSummary({
    * de corriger `totalWolves` ci-dessous, qui sinon reste figé sur la
    * composition initiale même après une conversion réussie. */
   infectionOccurred?: boolean
+  /** Même principe qu'infectionOccurred ci-dessus, mais pour l'Enfant
+   * Sauvage qui a perdu son mentor et rejoint les Loups-Garous (voir
+   * MyGameView.wild_child_conversion_occurred, migration 0099) — retour
+   * utilisateur : sans ça, le total de loups affiché ne changeait pas et
+   * pouvait tromper les joueurs. */
+  wildChildConversionOccurred?: boolean
 }) {
   const { t } = useLanguage()
   const [open, setOpen] = useState(false)
@@ -92,7 +99,11 @@ export function RosterSummary({
   // infectionOccurred, migration 0095) — corrige la limite notée ici
   // auparavant : ce total restait figé sur la composition INITIALE
   // (role_counts) même une fois un villageois converti en cours de partie.
-  const totalWolves = (roleCounts?.loup_garou ?? 0) + (roleCounts?.loup_alpha ? 1 : 0) + (infectionOccurred ? 1 : 0)
+  const totalWolves =
+    (roleCounts?.loup_garou ?? 0) +
+    (roleCounts?.loup_alpha ? 1 : 0) +
+    (infectionOccurred ? 1 : 0) +
+    (wildChildConversionOccurred ? 1 : 0)
   const deadWolves = players.filter(
     (p) => !p.is_alive && (p.revealed_role === 'loup_garou' || p.revealed_role === 'loup_alpha')
   ).length

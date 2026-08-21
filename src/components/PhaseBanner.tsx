@@ -59,6 +59,7 @@ export function PhaseBanner({
   roleCounts,
   onlineUserIds,
   infectionOccurred = false,
+  wildChildConversionOccurred = false,
   narratorEnabled,
   onToggleNarrator,
   narratorSupported = true,
@@ -84,6 +85,9 @@ export function PhaseBanner({
   /** Voir RosterSummary.tsx — transmis tel quel, transparent pour ce
    * composant. */
   infectionOccurred?: boolean
+  /** Voir RosterSummary.tsx — transmis tel quel, transparent pour ce
+   * composant. */
+  wildChildConversionOccurred?: boolean
   selfId?: string
   narratorEnabled?: boolean
   onToggleNarrator?: () => void
@@ -180,6 +184,7 @@ export function PhaseBanner({
             selfId={selfId}
             onlineUserIds={onlineUserIds}
             infectionOccurred={infectionOccurred}
+            wildChildConversionOccurred={wildChildConversionOccurred}
           />
         )}
         <Timer deadline={deadline} />
