@@ -106,7 +106,7 @@ function CupidonPanel({ view, gameId }: { view: MyGameView; gameId: string }) {
 
   return (
     <PanelShell emoji="💘" title={t('action.cupidon.title')} subtitle={t('action.cupidon.subtitle')}>
-      <PlayerGrid players={alive} selectable selectedId={undefined} highlightIds={[first, second].filter(Boolean) as string[]} onSelect={pick} />
+      <PlayerGrid players={alive} selectable compact selectedId={undefined} highlightIds={[first, second].filter(Boolean) as string[]} onSelect={pick} />
       <ErrorText>{error}</ErrorText>
       <Button className="mt-4 w-full" disabled={!first || !second || loading} onClick={confirm}>
         {loading ? t('common.sending') : t('action.cupidon.confirm')}
@@ -133,7 +133,7 @@ function VoyantePanel({ view, gameId, selfId }: { view: MyGameView; gameId: stri
 
   return (
     <PanelShell emoji="🔮" title={t('action.voyante.title')}>
-      <PlayerGrid players={alive} selectable selectedId={selected} onSelect={setSelected} />
+      <PlayerGrid players={alive} selectable compact selectedId={selected} onSelect={setSelected} />
       {view.seer_reveals.length > 0 && (
         <div className="mt-4 space-y-1 border-t border-night-600/60 pt-3">
           <p className="mb-1 text-xs uppercase tracking-wider text-moon-200/40">{t('action.voyante.pastVisions')}</p>
@@ -177,7 +177,7 @@ function EnfantSauvagePanel({ view, gameId, selfId }: { view: MyGameView; gameId
 
   return (
     <PanelShell emoji="🐾" title={t('action.enfantSauvage.title')} subtitle={t('action.enfantSauvage.subtitle')}>
-      <PlayerGrid players={alive} selectable selectedId={selected} onSelect={setSelected} />
+      <PlayerGrid players={alive} selectable compact selectedId={selected} onSelect={setSelected} />
       <ErrorText>{error}</ErrorText>
       <Button className="mt-4 w-full" disabled={!selected || loading} onClick={confirm}>
         {loading ? t('common.sending') : t('action.enfantSauvage.confirm')}
@@ -285,6 +285,7 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
           players={alive}
           selfId={selfId}
           selectable
+          compact
           selectedId={selected}
           disabledIds={alive.filter((p) => teammates.has(p.user_id) || p.user_id === selfId).map((p) => p.user_id)}
           onSelect={(id) => submit(id)}
@@ -513,6 +514,7 @@ function SorcierePanel({ view, gameId }: { view: MyGameView; gameId: string; sel
           <PlayerGrid
             players={alive}
             selectable
+            compact
             selectedId={poisonTarget}
             onSelect={(id) => {
               setPoisonTarget((cur) => (cur === id ? null : id))
@@ -595,7 +597,7 @@ export function VotePanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
         <h3 className="font-display text-lg text-moon-200">{t('action.vote.title')}</h3>
       </div>
       {hasVoted && <VoteRecordedBanner />}
-      <PlayerGrid players={alive} selfId={selfId} selectable selectedId={selected} onSelect={(id) => vote(id)} />
+      <PlayerGrid players={alive} selfId={selfId} selectable compact selectedId={selected} onSelect={(id) => vote(id)} />
       <Button variant="ghost" className="mt-3 w-full" disabled={loading} onClick={() => vote(null)}>
         {t('common.abstain')}
       </Button>
@@ -636,7 +638,7 @@ export function CaptainVotePanel({ view, gameId, selfId }: { view: MyGameView; g
         </div>
       </div>
       {hasVoted && <VoteRecordedBanner />}
-      <PlayerGrid players={alive} selfId={selfId} selectable selectedId={selected} onSelect={(id) => vote(id)} />
+      <PlayerGrid players={alive} selfId={selfId} selectable compact selectedId={selected} onSelect={(id) => vote(id)} />
       <Button variant="ghost" className="mt-3 w-full" disabled={loading} onClick={() => vote(null)}>
         {t('common.abstain')}
       </Button>
@@ -668,7 +670,7 @@ function CaptainSuccessionPanel({ view, gameId, selfId }: { view: MyGameView; ga
       title={t('action.captainSuccession.title')}
       subtitle={t('action.captainSuccession.subtitle')}
     >
-      <PlayerGrid players={alive} selfId={selfId} selectable onSelect={choose} />
+      <PlayerGrid players={alive} selfId={selfId} selectable compact onSelect={choose} />
       <ErrorText>{error}</ErrorText>
       {loading && <p className="mt-2 text-xs text-moon-200/40">{t('common.sending')}</p>}
     </PanelShell>
@@ -691,7 +693,7 @@ function HunterPanel({ view, gameId, selfId }: { view: MyGameView; gameId: strin
 
   return (
     <PanelShell emoji="🏹" title={t('action.hunter.title')} subtitle={t('action.hunter.subtitle')}>
-      <PlayerGrid players={alive} selfId={selfId} selectable onSelect={(id) => shoot(id)} />
+      <PlayerGrid players={alive} selfId={selfId} selectable compact onSelect={(id) => shoot(id)} />
       <Button variant="ghost" className="mt-3 w-full" disabled={loading} onClick={() => shoot(null)}>
         {t('action.hunter.noShot')}
       </Button>

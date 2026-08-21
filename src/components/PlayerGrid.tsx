@@ -43,6 +43,12 @@ interface Props {
    * avatar. Omis (undefined) : pas de voyant du tout, pour les usages qui
    * n'ont pas cette donnée sous la main. */
   onlineUserIds?: Set<string>
+  /** Version resserrée (demande utilisateur : "moins encombrant" pour tous
+   * les votes/choix) — avatars plus petits, plus de colonnes, marges
+   * réduites. Réservée aux grilles de SÉLECTION (vote village, loups,
+   * Voyante, Sorcière, Chasseur...) ; le roster en lecture seule garde la
+   * taille normale, plus confortable à parcourir sans urgence de clic. */
+  compact?: boolean
 }
 
 export function PlayerGrid({
@@ -55,6 +61,7 @@ export function PlayerGrid({
   onSelect,
   showDeathReveal = true,
   onlineUserIds,
+  compact = false,
 }: Props) {
   // Popover "Ajouter en ami" : uniquement en dehors d'un mode vote/action
   // (selectable), pour ne jamais gêner le choix d'une cible pendant un vote.
@@ -70,7 +77,13 @@ export function PlayerGrid({
   }, [openId])
 
   return (
-    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
+    <div
+      className={
+        compact
+          ? 'grid grid-cols-4 gap-1.5 sm:grid-cols-5 md:grid-cols-6'
+          : 'grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5'
+      }
+    >
       {players.map((p) => {
         const isDisabled = !p.is_alive || disabledIds.includes(p.user_id)
         const isSelected = selectedId === p.user_id
@@ -90,7 +103,7 @@ export function PlayerGrid({
                   setOpenId((cur) => (cur === p.user_id ? null : p.user_id))
                 }
               }}
-              className={`group relative flex w-full flex-col items-center gap-1 rounded-xl border p-2 text-center shadow-card transition-all
+              className={`group relative flex w-full flex-col items-center gap-1 rounded-xl border text-center shadow-card transition-all ${compact ? 'p-1.5' : 'p-2'}
                 ${isSelected ? 'border-blood-500 bg-gradient-to-b from-blood-700/30 to-blood-700/10 shadow-blood-glow' : 'border-night-600/60 bg-gradient-to-b from-night-700/50 to-night-900/50'}
                 ${isHighlighted && !isSelected ? 'border-moon-400/60' : ''}
                 ${!p.is_alive ? 'opacity-40 grayscale' : ''}
@@ -103,12 +116,16 @@ export function PlayerGrid({
                   thèmes, contrairement à night-950 qui deviendrait blanc de jour. */}
               <span className="relative inline-flex">
                 <span
-                  className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-[#05070d] ring-offset-2 ${
+                  className={`flex items-center justify-center rounded-full font-bold text-[#05070d] ring-offset-2 ${compact ? 'h-8 w-8 text-xs' : 'h-10 w-10 text-sm'} ${
                     p.rank_tier ? `ring-offset-night-900 ${tierRingClass(p.rank_tier)}` : ''
                   }`}
                   style={{ backgroundColor: p.avatar_color }}
                 >
-                  {p.avatar_icon ? <AvatarIcon icon={p.avatar_icon} className="h-5 w-5" /> : p.display_name.slice(0, 1).toUpperCase()}
+                  {p.avatar_icon ? (
+                    <AvatarIcon icon={p.avatar_icon} className={compact ? 'h-4 w-4' : 'h-5 w-5'} />
+                  ) : (
+                    p.display_name.slice(0, 1).toUpperCase()
+                  )}
                 </span>
                 {onlineUserIds && (
                   <span
@@ -119,7 +136,7 @@ export function PlayerGrid({
                   />
                 )}
               </span>
-              <span className="max-w-full truncate text-xs font-medium text-moon-200/90">
+              <span className={`max-w-full truncate font-medium text-moon-200/90 ${compact ? 'text-[10px]' : 'text-xs'}`}>
                 {p.display_name}
                 {p.user_id === selfId ? ` (${t('common.you')})` : ''}
               </span>
