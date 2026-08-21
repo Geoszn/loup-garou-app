@@ -28,7 +28,6 @@ import { translateGameLogMessage } from '../lib/gameLogTranslate'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { MyGameView, PublicPlayer } from '../types/game'
 import type { VoiceChannel } from '../hooks/useVoiceChat'
-import { useChannelPresence } from '../hooks/useChannelPresence'
 
 export default function GameRoom() {
   const { code } = useParams()
@@ -284,8 +283,8 @@ export default function GameRoom() {
         )}
 
         {!alive && view.game.status !== 'ended' && (
-          <div className="flex animate-fade-in flex-col gap-3 rounded-2xl border border-night-500/60 bg-night-950/60 p-4">
-            <p className="text-sm text-moon-200/60">
+          <div className="flex animate-fade-in flex-col gap-2 rounded-2xl border border-night-500/60 bg-night-950/60 p-3">
+            <p className="text-xs text-moon-200/50">
               {view.my_role
                 ? t('game.eliminatedNoticeWithRole', { role: roleLabel(view.my_role, t) })
                 : t('game.eliminatedNoticeNoRole')}
@@ -568,20 +567,12 @@ function DayTabs({
   )
 }
 
-/** Écran fantôme fusionné (demande utilisateur, remplace l'ancien
- * GhostTabs à onglets exclusifs) : le village s'affiche EN PERMANENCE en
- * haut (lecture seule) et le cimetière EN PERMANENCE en bas (chat toujours
- * actif, on peut y écrire à tout moment, quel que soit le canal vocal
- * choisi) — un fantôme peut ainsi suivre le village tout en restant
- * disponible pour ses camarades décédés.
- *
- * Seul le VOCAL reste "talkie-walkie" (un seul salon Daily réellement
- * ouvert à la fois, voir useVoiceChat.ts) : un bouton bascule où sont les
- * oreilles/la voix du fantôme, entre "Village" (écoute seule, comme avant)
- * et "Cimetière" (parler avec les autres fantômes). Un petit point animé
- * sur le bouton du canal INACTIF signale que ça y parle en ce moment
- * (voir useChannelPresence — sonde silencieuse, aucun son téléchargé) pour
- * inviter à basculer. */
+/** Écran fantôme fusionné : village en haut (lecture seule), cimetière en
+ * bas (chat toujours actif). Demande utilisateur : plus de vocal du tout au
+ * cimetière (retiré — seuls les fantômes s'y retrouvaient, jugé superflu) ;
+ * le vocal du village (écoute seule, quand les vivants parlent en journée)
+ * reste seul survivant, donc plus besoin de bouton pour choisir un canal —
+ * il s'affiche tout seul quand disponible. */
 function GhostPanel({
   gameId,
   code,
@@ -595,94 +586,15 @@ function GhostPanel({
   displayName: string
   gameStatus: MyGameView['game']['status']
 }) {
-  const { t } = useLanguage()
-  // "Village" par défaut : reprend le comportement précédent, où un fantôme
-  // arrivait toujours en écoute du village avant de devoir basculer
-  // manuellement sur "Cimetière" pour parler.
-  const [audioChannel, setAudioChannel] = useState<'village' | 'graveyard'>('village')
-
-  // Le vocal des vivants n'existe que pendant ces phases-là (voir le calcul
-  // de `voiceChannel` plus haut dans GameRoom pour les vivants) : inutile de
-  // proposer d'"écouter" un salon qui n'est pas encore ouvert (nuit, salon
-  // d'attente entre deux manches, etc.).
   const villageVoiceAvailable = ['day_reveal', 'day_discussion', 'day_vote', 'captain_election'].includes(gameStatus)
 
-  // Sondes silencieuses : seulement pour le canal qu'on n'écoute PAS en ce
-  // moment (celui qu'on écoute déjà a son propre indicateur "en train de
-  // parler" via VoiceChat/speakingIds, pas besoin d'une sonde en plus).
-  const villagePresence = useChannelPresence(gameId, code, 'village', villageVoiceAvailable && audioChannel !== 'village')
-  const graveyardPresence = useChannelPresence(gameId, code, 'graveyard', audioChannel !== 'graveyard')
-
   return (
-    <div className="flex flex-col gap-3">
-      {/* Bandeau "talkie-walkie" : où sont les oreilles/la voix. */}
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => setAudioChannel('village')}
-          className={`relative flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
-            audioChannel === 'village' ? 'bg-blood-600 text-[#fdf6e3]' : 'bg-night-800/60 text-moon-200/70'
-          }`}
-        >
-          {t('ghost.villageToggle')}
-          {audioChannel !== 'village' && villagePresence.active && (
-            <span
-              title={t('ghost.talkingHint')}
-              className="absolute -right-1 -top-1 h-3 w-3 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_0_2px_rgba(0,0,0,0.4)]"
-            />
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={() => setAudioChannel('graveyard')}
-          className={`relative flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition-colors ${
-            audioChannel === 'graveyard' ? 'bg-blood-600 text-[#fdf6e3]' : 'bg-night-800/60 text-moon-200/70'
-          }`}
-        >
-          {t('ghost.graveyardToggle')}
-          {audioChannel !== 'graveyard' && graveyardPresence.active && (
-            <span
-              title={t('ghost.talkingHint')}
-              className="absolute -right-1 -top-1 h-3 w-3 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_0_2px_rgba(0,0,0,0.4)]"
-            />
-          )}
-        </button>
-      </div>
-
-      {/* Haut : ce qui se passe au village — toujours affiché. */}
-      <div className="flex flex-col gap-2">
-        {villageVoiceAvailable &&
-          (audioChannel === 'village' ? (
-            <VoiceChat gameId={gameId} code={code} channel="village" displayName={displayName} selfUserId={selfId} listenOnly />
-          ) : (
-            <button
-              type="button"
-              onClick={() => setAudioChannel('village')}
-              className="rounded-xl border border-night-600/60 bg-night-900/40 px-3 py-2 text-left text-xs text-moon-200/50 transition-colors hover:bg-night-800/50"
-            >
-              {t('ghost.villagePaused')}
-            </button>
-          ))}
-        <ChatPanel gameId={gameId} channel="village" selfId={selfId} compact readOnly />
-      </div>
-
-      {/* Bas : le cimetière — chat TOUJOURS actif, quel que soit le canal
-          vocal choisi (demande utilisateur : ne jamais couper la
-          possibilité d'écrire aux autres fantômes). */}
-      <div className="flex flex-col gap-2">
-        {audioChannel === 'graveyard' ? (
-          <VoiceChat gameId={gameId} code={code} channel="graveyard" displayName={displayName} selfUserId={selfId} />
-        ) : (
-          <button
-            type="button"
-            onClick={() => setAudioChannel('graveyard')}
-            className="rounded-xl border border-night-600/60 bg-night-900/40 px-3 py-2 text-left text-xs text-moon-200/50 transition-colors hover:bg-night-800/50"
-          >
-            {t('ghost.graveyardPaused')}
-          </button>
-        )}
-        <ChatPanel gameId={gameId} channel="graveyard" selfId={selfId} compact />
-      </div>
+    <div className="flex flex-col gap-2">
+      {villageVoiceAvailable && (
+        <VoiceChat gameId={gameId} code={code} channel="village" displayName={displayName} selfUserId={selfId} listenOnly />
+      )}
+      <ChatPanel gameId={gameId} channel="village" selfId={selfId} compact readOnly />
+      <ChatPanel gameId={gameId} channel="graveyard" selfId={selfId} compact />
     </div>
   )
 }

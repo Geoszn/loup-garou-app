@@ -556,12 +556,12 @@ export const translations = {
   'game.kickedNotice': { fr: "Vous avez été retiré(e) de cette partie par l'hôte.", en: "You've been removed from this game by the host." },
   'game.excludedMessage': { fr: "Vous avez été exclu(e) de cette partie par l'hôte.", en: "You've been excluded from this game by the host." },
   'game.eliminatedNoticeWithRole': {
-    fr: '👻 Vous avez été éliminé — vous étiez {{role}}. Vous pouvez suivre le chat du village en direct (sans y participer), et discuter librement avec les autres joueurs éliminés au cimetière.',
-    en: "👻 You've been eliminated — you were {{role}}. You can follow the village chat live (without taking part), and chat freely with other eliminated players in the graveyard.",
+    fr: '👻 Vous avez été éliminé — vous étiez {{role}}.',
+    en: "👻 You've been eliminated — you were {{role}}.",
   },
   'game.eliminatedNoticeNoRole': {
-    fr: '👻 Vous avez été éliminé. Vous pouvez suivre le chat du village en direct (sans y participer), et discuter librement avec les autres joueurs éliminés au cimetière.',
-    en: "👻 You've been eliminated. You can follow the village chat live (without taking part), and chat freely with other eliminated players in the graveyard.",
+    fr: '👻 Vous avez été éliminé.',
+    en: "👻 You've been eliminated.",
   },
   // --- Popup de mort (DeathImpactModal.tsx, migration 0073) ------------------
   // Affichée juste après une élimination en cours de partie : montre
@@ -1655,24 +1655,6 @@ export const translations = {
   // --- Vote forcé par le modérateur (sans Capitaine) -------------------------
   'game.hostCallVoteButton': { fr: 'Lancer le vote', en: 'Call the vote' },
   'game.hostCallVoteButtonWaiting': { fr: 'En attente du village...', en: 'Waiting for the village...' },
-
-  // --- Écran fantôme fusionné : village en haut + cimetière toujours actif
-  // en bas, bouton "talkie-walkie" pour basculer le vocal (demande
-  // utilisateur, voir GameRoom.tsx / GhostPanel) ---------------------------
-  'ghost.villageToggle': { fr: '👥 Village', en: '👥 Village' },
-  'ghost.graveyardToggle': { fr: '👻 Cimetière', en: '👻 Graveyard' },
-  'ghost.talkingHint': {
-    fr: 'Ça parle ici — tape pour écouter',
-    en: "There's talking here — tap to listen",
-  },
-  'ghost.villagePaused': {
-    fr: '🔇 Vocal du village en pause — basculez sur "Village" ci-dessus pour écouter.',
-    en: '🔇 Village voice paused — switch to "Village" above to listen.',
-  },
-  'ghost.graveyardPaused': {
-    fr: '🔇 Vocal du cimetière en pause — basculez sur "Cimetière" ci-dessus pour parler.',
-    en: '🔇 Graveyard voice paused — switch to "Graveyard" above to speak.',
-  },
 } as const satisfies Record<string, Record<Lang, string>>
 
 export type TranslationKey = keyof typeof translations
