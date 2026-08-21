@@ -657,6 +657,17 @@ export const translations = {
     fr: 'Vous avez volé la carte d’un joueur au hasard cette nuit et échangé la vôtre contre la sienne. Votre nouveau rôle : {{role}}.',
     en: 'You stole a random player’s card tonight and swapped yours for theirs. Your new role: {{role}}.',
   },
+  // Bannière PUBLIQUE (tout le monde la voit, contrairement à
+  // wildChildTurned ci-dessous qui reste personnelle) — retour utilisateur :
+  // "il faut que tout le monde puisse être au courant qu'il y a eu un
+  // changement" dans le total de loups. Ne nomme jamais qui (voir migration
+  // 0100, wild_child_conversion_this_round) — affichée dans NightRecapModal
+  // ET VoteRecapModal (le mentor peut mourir de nuit ou lynché de jour).
+  'game.wildChildConversionPublicTitle': { fr: '🌑 Une ombre a changé de camp', en: '🌑 A shadow switched sides' },
+  'game.wildChildConversionPublic': {
+    fr: 'Un villageois a secrètement rejoint les Loups-Garous. Le nombre de loups a changé.',
+    en: 'A villager has secretly joined the Werewolves. The wolf count has changed.',
+  },
   'game.wildChildTurnedTitle': { fr: '🐺 Rongé(e) par la vengeance', en: '🐺 Consumed by revenge' },
   'game.wildChildTurned': {
     fr: 'Votre mentor est mort cette nuit. Rongé(e) par la vengeance, vous rejoignez désormais les Loups-Garous — personne d’autre que vous ne le sait.',

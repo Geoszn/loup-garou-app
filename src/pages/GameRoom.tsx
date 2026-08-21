@@ -73,6 +73,10 @@ export default function GameRoom() {
   const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false)
   const [modOpen, setModOpen] = useState(false)
   const [showDeathImpact, setShowDeathImpact] = useState(false)
+  // Voir handleRestart plus bas : état du bouton "Rejouer avec ce groupe"
+  // (écran de fin de partie, EndScreen).
+  const [restarting, setRestarting] = useState(false)
+  const [restartError, setRestartError] = useState<string | null>(null)
   // Détecte le passage vivant → mort pour déclencher la popup de bonus
   // d'impact (voir DeathImpactModal.tsx, migration 0073) — UNE seule fois,
   // au moment précis de la mort, pas à chaque rechargement une fois déjà
@@ -168,9 +172,24 @@ export default function GameRoom() {
     setConfirmLeaveOpen(true)
   }
 
+  // Bug corrigé (retour utilisateur) : un navigate() immédiat ici court-
+  // circuitait l'effet plus haut (view.game.status === 'lobby', ligne ~101)
+  // — les deux redirigeaient vers la même URL en concurrence, avant que le
+  // `view` local n'ait eu le temps de refléter le nouveau statut renvoyé par
+  // restart_game. Résultat observé : un écran d'erreur transitoire s'affiche
+  // brièvement avant que la redirection ne se stabilise sur le salon.
+  // ModerationPanel.confirmRestart (redémarrage en pleine partie) suit déjà
+  // le bon patron — laisser l'effet passif s'en charger, sans navigate() ici
+  // — voir son commentaire ; on aligne ce bouton dessus. En prime : bouton
+  // désactivé pendant l'appel (évite un double-clic qui ferait échouer le
+  // second appel puisque le statut n'est déjà plus "ended"/"night"/etc.), et
+  // erreur RPC affichée au lieu d'être silencieusement avalée.
   async function handleRestart() {
+    setRestarting(true)
+    setRestartError(null)
     const { error } = await supabase.rpc('restart_game', { p_game_id: gameId })
-    if (!error) navigate(`/partie/${code}/lobby`)
+    setRestarting(false)
+    if (error) setRestartError(error.message)
   }
 
   const isNight = view.game.status === 'night' || view.game.status === 'role_reveal'
@@ -483,6 +502,8 @@ export default function GameRoom() {
             code={code!}
             displayName={me?.display_name ?? t('common.playerFallback')}
             onRestart={handleRestart}
+            restarting={restarting}
+            restartError={restartError}
             onLeave={requestLeave}
           />
         )}
@@ -1055,6 +1076,8 @@ function EndScreen({
   code,
   displayName,
   onRestart,
+  restarting,
+  restartError,
   onLeave,
 }: {
   view: MyGameView
@@ -1064,6 +1087,8 @@ function EndScreen({
   code: string
   displayName: string
   onRestart: () => void
+  restarting: boolean
+  restartError: string | null
   onLeave: () => void
 }) {
   const { t } = useLanguage()
@@ -1227,14 +1252,15 @@ function EndScreen({
 
       <div className="flex flex-col gap-3 sm:flex-row">
         {isHost && (
-          <Button onClick={onRestart} className="w-full">
-            {t('game.playAgain')}
+          <Button onClick={onRestart} disabled={restarting} className="w-full">
+            {restarting ? t('common.sending') : t('game.playAgain')}
           </Button>
         )}
         <Button onClick={onLeave} variant={isHost ? 'ghost' : 'primary'} className="w-full">
           {t('game.leaveLobbyButton')}
         </Button>
       </div>
+      {isHost && <ErrorText>{restartError}</ErrorText>}
       {!isHost && (
         <p className="mt-3 text-xs text-moon-200/40">{t('game.waitHostRestart')}</p>
       )}

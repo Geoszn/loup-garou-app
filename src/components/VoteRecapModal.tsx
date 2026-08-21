@@ -51,6 +51,14 @@ export function VoteRecapModal({ view, gameId, selfId }: { view: MyGameView; gam
     (p) => p.death_cause === 'vote' && p.died_at_night === view.game.night_number
   )
 
+  // Retour utilisateur (migration 0100) : si le mentor de l'Enfant Sauvage
+  // vient d'être lynché par le village (plutôt que dévoré de nuit), la
+  // conversion qui en résulte n'apparaissait jusqu'ici NULLE PART pour le
+  // reste du village — ce récap de vote ne montrait que le résultat du vote,
+  // jamais le journal de partie. Même bannière publique et anonyme que
+  // NightRecapModal (ne révèle jamais qui).
+  const wildChildConversionThisRound = view.wild_child_conversion_this_round
+
   const aliveCount = view.players.filter((p) => p.is_alive).length
   const iAmReady = readyIds.includes(selfId)
   const iAmAlive = view.players.find((p) => p.user_id === selfId)?.is_alive ?? false
@@ -99,6 +107,15 @@ export function VoteRecapModal({ view, gameId, selfId }: { view: MyGameView; gam
             <p className="rounded-xl border border-night-600/60 bg-night-800/60 px-3 py-2.5 text-moon-200/80">
               {t('voteRecap.tie')}
             </p>
+          )}
+
+          {wildChildConversionThisRound && (
+            <div className="animate-fade-in rounded-xl border border-night-500/50 bg-night-700/40 px-3 py-2.5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-moon-300">
+                {t('game.wildChildConversionPublicTitle')}
+              </p>
+              <p className="mt-1 text-sm text-moon-200/90">{t('game.wildChildConversionPublic')}</p>
+            </div>
           )}
 
           {ranked.length > 0 && (

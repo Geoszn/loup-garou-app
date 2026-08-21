@@ -55,6 +55,15 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
   // l'Enfant Sauvage à tout le village.
   const wildChildTurnedWolf = view.wild_child_turned_wolf
 
+  // Bannière PUBLIQUE, visible de tout le monde (contrairement à
+  // wildChildTurnedWolf ci-dessus, réservée à l'Enfant Sauvage lui-même) —
+  // retour utilisateur : le reste du village doit savoir qu'un changement de
+  // camp a eu lieu, sans savoir qui (voir migration 0100). Le message
+  // générique existait déjà dans le journal brut (entries ci-dessous), mais
+  // noyé dedans -- ce bandeau le met en avant comme les autres événements de
+  // la nuit.
+  const wildChildConversionThisRound = view.wild_child_conversion_this_round
+
   // Infection du Loup Alpha (voir migration 0088) : même principe que
   // wild_child_turned_wolf ci-dessus — strictement personnel, jamais révélé
   // à qui que ce soit d'autre (le journal public reste anonyme, "un
@@ -87,7 +96,13 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          {(loverName || mentees.length > 0 || witchSavedMe || witchPoisonedMe || wildChildTurnedWolf || alphaInfectedMe) && (
+          {(loverName ||
+            mentees.length > 0 ||
+            witchSavedMe ||
+            witchPoisonedMe ||
+            wildChildTurnedWolf ||
+            wildChildConversionThisRound ||
+            alphaInfectedMe) && (
             <div className="mb-3 flex flex-col gap-2">
               {loverName && (
                 <div className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2.5">
@@ -126,6 +141,18 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
                 <div className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2.5">
                   <p className="text-xs font-semibold uppercase tracking-wide text-blood-400">{t('game.wildChildTurnedTitle')}</p>
                   <p className="mt-1 text-sm text-moon-200/90">{t('game.wildChildTurned')}</p>
+                </div>
+              )}
+              {/* Public, visible de tous (voir commentaire plus haut) —
+                  affichée en plus de l'encart personnel ci-dessus s'il y en
+                  a un, même patron que la potion de soin de la Sorcière
+                  (message générique public + message personnel dédié). */}
+              {wildChildConversionThisRound && (
+                <div className="animate-fade-in rounded-xl border border-night-500/50 bg-night-700/40 px-3 py-2.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-moon-300">
+                    {t('game.wildChildConversionPublicTitle')}
+                  </p>
+                  <p className="mt-1 text-sm text-moon-200/90">{t('game.wildChildConversionPublic')}</p>
                 </div>
               )}
               {/* Encart personnel pour la victime infectée par le Loup Alpha

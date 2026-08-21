@@ -193,6 +193,11 @@ export interface MyGameView {
   // corriger totalWolves dans RosterSummary.tsx, qui sinon reste figé sur
   // role_counts (composition initiale).
   wild_child_conversion_occurred: boolean
+  // Public (voir migration 0100) : même principe que le champ ci-dessus,
+  // mais borné au round actuellement affiché en récap (nuit OU vote de
+  // jour) — redevient faux une fois le round passé. Couvre le cas où le
+  // mentor meurt lynché de jour (VoteRecapModal), jusqu'ici invisible.
+  wild_child_conversion_this_round: boolean
   // Personnel (voir migration 0087) : est-ce que MOI j'ai été la victime du
   // Voleur (échange de carte à l'aveugle) — pas de restriction de phase
   // côté serveur (contrairement à witch_saved_me etc.), le client limite
