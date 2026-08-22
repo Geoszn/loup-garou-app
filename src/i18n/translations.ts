@@ -780,12 +780,42 @@ export const translations = {
   'action.voyante.confirm': { fr: 'Sonder ce joueur', en: 'Probe this player' },
   'action.wolf.title': { fr: 'Choisissez votre victime', en: 'Choose your victim' },
   'action.wolf.subtitle': { fr: 'Concertez-vous avec votre meute.', en: 'Coordinate with your pack.' },
-  // Réorganisation du panneau (retour utilisateur : "réorganise le tableau
-  // des votes, que ce soit plus simple, bien ordonné, une facilité de
-  // compréhension") : deux blocs bien distincts et numérotés — la cible à
-  // éliminer, puis (si applicable) l'option d'infecter à la place.
-  'action.wolf.stepTargetTitle': { fr: '1. Choisissez une cible', en: '1. Choose a target' },
-  'action.wolf.stepInfectTitle': { fr: '2. Infecter au lieu d’éliminer ?', en: '2. Infect instead of eliminate?' },
+  // Refonte en assistant à 3 temps (retour utilisateur : "le choix entre
+  // voter et infecter est perturbant, je ne suis pas sûr de mon choix") —
+  // avant, le choix de cible et l'accord d'infection étaient deux blocs
+  // affichés en même temps, avec un envoi immédiat au clic sur un joueur :
+  // rien ne distinguait clairement "je vote pour éliminer" de "je vote pour
+  // infecter", et aucune confirmation n'était demandée avant l'envoi. Refait
+  // en 3 étapes explicites, façon assistant : 1) intention (éliminer ou
+  // infecter), 2) victime, 3) pop-up récapitulatif à confirmer avant envoi —
+  // même esprit que la Sorcière (ConfirmDialog déjà utilisé là-bas).
+  'action.wolf.chooseIntentTitle': { fr: 'Que voulez-vous faire cette nuit ?', en: 'What do you want to do tonight?' },
+  'action.wolf.intentEliminate': { fr: 'Éliminer', en: 'Eliminate' },
+  'action.wolf.intentInfect': { fr: 'Infecter', en: 'Infect' },
+  'action.wolf.changeIntent': { fr: '‹ changer', en: '‹ change' },
+  'action.wolf.chooseTargetEliminateTitle': { fr: 'Qui éliminer ?', en: 'Who to eliminate?' },
+  'action.wolf.chooseTargetInfectTitle': { fr: 'Qui infecter ?', en: 'Who to infect?' },
+  'action.wolf.confirmEliminateTitle': { fr: 'Confirmer l’élimination', en: 'Confirm elimination' },
+  'action.wolf.confirmInfectTitle': { fr: 'Confirmer l’infection', en: 'Confirm infection' },
+  'action.wolf.confirmEliminateMessage': {
+    fr: 'Vous êtes sur le point de désigner {{name}} pour être éliminé(e) cette nuit, si la majorité de la meute est d’accord.',
+    en: 'You’re about to designate {{name}} to be eliminated tonight, if the pack majority agrees.',
+  },
+  'action.wolf.confirmInfectMessage': {
+    fr: 'Vous êtes sur le point de désigner {{name}} pour être infecté(e) au lieu d’éliminé(e), si la majorité de la meute est d’accord et que le Loup Alpha confirme.',
+    en: 'You’re about to designate {{name}} to be infected instead of eliminated, if the pack majority agrees and the Alpha Wolf confirms.',
+  },
+  'action.wolf.confirmButton': { fr: 'Confirmer', en: 'Confirm' },
+  'action.wolf.voteSummaryEliminate': {
+    fr: '🩸 Vote enregistré : vous voulez éliminer {{name}}.',
+    en: '🩸 Vote recorded: you want to eliminate {{name}}.',
+  },
+  'action.wolf.voteSummaryInfect': {
+    fr: '🧬 Vote enregistré : vous voulez infecter {{name}}.',
+    en: '🧬 Vote recorded: you want to infect {{name}}.',
+  },
+  'action.wolf.editChoice': { fr: 'Modifier mon choix', en: 'Change my choice' },
+  'action.wolf.packProgressTitle': { fr: 'Accord de la meute pour infecter', en: 'Pack agreement to infect' },
   'action.wolf.abstainTally': { fr: 'Abstention ({{n}})', en: 'Abstained ({{n}})' },
   'action.wolf.sendingVote': { fr: 'Envoi du vote...', en: 'Sending vote...' },
   'action.wolf.abstained': { fr: 'Vous vous êtes abstenu(e)', en: "You've abstained" },
@@ -802,13 +832,10 @@ export const translations = {
     fr: '👑 Votre vote de Loup Alpha compte double dans le dépouillement de la meute.',
     en: "👑 Your Alpha Wolf vote counts double in the pack's tally.",
   },
-  'action.wolf.alphaInfectSectionTitle': { fr: "Infecter plutôt qu'éliminer ?", en: 'Infect instead of eliminate?' },
   'action.wolf.alphaInfectSectionSubtitle': {
     fr: "Si la majorité de la meute est d'accord, le Loup Alpha pourra infecter la victime pour la faire rejoindre les loups, au lieu de l'éliminer.",
     en: 'If the majority of the pack agrees, the Alpha Wolf will be able to infect the victim to make them join the wolves, instead of eliminating them.',
   },
-  'action.wolf.alphaInfectAgreeButton': { fr: "Je suis d'accord pour infecter", en: 'I agree to infect' },
-  'action.wolf.alphaInfectAgreed': { fr: "✅ Vous êtes d'accord pour infecter", en: '✅ You agree to infect' },
   'action.wolf.alphaInfectProgress': {
     fr: '{{agreed}} / {{needed}} loups d’accord',
     en: '{{agreed}} / {{needed}} wolves agree',

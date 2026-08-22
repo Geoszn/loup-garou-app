@@ -214,16 +214,38 @@ function EnfantSauvagePanel({ view, gameId, selfId }: { view: MyGameView; gameId
 // Exportée (comme VotePanel/CaptainVotePanel plus bas) : GameRoom.tsx
 // l'affiche directement pendant toute la fenêtre de vote des loups, en
 // dehors du switch de ActionPanel, au lieu de basculer sur WaitingCard dès
-// le premier vote envoyé. submit_wolf_vote fait déjà un upsert côté serveur
-// (migration 0035) — revoter change simplement la cible tant que tous les
-// loups vivants n'ont pas voté ; seul l'affichage bloquait ce comportement
-// pourtant déjà supporté par le serveur.
+// le premier vote envoyé.
+//
+// Refonte en assistant à 3 temps (retour utilisateur : "le choix entre voter
+// et infecter est perturbant, ça ne nous permet pas d'être sûr de notre
+// choix") — avant, le choix de cible et l'accord d'infection étaient deux
+// blocs affichés EN MÊME TEMPS, chaque clic sur un joueur envoyant
+// immédiatement le vote sans confirmation. Repris façon Voyante/Sorcière :
+// 1) intention ("Éliminer" ou "Infecter", deux boutons côte à côte —
+// seulement si un Loup Alpha vivant peut encore infecter, sinon on saute
+// direct à l'étape 2, comme avant), 2) victime (grille), 3) pop-up
+// récapitulatif à confirmer avant l'envoi réel. Toujours les deux mêmes
+// appels RPC en coulisses (submit_wolf_vote pour la cible + éventuellement
+// submit_alpha_infect_agreement pour l'intention), envoyés ENSEMBLE au
+// moment de la confirmation plutôt que séparément à chaque clic.
 export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
   const { t } = useLanguage()
   const myVote = view.wolf_current_votes?.find((v) => v.actor_id === selfId)
-  const [selected, setSelected] = useState<string | null>(myVote?.target_id ?? null)
-  const [localAbstain, setLocalAbstain] = useState(myVote !== undefined && myVote.target_id === null)
   const hasVoted = myVote !== undefined
+  const infectPossible = view.alpha_infect_available
+  const agreedIds = new Set(view.alpha_infect_agreed_ids ?? [])
+  const myAgreedNow = agreedIds.has(selfId)
+
+  const [intent, setIntent] = useState<'eliminate' | 'infect' | null>(
+    hasVoted ? (myAgreedNow ? 'infect' : 'eliminate') : infectPossible ? null : 'eliminate'
+  )
+  const [selected, setSelected] = useState<string | null>(myVote?.target_id ?? null)
+  // Faux tant qu'on n'a pas encore voté cette nuit : montre directement
+  // l'assistant. Repasse à false après un envoi réussi (voir confirmChoice/
+  // submitAbstain) pour afficher le récapitulatif ; "Modifier mon choix" y
+  // repasse à true pour rouvrir l'assistant, pré-rempli avec le choix actuel.
+  const [editing, setEditing] = useState(!hasVoted)
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const [confirmAbstainOpen, setConfirmAbstainOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -242,37 +264,81 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
   // Refonte du Loup Alpha (migration 0093, demande utilisateur : "il faut que
   // la majorité des loups choississent d'infecter pour que l'alpha ai acces
   // a cette option") : l'Alpha vote désormais avec le reste de la meute
-  // ci-dessus (son vote pèse double côté serveur, get_wolf_target) — la
-  // seule chose spécifique à afficher ici est la section d'accord de meute
-  // pour infecter, visible tant qu'un Loup Alpha vivant n'a pas encore
-  // utilisé son infection (view.alpha_infect_available), et le bouton de
-  // confirmation réservé à l'Alpha lui-même une fois la majorité atteinte.
+  // ci-dessus (son vote pèse double côté serveur, get_wolf_target) — le bloc
+  // ci-dessous n'est plus qu'un indicateur de progression de l'accord de
+  // meute (l'intention de chaque loup est déjà capturée par l'assistant plus
+  // haut), plus le bouton de confirmation réservé à l'Alpha lui-même une
+  // fois la majorité atteinte.
   const isAlpha = view.my_role === 'loup_alpha'
   const aliveWolfIds = alive.filter((p) => teammates.has(p.user_id) || p.user_id === selfId).map((p) => p.user_id)
-  const agreedIds = new Set(view.alpha_infect_agreed_ids ?? [])
   const agreedCount = aliveWolfIds.filter((id) => agreedIds.has(id)).length
   const neededAgreements = aliveWolfIds.length === 0 ? 0 : Math.floor(aliveWolfIds.length / 2) + 1
-  const myAgreed = agreedIds.has(selfId)
   const majorityReached = agreedCount >= neededAgreements
   const [alphaLoading, setAlphaLoading] = useState(false)
   const [alphaError, setAlphaError] = useState<string | null>(null)
+  // Barre de progression de l'accord de meute (0 à 100%) — repère visuel
+  // rapide en plus du texte "X / Y", demande utilisateur : rendre la
+  // condition de majorité immédiatement lisible d'un coup d'œil.
+  const agreementPct = neededAgreements === 0 ? 0 : Math.min(100, Math.round((agreedCount / neededAgreements) * 100))
 
-  async function submit(id: string | null) {
+  const targetPlayer = view.players.find((p) => p.user_id === selected)
+
+  // Choisir un joueur dans la grille ouvre directement le pop-up
+  // récapitulatif (étape 3) — rien n'est envoyé au serveur avant que le
+  // joueur confirme explicitement.
+  function pickTarget(id: string) {
     setSelected(id)
-    setLocalAbstain(id === null)
-    setLoading(true)
-    setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_wolf_vote', { p_game_id: gameId, p_target: id })
-    setLoading(false)
-    if (rpcError) setError(rpcError.message)
+    setConfirmOpen(true)
   }
 
-  async function toggleAgreement() {
-    setAlphaLoading(true)
-    setAlphaError(null)
-    const { error: rpcError } = await supabase.rpc('submit_alpha_infect_agreement', { p_game_id: gameId, p_agree: !myAgreed })
-    setAlphaLoading(false)
-    if (rpcError) setAlphaError(rpcError.message)
+  async function confirmChoice() {
+    if (!selected || !intent) return
+    setLoading(true)
+    setError(null)
+    const { error: voteErr } = await supabase.rpc('submit_wolf_vote', { p_game_id: gameId, p_target: selected })
+    if (voteErr) {
+      setLoading(false)
+      setError(voteErr.message)
+      return
+    }
+    if (infectPossible) {
+      const { error: agreeErr } = await supabase.rpc('submit_alpha_infect_agreement', {
+        p_game_id: gameId,
+        p_agree: intent === 'infect',
+      })
+      if (agreeErr) {
+        setLoading(false)
+        setError(agreeErr.message)
+        return
+      }
+    }
+    setLoading(false)
+    setConfirmOpen(false)
+    setEditing(false)
+  }
+
+  // Possibilité de ne désigner personne : get_wolf_target (migration
+  // 0022/0035) ignore déjà les votes à cible nulle dans son dépouillement,
+  // donc si toute la meute encore en vie s'abstient (ou si les voix sont
+  // partagées à égalité), personne n'est dévoré cette nuit. On efface aussi
+  // tout accord d'infection en cours : s'abstenir n'a de sens que côté
+  // élimination.
+  async function submitAbstain() {
+    setLoading(true)
+    setError(null)
+    const { error: voteErr } = await supabase.rpc('submit_wolf_vote', { p_game_id: gameId, p_target: null })
+    if (!voteErr && infectPossible) {
+      await supabase.rpc('submit_alpha_infect_agreement', { p_game_id: gameId, p_agree: false })
+    }
+    setLoading(false)
+    setConfirmAbstainOpen(false)
+    if (voteErr) {
+      setError(voteErr.message)
+      return
+    }
+    setIntent('eliminate')
+    setSelected(null)
+    setEditing(false)
   }
 
   async function toggleAlphaConfirm() {
@@ -286,66 +352,130 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
     if (rpcError) setAlphaError(rpcError.message)
   }
 
-  // Barre de progression de l'accord de meute (0 à 100%) — repère visuel
-  // rapide en plus du texte "X / Y", demande utilisateur : rendre la
-  // condition de majorité immédiatement lisible d'un coup d'œil.
-  const agreementPct = neededAgreements === 0 ? 0 : Math.min(100, Math.round((agreedCount / neededAgreements) * 100))
-
   return (
     <PanelShell emoji="🐺" title={t('action.wolf.title')} subtitle={t('action.wolf.subtitle')}>
       {isAlpha && !view.alpha_infect_used && (
         <p className="mb-3 text-xs text-moon-300">{t('action.wolf.alphaDoubleVoteHint')}</p>
       )}
-      {hasVoted && <VoteRecordedBanner />}
 
-      {/* Bloc 1 : cible à éliminer — toujours affiché, c'est le vote
-          "principal". Réorganisation (retour utilisateur, migration 0097) :
-          titre numéroté + bloc visuellement isolé, pour que ce soit bien
-          distinct de l'option d'infection ci-dessous quand elle existe. */}
-      <div className="rounded-xl border border-night-600/60 bg-night-900/40 p-3">
-        <p className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-moon-200/60">
-          {t('action.wolf.stepTargetTitle')}
-        </p>
-        <PlayerGrid
-          players={alive}
-          selfId={selfId}
-          selectable
-          compact
-          selectedId={selected}
-          disabledIds={alive.filter((p) => teammates.has(p.user_id) || p.user_id === selfId).map((p) => p.user_id)}
-          onSelect={(id) => submit(id)}
-        />
-        {(votesByTarget.size > 0 || abstainCount > 0) && (
-          <p className="mt-3 text-xs text-moon-200/50">
-            {[...votesByTarget.entries()]
-              .map(([id, n]) => `${view.players.find((p) => p.user_id === id)?.display_name ?? '?'} (${n})`)
-              .concat(abstainCount > 0 ? [t('action.wolf.abstainTally', { n: abstainCount })] : [])
-              .join(' · ')}
+      {/* Récapitulatif du choix déjà envoyé (étape 3 franchie) — remplace le
+          bloc de vote tant qu'on ne clique pas sur "Modifier mon choix". */}
+      {!editing && hasVoted && (
+        <div className="rounded-xl border border-night-600/60 bg-night-900/40 p-3">
+          <p className="text-sm text-moon-200">
+            {targetPlayer
+              ? intent === 'infect'
+                ? t('action.wolf.voteSummaryInfect', { name: targetPlayer.display_name })
+                : t('action.wolf.voteSummaryEliminate', { name: targetPlayer.display_name })
+              : `✅ ${t('action.wolf.abstained')}`}
           </p>
-        )}
-        <ErrorText>{error}</ErrorText>
-        {loading && <p className="mt-2 text-xs text-moon-200/40">{t('action.wolf.sendingVote')}</p>}
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="mt-2 text-xs font-semibold text-moon-300 underline decoration-dotted hover:text-moon-200"
+          >
+            {t('action.wolf.editChoice')}
+          </button>
+        </div>
+      )}
 
-        {/* Possibilité de ne désigner personne : get_wolf_target (migration
-            0022/0035) ignore déjà les votes à cible nulle dans son
-            dépouillement, donc si toute la meute encore en vie s'abstient
-            (ou se partage les voix à égalité), personne n'est dévoré cette
-            nuit — comme un cas d'égalité classique. Toujours confirmé via
-            pop-up pour éviter un clic accidentel sur un choix qui engage
-            toute la meute. */}
-        <button
-          type="button"
-          onClick={() => setConfirmAbstainOpen(true)}
-          disabled={loading}
-          className={`mt-3 w-full rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-            localAbstain
-              ? 'border-moon-400/60 bg-night-800/70 text-moon-200'
-              : 'border-night-600 text-moon-200/60 hover:border-night-500 hover:text-moon-200'
-          }`}
-        >
-          {localAbstain ? `✅ ${t('action.wolf.abstained')}` : `🤷 ${t('action.wolf.abstainButton')}`}
-        </button>
-      </div>
+      {/* Étape 1 : intention — seulement s'il y a un vrai choix à faire
+          (Loup Alpha vivant, infection pas encore utilisée). Sinon on saute
+          direct à l'étape 2, comme avant cette refonte. */}
+      {editing && intent === null && (
+        <div className="rounded-xl border border-night-600/60 bg-night-900/40 p-3">
+          <p className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-moon-200/60">
+            {t('action.wolf.chooseIntentTitle')}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setIntent('eliminate')}
+              className="flex flex-col items-center gap-1 rounded-xl border border-night-600 bg-night-800/60 px-3 py-3 text-sm font-semibold text-moon-200 transition-colors hover:border-blood-500/60"
+            >
+              <span className="text-xl">🩸</span>
+              {t('action.wolf.intentEliminate')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIntent('infect')}
+              className="flex flex-col items-center gap-1 rounded-xl border border-emerald-600/40 bg-emerald-900/10 px-3 py-3 text-sm font-semibold text-emerald-400 transition-colors hover:border-emerald-500/70"
+            >
+              <span className="text-xl">🧬</span>
+              {t('action.wolf.intentInfect')}
+            </button>
+          </div>
+          <p className="mt-2.5 text-xs text-moon-200/50">{t('action.wolf.alphaInfectSectionSubtitle')}</p>
+        </div>
+      )}
+
+      {/* Étape 2 : victime. */}
+      {editing && intent !== null && (
+        <div className="rounded-xl border border-night-600/60 bg-night-900/40 p-3">
+          <div className="mb-2.5 flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-moon-200/60">
+              {intent === 'infect' ? t('action.wolf.chooseTargetInfectTitle') : t('action.wolf.chooseTargetEliminateTitle')}
+            </p>
+            {infectPossible && (
+              <button
+                type="button"
+                onClick={() => setIntent(null)}
+                className="shrink-0 text-xs text-moon-200/50 underline decoration-dotted hover:text-moon-200"
+              >
+                {t('action.wolf.changeIntent')}
+              </button>
+            )}
+          </div>
+          <PlayerGrid
+            players={alive}
+            selfId={selfId}
+            selectable
+            compact
+            selectedId={selected}
+            disabledIds={alive.filter((p) => teammates.has(p.user_id) || p.user_id === selfId).map((p) => p.user_id)}
+            onSelect={pickTarget}
+          />
+          {(votesByTarget.size > 0 || abstainCount > 0) && (
+            <p className="mt-3 text-xs text-moon-200/50">
+              {[...votesByTarget.entries()]
+                .map(([id, n]) => `${view.players.find((p) => p.user_id === id)?.display_name ?? '?'} (${n})`)
+                .concat(abstainCount > 0 ? [t('action.wolf.abstainTally', { n: abstainCount })] : [])
+                .join(' · ')}
+            </p>
+          )}
+          {intent === 'eliminate' && (
+            <button
+              type="button"
+              onClick={() => setConfirmAbstainOpen(true)}
+              disabled={loading}
+              className="mt-3 w-full rounded-xl border border-night-600 px-4 py-2.5 text-sm font-semibold text-moon-200/60 transition-colors hover:border-night-500 hover:text-moon-200 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              🤷 {t('action.wolf.abstainButton')}
+            </button>
+          )}
+        </div>
+      )}
+
+      <ErrorText>{error}</ErrorText>
+      {loading && <p className="mt-2 text-xs text-moon-200/40">{t('action.wolf.sendingVote')}</p>}
+
+      {/* Étape 3 : pop-up récapitulatif, obligatoire avant tout envoi réel —
+          demande utilisateur explicite ("un pop-up qui montre ce qu'il est
+          sur le point de faire, il confirme d'abord"). */}
+      <ConfirmDialog
+        open={confirmOpen && !!targetPlayer}
+        title={intent === 'infect' ? t('action.wolf.confirmInfectTitle') : t('action.wolf.confirmEliminateTitle')}
+        message={
+          targetPlayer
+            ? intent === 'infect'
+              ? t('action.wolf.confirmInfectMessage', { name: targetPlayer.display_name })
+              : t('action.wolf.confirmEliminateMessage', { name: targetPlayer.display_name })
+            : ''
+        }
+        confirmLabel={t('action.wolf.confirmButton')}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={confirmChoice}
+      />
 
       <ConfirmDialog
         open={confirmAbstainOpen}
@@ -353,44 +483,18 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
         message={t('action.wolf.abstainConfirmMessage')}
         confirmLabel={t('action.wolf.abstainConfirmLabel')}
         onCancel={() => setConfirmAbstainOpen(false)}
-        onConfirm={() => {
-          setConfirmAbstainOpen(false)
-          submit(null)
-        }}
+        onConfirm={submitAbstain}
       />
 
-      {/* Bloc 2 : accord de meute pour infecter (migration 0093), visible
-          tant qu'un Loup Alpha vivant n'a pas encore utilisé son infection.
-          Bloc à part entière (bordure + fond distincts) plutôt qu'une simple
-          suite de texte après un séparateur — pour qu'on comprenne d'un
-          coup d'œil que c'est une option SÉPARÉE du choix de cible ci-dessus,
-          pas une suite obligatoire. Chaque loup (Alpha compris) bascule
-          librement son accord ; l'Alpha voit en plus un bouton de
-          confirmation, actif seulement une fois la majorité atteinte — le
-          serveur revérifie tout à la résolution de toute façon, cet
-          affichage n'est qu'un guide. */}
-      {view.alpha_infect_available && (
+      {/* Statut de l'accord de meute pour infecter — pur indicateur de
+          progression désormais (chaque loup a déjà donné son intention via
+          l'assistant ci-dessus), plus le bouton de confirmation finale
+          réservé à l'Alpha une fois la majorité atteinte. */}
+      {infectPossible && (
         <div className="mt-4 rounded-xl border border-emerald-600/30 bg-emerald-900/10 p-3">
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-400/80">
-            {t('action.wolf.stepInfectTitle')}
+            {t('action.wolf.packProgressTitle')}
           </p>
-          <p className="mb-3 text-xs text-moon-200/50">{t('action.wolf.alphaInfectSectionSubtitle')}</p>
-
-          <button
-            type="button"
-            onClick={toggleAgreement}
-            disabled={alphaLoading}
-            className={`w-full rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-              myAgreed
-                ? 'border-emerald-500/60 bg-emerald-700/15 text-emerald-400'
-                : 'border-night-600 text-moon-200/60 hover:border-night-500 hover:text-moon-200'
-            }`}
-          >
-            {myAgreed ? t('action.wolf.alphaInfectAgreed') : t('action.wolf.alphaInfectAgreeButton')}
-          </button>
-
-          {/* Barre de progression + texte, plus lisible d'un coup d'œil que
-              le texte seul pour juger si la majorité est proche. */}
           <div className="mt-2.5">
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-night-800/80">
               <div
@@ -412,10 +516,9 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
                   était atteinte mais l'Alpha n'a jamais cliqué sur
                   "Confirmer l'infection" avant la fin de son tour — rien
                   n'attirait l'attention au moment précis où l'action
-                  devenait possible, noyé sous le reste du panneau (grille de
-                  cible, tally, bouton d'abstention...). Bannière + halo
-                  animé sur le bouton, visibles UNIQUEMENT pendant cette
-                  fenêtre (majorité atteinte, pas encore confirmé). */}
+                  devenait possible. Bannière + halo animé sur le bouton,
+                  visibles UNIQUEMENT pendant cette fenêtre (majorité
+                  atteinte, pas encore confirmé). */}
               {majorityReached && !view.alpha_infect_confirmed && (
                 <p className="mt-3 animate-pulse text-xs font-semibold text-emerald-400">
                   {t('action.wolf.alphaConfirmInfectReady')}
