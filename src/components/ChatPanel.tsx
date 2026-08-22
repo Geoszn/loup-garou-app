@@ -249,7 +249,13 @@ export const ChatPanel = memo(function ChatPanel({
       <div className="flex items-center gap-2 border-b border-night-600/50 px-4 py-2.5">
         <span>{info.emoji}</span>
         <span className="text-sm font-semibold text-moon-200">{t(info.titleKey)}</span>
-        <span className="ml-auto text-[10px] uppercase tracking-wider text-moon-200/30">
+        {/* Point rouge pulsant devant "en direct" (demande utilisateur, suite
+            à la maquette comparative validée) : renforce visuellement que ce
+            salon-ci est actif, en contraste avec le badge "lecture seule"
+            des autres. Absent en readOnly, ce salon n'étant pas actif pour
+            nous. */}
+        <span className="ml-auto flex items-center gap-1 text-[10px] uppercase tracking-wider text-moon-200/30">
+          {!readOnly && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blood-500" />}
           {readOnly ? t('chat.readOnly') : t('chat.live')}
         </span>
       </div>

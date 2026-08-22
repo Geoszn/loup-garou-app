@@ -492,6 +492,7 @@ export const translations = {
   'voiceChat.alone': { fr: 'Vous êtes seul(e) pour le moment.', en: "You're alone for now." },
   'voiceChat.othersOnline': { fr: '{{count}} autre{{s}} en ligne', en: '{{count}} other{{s}} online' },
   'voiceChat.retry': { fr: '🔄 Réessayer', en: '🔄 Retry' },
+  'voiceChat.details': { fr: 'Détails', en: 'Details' },
   'voiceChat.muted': { fr: '🔇 Muet', en: '🔇 Muted' },
   'voiceChat.active': { fr: '🎤 Actif', en: '🎤 Active' },
   'voiceChat.muteParticipantTitle': { fr: 'Couper le micro de {{name}}', en: "Mute {{name}}'s microphone" },

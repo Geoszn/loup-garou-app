@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useVoiceChat, type VoiceChannel } from '../hooks/useVoiceChat'
 import { useLanguage } from '../i18n/LanguageContext'
 import { AvatarIcon } from './AvatarIcon'
@@ -53,6 +54,11 @@ export function VoiceChat({
     forcedMuteNotice,
   } = useVoiceChat(gameId, code, channel, displayName, selfUserId, listenOnly)
   const { t } = useLanguage()
+  // Grille de participants repliée par défaut (demande utilisateur, suite à
+  // la maquette comparative validée : "le bloc vocal doit économiser encore
+  // plus d'espace") — un bouton "Détails" la déplie/replie à la demande, au
+  // lieu de l'afficher en permanence dès la connexion.
+  const [detailsOpen, setDetailsOpen] = useState(false)
 
   if (!channel) return null
 
@@ -109,6 +115,15 @@ export function VoiceChat({
             {t('voiceChat.retry')}
           </button>
         )}
+        {connected && (participants.length > 0 || !listenOnly) && (
+          <button
+            type="button"
+            onClick={() => setDetailsOpen((v) => !v)}
+            className="shrink-0 rounded-xl bg-night-700/70 px-2.5 py-1 text-[10px] font-semibold text-moon-200 transition-colors hover:bg-night-600/70"
+          >
+            {t('voiceChat.details')} {detailsOpen ? '⌃' : '⌄'}
+          </button>
+        )}
         {/* Badge modérateur réduit à un point (plus de texte en toutes
             lettres) : le titre au survol/appui long reste explicite. */}
         {connected && canModerate && (
@@ -154,13 +169,17 @@ export function VoiceChat({
         </p>
       )}
 
-      {connected && (participants.length > 0 || !listenOnly) && (
+      {connected && detailsOpen && (participants.length > 0 || !listenOnly) && (
         // Grille (pas des pastilles en flex-wrap, largeur variable selon la
         // longueur du nom) : demande utilisateur — chaque case doit avoir
         // EXACTEMENT la même taille. Colonnes égales (grid-cols-N) : toutes
         // les cases d'une même rangée font automatiquement la même largeur,
         // et le contenu identique (avatar + 1 ligne de nom) leur donne aussi
         // la même hauteur.
+        //
+        // Repliée par défaut (detailsOpen) : demande utilisateur suite à la
+        // maquette comparative — économise encore plus de place tant qu'on
+        // n'a pas besoin de voir qui est connecté.
         <div className="grid grid-cols-4 gap-1.5 border-t border-night-700/60 pt-2 sm:grid-cols-5">
           {!listenOnly && (
             <div
