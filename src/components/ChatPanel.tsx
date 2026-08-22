@@ -216,6 +216,19 @@ export const ChatPanel = memo(function ChatPanel({
     setMenuOpenFor(null)
   }, [])
 
+  // Referme le petit menu (réagir/répondre) dès qu'une réaction est posée —
+  // demande utilisateur : "dès qu'on a fait la réaction, ça disparaît
+  // automatiquement", comme sur WhatsApp. Avant, seul "répondre" refermait
+  // le menu (voir handleReply ci-dessus) ; choisir un emoji le laissait
+  // ouvert, ce qui obligeait à retaper la bulle pour le refermer.
+  const handleToggleReaction = useCallback(
+    (messageId: string, emoji: ReactionEmoji) => {
+      toggleReaction(messageId, emoji)
+      setMenuOpenFor(null)
+    },
+    [toggleReaction]
+  )
+
   return (
     <div
       style={
@@ -287,7 +300,7 @@ export const ChatPanel = memo(function ChatPanel({
             onBeginLongPress={beginLongPress}
             onCancelLongPress={cancelLongPress}
             onBubbleClick={handleBubbleClick}
-            onToggleReaction={toggleReaction}
+            onToggleReaction={handleToggleReaction}
             onReply={handleReply}
           />
         ))}
