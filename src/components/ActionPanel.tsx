@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
 import { roleLabel } from '../lib/roles'
 import { PlayerGrid } from './PlayerGrid'
@@ -8,32 +8,57 @@ import type { MyGameView } from '../types/game'
 
 export function ActionPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
   const action = view.pending_action_required
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Signale l'arrivée d'un nouveau tour (retour utilisateur : "la Voyante
+  // n'a pas reçu le pop-up pour sonder") — vérification en base sur la
+  // partie concernée : le serveur ouvrait bien sa fenêtre d'action pendant
+  // toute sa durée (aucun bug dans next_night_step / pending_action_required,
+  // le panneau s'affiche normalement dans l'immense majorité des parties),
+  // mais rien n'attirait l'attention quand le tour démarrait silencieusement
+  // juste après une autre phase (ici : l'élection du Capitaine venait de se
+  // terminer) — les yeux ailleurs une seconde, on pouvait laisser filer les
+  // 70 secondes sans s'en rendre compte. Vibration (mobile) + défilement
+  // automatique vers le panneau dès qu'un nouveau tour démarre, même logique
+  // que le bandeau pulsant déjà ajouté pour la confirmation d'infection Alpha.
+  useEffect(() => {
+    if (!action) return
+    navigator.vibrate?.([20, 60, 20])
+    containerRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [action])
+
   if (!action) return null
 
-  switch (action) {
-    case 'voleur':
-      return <VoleurPanel view={view} gameId={gameId} />
-    case 'cupidon':
-      return <CupidonPanel view={view} gameId={gameId} />
-    case 'enfant_sauvage':
-      return <EnfantSauvagePanel view={view} gameId={gameId} selfId={selfId} />
-    case 'voyante':
-      return <VoyantePanel view={view} gameId={gameId} selfId={selfId} />
-    case 'loup_garou':
-      return <WolfPanel view={view} gameId={gameId} selfId={selfId} />
-    case 'sorciere':
-      return <SorcierePanel view={view} gameId={gameId} selfId={selfId} />
-    case 'vote':
-      return <VotePanel view={view} gameId={gameId} selfId={selfId} />
-    case 'hunter':
-      return <HunterPanel view={view} gameId={gameId} selfId={selfId} />
-    case 'captain_vote':
-      return <CaptainVotePanel view={view} gameId={gameId} selfId={selfId} />
-    case 'captain_succession':
-      return <CaptainSuccessionPanel view={view} gameId={gameId} selfId={selfId} />
-    default:
-      return null
-  }
+  return (
+    <div ref={containerRef} className="scroll-mt-4">
+      {(() => {
+        switch (action) {
+          case 'voleur':
+            return <VoleurPanel view={view} gameId={gameId} />
+          case 'cupidon':
+            return <CupidonPanel view={view} gameId={gameId} />
+          case 'enfant_sauvage':
+            return <EnfantSauvagePanel view={view} gameId={gameId} selfId={selfId} />
+          case 'voyante':
+            return <VoyantePanel view={view} gameId={gameId} selfId={selfId} />
+          case 'loup_garou':
+            return <WolfPanel view={view} gameId={gameId} selfId={selfId} />
+          case 'sorciere':
+            return <SorcierePanel view={view} gameId={gameId} selfId={selfId} />
+          case 'vote':
+            return <VotePanel view={view} gameId={gameId} selfId={selfId} />
+          case 'hunter':
+            return <HunterPanel view={view} gameId={gameId} selfId={selfId} />
+          case 'captain_vote':
+            return <CaptainVotePanel view={view} gameId={gameId} selfId={selfId} />
+          case 'captain_succession':
+            return <CaptainSuccessionPanel view={view} gameId={gameId} selfId={selfId} />
+          default:
+            return null
+        }
+      })()}
+    </div>
+  )
 }
 
 function PanelShell({ emoji, title, subtitle, children }: { emoji: string; title: string; subtitle?: string; children: ReactNode }) {
