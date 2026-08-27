@@ -15,7 +15,7 @@
 //   SUPABASE_SERVICE_ROLE_KEY — pour lire push_subscriptions en contournant
 //   RLS (cette table n'a aucune policy cliente, voir 0105).
 import { createClient } from '@supabase/supabase-js'
-import { configureVapid, sendPushToUser } from './_lib/pushSend'
+import { configureVapid, sendPushToUser } from '../server/pushSend'
 
 interface VercelRequest {
   method?: string

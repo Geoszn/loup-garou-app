@@ -1,7 +1,10 @@
-// Préfixé par "_" : Vercel ignore ce fichier comme route (convention
-// officielle), il ne sert qu'à être importé par les vraies fonctions du
-// dossier api/ (send-push.ts, notify-user.ts) — évite de dupliquer la
-// boucle d'envoi + nettoyage des abonnements expirés dans chacune.
+// Hors du dossier api/ délibérément : Vercel exclut du build final tout
+// fichier/dossier préfixé par "_" à l'intérieur de api/ (pas seulement du
+// routage, comme on pensait au départ — un fichier api/_lib/pushSend.ts
+// causait un `ERR_MODULE_NOT_FOUND` en production dès qu'une fonction
+// l'importait, malgré un build Vercel "réussi"). server/ n'a ce problème
+// avec aucune fonction : importé normalement par send-push.ts et
+// notify-user.ts, qui empaquettent chacun leur propre copie au déploiement.
 import type { SupabaseClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
 

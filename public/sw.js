@@ -35,7 +35,13 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(payload.title, {
       body: payload.body,
       icon: '/icons/icon-192.png',
-      badge: '/icons/icon-192.png',
+      // Pas de `badge` : ce champ attend une silhouette monochrome avec
+      // canal alpha (l'OS la recolore lui-même, en tout petit, dans la
+      // barre de statut côté Android/Chrome) — icon-192.png est un PNG
+      // plein sans transparence, le réutiliser ici donnait un badge qui
+      // ressemblait à un carré plein plutôt qu'à une icône propre. Sans ce
+      // champ, l'OS retombe sur `icon` ou une icône par défaut, jamais
+      // pire que ce carré.
       data: { url: payload.url || '/dashboard' },
     })
   )
