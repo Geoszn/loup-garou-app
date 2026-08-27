@@ -9,6 +9,8 @@ import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { ContinentSelect } from '../components/ContinentSelect'
 import { AvatarIcon } from '../components/AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
+import { usePushNotifications } from '../hooks/usePushNotifications'
+import { sendTestPush } from '../lib/pushSubscription'
 
 // Délai entre l'affichage du message de succès dans une pop-up de réglage et
 // la fermeture automatique de cette pop-up : assez court pour ne pas faire
@@ -75,6 +77,8 @@ export default function Account() {
               {t('account.password.changeButton')}
             </Button>
           </SettingsRow>
+
+          <NotificationsRow />
         </Card>
 
         <DangerZoneCard />
@@ -113,6 +117,71 @@ function SettingsRow({ label, description, children }: { label: string; descript
       </div>
       {children}
     </div>
+  )
+}
+
+/** Réglage "Notifications" (voir usePushNotifications.ts) : active/désactive
+ * les push web, plus un bouton de test discret une fois activées, pour
+ * vérifier la chaîne complète sans attendre un vrai événement de jeu.
+ * Masqué entièrement si le navigateur/contexte ne supporte pas la Push API
+ * (ex. app native — voir le commentaire du hook) plutôt que d'afficher un
+ * réglage qui échouerait à coup sûr. */
+function NotificationsRow() {
+  const { t } = useLanguage()
+  const push = usePushNotifications()
+  const [testState, setTestState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle')
+  const [testError, setTestError] = useState<string | null>(null)
+
+  if (!push.supported) return null
+
+  async function runTest() {
+    setTestState('sending')
+    setTestError(null)
+    try {
+      await sendTestPush()
+      setTestState('sent')
+    } catch (err) {
+      setTestError(err instanceof Error ? err.message : 'Échec de l’envoi.')
+      setTestState('failed')
+    }
+  }
+
+  return (
+    <SettingsRow
+      label={t('account.notifications.title')}
+      description={
+        push.error
+          ? push.error
+          : testState === 'sent'
+            ? t('account.notifications.testSent')
+            : testError || t('account.notifications.description')
+      }
+    >
+      <div className="flex items-center gap-2">
+        {push.subscribed && (
+          <Button
+            variant="ghost"
+            onClick={runTest}
+            disabled={testState === 'sending'}
+            className="px-3.5 py-2 text-xs"
+          >
+            {testState === 'sending' ? t('account.notifications.testing') : t('account.notifications.testButton')}
+          </Button>
+        )}
+        <Button
+          variant="ghost"
+          onClick={() => (push.subscribed ? push.unsubscribe() : push.subscribe())}
+          disabled={push.loading}
+          className="px-3.5 py-2 text-xs"
+        >
+          {push.loading
+            ? t('common.loading')
+            : push.subscribed
+              ? t('account.notifications.disable')
+              : t('account.notifications.enable')}
+        </Button>
+      </div>
+    </SettingsRow>
   )
 }
 

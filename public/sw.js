@@ -18,6 +18,49 @@ self.addEventListener('activate', (event) => {
   )
 })
 
+// Réception d'une notification push (envoyée par api/send-push.ts via
+// web-push). payload attendu : { title, body, url }. `url` sert à rouvrir
+// l'appli au bon endroit au clic (ex. directement dans la partie concernée)
+// plutôt que sur le dashboard par défaut.
+self.addEventListener('push', (event) => {
+  let payload = { title: 'Loup Garou d’Afrique', body: '' }
+  try {
+    if (event.data) payload = { ...payload, ...event.data.json() }
+  } catch {
+    // Payload texte brut (pas de JSON) : on l'utilise tel quel comme corps.
+    if (event.data) payload.body = event.data.text()
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      data: { url: payload.url || '/dashboard' },
+    })
+  )
+})
+
+// Clic sur la notification : si un onglet de l'appli est déjà ouvert, on le
+// ramène au premier plan et on le navigue vers l'URL cible plutôt que
+// d'ouvrir un doublon.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const targetUrl = event.notification.data?.url || '/dashboard'
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if ('focus' in client) {
+          client.postMessage({ type: 'push-navigate', url: targetUrl })
+          return client.focus()
+        }
+      }
+      return self.clients.openWindow(targetUrl)
+    })
+  )
+})
+
 self.addEventListener('fetch', (event) => {
   const { request } = event
   if (request.method !== 'GET') return

@@ -126,6 +126,34 @@ Le code est déjà branché mais n'inclut aucun fichier audio par défaut : voir
 
 ---
 
+## 5ter. Notifications push (web)
+
+Notifications navigateur (Web Push API), activables depuis **Mon compte → Notifications**, sans passer par l'App Store ni le Play Store — ça fonctionne dès que le site est déployé (ou même en local pour la partie abonnement, voir plus bas).
+
+⚠️ Ceci ne couvre que le **web** (site déployé + PWA installée). Dans la coquille native Capacitor (`ios/`, `android/`), la WebView ne supporte pas la Push API standard de façon fiable — la notification native (via Firebase Cloud Messaging) est une brique à part, pas encore implémentée (voir `src/hooks/usePushNotifications.ts`).
+
+1. Générez une paire de clés VAPID (une fois, à garder précieusement) :
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+2. Clé **publique** → variable `VITE_VAPID_PUBLIC_KEY` dans `.env` (local) **et** dans les Environment Variables du projet Vercel. Sans danger à exposer côté client.
+3. Clé **privée** → variable `VAPID_PRIVATE_KEY` sur Vercel **uniquement**, jamais dans `.env` ni `VITE_...` (comme `DAILY_API_KEY` et `ELEVENLABS_API_KEY`, voir sections 4 et 5) :
+   ```bash
+   npx vercel env add VAPID_PRIVATE_KEY production
+   npx vercel env add VAPID_PUBLIC_KEY production
+   ```
+4. Ajoutez aussi `SUPABASE_SERVICE_ROLE_KEY` (Project Settings → API → `service_role`) sur Vercel — c'est ce qui permet à `api/send-push.ts` de lire la table `push_subscriptions` (aucune policy RLS cliente dessus, par conception) :
+   ```bash
+   npx vercel env add SUPABASE_SERVICE_ROLE_KEY production
+   ```
+5. Redéployez : `npx vercel --prod`.
+
+**Tester** : "Mon compte" → "Notifications" → "Activer" (le navigateur demande la permission), puis "Envoyer un test" — un bandeau système doit apparaître en quelques secondes. Le bouton de test appelle `api/send-push.ts`, qui n'existe qu'en production (fonction serverless Vercel) : en local (`npm run dev`), l'abonnement fonctionne mais le test échouera, comme pour le vocal (section 4) et le narrateur (section 5).
+
+Ce qui existe pour l'instant : notification de **test**, envoyée par le joueur à lui-même. Notifier un *autre* joueur (ex. "c'est ton tour", "un ami a lancé une partie") demande un appelant serveur de confiance différent — c'est la prochaine étape, pas encore construite.
+
+---
+
 ## 6. Comment fonctionne le moteur de jeu
 
 Toute la logique sensible (qui est loup-garou, qui vote quoi la nuit) vit dans des fonctions Postgres `SECURITY DEFINER` : le client ne peut jamais lire directement le rôle d'un autre joueur vivant, seulement via `get_my_game_view`, qui calcule côté serveur ce que chaque joueur a le droit de voir.
@@ -172,6 +200,7 @@ Dès qu'une phase change, le salon correspondant se ferme automatiquement (la fo
 - [ ] En tuant un joueur de test, son compte bascule bien dans le salon "Cimetière" (texte + vocal) et ne voit plus les salons du village.
 - [ ] `ELEVENLABS_API_KEY` est configurée sur Vercel et le site a été redéployé après (sinon le narrateur utilise simplement la voix du navigateur).
 - [ ] Le narrateur s'entend bien pendant une partie (cliquer n'importe où dans la partie une première fois, sur Safari notamment, pour "débloquer" le son).
+- [ ] `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `SUPABASE_SERVICE_ROLE_KEY` sont configurées sur Vercel et le site a été redéployé après (voir section 5ter) ; "Mon compte → Notifications → Activer" puis "Envoyer un test" affiche bien un bandeau système.
 
 ---
 
