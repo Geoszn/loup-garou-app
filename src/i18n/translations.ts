@@ -310,6 +310,7 @@ export const translations = {
   // --- Commun (suite) --------------------------------------------------------
   'common.sending': { fr: 'Envoi...', en: 'Sending...' },
   'common.addFriend': { fr: 'Ajouter en ami', en: 'Add as friend' },
+  'common.viewProfile': { fr: 'Voir le profil', en: 'View profile' },
   'common.host': { fr: 'Hôte', en: 'Host' },
   'common.captain': { fr: 'Capitaine', en: 'Captain' },
   'common.backHome': { fr: "Retour à l'accueil", en: 'Back to home' },
@@ -1267,6 +1268,7 @@ export const translations = {
   'roster.becameFriends': { fr: 'Amis ! 🎉', en: 'Friends! 🎉' },
   'roster.friendSent': { fr: 'Demande envoyée', en: 'Request sent' },
   'roster.friendFailed': { fr: 'Échec', en: 'Failed' },
+  'playerProfile.acceptRequest': { fr: 'Accepter la demande', en: 'Accept request' },
   'roster.title.tooltip': { fr: 'Effectifs de la partie', en: 'Game roster' },
 
   // --- Panneau des demandes (JoinRequestsPanel.tsx) ---------------------------

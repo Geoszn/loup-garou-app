@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase'
 import { notifyGameInvite, notifyGameStarted } from '../lib/pushSubscription'
 import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, SideDrawer } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
-import { FriendRequestPopover } from '../components/FriendRequestPopover'
+import { PlayerProfileModal } from '../components/PlayerProfileModal'
 import { ModerationPanel } from '../components/ModerationPanel'
 import { JoinRequestsPanel } from '../components/JoinRequestsPanel'
 import { VoiceChat } from '../components/VoiceChat'
@@ -93,14 +93,11 @@ export default function Lobby() {
   const [friends, setFriends] = useState<{ user_id: string; username: string; avatar_icon: string }[]>([])
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
   const [inviteError, setInviteError] = useState<string | null>(null)
+  // Id du joueur dont la fiche (PlayerProfileModal) est actuellement
+  // ouverte — plus besoin d'écouteur "clic en dehors" comme avec l'ancien
+  // popover ancré : Modal gère déjà son propre clic sur le fond pour se
+  // fermer.
   const [openFriendId, setOpenFriendId] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!openFriendId) return
-    const close = () => setOpenFriendId(null)
-    document.addEventListener('click', close)
-    return () => document.removeEventListener('click', close)
-  }, [openFriendId])
 
   useEffect(() => {
     supabase.rpc('get_my_social').then(({ data, error }) => {
@@ -463,8 +460,8 @@ export default function Lobby() {
                   <button
                     type="button"
                     disabled={isSelf}
-                    onClick={() => !isSelf && setOpenFriendId((cur) => (cur === p.user_id ? null : p.user_id))}
-                    title={isSelf ? undefined : t('common.addFriend')}
+                    onClick={() => !isSelf && setOpenFriendId(p.user_id)}
+                    title={isSelf ? undefined : t('common.viewProfile')}
                     className={`flex w-full items-center gap-2 rounded-xl border border-night-600/60 bg-night-900/50 px-3 py-2 text-left text-sm transition-colors ${
                       isSelf ? '' : 'cursor-pointer hover:border-moon-400/50 hover:bg-night-800/60'
                     }`}
@@ -492,14 +489,6 @@ export default function Lobby() {
                     {p.is_host && <span className="shrink-0" title={t('common.host')}>👑</span>}
                     {p.is_captain && <span className="shrink-0" title={t('common.captain')}>🎖️</span>}
                   </button>
-                  {openFriendId === p.user_id && (
-                    <FriendRequestPopover
-                      userId={p.user_id}
-                      displayName={p.display_name}
-                      avatarIcon={p.avatar_icon}
-                      onClose={() => setOpenFriendId(null)}
-                    />
-                  )}
                 </li>
               )
             })}
@@ -508,6 +497,11 @@ export default function Lobby() {
 
         <ErrorText>{actionError}</ErrorText>
       </div>
+
+      {/* Une seule instance, hors de la boucle ci-dessus : Modal est déjà
+          un overlay plein écran (position fixed), pas besoin d'en monter
+          une par joueur. */}
+      {openFriendId && <PlayerProfileModal userId={openFriendId} onClose={() => setOpenFriendId(null)} />}
 
       <BottomActionBar>
         {isHost ? (
