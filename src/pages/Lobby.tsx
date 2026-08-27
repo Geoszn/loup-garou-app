@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { useGame } from '../hooks/useGame'
 import { useNotificationSound } from '../hooks/useNotificationSound'
 import { supabase } from '../lib/supabase'
-import { notifyGameInvite, notifyGameStarted } from '../lib/pushSubscription'
+import { notifyGameInvite, notifyGameStarted, isStandaloneDisplay } from '../lib/pushSubscription'
 import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, SideDrawer } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { PlayerProfileModal } from '../components/PlayerProfileModal'
@@ -98,6 +98,14 @@ export default function Lobby() {
   // popover ancré : Modal gère déjà son propre clic sur le fond pour se
   // fermer.
   const [openFriendId, setOpenFriendId] = useState<string | null>(null)
+
+  // Rappel "tu as peut-être déjà l'app installée" (voir le bandeau
+  // ci-dessous) : n'a de sens que dans un onglet classique, jamais une fois
+  // déjà dans la PWA installée — sinon on se rappellerait à soi-même
+  // d'utiliser ce qu'on est déjà en train d'utiliser. Calculé une fois au
+  // montage (le mode d'affichage ne change pas en cours de session).
+  const [homeScreenHintDismissed, setHomeScreenHintDismissed] = useState(false)
+  const showHomeScreenHint = !isStandaloneDisplay() && !homeScreenHintDismissed
 
   useEffect(() => {
     supabase.rpc('get_my_social').then(({ data, error }) => {
@@ -347,6 +355,27 @@ export default function Lobby() {
             </Button>
           </div>
         </header>
+
+        {/* Un lien d'invitation ouvre toujours un onglet classique, jamais
+            l'app installée — Safari (et la plupart des navigateurs mobiles)
+            ne permettent pas à un lien web d'ouvrir directement une PWA sur
+            l'écran d'accueil, contrairement aux vraies apps de l'App
+            Store. Impossible de savoir avec certitude si ce joueur l'a déjà
+            installée depuis un onglet classique (voir isStandaloneDisplay
+            dans pushSubscription.ts) : le rappel reste donc générique
+            plutôt que de prétendre le savoir. */}
+        {showHomeScreenHint && (
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-night-700/60 bg-night-900/40 px-4 py-2.5 text-xs text-moon-200/60">
+            <span>📲 {t('lobby.homeScreenHint')}</span>
+            <button
+              type="button"
+              onClick={() => setHomeScreenHintDismissed(true)}
+              className="shrink-0 text-moon-200/40 transition-colors hover:text-moon-200"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         {/* Demandes pour rejoindre : placé tout en haut, juste sous
             l'en-tête, pour que l'hôte ne puisse pas les manquer — avant, ce

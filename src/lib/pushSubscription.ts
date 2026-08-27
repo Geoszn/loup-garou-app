@@ -12,6 +12,30 @@ export function urlBase64ToUint8Array(base64Url: string): Uint8Array {
   return Uint8Array.from(raw, (c) => c.charCodeAt(0))
 }
 
+/** iPhone/iPad, y compris l'iPadOS 13+ qui s'annonce comme "Macintosh" dans
+ * le user-agent mais se distingue d'un vrai Mac par son écran tactile. */
+export function isIosDevice(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+
+/** true si le site tourne déjà en PWA installée (icône sur l'écran
+ * d'accueil) plutôt que dans un onglet Safari/Chrome classique —
+ * `standalone` n'existe que sur Safari/iOS, `display-mode` est le standard
+ * suivi ailleurs. Sert notamment à savoir s'il vaut la peine de rappeler à
+ * quelqu'un qui ouvre un lien d'invitation dans un simple onglet qu'il a
+ * peut-être déjà l'app sur son écran d'accueil (voir JoinByLink.tsx) — on ne
+ * peut jamais savoir avec certitude si elle est installée depuis un onglet
+ * classique (aucune API cross-navigateur pour ça), seulement si on tourne
+ * DÉJÀ dedans. */
+export function isStandaloneDisplay(): boolean {
+  if (typeof window === 'undefined') return false
+  return (
+    (window.navigator as { standalone?: boolean }).standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches
+  )
+}
+
 /**
  * Déclenche l'envoi d'une notification de test à l'utilisateur connecté, sur
  * tous ses abonnements actifs (voir api/send-push.ts). Utilisée par le

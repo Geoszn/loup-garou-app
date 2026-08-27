@@ -423,6 +423,10 @@ export const translations = {
   'lobby.kickedNotice': { fr: "Vous avez été retiré(e) de ce salon par l'hôte.", en: "You've been removed from this lobby by the host." },
   'lobby.waitingRoom': { fr: "Salon d'attente", en: 'Waiting room' },
   'lobby.gameTitle': { fr: 'Partie {{code}}', en: 'Game {{code}}' },
+  'lobby.homeScreenHint': {
+    fr: 'Le jeu est déjà sur ton écran d’accueil ? Ouvre-le depuis là plutôt que ce lien, pour profiter du son et des notifications.',
+    en: 'Already have the game on your home screen? Open it from there instead of this link, for sound and notifications.',
+  },
   'lobby.settingsButton': { fr: '⚙️ Réglages', en: '⚙️ Settings' },
   'lobby.customSettingsTitle': { fr: 'Réglages personnalisés', en: 'Customized settings' },
   'lobby.leaveButton': { fr: '🚪 Quitter', en: '🚪 Leave' },
