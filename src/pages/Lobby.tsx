@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { useGame } from '../hooks/useGame'
 import { useNotificationSound } from '../hooks/useNotificationSound'
 import { supabase } from '../lib/supabase'
+import { notifyGameInvite } from '../lib/pushSubscription'
 import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, SideDrawer } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { FriendRequestPopover } from '../components/FriendRequestPopover'
@@ -258,6 +259,10 @@ export default function Lobby() {
       return
     }
     setInvitedIds((prev) => new Set(prev).add(friendId))
+    // Best-effort, ne bloque jamais l'invitation elle-même (voir le
+    // commentaire de notifyGameInvite) — la plupart des amis n'auront pas
+    // encore activé les notifications.
+    void notifyGameInvite(gameId, friendId)
   }
 
   async function handleLeave() {

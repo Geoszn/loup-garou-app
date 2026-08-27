@@ -150,7 +150,13 @@ Notifications navigateur (Web Push API), activables depuis **Mon compte → Noti
 
 **Tester** : "Mon compte" → "Notifications" → "Activer" (le navigateur demande la permission), puis "Envoyer un test" — un bandeau système doit apparaître en quelques secondes. Le bouton de test appelle `api/send-push.ts`, qui n'existe qu'en production (fonction serverless Vercel) : en local (`npm run dev`), l'abonnement fonctionne mais le test échouera, comme pour le vocal (section 4) et le narrateur (section 5).
 
-Ce qui existe pour l'instant : notification de **test**, envoyée par le joueur à lui-même. Notifier un *autre* joueur (ex. "c'est ton tour", "un ami a lancé une partie") demande un appelant serveur de confiance différent — c'est la prochaine étape, pas encore construite.
+Ce qui existe pour l'instant :
+- notification de **test**, envoyée par le joueur à lui-même (`api/send-push.ts`) ;
+- notification d'**invitation à une partie**, envoyée à un ami quand on l'invite depuis le salon d'attente (`api/notify-user.ts`, déclenchée par `Lobby.tsx` juste après `invite_friend_to_game`) — best-effort, silencieuse si l'ami n'a pas activé les notifications.
+
+`api/notify-user.ts` revérifie côté serveur (avec la clé `service_role`) qu'une ligne `game_invites` correspondante existe bien avant d'envoyer quoi que ce soit : un joueur ne peut donc jamais déclencher de notification vers un compte arbitraire, seulement confirmer une invitation qu'il vient réellement de créer.
+
+Reste à construire : notifier "c'est ton tour de jouer" (demande d'accrocher un appel similaire aux fonctions de nuit/vote du moteur de jeu, plus risqué — touche la logique de partie en production) et les demandes d'ami reçues (même patron que les invitations, plus rapide à ajouter).
 
 ---
 
