@@ -371,15 +371,6 @@ export function Modal({
   children: ReactNode
 }) {
   const { t } = useLanguage()
-  // Piloté séparément de `open` : `open` retombe à `false` côté appelant dès
-  // qu'on décide de fermer, ce qui démonterait la pop-up avant la fin de
-  // l'animation de sortie si on ne gardait pas cet état local le temps que
-  // l'anim se termine (voir onAnimationComplete plus bas).
-  const [dismissing, setDismissing] = useState(false)
-
-  useEffect(() => {
-    if (open) setDismissing(false)
-  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -392,9 +383,21 @@ export function Modal({
 
   if (!open) return null
 
+  // Ferme immédiatement au relâché, sans étape d'animation de sortie
+  // intermédiaire : une première version gardait un état local
+  // (`dismissing`) le temps qu'une anim "s'envoler vers le bas" se termine
+  // avant d'appeler onClose — mais Modal reste monté (même instance React)
+  // entre une fermeture et une réouverture, donc si le joueur rouvrait la
+  // pop-up assez vite, cet état restait bloqué à `true` d'une ouverture sur
+  // l'autre : la pop-up réapparaissait invisible/hors-écran (juste le fond
+  // flou visible, sans carte dessus — bug remonté par un joueur). Fermer
+  // directement ici élimine complètement ce risque de course ; le geste de
+  // glissement lui-même (le doigt qui traîne déjà la pop-up vers le bas
+  // avant le relâché) suffit à donner la sensation de mouvement, même sans
+  // suite d'animation après.
   function handleDragEnd(_: PointerEvent | MouseEvent | TouchEvent, info: PanInfo) {
     if (info.offset.y > DRAG_CLOSE_THRESHOLD || info.velocity.y > DRAG_VELOCITY_THRESHOLD) {
-      setDismissing(true)
+      onClose()
     }
   }
 
@@ -411,19 +414,17 @@ export function Modal({
         className="max-h-full w-full max-w-sm animate-modal-in overflow-y-auto scrollbar-thin rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/95 to-night-900/95 p-6 shadow-card"
         // Glissement vers le bas pour fermer, comme une feuille modale
         // mobile classique — bloqué vers le haut (dragConstraints à 0) pour
-        // ne jamais laisser la pop-up "s'échapper" au-dessus de l'écran.
-        // Pas d'équivalent pour ConfirmDialog/SideDrawer, qui ne
-        // réutilisent pas ce composant (voir leurs définitions plus bas) —
-        // seule cette pop-up générique en bénéficie pour l'instant.
+        // ne jamais laisser la pop-up "s'échapper" au-dessus de l'écran. Le
+        // relâché en dessous du seuil (voir handleDragEnd) revient à sa
+        // position via le ressort par défaut de framer-motion pour `drag` +
+        // `dragConstraints` — pas besoin de le piloter nous-même. Pas
+        // d'équivalent pour ConfirmDialog/SideDrawer, qui ne réutilisent
+        // pas ce composant (voir leurs définitions plus bas) — seule cette
+        // pop-up générique en bénéficie pour l'instant.
         drag="y"
         dragConstraints={{ top: 0, bottom: 0 }}
         dragElastic={{ top: 0, bottom: 0.6 }}
         onDragEnd={handleDragEnd}
-        animate={dismissing ? { y: '120%', opacity: 0 } : undefined}
-        transition={{ type: 'spring', stiffness: 400, damping: 40 }}
-        onAnimationComplete={() => {
-          if (dismissing) onClose()
-        }}
       >
         {/* Petite poignée, seul indice visuel que la pop-up se glisse vers
             le bas — sans elle, rien ne suggère que le geste existe. */}
