@@ -5,6 +5,28 @@ import { urlBase64ToUint8Array } from '../lib/pushSubscription'
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
 
+/** iPhone/iPad, y compris l'iPadOS 13+ qui s'annonce comme "Macintosh" dans
+ * le user-agent mais se distingue d'un vrai Mac par son écran tactile. */
+function isIosDevice(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return (
+    /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  )
+}
+
+/** true si le site tourne déjà en PWA installée (icône sur l'écran
+ * d'accueil) plutôt que dans un onglet Safari classique — `standalone`
+ * n'existe que sur Safari/iOS, `display-mode` est le standard suivi
+ * ailleurs. */
+function isStandaloneDisplay(): boolean {
+  if (typeof window === 'undefined') return false
+  return (
+    (window.navigator as { standalone?: boolean }).standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches
+  )
+}
+
 /**
  * Notifications push web (voir migration 0105 + public/sw.js). Volontairement
  * limité au web (`Capacitor.isNativePlatform()` exclu) : dans la coquille
@@ -21,6 +43,13 @@ export function usePushNotifications() {
     'serviceWorker' in navigator &&
     'PushManager' in window &&
     !!VAPID_PUBLIC_KEY
+
+  // Cas particulier Safari/iOS : PushManager n'existe que si le site a été
+  // ajouté à l'écran d'accueil (et iOS >= 16.4) — dans un onglet Safari
+  // classique, `supported` ci-dessus est déjà `false` (PushManager absent),
+  // mais on peut au moins expliquer pourquoi et quoi faire, plutôt que de
+  // masquer purement et simplement le réglage.
+  const needsHomeScreenInstall = !supported && isIosDevice() && !isStandaloneDisplay() && !Capacitor.isNativePlatform()
 
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>(
     supported ? Notification.permission : 'unsupported'
@@ -102,5 +131,5 @@ export function usePushNotifications() {
     }
   }, [supported])
 
-  return { supported, permission, subscribed, loading, error, subscribe, unsubscribe }
+  return { supported, needsHomeScreenInstall, permission, subscribed, loading, error, subscribe, unsubscribe }
 }

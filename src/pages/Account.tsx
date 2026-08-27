@@ -124,13 +124,27 @@ function SettingsRow({ label, description, children }: { label: string; descript
  * les push web, plus un bouton de test discret une fois activées, pour
  * vérifier la chaîne complète sans attendre un vrai événement de jeu.
  * Masqué entièrement si le navigateur/contexte ne supporte pas la Push API
- * (ex. app native — voir le commentaire du hook) plutôt que d'afficher un
- * réglage qui échouerait à coup sûr. */
+ * ET qu'il n'y a rien à faire pour y remédier (ex. app native — voir le
+ * commentaire du hook). Cas particulier Safari/iOS (`needsHomeScreenInstall`) :
+ * un onglet Safari classique n'a jamais accès à PushManager, mais ajouter le
+ * site à l'écran d'accueil suffit à le débloquer — impossible à déclencher
+ * par code sur iOS (Apple ne l'autorise pas), donc on explique la manip
+ * plutôt que de rester silencieux. */
 function NotificationsRow() {
   const { t } = useLanguage()
   const push = usePushNotifications()
   const [testState, setTestState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle')
   const [testError, setTestError] = useState<string | null>(null)
+
+  if (!push.supported && push.needsHomeScreenInstall) {
+    return (
+      <SettingsRow label={t('account.notifications.title')} description={t('account.notifications.installDescription')}>
+        <span className="shrink-0 text-2xl" aria-hidden>
+          📲
+        </span>
+      </SettingsRow>
+    )
+  }
 
   if (!push.supported) return null
 

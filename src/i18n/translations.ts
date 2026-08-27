@@ -1074,6 +1074,10 @@ export const translations = {
     fr: 'Reçois une alerte quand c’est ton tour de jouer ou qu’un ami te lance une invitation.',
     en: 'Get alerted when it’s your turn to play or a friend invites you to a game.',
   },
+  'account.notifications.installDescription': {
+    fr: 'Sur iPhone/iPad, ajoute d’abord le jeu à ton écran d’accueil pour pouvoir activer les notifications : bouton Partager ⬆️ dans Safari, puis « Sur l’écran d’accueil ». Rouvre ensuite le jeu depuis cette icône (pas depuis Safari).',
+    en: 'On iPhone/iPad, add the game to your home screen first to enable notifications: the Share button ⬆️ in Safari, then “Add to Home Screen”. Then reopen the game from that icon (not from Safari).',
+  },
   'account.notifications.enable': { fr: 'Activer', en: 'Enable' },
   'account.notifications.disable': { fr: 'Désactiver', en: 'Disable' },
   'account.notifications.testButton': { fr: 'Envoyer un test', en: 'Send a test' },
