@@ -8,6 +8,7 @@ import { RankBadge } from '../components/RankBadge'
 import { DashboardLeaderboard } from '../components/DashboardLeaderboard'
 import { FeedbackButton } from '../components/FeedbackButton'
 import { ContinentPrompt } from '../components/ContinentPrompt'
+import { NotificationOptInPrompt } from '../components/NotificationOptInPrompt'
 import { PublicGamesList } from '../components/PublicGamesBrowser'
 import { QuoteCarousel } from '../components/QuoteCarousel'
 import { AvatarIcon } from '../components/AvatarIcon'
@@ -246,6 +247,10 @@ export default function Dashboard() {
       {/* Comptes créés avant la migration 0057 (continent) : pop-up
           non bloquante, tant que le continent n'est pas choisi. */}
       <ContinentPrompt />
+      {/* Attend que le continent soit déjà renseigné avant de s'afficher
+          (voir le commentaire du composant) — jamais superposée à celle du
+          dessus au même login. */}
+      <NotificationOptInPrompt />
       <div className="mx-auto flex max-w-3xl flex-col gap-8">
         <header className="flex items-center justify-between gap-2">
           {/* Logo cliquable vers la page d'accueil publique — jusqu'ici rien

@@ -111,7 +111,13 @@ export default function Account() {
 function SettingsRow({ label, description, children }: { label: string; description?: ReactNode; children: ReactNode }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-      <div>
+      {/* min-w-0 : sans ça, un texte de description un peu long (voir le
+          réglage Notifications) refuse de se réduire dans ce conteneur flex
+          et pousse le contrôle de droite hors de la ligne au lieu de passer
+          à la ligne proprement — un piège classique de flexbox avec du
+          texte. break-words en filet de sécurité pour un mot isolé trop
+          long (peu probable en pratique, mais coûte rien). */}
+      <div className="min-w-0 flex-1 break-words">
         <p className="font-display text-base text-moon-200">{label}</p>
         {description && <p className="mt-0.5 text-xs text-moon-200/50">{description}</p>}
       </div>
@@ -137,12 +143,29 @@ function NotificationsRow() {
   const [testError, setTestError] = useState<string | null>(null)
 
   if (!push.supported && push.needsHomeScreenInstall) {
+    // Pas de SettingsRow ici (mise en page 2 colonnes label/contrôle) : le
+    // texte d'explication est trop long pour tenir à côté d'un contrôle sans
+    // paraître tassé — une liste d'étapes empilée, en pleine largeur, se lit
+    // mieux qu'un paragraphe compressé (signalement utilisateur). Le
+    // padding (px-5 py-4) reste identique aux autres lignes pour garder le
+    // même rythme visuel dans la carte.
     return (
-      <SettingsRow label={t('account.notifications.title')} description={t('account.notifications.installDescription')}>
-        <span className="shrink-0 text-2xl" aria-hidden>
-          📲
-        </span>
-      </SettingsRow>
+      <div className="flex flex-col gap-3 px-5 py-4">
+        <div>
+          <p className="font-display text-base text-moon-200">{t('account.notifications.title')}</p>
+          <p className="mt-0.5 text-xs text-moon-200/50">{t('account.notifications.installIntro')}</p>
+        </div>
+        <ol className="flex flex-col gap-2">
+          {[t('account.notifications.installStep1'), t('account.notifications.installStep2')].map((step, i) => (
+            <li key={i} className="flex items-start gap-2.5 text-xs text-moon-200/70">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-moon-400/10 text-[11px] font-semibold text-moon-300">
+                {i + 1}
+              </span>
+              <span className="pt-0.5">{step}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
     )
   }
 

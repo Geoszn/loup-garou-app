@@ -1069,14 +1069,29 @@ export const translations = {
     en: 'Used for the continental leaderboard — optional.',
   },
   'account.continent.none': { fr: 'Non renseigné', en: 'Not set' },
+  'notifPrompt.title': { fr: 'Reste informé', en: 'Stay in the loop' },
+  'notifPrompt.subtitle': {
+    fr: 'Active les notifications pour être prévenu quand un ami t’invite à une partie. Modifiable à tout moment dans Mon compte.',
+    en: 'Enable notifications to know when a friend invites you to a game. Changeable anytime in My Account.',
+  },
+  'notifPrompt.later': { fr: 'Plus tard', en: 'Later' },
+  'notifPrompt.enable': { fr: 'Activer', en: 'Enable' },
   'account.notifications.title': { fr: 'Notifications', en: 'Notifications' },
   'account.notifications.description': {
     fr: 'Reçois une alerte quand c’est ton tour de jouer ou qu’un ami te lance une invitation.',
     en: 'Get alerted when it’s your turn to play or a friend invites you to a game.',
   },
-  'account.notifications.installDescription': {
-    fr: 'Sur iPhone/iPad, ajoute d’abord le jeu à ton écran d’accueil pour pouvoir activer les notifications : bouton Partager ⬆️ dans Safari, puis « Sur l’écran d’accueil ». Rouvre ensuite le jeu depuis cette icône (pas depuis Safari).',
-    en: 'On iPhone/iPad, add the game to your home screen first to enable notifications: the Share button ⬆️ in Safari, then “Add to Home Screen”. Then reopen the game from that icon (not from Safari).',
+  'account.notifications.installIntro': {
+    fr: 'Sur iPhone/iPad, ajoute d’abord le jeu à ton écran d’accueil :',
+    en: 'On iPhone/iPad, add the game to your home screen first:',
+  },
+  'account.notifications.installStep1': {
+    fr: 'Appuie sur le bouton Partager ⬆️ dans Safari',
+    en: 'Tap the Share button ⬆️ in Safari',
+  },
+  'account.notifications.installStep2': {
+    fr: 'Choisis « Sur l’écran d’accueil », puis rouvre le jeu depuis cette icône (pas depuis Safari)',
+    en: 'Choose “Add to Home Screen”, then reopen the game from that icon (not from Safari)',
   },
   'account.notifications.enable': { fr: 'Activer', en: 'Enable' },
   'account.notifications.disable': { fr: 'Désactiver', en: 'Disable' },
