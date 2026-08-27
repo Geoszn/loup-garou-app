@@ -91,3 +91,23 @@ export function notifyGameStarted(gameId: string, candidateUserIds: string[]): P
   if (candidateUserIds.length === 0) return Promise.resolve()
   return notifyBestEffort('/api/notify-game-started', { gameId, candidateUserIds })
 }
+
+/**
+ * Prévient l'hôte d'une partie qu'un joueur demande à la rejoindre (voir
+ * api/notify-join-request.ts). Appelée après un appel réussi à join_game
+ * (statut 'pending') ou request_join_public_game (voir Dashboard.tsx,
+ * JoinByLink.tsx, PublicGamesBrowser.tsx).
+ */
+export function notifyJoinRequest(gameId: string): Promise<void> {
+  return notifyBestEffort('/api/notify-join-request', { gameId })
+}
+
+/**
+ * Prévient un joueur que sa demande pour rejoindre une partie vient d'être
+ * acceptée (voir api/notify-join-accepted.ts). Appelée par l'hôte juste
+ * après un appel réussi à respond_join_request(p_accept: true) (voir
+ * JoinRequestsPanel.tsx).
+ */
+export function notifyJoinAccepted(requestId: string): Promise<void> {
+  return notifyBestEffort('/api/notify-join-accepted', { requestId })
+}

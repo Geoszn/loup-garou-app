@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { notifyJoinAccepted } from '../lib/pushSubscription'
 import { Button, ErrorText } from './ui'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { JoinRequest } from '../types/game'
@@ -22,7 +23,11 @@ export function JoinRequestsPanel({ requests }: { requests: JoinRequest[] }) {
       p_accept: accept,
     })
     setRespondingId(null)
-    if (rpcError) setError(rpcError.message)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    if (accept) void notifyJoinAccepted(id)
   }
 
   if (requests.length === 0) {

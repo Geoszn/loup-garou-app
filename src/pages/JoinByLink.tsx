@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { notifyJoinRequest } from '../lib/pushSubscription'
 import { Card, ErrorText } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { useLanguage } from '../i18n/LanguageContext'
@@ -58,6 +59,7 @@ export default function JoinByLink() {
       // La partie peut déjà être en cours (voir join_game, migration 0038) :
       // la demande reste alors en attente jusqu'au retour en salon.
       if (data.status === 'pending') {
+        void notifyJoinRequest(data.game_id)
         navigate(`/attente/${data.game_id}`, { replace: true, state: { code: data.code } })
         return
       }

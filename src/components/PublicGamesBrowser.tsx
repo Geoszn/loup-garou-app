@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { notifyJoinRequest } from '../lib/pushSubscription'
 import { Button, ErrorText } from './ui'
 import { AvatarIcon } from './AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
@@ -48,6 +49,7 @@ export function PublicGamesList({ displayName }: { displayName: string }) {
       setError(rpcError.message)
       return
     }
+    void notifyJoinRequest(game.game_id)
     navigate(`/attente/${game.game_id}`, { state: { code: game.code } })
   }
 

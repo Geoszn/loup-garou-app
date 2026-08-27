@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { notifyJoinRequest } from '../lib/pushSubscription'
 import { Button, Card, ErrorText, Input, Label, Modal } from '../components/ui'
 import { AccountMenu } from '../components/AccountMenu'
 import { RankBadge } from '../components/RankBadge'
@@ -144,6 +145,7 @@ export default function Dashboard() {
     // réponde, une fois revenu en salon — même écran que pour les demandes
     // sur une partie publique.
     if (data.status === 'pending') {
+      void notifyJoinRequest(data.game_id)
       navigate(`/attente/${data.game_id}`, { state: { code: data.code } })
       return
     }
@@ -231,6 +233,7 @@ export default function Dashboard() {
     // Cas rare mais possible : la partie a démarré entre l'envoi de
     // l'invitation et son acceptation (voir join_game, migration 0038).
     if (data.status === 'pending') {
+      void notifyJoinRequest(data.game_id)
       navigate(`/attente/${data.game_id}`, { state: { code: data.code } })
       return
     }
