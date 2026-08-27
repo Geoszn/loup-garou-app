@@ -17,7 +17,9 @@
 // à partir d'un texte fourni par le client, pour ne laisser aucune place à
 // une notification usurpée ou avec un contenu arbitraire.
 import { createClient } from '@supabase/supabase-js'
-import { configureVapid, sendPushToUser } from '../server/pushSend'
+// Extension .js explicite obligatoire — voir le même commentaire dans
+// api/send-push.ts.
+import { configureVapid, sendPushToUser } from '../server/pushSend.js'
 
 interface VercelRequest {
   method?: string

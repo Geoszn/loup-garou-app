@@ -15,7 +15,12 @@
 //   SUPABASE_SERVICE_ROLE_KEY — pour lire push_subscriptions en contournant
 //   RLS (cette table n'a aucune policy cliente, voir 0105).
 import { createClient } from '@supabase/supabase-js'
-import { configureVapid, sendPushToUser } from '../server/pushSend'
+// Extension .js explicite obligatoire : ce projet tourne en ESM natif
+// Node ("type": "module" dans package.json), qui — contrairement à Vite
+// pour src/ — n'auto-résout jamais un import relatif sans extension à
+// l'exécution, même si le fichier source est un .ts (voir le commentaire
+// de server/pushSend.ts pour l'historique de ce piège).
+import { configureVapid, sendPushToUser } from '../server/pushSend.js'
 
 interface VercelRequest {
   method?: string
