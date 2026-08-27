@@ -24,6 +24,7 @@
     "@daily-co/daily-js": "^0.68.0",
     "@sentry/react": "^8.42.0",
     "@supabase/supabase-js": "^2.45.4",
+    "framer-motion": "^13.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.2",

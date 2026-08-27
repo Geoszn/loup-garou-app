@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
 import { Link, type LinkProps } from 'react-router-dom'
+import { motion, type PanInfo } from 'framer-motion'
 import { useLanguage } from '../i18n/LanguageContext'
 
 type ButtonVariant = 'primary' | 'ghost' | 'danger'
@@ -348,6 +349,16 @@ export function ConfirmDialog({
  * rejoindre — voir Dashboard.tsx). Même habillage que ConfirmDialog, mais
  * sans le duo confirmer/annuler imposé : c'est l'appelant qui fournit tout
  * le contenu, boutons compris. */
+// Distance de glissement vers le bas (en px) à partir de laquelle relâcher
+// ferme la pop-up, même sans vitesse particulière — un geste lent mais
+// franc doit fermer tout autant qu'un "flick" rapide (voir DRAG_VELOCITY_
+// THRESHOLD ci-dessous pour ce second cas).
+const DRAG_CLOSE_THRESHOLD = 120
+// Vitesse de relâchement (px/s) à partir de laquelle un petit glissement,
+// même court, ferme quand même la pop-up — pour un "flick" rapide du
+// pouce qu'on n'a pas forcément traîné sur 120px.
+const DRAG_VELOCITY_THRESHOLD = 800
+
 export function Modal({
   open,
   onClose,
@@ -360,6 +371,16 @@ export function Modal({
   children: ReactNode
 }) {
   const { t } = useLanguage()
+  // Piloté séparément de `open` : `open` retombe à `false` côté appelant dès
+  // qu'on décide de fermer, ce qui démonterait la pop-up avant la fin de
+  // l'animation de sortie si on ne gardait pas cet état local le temps que
+  // l'anim se termine (voir onAnimationComplete plus bas).
+  const [dismissing, setDismissing] = useState(false)
+
+  useEffect(() => {
+    if (open) setDismissing(false)
+  }, [open])
+
   useEffect(() => {
     if (!open) return
     function onKeyDown(e: KeyboardEvent) {
@@ -370,18 +391,43 @@ export function Modal({
   }, [open, onClose])
 
   if (!open) return null
+
+  function handleDragEnd(_: PointerEvent | MouseEvent | TouchEvent, info: PanInfo) {
+    if (info.offset.y > DRAG_CLOSE_THRESHOLD || info.velocity.y > DRAG_VELOCITY_THRESHOLD) {
+      setDismissing(true)
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex animate-overlay-in items-center justify-center bg-black/60 px-4 py-8 backdrop-blur-sm"
       onClick={onClose}
     >
-      <div
+      <motion.div
         role="dialog"
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
         className="max-h-full w-full max-w-sm animate-modal-in overflow-y-auto scrollbar-thin rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/95 to-night-900/95 p-6 shadow-card"
+        // Glissement vers le bas pour fermer, comme une feuille modale
+        // mobile classique — bloqué vers le haut (dragConstraints à 0) pour
+        // ne jamais laisser la pop-up "s'échapper" au-dessus de l'écran.
+        // Pas d'équivalent pour ConfirmDialog/SideDrawer, qui ne
+        // réutilisent pas ce composant (voir leurs définitions plus bas) —
+        // seule cette pop-up générique en bénéficie pour l'instant.
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0, bottom: 0.6 }}
+        onDragEnd={handleDragEnd}
+        animate={dismissing ? { y: '120%', opacity: 0 } : undefined}
+        transition={{ type: 'spring', stiffness: 400, damping: 40 }}
+        onAnimationComplete={() => {
+          if (dismissing) onClose()
+        }}
       >
+        {/* Petite poignée, seul indice visuel que la pop-up se glisse vers
+            le bas — sans elle, rien ne suggère que le geste existe. */}
+        <div className="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-moon-200/15" />
         <div className="mb-4 flex items-center justify-between gap-3">
           <h3 className="font-display text-lg text-moon-200">{title}</h3>
           <button
@@ -394,7 +440,7 @@ export function Modal({
           </button>
         </div>
         {children}
-      </div>
+      </motion.div>
     </div>
   )
 }
