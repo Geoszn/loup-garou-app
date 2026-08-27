@@ -111,13 +111,16 @@ export default function Account() {
 function SettingsRow({ label, description, children }: { label: string; description?: ReactNode; children: ReactNode }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-      {/* min-w-0 : sans ça, un texte de description un peu long (voir le
-          réglage Notifications) refuse de se réduire dans ce conteneur flex
-          et pousse le contrôle de droite hors de la ligne au lieu de passer
-          à la ligne proprement — un piège classique de flexbox avec du
-          texte. break-words en filet de sécurité pour un mot isolé trop
-          long (peu probable en pratique, mais coûte rien). */}
-      <div className="min-w-0 flex-1 break-words">
+      {/* min-w-0 : sans ça, un texte de description un peu long refuse de se
+          réduire dans ce conteneur flex et pousse le contrôle de droite hors
+          de la ligne au lieu de passer à la ligne proprement — un piège
+          classique de flexbox avec du texte. PAS de break-words en plus
+          (essayé, retiré) : ça force la coupure en plein milieu d'un mot
+          isolé assez long (ex. "Notifications") dès que l'espace se resserre,
+          un résultat bien pire que le problème d'origine — min-w-0 seul
+          suffit à faire passer proprement à la ligne suivante, au niveau
+          d'un espace, sans jamais couper un mot. */}
+      <div className="min-w-0 flex-1">
         <p className="font-display text-base text-moon-200">{label}</p>
         {description && <p className="mt-0.5 text-xs text-moon-200/50">{description}</p>}
       </div>
@@ -183,18 +186,26 @@ function NotificationsRow() {
     }
   }
 
+  // Pas de SettingsRow ici non plus (même raison que le bloc iOS
+  // au-dessus) : une fois abonné, il y a DEUX boutons ("Envoyer un test" +
+  // "Activer"/"Désactiver") à caser à côté du libellé et de sa description
+  // — ça ne tient pas sur une ligne sans se tasser (signalement
+  // utilisateur : "Notifications" coupé en plein milieu du mot). Texte en
+  // pleine largeur, boutons juste en dessous, qui passent naturellement à
+  // la ligne s'ils manquent de place plutôt que d'écraser le texte.
   return (
-    <SettingsRow
-      label={t('account.notifications.title')}
-      description={
-        push.error
-          ? push.error
-          : testState === 'sent'
-            ? t('account.notifications.testSent')
-            : testError || t('account.notifications.description')
-      }
-    >
-      <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-3 px-5 py-4">
+      <div>
+        <p className="font-display text-base text-moon-200">{t('account.notifications.title')}</p>
+        <p className="mt-0.5 text-xs text-moon-200/50">
+          {push.error
+            ? push.error
+            : testState === 'sent'
+              ? t('account.notifications.testSent')
+              : testError || t('account.notifications.description')}
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
         {push.subscribed && (
           <Button
             variant="ghost"
@@ -218,7 +229,7 @@ function NotificationsRow() {
               : t('account.notifications.enable')}
         </Button>
       </div>
-    </SettingsRow>
+    </div>
   )
 }
 

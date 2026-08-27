@@ -88,9 +88,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // qui n'a aucune policy RLS cliente par conception (voir 0105).
   const serviceClient = createClient(supabaseUrl, serviceRoleKey)
 
+  // Titre volontairement court, sans répéter le nom de l'app : iOS l'affiche
+  // déjà lui-même sous le titre ("from LG Afrique", tiré du short_name du
+  // manifest) — le répéter dans notre propre titre donnait une notification
+  // à 3 lignes avec le nom du jeu écrit deux fois (signalement utilisateur).
+  const { data: profile } = await serviceClient.from('profiles').select('lang').eq('id', userData.user.id).maybeSingle()
+  const isEnglish = profile?.lang === 'en'
+
   const { sent, removed } = await sendPushToUser(serviceClient, userData.user.id, {
-    title: '🐺 Loup Garou d’Afrique',
-    body: 'Si tu vois ceci, les notifications fonctionnent !',
+    title: isEnglish ? '🐺 Test notification' : '🐺 Notification de test',
+    body: isEnglish ? 'If you see this, notifications are working!' : 'Si tu vois ceci, les notifications fonctionnent !',
     url: '/dashboard',
   })
 
