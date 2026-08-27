@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { useGame } from '../hooks/useGame'
 import { useNotificationSound } from '../hooks/useNotificationSound'
 import { supabase } from '../lib/supabase'
-import { notifyGameInvite } from '../lib/pushSubscription'
+import { notifyGameInvite, notifyGameStarted } from '../lib/pushSubscription'
 import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, SideDrawer } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { FriendRequestPopover } from '../components/FriendRequestPopover'
@@ -247,7 +247,17 @@ export default function Lobby() {
     }
     const { error } = await supabase.rpc('start_game', { p_game_id: gameId })
     setStarting(false)
-    if (error) setActionError(error.message)
+    if (error) {
+      setActionError(error.message)
+      return
+    }
+    // Prévient les joueurs qui ont quitté l'appli (pas dans onlineUserIds,
+    // le même canal de présence que le point vert/gris déjà affiché sur
+    // chaque joueur ci-dessous) que la partie vient de démarrer — jamais
+    // quelqu'un qui a déjà le salon sous les yeux. Best-effort, voir
+    // notifyGameStarted.
+    const offlineIds = (view?.players ?? []).map((p) => p.user_id).filter((id) => !onlineUserIds.has(id))
+    void notifyGameStarted(gameId, offlineIds)
   }
 
   async function inviteFriend(friendId: string) {

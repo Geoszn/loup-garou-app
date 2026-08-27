@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { notifyFriendRequest } from '../lib/pushSubscription'
 import { AvatarIcon } from './AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
 
@@ -35,6 +36,7 @@ export function FriendRequestPopover({
       ok: true,
       message: data?.status === 'accepted' ? t('friendPopover.becameFriends') : t('friendPopover.sent'),
     })
+    if (data?.status === 'pending') void notifyFriendRequest(userId)
   }
 
   return (

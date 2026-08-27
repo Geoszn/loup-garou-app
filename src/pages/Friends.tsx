@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { notifyFriendRequest } from '../lib/pushSubscription'
 import { Button, Card, ErrorText, Input, Label, SuccessText } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { AvatarIcon } from '../components/AvatarIcon'
@@ -70,6 +71,7 @@ export default function Friends() {
     }
     setCode('')
     setSuccess(data?.status === 'accepted' ? t('friends.add.becameFriends') : t('friends.add.sent'))
+    if (data?.status === 'pending' && data?.target_user_id) void notifyFriendRequest(data.target_user_id)
     await load()
   }
 

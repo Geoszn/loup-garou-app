@@ -36,26 +36,58 @@ export async function sendTestPush(): Promise<void> {
   }
 }
 
-/**
- * Prévient un ami par notification push qu'il vient de recevoir une
- * invitation à une partie (voir api/notify-user.ts). Appelée juste après un
- * appel réussi à invite_friend_to_game (voir Lobby.tsx) — volontairement
- * best-effort : la plupart des joueurs n'auront pas activé les
- * notifications, ce n'est jamais une raison d'afficher une erreur à celui
- * qui invite, l'invitation elle-même a déjà réussi.
- */
-export async function notifyGameInvite(gameId: string, friendId: string): Promise<void> {
+/** POST authentifié best-effort vers une route de notification — n'échoue
+ * jamais bruyamment (voir le commentaire de notifyGameInvite ci-dessous) :
+ * la plupart des joueurs n'auront pas activé les notifications, et ces
+ * appels suivent toujours une action côté jeu déjà réussie (invitation,
+ * demande d'ami, lancement de partie) qui ne doit jamais paraître avoir
+ * échoué à cause de ça. */
+async function notifyBestEffort(path: string, body: Record<string, unknown>): Promise<void> {
   const { data: sessionData } = await supabase.auth.getSession()
   const token = sessionData.session?.access_token
   if (!token) return
 
   try {
-    await fetch(apiUrl('/api/notify-user'), {
+    await fetch(apiUrl(path), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ gameId, friendId }),
+      body: JSON.stringify(body),
     })
   } catch {
-    // Best-effort : voir le commentaire ci-dessus.
+    // Best-effort : voir le commentaire de la fonction.
   }
+}
+
+/**
+ * Prévient un ami par notification push qu'il vient de recevoir une
+ * invitation à une partie (voir api/notify-user.ts). Appelée juste après un
+ * appel réussi à invite_friend_to_game (voir Lobby.tsx).
+ */
+export function notifyGameInvite(gameId: string, friendId: string): Promise<void> {
+  return notifyBestEffort('/api/notify-user', { gameId, friendId })
+}
+
+/**
+ * Prévient un joueur par notification push qu'il vient de recevoir une
+ * demande d'ami (voir api/notify-friend-request.ts). Appelée juste après un
+ * appel réussi à send_friend_request / send_friend_request_by_user_id, SEULEMENT
+ * quand la réponse indique 'pending' — un statut 'accepted' veut dire que
+ * les deux comptes étaient déjà en attente l'un vers l'autre et sont
+ * maintenant amis directement, rien à notifier dans ce cas.
+ */
+export function notifyFriendRequest(targetUserId: string): Promise<void> {
+  return notifyBestEffort('/api/notify-friend-request', { targetUserId })
+}
+
+/**
+ * Prévient les joueurs d'un salon que la partie vient de démarrer — mais
+ * seulement ceux passés dans `candidateUserIds`, calculée côté appelant à
+ * partir de `onlineUserIds` (voir usePushNotifications.ts et le commentaire
+ * de api/notify-game-started.ts) : jamais quelqu'un qui a déjà l'écran du
+ * salon sous les yeux. Appelée juste après un appel réussi à start_game
+ * (voir Lobby.tsx).
+ */
+export function notifyGameStarted(gameId: string, candidateUserIds: string[]): Promise<void> {
+  if (candidateUserIds.length === 0) return Promise.resolve()
+  return notifyBestEffort('/api/notify-game-started', { gameId, candidateUserIds })
 }

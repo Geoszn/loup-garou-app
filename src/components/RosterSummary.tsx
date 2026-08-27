@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ROLES, type RoleId } from '../lib/roles'
 import type { PublicPlayer, RoleCounts } from '../types/game'
 import { supabase } from '../lib/supabase'
+import { notifyFriendRequest } from '../lib/pushSubscription'
 import { AvatarIcon } from './AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
 
@@ -74,6 +75,7 @@ export function RosterSummary({
         ? { ok: false, message: error.message }
         : { ok: true, message: data?.status === 'accepted' ? t('roster.becameFriends') : t('roster.friendSent') },
     }))
+    if (!error && data?.status === 'pending') void notifyFriendRequest(userId)
   }
 
   useEffect(() => {
