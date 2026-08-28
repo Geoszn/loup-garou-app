@@ -9,6 +9,7 @@ import { RankBadge } from '../components/RankBadge'
 import { LoginStreakBadge } from '../components/LoginStreakBadge'
 import { DailyLoginBanner } from '../components/DailyLoginBanner'
 import { FriendsOnlineWidget, type FriendPerson } from '../components/FriendsOnlineWidget'
+import { QuestsCard } from '../components/QuestsCard'
 import { DashboardLeaderboard } from '../components/DashboardLeaderboard'
 import { FeedbackButton } from '../components/FeedbackButton'
 import { ContinentPrompt } from '../components/ContinentPrompt'
@@ -417,6 +418,8 @@ export default function Dashboard() {
             ))}
           </div>
         )}
+
+        <QuestsCard />
 
         <FriendsOnlineWidget friends={friends} />
 

@@ -1103,6 +1103,8 @@ export const translations = {
   'friendsOnline.title': { fr: 'Amis en ligne ({{count}})', en: 'Friends online ({{count}})' },
   'friendsOnline.inGame': { fr: 'en partie', en: 'in a game' },
   'friendsOnline.idle': { fr: 'disponible', en: 'available' },
+  'quest.title': { fr: 'Quêtes du jour', en: 'Daily quests' },
+  'quest.claim': { fr: 'Réclamer (+{{points}})', en: 'Claim (+{{points}})' },
   'account.notifications.title': { fr: 'Notifications', en: 'Notifications' },
   'account.notifications.description': {
     fr: 'Reçois une alerte quand c’est ton tour de jouer ou qu’un ami te lance une invitation.',

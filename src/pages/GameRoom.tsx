@@ -1175,6 +1175,18 @@ function EndScreen({
   // doit détecter un changement en cours de partie encore active).
   const [showTierUp, setShowTierUp] = useState(myTierChanged)
 
+  // Fait avancer les quêtes du jour (voir QuestsCard.tsx, migration 0112)
+  // avec cette partie précise — en arrière-plan, sans rien afficher ici
+  // (le résultat se voit sur le tableau de bord). sync_daily_quests_for_game
+  // est idempotente par partie (quest_game_sync), donc pas besoin de garde
+  // supplémentaire même si EndScreen venait à re-render.
+  const questSyncedRef = useRef(false)
+  useEffect(() => {
+    if (questSyncedRef.current) return
+    questSyncedRef.current = true
+    supabase.rpc('sync_daily_quests_for_game', { p_game_id: gameId })
+  }, [gameId])
+
   return (
     <Card className="text-center">
       {showTierUp && myResult && (

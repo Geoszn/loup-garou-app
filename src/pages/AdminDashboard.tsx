@@ -26,7 +26,7 @@ import { continentEmoji, continentName } from '../lib/continents'
 // l'écran "Accès refusé".
 // ============================================================================
 
-type Tab = 'stats' | 'users' | 'games' | 'content' | 'events' | 'messages' | 'security' | 'settings'
+type Tab = 'stats' | 'users' | 'games' | 'content' | 'events' | 'quests' | 'messages' | 'security' | 'settings'
 
 const TAB_ITEMS: { id: Tab; label: string; icon: string }[] = [
   { id: 'stats', label: 'Vue d’ensemble', icon: '📊' },
@@ -34,6 +34,10 @@ const TAB_ITEMS: { id: Tab; label: string; icon: string }[] = [
   { id: 'games', label: 'Salons', icon: '🎲' },
   { id: 'content', label: 'Contenu du jeu', icon: '📝' },
   { id: 'events', label: 'Événements', icon: '🎉' },
+  // Catalogue des quêtes quotidiennes (voir QuestsCard.tsx côté joueur,
+  // migration 0112) : texte/objectif/récompense/activation, sans passer par
+  // un déploiement de code — même principe que l'onglet Événements ci-dessus.
+  { id: 'quests', label: 'Quêtes', icon: '📜' },
   // Messages reçus des joueurs (bouton "feedback" en jeu, voir
   // FeedbackButton.tsx) : jusqu'ici uniquement envoyés par email via Resend
   // (api/feedback.ts, "best effort", pas encore configuré côté Vercel) —
@@ -350,6 +354,7 @@ export default function AdminDashboard() {
         {tab === 'games' && <GamesTab />}
         {tab === 'content' && <ContentTab />}
         {tab === 'events' && <EventsTab />}
+        {tab === 'quests' && <QuestTemplatesTab />}
         {tab === 'messages' && <MessagesTab />}
         {tab === 'security' && <SecurityTab />}
         {tab === 'settings' && <SettingsTab />}
@@ -2130,6 +2135,338 @@ function EventBannerImageUpload({
       </div>
       <ErrorText>{error}</ErrorText>
     </div>
+  )
+}
+
+// ----------------------------------------------------------------------------
+// Catalogue des quêtes quotidiennes (voir QuestsCard.tsx côté joueur,
+// migration 0112) — même patron que EventsTab/EventFormDrawer juste
+// au-dessus : upsert unique (p_id null = création), toggle Activer/
+// Désactiver en un clic, suppression définitive.
+//
+// `condition_key` reste un choix parmi un ensemble FERMÉ de 5 valeurs (voir
+// le commentaire en tête de migration 0112) : chacune correspond à un bloc
+// de code précis dans sync_daily_quests_for_game, l'admin ne peut pas en
+// inventer une sixième depuis cet écran — seuls texte/objectif/récompense/
+// activation sont librement modifiables.
+// ----------------------------------------------------------------------------
+type QuestConditionKey = 'games_played' | 'games_won' | 'survived' | 'won_as_wolf' | 'won_as_village'
+
+const QUEST_CONDITION_LABELS: Record<QuestConditionKey, string> = {
+  games_played: 'Nombre de parties jouées',
+  games_won: 'Nombre de victoires',
+  survived: 'Survivre jusqu’à la fin',
+  won_as_wolf: 'Gagner en tant que Loup',
+  won_as_village: 'Gagner en tant que Villageois',
+}
+
+interface QuestTemplate {
+  id: string
+  condition_key: QuestConditionKey
+  label_fr: string
+  label_en: string
+  target: number
+  reward_points: number
+  active: boolean
+  created_at: string
+}
+
+function QuestTemplatesTab() {
+  const [templates, setTemplates] = useState<QuestTemplate[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<QuestTemplate | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<QuestTemplate | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    const { data, error: rpcError } = await supabase.rpc('admin_list_quest_templates')
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    setError(null)
+    setTemplates((data ?? []) as QuestTemplate[])
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  function openCreate() {
+    setEditing(null)
+    setFormOpen(true)
+  }
+
+  function openEdit(qt: QuestTemplate) {
+    setEditing(qt)
+    setFormOpen(true)
+  }
+
+  async function toggleActive(qt: QuestTemplate) {
+    setBusyId(qt.id)
+    const { error: rpcError } = await supabase.rpc('admin_upsert_quest_template', {
+      p_id: qt.id,
+      p_condition_key: qt.condition_key,
+      p_label_fr: qt.label_fr,
+      p_label_en: qt.label_en,
+      p_target: qt.target,
+      p_reward_points: qt.reward_points,
+      p_active: !qt.active,
+    })
+    setBusyId(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    load()
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    setBusyId(deleteTarget.id)
+    const { error: rpcError } = await supabase.rpc('admin_delete_quest_template', { p_id: deleteTarget.id })
+    setBusyId(null)
+    setDeleteTarget(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    load()
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-moon-200/60">
+          {templates?.length ?? 0} quête(s) au catalogue — 3 tirées au hasard chaque jour parmi celles actives.
+        </p>
+        <Button className="px-3.5 py-2 text-xs" onClick={openCreate}>
+          + Nouvelle quête
+        </Button>
+      </div>
+
+      <ErrorText>{error}</ErrorText>
+
+      {templates === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
+      {templates !== null && templates.length === 0 && <p className="text-sm text-moon-200/50">Aucune quête au catalogue.</p>}
+
+      <div className="flex flex-col gap-2">
+        {templates?.map((qt) => (
+          <Card key={qt.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
+            <div>
+              <p className="flex items-center gap-2 text-sm font-semibold text-moon-200">
+                {qt.label_fr}
+                {!qt.active && (
+                  <span className="rounded-full bg-night-700/60 px-2 py-0.5 text-[10px] uppercase text-moon-200/50">
+                    Désactivée
+                  </span>
+                )}
+              </p>
+              <p className="mt-1 text-xs text-moon-200/50">
+                {QUEST_CONDITION_LABELS[qt.condition_key]} · objectif {qt.target} · +{qt.reward_points} pts
+              </p>
+              <p className="mt-1 text-xs text-moon-200/40">🇫🇷 {qt.label_fr} · 🇬🇧 {qt.label_en}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="ghost" className="px-3 py-1.5 text-xs" disabled={busyId === qt.id} onClick={() => openEdit(qt)}>
+                Modifier
+              </Button>
+              <Button variant="ghost" className="px-3 py-1.5 text-xs" disabled={busyId === qt.id} onClick={() => toggleActive(qt)}>
+                {qt.active ? 'Désactiver' : 'Activer'}
+              </Button>
+              <Button variant="danger" className="px-3 py-1.5 text-xs" disabled={busyId === qt.id} onClick={() => setDeleteTarget(qt)}>
+                Supprimer
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <QuestTemplateFormDrawer
+        open={formOpen}
+        template={editing}
+        onClose={() => setFormOpen(false)}
+        onSaved={() => {
+          setFormOpen(false)
+          load()
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={`Supprimer « ${deleteTarget?.label_fr ?? ''} » ?`}
+        message="Retirée du catalogue immédiatement. Un joueur qui l'a déjà en cours aujourd'hui la perd sans conséquence (une autre est réassignée le lendemain)."
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        danger
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+      />
+    </div>
+  )
+}
+
+interface QuestTemplateFormState {
+  condition_key: QuestConditionKey
+  label_fr: string
+  label_en: string
+  target: string
+  reward_points: string
+  active: boolean
+}
+
+const EMPTY_QUEST_FORM: QuestTemplateFormState = {
+  condition_key: 'games_played',
+  label_fr: '',
+  label_en: '',
+  target: '1',
+  reward_points: '5',
+  active: true,
+}
+
+function QuestTemplateFormDrawer({
+  open,
+  template,
+  onClose,
+  onSaved,
+}: {
+  open: boolean
+  template: QuestTemplate | null
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [form, setForm] = useState<QuestTemplateFormState>(EMPTY_QUEST_FORM)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    if (template) {
+      setForm({
+        condition_key: template.condition_key,
+        label_fr: template.label_fr,
+        label_en: template.label_en,
+        target: String(template.target),
+        reward_points: String(template.reward_points),
+        active: template.active,
+      })
+    } else {
+      setForm(EMPTY_QUEST_FORM)
+    }
+    setError(null)
+  }, [open, template])
+
+  async function save(e: FormEvent) {
+    e.preventDefault()
+    if (!form.label_fr.trim() || !form.label_en.trim()) {
+      setError('Texte requis (FR et EN).')
+      return
+    }
+    const target = Number(form.target)
+    const reward = Number(form.reward_points)
+    if (!Number.isFinite(target) || target <= 0) {
+      setError('Objectif invalide.')
+      return
+    }
+    if (!Number.isFinite(reward) || reward < 0) {
+      setError('Récompense invalide.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('admin_upsert_quest_template', {
+      p_id: template?.id ?? null,
+      p_condition_key: form.condition_key,
+      p_label_fr: form.label_fr,
+      p_label_en: form.label_en,
+      p_target: target,
+      p_reward_points: reward,
+      p_active: form.active,
+    })
+    setBusy(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    onSaved()
+  }
+
+  return (
+    <SideDrawer open={open} onClose={onClose} title={template ? 'Modifier la quête' : 'Nouvelle quête'}>
+      <form className="flex flex-col gap-4" onSubmit={save}>
+        <div>
+          <Label>Condition suivie</Label>
+          <Segmented
+            tabs={(Object.keys(QUEST_CONDITION_LABELS) as QuestConditionKey[]).map((id) => ({
+              id,
+              label: QUEST_CONDITION_LABELS[id],
+            }))}
+            active={form.condition_key}
+            onChange={(id) => setForm((f) => ({ ...f, condition_key: id }))}
+          />
+        </div>
+
+        <div>
+          <Label>Texte affiché — Français</Label>
+          <Input
+            value={form.label_fr}
+            onChange={(ev) => setForm((f) => ({ ...f, label_fr: ev.target.value }))}
+            placeholder="Ex. Gagne une partie"
+          />
+        </div>
+        <div>
+          <Label>Texte affiché — English</Label>
+          <Input
+            value={form.label_en}
+            onChange={(ev) => setForm((f) => ({ ...f, label_en: ev.target.value }))}
+            placeholder="Ex. Win a game"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Objectif</Label>
+            <Input
+              type="number"
+              min={1}
+              value={form.target}
+              onChange={(ev) => setForm((f) => ({ ...f, target: ev.target.value }))}
+            />
+          </div>
+          <div>
+            <Label>Récompense (points)</Label>
+            <Input
+              type="number"
+              min={0}
+              value={form.reward_points}
+              onChange={(ev) => setForm((f) => ({ ...f, reward_points: ev.target.value }))}
+            />
+          </div>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-moon-200/80">
+          <input
+            type="checkbox"
+            checked={form.active}
+            onChange={(ev) => setForm((f) => ({ ...f, active: ev.target.checked }))}
+            className="h-4 w-4 rounded border-night-600/70 bg-night-900/50 accent-blood-600"
+          />
+          Active (peut être tirée au sort chaque jour)
+        </label>
+
+        <ErrorText>{error}</ErrorText>
+
+        <div className="mt-2 flex gap-3">
+          <Button type="button" variant="ghost" className="flex-1" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button type="submit" className="flex-1" disabled={busy}>
+            {template ? 'Enregistrer' : 'Créer'}
+          </Button>
+        </div>
+      </form>
+    </SideDrawer>
   )
 }
 
