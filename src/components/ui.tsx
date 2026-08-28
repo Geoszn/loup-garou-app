@@ -352,12 +352,17 @@ export function ConfirmDialog({
 // Distance de glissement vers le bas (en px) à partir de laquelle relâcher
 // ferme la pop-up, même sans vitesse particulière — un geste lent mais
 // franc doit fermer tout autant qu'un "flick" rapide (voir DRAG_VELOCITY_
-// THRESHOLD ci-dessous pour ce second cas).
-const DRAG_CLOSE_THRESHOLD = 120
+// THRESHOLD ci-dessous pour ce second cas). Exportées : réutilisées telles
+// quelles par DeathImpactModal.tsx et TierUpModal.tsx, qui ont leur propre
+// mise en page (pas Modal ci-dessous) mais doivent réagir au même geste de
+// la même façon — un seuil qui diffère d'une pop-up à l'autre serait un
+// vrai piège pour l'utilisateur (le "type" de geste nécessaire changerait
+// sans qu'il y ait de raison visible).
+export const DRAG_CLOSE_THRESHOLD = 120
 // Vitesse de relâchement (px/s) à partir de laquelle un petit glissement,
 // même court, ferme quand même la pop-up — pour un "flick" rapide du
 // pouce qu'on n'a pas forcément traîné sur 120px.
-const DRAG_VELOCITY_THRESHOLD = 800
+export const DRAG_VELOCITY_THRESHOLD = 800
 
 export function Modal({
   open,

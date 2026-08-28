@@ -1,8 +1,10 @@
+import { motion, type PanInfo } from 'framer-motion'
 import { useLanguage } from '../i18n/LanguageContext'
 import { RankTierBadge } from './RankTierBadge'
 import { AvatarIcon } from './AvatarIcon'
 import { tierLabel, type RankTier } from '../lib/ranks'
 import { AVATAR_ICON_MIN_POINTS, type AvatarIcon as AvatarIconId } from '../lib/avatars'
+import { DRAG_CLOSE_THRESHOLD, DRAG_VELOCITY_THRESHOLD } from './ui'
 
 /** Paliers à partir desquels un cadre d'avatar apparaît en partie (voir
  * tierRingClass, PlayerGrid.tsx) — nouveau_venu et villageois n'ont encore
@@ -31,13 +33,26 @@ export function TierUpModal({ newTier, previousPoints, newPoints, onClose }: {
 
   const unlocksFrame = FRAME_TIERS.has(newTier)
 
+  // Purement personnelle, comme DeathImpactModal — voir son commentaire
+  // pour pourquoi ni elle ni TierUpModal ne posent de risque de
+  // désynchronisation, contrairement à NightRecapModal/VoteRecapModal.
+  function handleDragEnd(_: PointerEvent | MouseEvent | TouchEvent, info: PanInfo) {
+    if (info.offset.y > DRAG_CLOSE_THRESHOLD || info.velocity.y > DRAG_VELOCITY_THRESHOLD) {
+      onClose()
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex animate-overlay-in items-center justify-center bg-black/60 px-4 py-8 backdrop-blur-sm">
-      <div
+      <motion.div
         role="dialog"
         aria-modal="true"
         aria-labelledby="tier-up-title"
         className="flex w-full max-w-sm animate-modal-in flex-col rounded-2xl border border-moon-400/40 bg-gradient-to-b from-night-700/95 to-night-900/95 shadow-glow"
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0, bottom: 0.6 }}
+        onDragEnd={handleDragEnd}
       >
         <div className="flex flex-col items-center gap-3 border-b border-night-600/50 px-5 py-6 text-center">
           <p className="text-xs uppercase tracking-widest text-moon-300">{t('tierUp.eyebrow')}</p>
@@ -84,7 +99,7 @@ export function TierUpModal({ newTier, previousPoints, newPoints, onClose }: {
             {t('tierUp.continue')}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

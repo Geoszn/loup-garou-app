@@ -59,8 +59,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     })
 
+    // Le rafraîchissement automatique du token (autoRefreshToken, voir
+    // lib/supabase.ts) repose sur un minuteur JS qui tourne dans la page —
+    // suspendu par l'OS dès que l'onglet/l'app passe en arrière-plan
+    // (verrouillage de l'écran, appli mise en veille sur mobile). Un token
+    // qui expire pendant ce temps ne se renouvelle jamais tout seul : au
+    // retour, le SDK reste persuadé d'avoir une session valide jusqu'au
+    // premier appel réseau qui échoue — d'où la déconnexion silencieuse
+    // remontée après quelques minutes de veille. startAutoRefresh()/
+    // stopAutoRefresh() sur visibilitychange force une vérification
+    // immédiate dès que l'app redevient visible, plutôt que d'attendre un
+    // minuteur qui ne s'est jamais déclenché (patron documenté par
+    // Supabase pour ce cas — habituellement cité pour React Native, mais
+    // le problème de fond, des minuteurs suspendus en arrière-plan,
+    // s'applique tout autant ici sur mobile Safari/PWA).
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        supabase.auth.startAutoRefresh()
+      } else {
+        supabase.auth.stopAutoRefresh()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
     return () => {
       listener.subscription.unsubscribe()
+      document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   }, [])
 

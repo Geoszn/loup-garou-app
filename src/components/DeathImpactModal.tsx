@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { motion, type PanInfo } from 'framer-motion'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
 import { roleLabel, ROLES, type RoleId } from '../lib/roles'
 import type { ImpactBonus, ImpactDetail } from '../types/game'
+import { DRAG_CLOSE_THRESHOLD, DRAG_VELOCITY_THRESHOLD } from './ui'
 
 type Translate = (key: TranslationKey, vars?: Record<string, string | number>) => string
 
@@ -66,13 +68,29 @@ export function DeathImpactModal({
   const displayTotal = useCountUp(total)
   const roleInfo = myRole ? ROLES[myRole as RoleId] : null
 
+  // Purement personnelle (rien à synchroniser avec les autres joueurs,
+  // contrairement à NightRecapModal/VoteRecapModal, volontairement
+  // épargnées par ce geste — voir leur "tous prêts" collectif) : le
+  // glissement pour fermer y est sans risque. Même schéma que Modal
+  // (ui.tsx) — fermeture directe au relâché, sans état intermédiaire (voir
+  // le commentaire de handleDragEnd là-bas pour le bug que ça évite).
+  function handleDragEnd(_: PointerEvent | MouseEvent | TouchEvent, info: PanInfo) {
+    if (info.offset.y > DRAG_CLOSE_THRESHOLD || info.velocity.y > DRAG_VELOCITY_THRESHOLD) {
+      onClose()
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex animate-overlay-in items-center justify-center bg-black/60 px-4 py-8 backdrop-blur-sm">
-      <div
+      <motion.div
         role="dialog"
         aria-modal="true"
         aria-labelledby="death-impact-title"
         className="flex w-full max-w-sm animate-modal-in flex-col rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/95 to-night-900/95 shadow-card"
+        drag="y"
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0, bottom: 0.6 }}
+        onDragEnd={handleDragEnd}
       >
         <div className="flex flex-col items-center gap-2 border-b border-night-600/50 px-5 py-5 text-center">
           <h2 id="death-impact-title" className="font-display text-lg text-moon-200">
@@ -123,7 +141,7 @@ export function DeathImpactModal({
             {t('deathImpact.continue')}
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }
