@@ -15,6 +15,13 @@ interface Profile {
   rank_points: number
   current_streak: number
   best_streak: number
+  // Série de connexion quotidienne (voir migration 0110) : distincte de
+  // current_streak ci-dessus (victoires d'affilée) — comptée à chaque
+  // ouverture de l'app un jour différent, gagné ou perdu. claim_daily_login()
+  // met à jour ces deux colonnes en base ; refreshProfile() après l'appel
+  // les fait suivre ici pour le badge d'en-tête.
+  login_streak: number
+  login_streak_best: number
   continent: string | null
 }
 
@@ -37,7 +44,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function loadProfile(userId: string) {
     const { data } = await supabase
       .from('profiles')
-      .select('id, username, avatar_icon, lang, username_changed_at, rank_points, current_streak, best_streak, continent')
+      .select(
+        'id, username, avatar_icon, lang, username_changed_at, rank_points, current_streak, best_streak, login_streak, login_streak_best, continent',
+      )
       .eq('id', userId)
       .maybeSingle()
     if (data) setProfile(data as Profile)

@@ -1083,6 +1083,13 @@ export const translations = {
   },
   'notifPrompt.later': { fr: 'Plus tard', en: 'Later' },
   'notifPrompt.enable': { fr: 'Activer', en: 'Enable' },
+  'dailyStreak.newHeadline': { fr: 'Nouvelle série commencée !', en: 'New streak started!' },
+  'dailyStreak.newSub': { fr: 'Reviens demain pour la faire grandir.', en: 'Come back tomorrow to grow it.' },
+  'dailyStreak.headline': { fr: 'Content de te revoir !', en: 'Welcome back!' },
+  'dailyStreak.sub': { fr: 'Reviens demain pour continuer la série.', en: 'Come back tomorrow to keep it going.' },
+  'dailyStreak.milestoneHeadline': { fr: 'Série de {{count}} jours !', en: '{{count}}-day streak!' },
+  'dailyStreak.milestoneSub': { fr: 'Ta plus longue série jusqu’ici.', en: 'Your longest streak yet.' },
+  'dailyStreak.days': { fr: 'jours', en: 'days' },
   'account.notifications.title': { fr: 'Notifications', en: 'Notifications' },
   'account.notifications.description': {
     fr: 'Reçois une alerte quand c’est ton tour de jouer ou qu’un ami te lance une invitation.',

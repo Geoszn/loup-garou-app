@@ -6,6 +6,8 @@ import { notifyJoinRequest } from '../lib/pushSubscription'
 import { Button, Card, ErrorText, Input, Label, Modal } from '../components/ui'
 import { AccountMenu } from '../components/AccountMenu'
 import { RankBadge } from '../components/RankBadge'
+import { LoginStreakBadge } from '../components/LoginStreakBadge'
+import { DailyLoginBanner } from '../components/DailyLoginBanner'
 import { DashboardLeaderboard } from '../components/DashboardLeaderboard'
 import { FeedbackButton } from '../components/FeedbackButton'
 import { ContinentPrompt } from '../components/ContinentPrompt'
@@ -272,6 +274,7 @@ export default function Dashboard() {
           </Link>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             {profile && <RankBadge points={profile.rank_points} streak={profile.current_streak} />}
+            {profile && <LoginStreakBadge streak={profile.login_streak} />}
             <AccountMenu
               username={profile?.username}
               avatarIcon={profile?.avatar_icon}
@@ -355,6 +358,8 @@ export default function Dashboard() {
             ))}
           </div>
         )}
+
+        <DailyLoginBanner />
 
         {notice && !noticeDismissed && (
           <div
