@@ -8,6 +8,7 @@ import { AccountMenu } from '../components/AccountMenu'
 import { RankBadge } from '../components/RankBadge'
 import { LoginStreakBadge } from '../components/LoginStreakBadge'
 import { DailyLoginBanner } from '../components/DailyLoginBanner'
+import { FriendsOnlineWidget, type FriendPerson } from '../components/FriendsOnlineWidget'
 import { DashboardLeaderboard } from '../components/DashboardLeaderboard'
 import { FeedbackButton } from '../components/FeedbackButton'
 import { ContinentPrompt } from '../components/ContinentPrompt'
@@ -57,6 +58,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null)
   const [invites, setInvites] = useState<GameInvite[]>([])
   const [pendingFriendCount, setPendingFriendCount] = useState(0)
+  const [friends, setFriends] = useState<FriendPerson[]>([])
   const [joiningInvite, setJoiningInvite] = useState<string | null>(null)
 
   // Partie en cours à laquelle l'utilisateur participe encore (voir
@@ -193,6 +195,7 @@ export default function Dashboard() {
     if (rpcError || !data) return
     setInvites(data.game_invites ?? [])
     setPendingFriendCount((data.incoming_requests ?? []).length)
+    setFriends(data.friends ?? [])
   }
 
   useEffect(() => {
@@ -414,6 +417,8 @@ export default function Dashboard() {
             ))}
           </div>
         )}
+
+        <FriendsOnlineWidget friends={friends} />
 
         <DashboardLeaderboard />
 

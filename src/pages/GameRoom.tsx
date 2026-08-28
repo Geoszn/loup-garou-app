@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { usePresence } from '../context/PresenceContext'
 import { useGame } from '../hooks/useGame'
 import { useNarrator } from '../hooks/useNarrator'
 import { useSoundEffects } from '../hooks/useSoundEffects'
@@ -33,10 +34,23 @@ import type { VoiceChannel } from '../hooks/useVoiceChat'
 export default function GameRoom() {
   const { code } = useParams()
   const { user } = useAuth()
+  const { setMyStatus } = usePresence()
   const navigate = useNavigate()
   const { t } = useLanguage()
   const [gameId, setGameId] = useState<string | null>(null)
   const [resolveError, setResolveError] = useState<string | null>(null)
+
+  // Présence globale (voir PresenceContext.tsx, canal distinct de celui de
+  // useGame.ts) : signale aux amis qui consultent "Amis en ligne" sur le
+  // tableau de bord que ce compte est occupé sur cette partie précise, tant
+  // que cet écran reste monté — remis à 'idle' en quittant, y compris via
+  // un changement de route sans passer par un bouton "Quitter" dédié.
+  useEffect(() => {
+    if (!code) return
+    setMyStatus('in_game', code.toUpperCase())
+    return () => setMyStatus('idle')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [code])
 
   useEffect(() => {
     if (!code) return

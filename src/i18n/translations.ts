@@ -1100,6 +1100,9 @@ export const translations = {
   'reward.won': { fr: '+{{points}} points bonus !', en: '+{{points}} bonus points!' },
   'reward.empty': { fr: 'Rien cette fois. Retente au prochain match !', en: 'Nothing this time. Try again next match!' },
   'reward.alreadyClaimed': { fr: 'Coffre déjà ouvert pour cette partie.', en: 'Chest already opened for this game.' },
+  'friendsOnline.title': { fr: 'Amis en ligne ({{count}})', en: 'Friends online ({{count}})' },
+  'friendsOnline.inGame': { fr: 'en partie', en: 'in a game' },
+  'friendsOnline.idle': { fr: 'disponible', en: 'available' },
   'account.notifications.title': { fr: 'Notifications', en: 'Notifications' },
   'account.notifications.description': {
     fr: 'Reçois une alerte quand c’est ton tour de jouer ou qu’un ami te lance une invitation.',

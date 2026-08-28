@@ -8,6 +8,7 @@ import { SplashScreen } from '@capacitor/splash-screen'
 import './index.css'
 import App from './App'
 import { AuthProvider } from './context/AuthContext'
+import { PresenceProvider } from './context/PresenceContext'
 import { LanguageProvider } from './i18n/LanguageContext'
 
 // Coquille native (Android/iOS) uniquement : sur le web classique, ces
@@ -57,7 +58,9 @@ createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <LanguageProvider>
           <AuthProvider>
-            <App />
+            <PresenceProvider>
+              <App />
+            </PresenceProvider>
           </AuthProvider>
         </LanguageProvider>
       </BrowserRouter>
