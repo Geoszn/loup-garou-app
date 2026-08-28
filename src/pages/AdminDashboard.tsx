@@ -99,6 +99,44 @@ interface AdminGame {
   pending_join_requests: number
 }
 
+// Fiche détaillée d'une partie (voir admin_get_game_detail, migration
+// 0109) — jamais de rôle secret dedans, uniquement de quoi comprendre
+// pourquoi une partie signalée bloquée l'est réellement : la phase, son
+// échéance, et qui parmi les joueurs vivants n'a pas encore agi.
+interface AdminGameDetail {
+  game: {
+    id: string
+    code: string
+    status: string
+    is_public: boolean
+    night_number: number
+    night_step: string | null
+    phase_deadline: string | null
+    created_at: string
+    last_activity_at: string
+    hunter_pending: string | null
+    captain_pending: string | null
+  }
+  players: {
+    user_id: string
+    display_name: string
+    is_alive: boolean
+    is_host: boolean
+    is_captain: boolean
+    seat_number: number
+    pending: boolean
+  }[]
+}
+
+const NIGHT_STEP_LABELS: Record<string, string> = {
+  voleur: 'Voleur',
+  cupidon: 'Cupidon',
+  enfant_sauvage: 'Enfant Sauvage',
+  voyante: 'Voyante',
+  loup_garou: 'Loups-Garous',
+  sorciere: 'Sorcière',
+}
+
 const USERS_PAGE_SIZE = 10
 
 // Filtre initial appliqué à l'onglet Utilisateurs quand on y arrive en
@@ -856,6 +894,16 @@ function GamesTab() {
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [endTarget, setEndTarget] = useState<AdminGame | null>(null)
+  // Filtre client (pas de nouvel aller-retour réseau) : la liste tient déjà
+  // entièrement en mémoire (p_limit: 100), pas besoin d'une recherche
+  // côté serveur pour ce volume. Cherche sur le code ET le nom de l'hôte —
+  // c'est par l'un ou l'autre qu'un signalement support arrive en général
+  // ("le joueur X n'arrive pas à..." / "la partie ABCD est bloquée").
+  const [search, setSearch] = useState('')
+  // Fiche détaillée ouverte (voir GameDetailModal plus bas) — id de partie
+  // uniquement, pour ne jamais garder une copie de AdminGame qui pourrait
+  // devenir périmée pendant que la modale reste ouverte.
+  const [detailId, setDetailId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     const { data, error: rpcError } = await supabase.rpc('admin_list_active_games', { p_limit: 100 })
@@ -886,14 +934,28 @@ function GamesTab() {
     load()
   }
 
+  const needle = search.trim().toLowerCase()
+  const filteredGames = games?.filter(
+    (g) => !needle || g.code.toLowerCase().includes(needle) || g.host_name.toLowerCase().includes(needle)
+  )
+
   return (
     <div className="flex flex-col gap-4">
       <ErrorText>{error}</ErrorText>
+      <Input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Rechercher par code ou par hôte..."
+        className="max-w-sm"
+      />
       {games === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
       {games !== null && games.length === 0 && <p className="text-sm text-moon-200/50">Aucune partie en cours.</p>}
+      {games !== null && games.length > 0 && filteredGames?.length === 0 && (
+        <p className="text-sm text-moon-200/50">Aucune partie ne correspond à "{search}".</p>
+      )}
 
       <div className="flex flex-col gap-2">
-        {games?.map((g) => (
+        {filteredGames?.map((g) => (
           <Card key={g.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
             <div>
               <p className="text-sm font-semibold text-moon-200">
@@ -913,9 +975,14 @@ function GamesTab() {
                 </p>
               )}
             </div>
-            <Button variant="danger" className="px-3 py-1.5 text-xs" disabled={busyId === g.id} onClick={() => setEndTarget(g)}>
-              Arrêter
-            </Button>
+            <div className="flex shrink-0 gap-2">
+              <Button variant="ghost" className="px-3 py-1.5 text-xs" onClick={() => setDetailId(g.id)}>
+                Voir le détail
+              </Button>
+              <Button variant="danger" className="px-3 py-1.5 text-xs" disabled={busyId === g.id} onClick={() => setEndTarget(g)}>
+                Arrêter
+              </Button>
+            </div>
           </Card>
         ))}
       </div>
@@ -930,7 +997,98 @@ function GamesTab() {
         onConfirm={confirmEnd}
         onCancel={() => setEndTarget(null)}
       />
+
+      {detailId && <GameDetailModal gameId={detailId} onClose={() => setDetailId(null)} />}
     </div>
+  )
+}
+
+/** Fiche détaillée d'une partie (voir admin_get_game_detail, migration
+ * 0109) — pour comprendre pourquoi une partie signalée bloquée l'est
+ * réellement, sans passer par la base directement. Se recharge toutes les
+ * 5s tant qu'elle est ouverte (comme la liste elle-même), pour suivre un
+ * blocage en train de se résoudre sans avoir à fermer/rouvrir. */
+function GameDetailModal({ gameId, onClose }: { gameId: string; onClose: () => void }) {
+  const [detail, setDetail] = useState<AdminGameDetail | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    const { data, error: rpcError } = await supabase.rpc('admin_get_game_detail', { p_game_id: gameId })
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    setError(null)
+    setDetail(data as AdminGameDetail)
+  }, [gameId])
+
+  useEffect(() => {
+    load()
+    const interval = setInterval(load, 5000)
+    return () => clearInterval(interval)
+  }, [load])
+
+  const pendingCount = detail?.players.filter((p) => p.pending).length ?? 0
+
+  return (
+    <Modal open onClose={onClose} title={detail ? `Partie ${detail.game.code}` : 'Partie'}>
+      <ErrorText>{error}</ErrorText>
+      {!detail && !error && <p className="text-sm text-moon-200/50">Chargement...</p>}
+      {detail && (
+        <div className="flex flex-col gap-4">
+          <div className="rounded-xl border border-night-600/60 bg-night-900/40 p-3 text-sm">
+            <p className="text-moon-200">
+              {STATUS_LABELS[detail.game.status] ?? detail.game.status}
+              {detail.game.status === 'night' && detail.game.night_step && (
+                <> · {NIGHT_STEP_LABELS[detail.game.night_step] ?? detail.game.night_step}</>
+              )}
+              {detail.game.night_number > 0 && <> · Nuit {detail.game.night_number}</>}
+            </p>
+            <p className="mt-1 text-xs text-moon-200/50">
+              Dernière activité : {timeSince(detail.game.last_activity_at)}
+              {detail.game.phase_deadline && <> · échéance de phase {fmtDate(detail.game.phase_deadline)}</>}
+            </p>
+            {/* hunter_pending/captain_pending bloquent la partie pour TOUT
+                le monde (pas seulement l'acteur concerné) jusqu'à ce que ce
+                joueur précis agisse — souvent la cause d'un blocage signalé
+                "tout le monde attend sans rien pouvoir faire". */}
+            {detail.game.hunter_pending && (
+              <p className="mt-1 text-xs text-blood-400">
+                🎯 En attente du tir du Chasseur ({detail.players.find((p) => p.user_id === detail.game.hunter_pending)?.display_name ?? '?'})
+              </p>
+            )}
+            {detail.game.captain_pending && (
+              <p className="mt-1 text-xs text-blood-400">
+                🎖️ En attente de la succession du Capitaine ({detail.players.find((p) => p.user_id === detail.game.captain_pending)?.display_name ?? '?'})
+              </p>
+            )}
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-moon-200/50">
+              Joueurs {pendingCount > 0 && <span className="text-blood-400">· {pendingCount} en attente</span>}
+            </p>
+            <div className="flex flex-col gap-1.5">
+              {detail.players.map((p) => (
+                <div
+                  key={p.user_id}
+                  className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs ${
+                    p.pending ? 'border-blood-700/50 bg-blood-700/10' : 'border-night-600/60 bg-night-800/40'
+                  }`}
+                >
+                  <span className={p.is_alive ? 'text-moon-200' : 'text-moon-200/40 line-through'}>
+                    {p.display_name}
+                    {p.is_host && ' · 👑'}
+                    {p.is_captain && ' · 🎖️'}
+                  </span>
+                  {p.pending && <span className="shrink-0 font-semibold text-blood-400">en attente</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </Modal>
   )
 }
 
