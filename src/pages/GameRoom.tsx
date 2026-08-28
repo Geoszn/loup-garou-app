@@ -18,6 +18,7 @@ import { VoteRecapModal } from '../components/VoteRecapModal'
 import { NightRecapModal } from '../components/NightRecapModal'
 import { DeathImpactModal, impactLabel } from '../components/DeathImpactModal'
 import { TierUpModal } from '../components/TierUpModal'
+import { RewardChest } from '../components/RewardChest'
 import { ModerationPanel } from '../components/ModerationPanel'
 import { VoiceChat } from '../components/VoiceChat'
 import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, Modal, Segmented } from '../components/ui'
@@ -1230,6 +1231,11 @@ function EndScreen({
           </div>
         </div>
       )}
+
+      {/* Coffre de fin de partie (voir RewardChest.tsx) : bonus de points
+          aléatoire, indépendant du résultat ci-dessus — affiché même en cas
+          de défaite. */}
+      <RewardChest gameId={gameId} />
 
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
         {view.final_reveal?.map((r) => {

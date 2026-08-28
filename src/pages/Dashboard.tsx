@@ -359,7 +359,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        <DailyLoginBanner />
+        <DailyLoginBanner hasActiveEvent={events.length > 0} />
 
         {notice && !noticeDismissed && (
           <div
