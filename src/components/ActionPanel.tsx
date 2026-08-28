@@ -216,18 +216,23 @@ function EnfantSauvagePanel({ view, gameId, selfId }: { view: MyGameView; gameId
 // dehors du switch de ActionPanel, au lieu de basculer sur WaitingCard dès
 // le premier vote envoyé.
 //
-// Refonte en assistant à 3 temps (retour utilisateur : "le choix entre voter
-// et infecter est perturbant, ça ne nous permet pas d'être sûr de notre
-// choix") — avant, le choix de cible et l'accord d'infection étaient deux
-// blocs affichés EN MÊME TEMPS, chaque clic sur un joueur envoyant
-// immédiatement le vote sans confirmation. Repris façon Voyante/Sorcière :
-// 1) intention ("Éliminer" ou "Infecter", deux boutons côte à côte —
-// seulement si un Loup Alpha vivant peut encore infecter, sinon on saute
-// direct à l'étape 2, comme avant), 2) victime (grille), 3) pop-up
-// récapitulatif à confirmer avant l'envoi réel. Toujours les deux mêmes
-// appels RPC en coulisses (submit_wolf_vote pour la cible + éventuellement
-// submit_alpha_infect_agreement pour l'intention), envoyés ENSEMBLE au
-// moment de la confirmation plutôt que séparément à chaque clic.
+// Deuxième refonte (demande utilisateur, migration 0108) — la précédente
+// (assistant à 3 temps) montrait encore l'étape "choisir une victime" à un
+// loup simple même après avoir choisi "Infecter", alors que seul l'Alpha
+// doit choisir qui infecter. Nouveau comportement :
+// - Un loup SIMPLE choisit une intention ("Éliminer" ou "Infecter" — voir
+//   étape 1 plus bas, seulement si un Alpha vivant peut encore infecter).
+//   "Éliminer" enchaîne sur le choix d'une victime, comme avant. "Infecter"
+//   envoie directement son accord (rien d'autre à décider) — voir
+//   chooseInfect ci-dessous, qui réutilise le mécanisme d'abstention déjà
+//   existant côté serveur (submit_wolf_vote avec une cible nulle) pour ne
+//   jamais peser sur le dépouillement de cible.
+// - L'ALPHA, lui, ne voit jamais cette étape d'intention : il désigne
+//   toujours directement une victime dès le début de la nuit (comme avant
+//   toute refonte), et peut en plus confirmer l'infection une fois la
+//   majorité des loups SIMPLES atteinte — la cible déjà désignée devient
+//   alors la victime de l'infection au lieu de l'élimination (voir le
+//   bouton de confirmation, plus bas dans le rendu).
 export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
   const { t } = useLanguage()
   const myVote = view.wolf_current_votes?.find((v) => v.actor_id === selfId)
@@ -235,9 +240,14 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
   const infectPossible = view.alpha_infect_available
   const agreedIds = new Set(view.alpha_infect_agreed_ids ?? [])
   const myAgreedNow = agreedIds.has(selfId)
+  const isAlpha = view.my_role === 'loup_alpha'
 
+  // L'Alpha ne choisit jamais d'intention collective — intent reste figé à
+  // 'eliminate' pour lui, ce n'est qu'un nom d'étape interne pour sauter
+  // directement à la grille de cible, jamais un vote réel de sa part (voir
+  // le commentaire de tête ci-dessus).
   const [intent, setIntent] = useState<'eliminate' | 'infect' | null>(
-    hasVoted ? (myAgreedNow ? 'infect' : 'eliminate') : infectPossible ? null : 'eliminate'
+    isAlpha ? 'eliminate' : hasVoted ? (myAgreedNow ? 'infect' : 'eliminate') : infectPossible ? null : 'eliminate'
   )
   const [selected, setSelected] = useState<string | null>(myVote?.target_id ?? null)
   // Faux tant qu'on n'a pas encore voté cette nuit : montre directement
@@ -261,16 +271,17 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
     votesByTarget.set(v.target_id, (votesByTarget.get(v.target_id) ?? 0) + 1)
   })
 
-  // Refonte du Loup Alpha (migration 0093, demande utilisateur : "il faut que
-  // la majorité des loups choississent d'infecter pour que l'alpha ai acces
-  // a cette option") : l'Alpha vote désormais avec le reste de la meute
-  // ci-dessus (son vote pèse double côté serveur, get_wolf_target) — le bloc
-  // ci-dessous n'est plus qu'un indicateur de progression de l'accord de
-  // meute (l'intention de chaque loup est déjà capturée par l'assistant plus
-  // haut), plus le bouton de confirmation réservé à l'Alpha lui-même une
-  // fois la majorité atteinte.
-  const isAlpha = view.my_role === 'loup_alpha'
-  const aliveWolfIds = alive.filter((p) => teammates.has(p.user_id) || p.user_id === selfId).map((p) => p.user_id)
+  // Majorité pour débloquer l'infection (migration 0108, demande
+  // utilisateur : "le loup alpha ne vote même pas, ce sont les AUTRES
+  // loups qui décident") : ne compte plus que les loups SIMPLES vivants,
+  // l'Alpha exclu des deux côtés du calcul — avec 1 Alpha + 1 loup simple,
+  // le vote de cet unique loup suffit désormais (avant : 2 loups sur 2
+  // requis, l'Alpha comptant à tort dans son propre calcul de permission).
+  // wolf_alpha_id (migration 0104) identifie précisément qui exclure, sans
+  // dépendre de qui regarde (view.my_role).
+  const aliveWolfIds = alive
+    .filter((p) => (teammates.has(p.user_id) || p.user_id === selfId) && p.user_id !== view.wolf_alpha_id)
+    .map((p) => p.user_id)
   const agreedCount = aliveWolfIds.filter((id) => agreedIds.has(id)).length
   const neededAgreements = aliveWolfIds.length === 0 ? 0 : Math.floor(aliveWolfIds.length / 2) + 1
   const majorityReached = agreedCount >= neededAgreements
@@ -291,8 +302,12 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
     setConfirmOpen(true)
   }
 
+  // N'est plus jamais appelée avec intent === 'infect' pour un loup simple
+  // (voir chooseInfect ci-dessous, qui gère ce cas séparément sans passer
+  // par la grille de cible) — seulement pour une élimination, que ce soit
+  // un loup simple ou l'Alpha lui-même désignant sa cible du jour.
   async function confirmChoice() {
-    if (!selected || !intent) return
+    if (!selected) return
     setLoading(true)
     setError(null)
     const { error: voteErr } = await supabase.rpc('submit_wolf_vote', { p_game_id: gameId, p_target: selected })
@@ -301,10 +316,14 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
       setError(voteErr.message)
       return
     }
-    if (infectPossible) {
+    // Efface un éventuel accord d'infection donné plus tôt dans le tour
+    // (le loup a changé d'avis pour "Éliminer") — jamais pour l'Alpha, qui
+    // ne participe pas à ce vote (voir submit_alpha_infect_agreement,
+    // migration 0108 : rejette désormais explicitement son rôle).
+    if (infectPossible && !isAlpha) {
       const { error: agreeErr } = await supabase.rpc('submit_alpha_infect_agreement', {
         p_game_id: gameId,
-        p_agree: intent === 'infect',
+        p_agree: false,
       })
       if (agreeErr) {
         setLoading(false)
@@ -317,17 +336,44 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
     setEditing(false)
   }
 
+  // Choix "Infecter" — loups simples uniquement (voir le commentaire de
+  // tête de fichier). Envoyé immédiatement, sans étape de cible ni pop-up
+  // de confirmation supplémentaire : il n'y a plus rien à décider une fois
+  // ce bouton pressé, seul l'Alpha choisira qui infecter. p_target: null
+  // réutilise le mécanisme d'abstention déjà existant (submit_wolf_vote) —
+  // ce vote ne pèse donc jamais sur le dépouillement de cible
+  // (get_wolf_target), qui reste entièrement piloté par la cible que
+  // l'Alpha aura lui-même désignée.
+  async function chooseInfect() {
+    setIntent('infect')
+    setLoading(true)
+    setError(null)
+    const { error: voteErr } = await supabase.rpc('submit_wolf_vote', { p_game_id: gameId, p_target: null })
+    if (voteErr) {
+      setLoading(false)
+      setError(voteErr.message)
+      return
+    }
+    const { error: agreeErr } = await supabase.rpc('submit_alpha_infect_agreement', { p_game_id: gameId, p_agree: true })
+    setLoading(false)
+    if (agreeErr) {
+      setError(agreeErr.message)
+      return
+    }
+    setEditing(false)
+  }
+
   // Possibilité de ne désigner personne : get_wolf_target (migration
   // 0022/0035) ignore déjà les votes à cible nulle dans son dépouillement,
   // donc si toute la meute encore en vie s'abstient (ou si les voix sont
   // partagées à égalité), personne n'est dévoré cette nuit. On efface aussi
-  // tout accord d'infection en cours : s'abstenir n'a de sens que côté
-  // élimination.
+  // tout accord d'infection en cours (jamais pour l'Alpha, voir
+  // confirmChoice ci-dessus) : s'abstenir n'a de sens que côté élimination.
   async function submitAbstain() {
     setLoading(true)
     setError(null)
     const { error: voteErr } = await supabase.rpc('submit_wolf_vote', { p_game_id: gameId, p_target: null })
-    if (!voteErr && infectPossible) {
+    if (!voteErr && infectPossible && !isAlpha) {
       await supabase.rpc('submit_alpha_infect_agreement', { p_game_id: gameId, p_agree: false })
     }
     setLoading(false)
@@ -358,16 +404,19 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
         <p className="mb-3 text-xs text-moon-300">{t('action.wolf.alphaDoubleVoteHint')}</p>
       )}
 
-      {/* Récapitulatif du choix déjà envoyé (étape 3 franchie) — remplace le
-          bloc de vote tant qu'on ne clique pas sur "Modifier mon choix". */}
+      {/* Récapitulatif du choix déjà envoyé — remplace le bloc de vote tant
+          qu'on ne clique pas sur "Modifier mon choix". Cas "infection" à
+          part (jamais de cible chez un loup simple dans ce cas — voir
+          chooseInfect) : ni "abstenu" ni le nom d'une cible, un message
+          dédié. */}
       {!editing && hasVoted && (
         <div className="rounded-xl border border-night-600/60 bg-night-900/40 p-3">
           <p className="text-sm text-moon-200">
-            {targetPlayer
-              ? intent === 'infect'
-                ? t('action.wolf.voteSummaryInfect', { name: targetPlayer.display_name })
-                : t('action.wolf.voteSummaryEliminate', { name: targetPlayer.display_name })
-              : `✅ ${t('action.wolf.abstained')}`}
+            {intent === 'infect' && !isAlpha
+              ? t('action.wolf.voteSummaryInfectWaiting')
+              : targetPlayer
+                ? t('action.wolf.voteSummaryEliminate', { name: targetPlayer.display_name })
+                : `✅ ${t('action.wolf.abstained')}`}
           </p>
           <button
             type="button"
@@ -379,9 +428,10 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
         </div>
       )}
 
-      {/* Étape 1 : intention — seulement s'il y a un vrai choix à faire
-          (Loup Alpha vivant, infection pas encore utilisée). Sinon on saute
-          direct à l'étape 2, comme avant cette refonte. */}
+      {/* Étape 1 : intention — jamais pour l'Alpha (intent reste figé à
+          'eliminate' pour lui, cette condition n'est donc jamais vraie),
+          seulement pour un loup simple avec un Alpha encore disponible
+          pour infecter. */}
       {editing && intent === null && (
         <div className="rounded-xl border border-night-600/60 bg-night-900/40 p-3">
           <p className="mb-2.5 text-xs font-semibold uppercase tracking-wide text-moon-200/60">
@@ -398,25 +448,47 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
             </button>
             <button
               type="button"
-              onClick={() => setIntent('infect')}
-              className="flex flex-col items-center gap-1 rounded-xl border border-emerald-600/40 bg-emerald-900/10 px-3 py-3 text-sm font-semibold text-emerald-400 transition-colors hover:border-emerald-500/70"
+              onClick={chooseInfect}
+              disabled={loading}
+              className="flex flex-col items-center gap-1 rounded-xl border border-emerald-600/40 bg-emerald-900/10 px-3 py-3 text-sm font-semibold text-emerald-400 transition-colors hover:border-emerald-500/70 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <span className="text-xl">🧬</span>
-              {t('action.wolf.intentInfect')}
+              {loading ? t('action.wolf.sendingVote') : t('action.wolf.intentInfect')}
             </button>
           </div>
           <p className="mt-2.5 text-xs text-moon-200/50">{t('action.wolf.alphaInfectSectionSubtitle')}</p>
         </div>
       )}
 
-      {/* Étape 2 : victime. */}
-      {editing && intent !== null && (
+      {/* Attente — loup simple qui vient de voter "Infecter" (envoyé
+          directement par chooseInfect, sans étape de cible) : plus rien à
+          faire de son côté, seul l'Alpha choisit qui. */}
+      {editing && intent === 'infect' && !isAlpha && (
+        <div className="rounded-xl border border-emerald-600/30 bg-emerald-900/10 p-4 text-center">
+          <p className="mb-1 text-2xl">🧬</p>
+          <p className="text-sm text-moon-200/80">{t('action.wolf.infectWaitingMessage')}</p>
+          <button
+            type="button"
+            onClick={() => setIntent(null)}
+            className="mt-3 text-xs text-moon-200/50 underline decoration-dotted hover:text-moon-200"
+          >
+            {t('action.wolf.changeIntent')}
+          </button>
+        </div>
+      )}
+
+      {/* Étape 2 : victime — l'Alpha y arrive toujours directement (intent
+          figé à 'eliminate' pour lui, il désigne une cible dès le début de
+          la nuit, comme avant toute refonte), un loup simple seulement
+          s'il a choisi "Éliminer". Jamais montrée pour un choix
+          "Infecter" (voir le bloc d'attente ci-dessus à la place). */}
+      {editing && intent === 'eliminate' && (
         <div className="rounded-xl border border-night-600/60 bg-night-900/40 p-3">
           <div className="mb-2.5 flex items-center justify-between gap-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-moon-200/60">
-              {intent === 'infect' ? t('action.wolf.chooseTargetInfectTitle') : t('action.wolf.chooseTargetEliminateTitle')}
+              {t('action.wolf.chooseTargetEliminateTitle')}
             </p>
-            {infectPossible && (
+            {infectPossible && !isAlpha && (
               <button
                 type="button"
                 onClick={() => setIntent(null)}
@@ -443,35 +515,27 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
                 .join(' · ')}
             </p>
           )}
-          {intent === 'eliminate' && (
-            <button
-              type="button"
-              onClick={() => setConfirmAbstainOpen(true)}
-              disabled={loading}
-              className="mt-3 w-full rounded-xl border border-night-600 px-4 py-2.5 text-sm font-semibold text-moon-200/60 transition-colors hover:border-night-500 hover:text-moon-200 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              🤷 {t('action.wolf.abstainButton')}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setConfirmAbstainOpen(true)}
+            disabled={loading}
+            className="mt-3 w-full rounded-xl border border-night-600 px-4 py-2.5 text-sm font-semibold text-moon-200/60 transition-colors hover:border-night-500 hover:text-moon-200 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            🤷 {t('action.wolf.abstainButton')}
+          </button>
         </div>
       )}
 
       <ErrorText>{error}</ErrorText>
       {loading && <p className="mt-2 text-xs text-moon-200/40">{t('action.wolf.sendingVote')}</p>}
 
-      {/* Étape 3 : pop-up récapitulatif, obligatoire avant tout envoi réel —
-          demande utilisateur explicite ("un pop-up qui montre ce qu'il est
-          sur le point de faire, il confirme d'abord"). */}
+      {/* Pop-up récapitulatif, obligatoire avant tout envoi réel — jamais
+          affichée pour un choix "Infecter" chez un loup simple (envoyé
+          directement, rien à confirmer). */}
       <ConfirmDialog
         open={confirmOpen && !!targetPlayer}
-        title={intent === 'infect' ? t('action.wolf.confirmInfectTitle') : t('action.wolf.confirmEliminateTitle')}
-        message={
-          targetPlayer
-            ? intent === 'infect'
-              ? t('action.wolf.confirmInfectMessage', { name: targetPlayer.display_name })
-              : t('action.wolf.confirmEliminateMessage', { name: targetPlayer.display_name })
-            : ''
-        }
+        title={t('action.wolf.confirmEliminateTitle')}
+        message={targetPlayer ? t('action.wolf.confirmEliminateMessage', { name: targetPlayer.display_name }) : ''}
         confirmLabel={t('action.wolf.confirmButton')}
         onCancel={() => setConfirmOpen(false)}
         onConfirm={confirmChoice}
@@ -486,10 +550,11 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
         onConfirm={submitAbstain}
       />
 
-      {/* Statut de l'accord de meute pour infecter — pur indicateur de
-          progression désormais (chaque loup a déjà donné son intention via
-          l'assistant ci-dessus), plus le bouton de confirmation finale
-          réservé à l'Alpha une fois la majorité atteinte. */}
+      {/* Statut de l'accord de meute pour infecter — indicateur de
+          progression basé sur les loups SIMPLES uniquement (voir
+          aliveWolfIds plus haut, migration 0108 : l'Alpha exclu du
+          calcul), plus le bouton de confirmation finale réservé à l'Alpha
+          une fois leur majorité atteinte. */}
       {infectPossible && (
         <div className="mt-4 rounded-xl border border-emerald-600/30 bg-emerald-900/10 p-3">
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-400/80">

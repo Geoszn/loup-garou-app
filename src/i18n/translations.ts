@@ -799,25 +799,27 @@ export const translations = {
   'action.wolf.intentInfect': { fr: 'Infecter', en: 'Infect' },
   'action.wolf.changeIntent': { fr: '‹ changer', en: '‹ change' },
   'action.wolf.chooseTargetEliminateTitle': { fr: 'Qui éliminer ?', en: 'Who to eliminate?' },
-  'action.wolf.chooseTargetInfectTitle': { fr: 'Qui infecter ?', en: 'Who to infect?' },
   'action.wolf.confirmEliminateTitle': { fr: 'Confirmer l’élimination', en: 'Confirm elimination' },
-  'action.wolf.confirmInfectTitle': { fr: 'Confirmer l’infection', en: 'Confirm infection' },
   'action.wolf.confirmEliminateMessage': {
     fr: 'Vous êtes sur le point de désigner {{name}} pour être éliminé(e) cette nuit, si la majorité de la meute est d’accord.',
     en: 'You’re about to designate {{name}} to be eliminated tonight, if the pack majority agrees.',
-  },
-  'action.wolf.confirmInfectMessage': {
-    fr: 'Vous êtes sur le point de désigner {{name}} pour être infecté(e) au lieu d’éliminé(e), si la majorité de la meute est d’accord et que le Loup Alpha confirme.',
-    en: 'You’re about to designate {{name}} to be infected instead of eliminated, if the pack majority agrees and the Alpha Wolf confirms.',
   },
   'action.wolf.confirmButton': { fr: 'Confirmer', en: 'Confirm' },
   'action.wolf.voteSummaryEliminate': {
     fr: '🩸 Vote enregistré : vous voulez éliminer {{name}}.',
     en: '🩸 Vote recorded: you want to eliminate {{name}}.',
   },
-  'action.wolf.voteSummaryInfect': {
-    fr: '🧬 Vote enregistré : vous voulez infecter {{name}}.',
-    en: '🧬 Vote recorded: you want to infect {{name}}.',
+  // Loup simple ayant voté "Infecter" (migration 0108) : jamais de cible
+  // de son côté, seul l'Alpha choisit qui — message dédié plutôt que
+  // "abstenu" (techniquement vrai côté serveur — cible nulle — mais
+  // trompeur : il n'a pas renoncé à agir, il a voté infecter).
+  'action.wolf.voteSummaryInfectWaiting': {
+    fr: '🧬 Vote enregistré : vous voulez infecter. Le Loup Alpha choisira qui.',
+    en: '🧬 Vote recorded: you want to infect. The Alpha Wolf will choose who.',
+  },
+  'action.wolf.infectWaitingMessage': {
+    fr: 'Ton vote a été enregistré. Rien d’autre à faire — le Loup Alpha choisira une cible une fois la majorité de la meute atteinte.',
+    en: 'Your vote has been recorded. Nothing else to do — the Alpha Wolf will choose a target once the pack majority is reached.',
   },
   'action.wolf.editChoice': { fr: 'Modifier mon choix', en: 'Change my choice' },
   'action.wolf.packProgressTitle': { fr: 'Accord de la meute pour infecter', en: 'Pack agreement to infect' },
