@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
 import { Link, type LinkProps } from 'react-router-dom'
-import { motion, type PanInfo } from 'framer-motion'
+import { motion, useDragControls, type PanInfo } from 'framer-motion'
 import { useLanguage } from '../i18n/LanguageContext'
 
 type ButtonVariant = 'primary' | 'ghost' | 'danger'
@@ -376,6 +376,7 @@ export function Modal({
   children: ReactNode
 }) {
   const { t } = useLanguage()
+  const dragControls = useDragControls()
 
   useEffect(() => {
     if (!open) return
@@ -388,6 +389,18 @@ export function Modal({
 
   if (!open) return null
 
+  // BUG CORRIGÉ (retour utilisateur : impossible de défiler jusqu'en bas du
+  // panneau de modération en pleine partie) : `drag="y"` posé sur le MÊME
+  // élément que `overflow-y-auto` faisait capturer tout geste vertical par
+  // le glissement de fermeture plutôt que par le défilement natif, dès que
+  // le contenu dépassait la hauteur visible — invisible pour un contenu
+  // court (la plupart des popups), mais bloquant pour un contenu long
+  // (liste de joueurs + mots bloqués + section redémarrage). Corrigé en
+  // limitant le déclenchement du glissement à la zone d'en-tête (poignée +
+  // titre) via dragListener={false} + dragControls : le contenu, lui, ne
+  // déclenche plus jamais le geste de fermeture et défile normalement,
+  // quelle que soit sa hauteur.
+  //
   // Ferme immédiatement au relâché, sans étape d'animation de sortie
   // intermédiaire : une première version gardait un état local
   // (`dismissing`) le temps qu'une anim "s'envoler vers le bas" se termine
@@ -416,7 +429,7 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-full w-full max-w-sm animate-modal-in overflow-y-auto scrollbar-thin rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/95 to-night-900/95 p-6 shadow-card"
+        className="flex max-h-full w-full max-w-sm animate-modal-in flex-col rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/95 to-night-900/95 shadow-card"
         // Glissement vers le bas pour fermer, comme une feuille modale
         // mobile classique — bloqué vers le haut (dragConstraints à 0) pour
         // ne jamais laisser la pop-up "s'échapper" au-dessus de l'écran. Le
@@ -426,26 +439,44 @@ export function Modal({
         // d'équivalent pour ConfirmDialog/SideDrawer, qui ne réutilisent
         // pas ce composant (voir leurs définitions plus bas) — seule cette
         // pop-up générique en bénéficie pour l'instant.
+        //
+        // dragListener={false} + dragControls : le geste ne se déclenche
+        // plus qu'à partir de la zone d'en-tête ci-dessous (onPointerDown),
+        // jamais depuis le contenu défilant — voir le commentaire sur le
+        // bug corrigé plus haut.
         drag="y"
+        dragListener={false}
+        dragControls={dragControls}
         dragConstraints={{ top: 0, bottom: 0 }}
         dragElastic={{ top: 0, bottom: 0.6 }}
         onDragEnd={handleDragEnd}
       >
-        {/* Petite poignée, seul indice visuel que la pop-up se glisse vers
-            le bas — sans elle, rien ne suggère que le geste existe. */}
-        <div className="mx-auto mb-3 h-1 w-10 shrink-0 rounded-full bg-moon-200/15" />
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h3 className="font-display text-lg text-moon-200">{title}</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t('common.close')}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-moon-200/50 transition-colors hover:bg-night-700/60 hover:text-moon-200"
+        <div className="shrink-0 px-6 pt-6">
+          {/* Poignée : seule zone qui déclenche le glissement de fermeture
+              (onPointerDown ci-dessous) — une bande tactile plus généreuse
+              que le trait visuel lui-même pour rester facile à attraper au
+              doigt, sans empiéter sur le titre ni le bouton fermer juste en
+              dessous (qui doivent garder un clic/tap fiable, jamais
+              intercepté par le geste de glissement). */}
+          <div
+            className="mx-auto -mt-1 mb-3 flex h-5 w-full cursor-grab items-center justify-center active:cursor-grabbing"
+            onPointerDown={(e) => dragControls.start(e)}
           >
-            ✕
-          </button>
+            <div className="h-1 w-10 shrink-0 rounded-full bg-moon-200/15" />
+          </div>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="font-display text-lg text-moon-200">{title}</h3>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t('common.close')}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-moon-200/50 transition-colors hover:bg-night-700/60 hover:text-moon-200"
+            >
+              ✕
+            </button>
+          </div>
         </div>
-        {children}
+        <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin px-6 pb-6">{children}</div>
       </motion.div>
     </div>
   )
