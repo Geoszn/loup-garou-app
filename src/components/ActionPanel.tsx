@@ -331,6 +331,26 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
         return
       }
     }
+    // BUG CORRIGÉ (retour utilisateur, second test) : si l'Alpha avait déjà
+    // confirmé l'infection plus tôt dans son tour puis revenait ici choisir
+    // "Éliminer" (via le pop-up à double choix ci-dessous), la victime était
+    // quand même infectée à la résolution — parce que rien n'annulait son
+    // propre alpha_infect_confirmed, resté vrai en arrière-plan. Ce cas
+    // n'existait pas pour un loup simple (le bloc juste au-dessus le gère
+    // déjà, via SON accord à lui) : seul l'Alpha peut avoir confirmé
+    // l'infection lui-même. Choisir "Éliminer" doit toujours vouloir dire
+    // éliminer, même après une confirmation d'infection déjà donnée.
+    if (isAlpha && view.alpha_infect_confirmed) {
+      const { error: confirmErr } = await supabase.rpc('submit_loup_alpha_confirm_infect', {
+        p_game_id: gameId,
+        p_confirm: false,
+      })
+      if (confirmErr) {
+        setLoading(false)
+        setError(confirmErr.message)
+        return
+      }
+    }
     setLoading(false)
     setConfirmOpen(false)
     setEditing(false)
@@ -568,10 +588,12 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
           directement, rien à confirmer).
           Deux variantes pour l'Alpha : tant que la majorité n'est pas
           atteinte, un seul bouton "Éliminer" comme avant (l'infection n'est
-          pas encore une option réelle). Une fois la majorité atteinte,
-          voir confirmInfectAsAlpha ci-dessus — les deux issues possibles
+          pas encore une option réelle). Une fois la majorité atteinte —
+          qu'il ait déjà cliqué "Confirmer l'infection" plus bas ou pas
+          encore, voir confirmInfectAsAlpha/confirmChoice ci-dessus, tous
+          deux idempotents dans les deux sens — les deux issues possibles
           sont proposées explicitement l'une à côté de l'autre. */}
-      {isAlpha && majorityReached && !view.alpha_infect_confirmed ? (
+      {isAlpha && majorityReached ? (
         <Modal open={confirmOpen && !!targetPlayer} onClose={() => setConfirmOpen(false)} title={t('action.wolf.confirmChoiceTitle')}>
           <p className="mb-6 text-sm text-moon-200/70">
             {targetPlayer ? t('action.wolf.confirmChoiceMessage', { name: targetPlayer.display_name }) : ''}
