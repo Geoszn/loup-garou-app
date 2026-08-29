@@ -808,6 +808,13 @@ export const translations = {
     en: 'You’re about to designate {{name}} to be eliminated tonight, if the pack majority agrees.',
   },
   'action.wolf.confirmButton': { fr: 'Confirmer', en: 'Confirm' },
+  'action.wolf.confirmChoiceTitle': { fr: 'Éliminer ou infecter ?', en: 'Eliminate or infect?' },
+  'action.wolf.confirmChoiceMessage': {
+    fr: 'La meute a déjà la majorité pour infecter. Que voulez-vous faire de {{name}} cette nuit ?',
+    en: 'The pack already has the majority to infect. What do you want to do to {{name}} tonight?',
+  },
+  'action.wolf.confirmInfectButton': { fr: 'Infecter {{name}}', en: 'Infect {{name}}' },
+  'action.wolf.confirmEliminateButton': { fr: 'Éliminer {{name}}', en: 'Eliminate {{name}}' },
   'action.wolf.voteSummaryEliminate': {
     fr: '🩸 Vote enregistré : vous voulez éliminer {{name}}.',
     en: '🩸 Vote recorded: you want to eliminate {{name}}.',

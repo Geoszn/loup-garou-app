@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
 import { roleLabel } from '../lib/roles'
 import { PlayerGrid } from './PlayerGrid'
-import { Button, Card, ConfirmDialog, ErrorText } from './ui'
+import { Button, Card, ConfirmDialog, ErrorText, Modal } from './ui'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { MyGameView } from '../types/game'
 
@@ -336,6 +336,40 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
     setEditing(false)
   }
 
+  // BUG CORRIGÉ (retour utilisateur, capture d'écran à l'appui) : une fois
+  // la majorité de la meute déjà d'accord pour infecter, l'Alpha choisissait
+  // quand même une cible via CE MÊME écran ("Confirmer l'élimination"),
+  // pensait avoir confirmé l'infection, et le joueur choisi était tué au
+  // lieu d'être infecté — parce que confirmer une cible (submit_wolf_vote)
+  // et confirmer l'infection (submit_loup_alpha_confirm_infect) sont deux
+  // actions distinctes, la seconde nécessitant un bouton séparé plus bas
+  // dans le panneau, facile à ne pas remarquer une fois déjà sur ce pop-up.
+  // Désormais, dès que la majorité est atteinte, ce pop-up propose les DEUX
+  // issues explicitement (voir le rendu du ConfirmDialog plus bas) — plus
+  // aucun moyen d'infecter "par erreur" en croyant confirmer, ni l'inverse.
+  async function confirmInfectAsAlpha() {
+    if (!selected) return
+    setLoading(true)
+    setError(null)
+    const { error: voteErr } = await supabase.rpc('submit_wolf_vote', { p_game_id: gameId, p_target: selected })
+    if (voteErr) {
+      setLoading(false)
+      setError(voteErr.message)
+      return
+    }
+    const { error: confirmErr } = await supabase.rpc('submit_loup_alpha_confirm_infect', {
+      p_game_id: gameId,
+      p_confirm: true,
+    })
+    setLoading(false)
+    if (confirmErr) {
+      setError(confirmErr.message)
+      return
+    }
+    setConfirmOpen(false)
+    setEditing(false)
+  }
+
   // Choix "Infecter" — loups simples uniquement (voir le commentaire de
   // tête de fichier). Envoyé immédiatement, sans étape de cible ni pop-up
   // de confirmation supplémentaire : il n'y a plus rien à décider une fois
@@ -531,15 +565,44 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
 
       {/* Pop-up récapitulatif, obligatoire avant tout envoi réel — jamais
           affichée pour un choix "Infecter" chez un loup simple (envoyé
-          directement, rien à confirmer). */}
-      <ConfirmDialog
-        open={confirmOpen && !!targetPlayer}
-        title={t('action.wolf.confirmEliminateTitle')}
-        message={targetPlayer ? t('action.wolf.confirmEliminateMessage', { name: targetPlayer.display_name }) : ''}
-        confirmLabel={t('action.wolf.confirmButton')}
-        onCancel={() => setConfirmOpen(false)}
-        onConfirm={confirmChoice}
-      />
+          directement, rien à confirmer).
+          Deux variantes pour l'Alpha : tant que la majorité n'est pas
+          atteinte, un seul bouton "Éliminer" comme avant (l'infection n'est
+          pas encore une option réelle). Une fois la majorité atteinte,
+          voir confirmInfectAsAlpha ci-dessus — les deux issues possibles
+          sont proposées explicitement l'une à côté de l'autre. */}
+      {isAlpha && majorityReached && !view.alpha_infect_confirmed ? (
+        <Modal open={confirmOpen && !!targetPlayer} onClose={() => setConfirmOpen(false)} title={t('action.wolf.confirmChoiceTitle')}>
+          <p className="mb-6 text-sm text-moon-200/70">
+            {targetPlayer ? t('action.wolf.confirmChoiceMessage', { name: targetPlayer.display_name }) : ''}
+          </p>
+          <div className="flex flex-col gap-2.5">
+            <Button
+              variant="ghost"
+              disabled={loading}
+              className="w-full border-emerald-600/50 text-emerald-400 hover:border-emerald-500/70"
+              onClick={confirmInfectAsAlpha}
+            >
+              🧬 {targetPlayer ? t('action.wolf.confirmInfectButton', { name: targetPlayer.display_name }) : ''}
+            </Button>
+            <Button variant="danger" disabled={loading} className="w-full" onClick={confirmChoice}>
+              🩸 {targetPlayer ? t('action.wolf.confirmEliminateButton', { name: targetPlayer.display_name }) : ''}
+            </Button>
+            <Button variant="ghost" disabled={loading} className="w-full" onClick={() => setConfirmOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+          </div>
+        </Modal>
+      ) : (
+        <ConfirmDialog
+          open={confirmOpen && !!targetPlayer}
+          title={t('action.wolf.confirmEliminateTitle')}
+          message={targetPlayer ? t('action.wolf.confirmEliminateMessage', { name: targetPlayer.display_name }) : ''}
+          confirmLabel={t('action.wolf.confirmButton')}
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={confirmChoice}
+        />
+      )}
 
       <ConfirmDialog
         open={confirmAbstainOpen}
