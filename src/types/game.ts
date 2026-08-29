@@ -261,6 +261,14 @@ export interface MyGameView {
   pending_action_required: NightStep | 'vote' | 'hunter' | 'captain_vote' | 'captain_succession' | null
   wolf_target_visible_to_witch: string | null
   wolf_current_votes: { actor_id: string; target_id: string | null }[]
+  // Qui a voté pour qui cette nuit (une fois résolue) — réservé aux Loups
+  // eux-mêmes (jamais aux villageois), rempli uniquement pendant
+  // 'day_reveal' (voir migration 0113). target_name null = soit un vote
+  // "infecter" (chose_infect true), soit une abstention (chose_infect
+  // false) — les deux partagent target_id null côté serveur.
+  wolf_night_recap:
+    | { actor_id: string; actor_name: string; is_alpha: boolean; target_id: string | null; target_name: string | null; chose_infect: boolean }[]
+    | null
   log: { id: string; message: string; created_at: string }[]
   my_vote_target: string | null
   my_captain_vote_target: string | null

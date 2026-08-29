@@ -684,6 +684,9 @@ export const translations = {
     fr: 'Le Loup Alpha vous a mordu(e) cette nuit. Vous rejoignez désormais les Loups-Garous — personne d’autre que vous ne le sait.',
     en: 'The Alpha Wolf bit you tonight. You now join the Werewolves — no one else knows this.',
   },
+  'game.wolfNightRecapTitle': { fr: '🐺 Vote de la meute cette nuit', en: '🐺 Pack vote this night' },
+  'game.wolfNightRecapInfect': { fr: 'a voté pour infecter', en: 'voted to infect' },
+  'game.wolfNightRecapAbstain': { fr: 's’est abstenu(e)', en: 'abstained' },
   'game.discussionHint': {
     fr: "💬 Discutez pour démasquer les Loups-Garous — le vote ouvre automatiquement dans la limite de temps, ou plus tôt si le Capitaine le lance avec l'accord de tout le village.",
     en: "💬 Discuss to unmask the Werewolves — the vote opens automatically once time runs out, or sooner if the Captain calls it with the whole village's agreement.",

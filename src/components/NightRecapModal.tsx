@@ -72,6 +72,12 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
   // encore utilisé son infection, donc pas de garde `isFirstNight` non plus.
   const alphaInfectedMe = view.alpha_infected_me
 
+  // Qui a voté pour qui cette nuit — réservé aux Loups eux-mêmes (voir
+  // migration 0113, wolf_night_recap) : null pour tout le monde d'autre,
+  // jamais [] ici (get_my_game_view renvoie null hors rôle loup), donc ce
+  // seul test suffit à garder l'info hors de vue des villageois.
+  const wolfNightRecap = view.wolf_night_recap
+
   async function handleReady() {
     setSubmitting(true)
     await supabase.rpc('submit_day_reveal_ready', { p_game_id: gameId })
@@ -102,7 +108,8 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
             witchPoisonedMe ||
             wildChildTurnedWolf ||
             wildChildConversionThisRound ||
-            alphaInfectedMe) && (
+            alphaInfectedMe ||
+            (wolfNightRecap && wolfNightRecap.length > 0)) && (
             <div className="mb-3 flex flex-col gap-2">
               {loverName && (
                 <div className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2.5">
@@ -162,6 +169,33 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
                 <div className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2.5">
                   <p className="text-xs font-semibold uppercase tracking-wide text-blood-400">{t('game.alphaInfectedMeTitle')}</p>
                   <p className="mt-1 text-sm text-moon-200/90">{t('game.alphaInfectedMe')}</p>
+                </div>
+              )}
+              {/* Réservé aux Loups (voir wolfNightRecap ci-dessus) — jamais
+                  visible pour un villageois, même mort : get_my_game_view ne
+                  renvoie ce champ que pour les rôles loup_garou/loup_alpha. */}
+              {wolfNightRecap && wolfNightRecap.length > 0 && (
+                <div className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blood-400">
+                    {t('game.wolfNightRecapTitle')}
+                  </p>
+                  <ul className="mt-1.5 flex flex-col gap-1">
+                    {wolfNightRecap.map((v) => (
+                      <li key={v.actor_id} className="flex flex-wrap items-baseline gap-x-1.5 text-sm text-moon-200/90">
+                        <span className="font-semibold">
+                          {v.actor_name}
+                          {v.is_alpha && <span className="ml-1 text-[10px] font-normal text-moon-300">Alpha</span>}
+                        </span>
+                        <span className="text-moon-200/60">
+                          {v.target_name
+                            ? `→ ${v.target_name}`
+                            : v.chose_infect
+                              ? t('game.wolfNightRecapInfect')
+                              : t('game.wolfNightRecapAbstain')}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </div>
