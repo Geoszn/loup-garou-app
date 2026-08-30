@@ -37,7 +37,7 @@ else
   echo
   read -p "Message de commit (laisse vide pour un message automatique) : " msg
   if [ -z "$msg" ]; then
-    msg="Corrige la disparition instantanée du résultat du Griot après son choix (résultat désormais persistant, comme pour la Voyante)"
+    msg="Ajoute le résultat du Griot au récap de nuit (temps de pause garanti) en plus de l'affichage pendant la nuit"
   fi
   git add -A
   git commit -m "$msg"
@@ -55,5 +55,8 @@ echo
 echo "À tester :"
 echo "  - Le Griot observe un joueur : un encart 'Ce que vous avez appris' apparaît"
 echo "    et reste affiché, même une fois la phase suivante commencée."
+echo "  - Une fois la nuit résolue (récap ☀️ affiché à tout le monde) : le Griot y voit"
+echo "    AUSSI son résultat, avec le vrai temps de pause du récap — même sur une nuit"
+echo "    qui s'enchaîne vite (petite partie de test)."
 echo
 read -p "Appuie sur Entrée pour fermer..."

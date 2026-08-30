@@ -422,6 +422,11 @@ export const translations = {
     fr: 'Choisissez un joueur : vous apprendrez une trace de son action lors de la nuit précédente (rien avant la deuxième nuit).',
     en: "Choose a player: you'll learn a trace of their action from the previous night (nothing before the second night).",
   },
+  'role.sans_visage.name': { fr: 'Sans-Visage', en: 'Faceless' },
+  'role.sans_visage.description': {
+    fr: "Vous êtes un Loup-Garou, mais votre véritable nature reste invisible au pouvoir de la Voyante — elle vous verra toujours comme un simple villageois. En dehors de ça, vous jouez et votez avec la meute exactement comme n'importe quel autre Loup.",
+    en: "You are a Werewolf, but your true nature stays hidden from the Seer's power — she will always see you as an ordinary villager. Beyond that, you play and vote with the pack exactly like any other Wolf.",
+  },
   'role.capitaine.name': { fr: 'Capitaine', en: 'Captain' },
 
   // --- Salon d'attente (Lobby.tsx) --------------------------------------------
@@ -472,6 +477,10 @@ export const translations = {
   'lobby.alphaToggleHint': {
     fr: "Nécessite au moins 10 joueurs. Vote avec le reste de la meute (son vote compte double) ; si la majorité des loups est d'accord, il peut infecter une victime au lieu de l'éliminer (une seule fois par partie).",
     en: "Requires at least 10 players. Votes with the rest of the pack (their vote counts double); if the majority of wolves agree, they can infect a victim instead of eliminating them (once per game).",
+  },
+  'lobby.sansVisageToggleHint': {
+    fr: "Vote avec le reste de la meute exactement comme un Loup simple. Sa seule différence : la Voyante le voit toujours comme un villageois, jamais comme un Loup.",
+    en: 'Votes with the rest of the pack exactly like a simple Wolf. Their only difference: the Seer always sees them as a villager, never as a Wolf.',
   },
   'lobby.alphaConstraintViolated': {
     fr: 'Le Loup Alpha nécessite au moins 10 joueurs.',

@@ -13,6 +13,7 @@ export type RoleId =
   | 'voleur'
   | 'enfant_sauvage'
   | 'griot'
+  | 'sans_visage'
 
 // Les noms/descriptions ne sont plus stockés en dur ici : ce sont des clés du
 // dictionnaire i18n (voir src/i18n/translations.ts, namespace `role.*`), pour
@@ -139,11 +140,24 @@ export const ROLES: Record<RoleId, RoleInfo> = {
     descriptionKey: 'role.griot.description',
     nightActionKey: 'role.griot.nightAction',
   },
+  // Fonctionne exactement comme un Loup-Garou simple (vote de nuit partagé
+  // avec la meute, chat des loups, condition de victoire) — voir migration
+  // 0118. Pas de nightActionKey : WolfPanel (ActionPanel.tsx) le gère déjà
+  // de façon générique, aucun écran de nuit dédié n'est nécessaire.
+  sans_visage: {
+    id: 'sans_visage',
+    team: 'loups',
+    emoji: '👤',
+    color: '#6b5a7a',
+    nameKey: 'role.sans_visage.name',
+    descriptionKey: 'role.sans_visage.description',
+  },
 }
 
 export const ROLE_ORDER: RoleId[] = [
   'loup_garou',
   'loup_alpha',
+  'sans_visage',
   'voyante',
   'sorciere',
   'chasseur',

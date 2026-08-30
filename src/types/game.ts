@@ -40,6 +40,11 @@ export interface RoleCounts {
   // jamais la nuit 1 (rien à raconter avant qu'une première nuit se soit
   // écoulée) — voir next_night_step côté serveur.
   griot: boolean
+  // Le Sans-Visage (voir migration 0118) : fonctionne exactement comme un
+  // Loup-Garou simple (vote de nuit, chat des loups, victoire) — seule
+  // différence, gérée entièrement côté serveur : la Voyante le voit
+  // toujours comme "villageois".
+  sans_visage: boolean
 }
 
 export interface GameSettings {

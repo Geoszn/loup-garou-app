@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useCountdown } from './Timer'
 import { useLanguage } from '../i18n/LanguageContext'
 import { translateGameLogMessage } from '../lib/gameLogTranslate'
+import { GRIOT_REVEAL_KEYS } from './ActionPanel'
 import type { MyGameView } from '../types/game'
 
 /** Pop-up affichée juste après la résolution d'une nuit (statut
@@ -78,6 +79,22 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
   // seul test suffit à garder l'info hors de vue des villageois.
   const wolfNightRecap = view.wolf_night_recap
 
+  // Résultat du Griot pour la nuit qui vient de se résoudre — réservé au
+  // Griot lui-même (griot_reveals ne contient rien pour les autres rôles,
+  // voir migration 0116). Ajouté ICI en plus du bloc déjà affiché pendant
+  // la nuit elle-même (NightResultPanel, GameRoom.tsx) : retour utilisateur
+  // — sur une petite partie de test, la nuit peut s'enchaîner et se
+  // résoudre en quelques secondes une fois le Griot le dernier à agir,
+  // sans laisser le temps de lire quoi que ce soit pendant que le statut
+  // était encore 'night'. Ce récap, lui, reste ouvert un vrai temps de
+  // pause (role_reveal_seconds) garanti pour tout le monde — un filet de
+  // sécurité fiable, pas une répétition inutile.
+  const myGriotReveal =
+    view.my_role === 'griot' ? (view.griot_reveals ?? []).find((r) => r.night_number === view.game.night_number) : null
+  const griotRevealTarget = myGriotReveal
+    ? view.players.find((p) => p.user_id === myGriotReveal.target_id)
+    : null
+
   async function handleReady() {
     setSubmitting(true)
     await supabase.rpc('submit_day_reveal_ready', { p_game_id: gameId })
@@ -109,7 +126,8 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
             wildChildTurnedWolf ||
             wildChildConversionThisRound ||
             alphaInfectedMe ||
-            (wolfNightRecap && wolfNightRecap.length > 0)) && (
+            (wolfNightRecap && wolfNightRecap.length > 0) ||
+            myGriotReveal) && (
             <div className="mb-3 flex flex-col gap-2">
               {loverName && (
                 <div className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2.5">
@@ -196,6 +214,20 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
                       </li>
                     ))}
                   </ul>
+                </div>
+              )}
+              {/* Réservé au Griot lui-même (voir myGriotReveal ci-dessus) —
+                  jamais le rôle du joueur observé, uniquement une phrase
+                  générique traduite via GRIOT_REVEAL_KEYS. */}
+              {myGriotReveal && (
+                <div className="animate-fade-in rounded-xl border border-moon-400/30 bg-moon-400/5 px-3 py-2.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-moon-300">
+                    {t('game.griotResultTitle')}
+                  </p>
+                  <p className="mt-1 text-sm text-moon-200/90">
+                    <span className="text-moon-200">{griotRevealTarget?.display_name ?? '?'}</span>{' '}
+                    {t(GRIOT_REVEAL_KEYS[myGriotReveal.kind] ?? 'griot.reveal.no_action')}
+                  </p>
                 </div>
               )}
             </div>
