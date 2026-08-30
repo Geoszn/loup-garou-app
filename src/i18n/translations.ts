@@ -427,6 +427,12 @@ export const translations = {
     fr: "Vous êtes un Loup-Garou, mais votre véritable nature reste invisible au pouvoir de la Voyante — elle vous verra toujours comme un simple villageois. En dehors de ça, vous jouez et votez avec la meute exactement comme n'importe quel autre Loup.",
     en: "You are a Werewolf, but your true nature stays hidden from the Seer's power — she will always see you as an ordinary villager. Beyond that, you play and vote with the pack exactly like any other Wolf.",
   },
+  'role.anancy.name': { fr: 'Anancy, Tisseur des Destins', en: 'Anancy, Weaver of Fates' },
+  'role.anancy.description': {
+    fr: "Vous n'appartenez à aucun camp. Chaque nuit, vous pouvez échanger secrètement les rôles de deux joueurs vivants (sans jamais connaître ces rôles) — un joueur déjà touché devient définitivement intouchable. Vous gagnez seul si vous êtes encore vivant à l'aube du cinquième jour, peu importe le camp dominant.",
+    en: 'You belong to no camp. Each night, you may secretly swap the roles of two living players (without ever learning those roles) — a player already touched becomes permanently untouchable. You win alone if you are still alive at dawn on the fifth day, no matter which camp dominates.',
+  },
+  'role.team.neutre': { fr: 'Neutre', en: 'Neutral' },
   'role.capitaine.name': { fr: 'Capitaine', en: 'Captain' },
 
   // --- Salon d'attente (Lobby.tsx) --------------------------------------------
@@ -742,6 +748,11 @@ export const translations = {
     fr: 'Envers et contre tout, {{lover1}} et {{lover2}} sont les deux derniers survivants — leur amour l’emporte sur les deux camps.',
     en: 'Against all odds, {{lover1}} and {{lover2}} are the last two survivors — their love triumphs over both camps.',
   },
+  'game.endAnancyWin': { fr: '🕸️ Anancy l’emporte !', en: '🕸️ Anancy wins!' },
+  'game.endAnancyExplain': {
+    fr: '{{name}} a survécu jusqu’à l’aube du cinquième jour — sa victoire personnelle l’emporte, peu importe le camp dominant.',
+    en: '{{name}} survived until dawn on the fifth day — their personal victory stands, no matter which camp dominates.',
+  },
   // --- Section personnelle de l'écran de fin (EndScreen, migration 0073) -----
   // Détail du calcul de points pour CE joueur sur cette partie — lu depuis
   // my_game_result (game_results, permanent). "Résultat de la partie" =
@@ -813,6 +824,29 @@ export const translations = {
   'action.griot.pastReveals': { fr: 'Vos observations passées', en: 'Your past observations' },
   'action.griot.confirm': { fr: 'Observer ce joueur', en: 'Watch this player' },
   'action.griot.nightLabel': { fr: 'Nuit {{night}}', en: 'Night {{night}}' },
+  'action.anancy.title': { fr: 'Tissez le destin de deux joueurs', en: 'Weave the fate of two players' },
+  'action.anancy.subtitle': {
+    fr: 'Choisissez deux joueurs vivants pour échanger secrètement leurs rôles — ou ne rien faire cette nuit.',
+    en: 'Choose two living players to secretly swap their roles — or do nothing tonight.',
+  },
+  'action.anancy.confirm': { fr: 'Échanger ces deux joueurs', en: 'Swap these two players' },
+  'action.anancy.doNothing': { fr: 'Ne rien faire cette nuit', en: 'Do nothing tonight' },
+  'action.anancy.selected': { fr: '{{count}}/2 sélectionné(s)', en: '{{count}}/2 selected' },
+  'action.anancy.alreadyTouched': { fr: 'déjà intouchable', en: 'already untouchable' },
+  'action.anancy.confirmTitle': { fr: 'Confirmer l’échange', en: 'Confirm the swap' },
+  'action.anancy.confirmMessage': {
+    fr: 'Vous êtes sur le point d’échanger secrètement les rôles de {{name1}} et {{name2}}. Vous ne saurez jamais lesquels. Les deux deviendront définitivement intouchables.',
+    en: 'You are about to secretly swap the roles of {{name1}} and {{name2}}. You will never know which ones. Both will become permanently untouchable.',
+  },
+  'game.anancySwappedMeTitle': { fr: '🕸️ Le destin a changé', en: '🕸️ Fate has changed' },
+  'game.anancySwappedMe': {
+    fr: 'Une force mystérieuse a modifié votre rôle cette nuit. Regardez votre carte...',
+    en: 'A mysterious force altered your role tonight. Check your card...',
+  },
+  'lobby.anancyToggleHint': {
+    fr: 'Camp neutre. Chaque nuit, il peut échanger secrètement les rôles de deux joueurs (jamais deux fois le même). Il gagne seul s’il est vivant à l’aube du cinquième jour.',
+    en: 'Neutral camp. Each night, they may secretly swap the roles of two players (never the same one twice). They win alone if alive at dawn on the fifth day.',
+  },
   'griot.reveal.observed_card': { fr: "a observé la carte d'un autre joueur.", en: "observed another player's card." },
   'griot.reveal.watched_wolves': {
     fr: 'a observé discrètement les activités des loups.',

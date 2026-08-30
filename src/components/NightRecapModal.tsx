@@ -73,6 +73,11 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
   // encore utilisé son infection, donc pas de garde `isFirstNight` non plus.
   const alphaInfectedMe = view.alpha_infected_me
 
+  // Anancy (voir migration 0119) : révèle SEULEMENT que mon rôle a changé
+  // cette nuit — jamais par qui, ni vers quel rôle (je le découvrirai en
+  // regardant ma propre carte). Toujours false hors 'day_reveal'.
+  const anancySwappedMe = view.anancy_swapped_me
+
   // Qui a voté pour qui cette nuit — réservé aux Loups eux-mêmes (voir
   // migration 0113, wolf_night_recap) : null pour tout le monde d'autre,
   // jamais [] ici (get_my_game_view renvoie null hors rôle loup), donc ce
@@ -127,7 +132,8 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
             wildChildConversionThisRound ||
             alphaInfectedMe ||
             (wolfNightRecap && wolfNightRecap.length > 0) ||
-            myGriotReveal) && (
+            myGriotReveal ||
+            anancySwappedMe) && (
             <div className="mb-3 flex flex-col gap-2">
               {loverName && (
                 <div className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2.5">
@@ -187,6 +193,15 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
                 <div className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2.5">
                   <p className="text-xs font-semibold uppercase tracking-wide text-blood-400">{t('game.alphaInfectedMeTitle')}</p>
                   <p className="mt-1 text-sm text-moon-200/90">{t('game.alphaInfectedMe')}</p>
+                </div>
+              )}
+              {/* Anancy (voir anancySwappedMe ci-dessus) : révèle uniquement
+                  QUE le rôle a changé, jamais par qui ni vers quoi — même
+                  logique de discrétion que les encarts personnels ci-dessus. */}
+              {anancySwappedMe && (
+                <div className="animate-fade-in rounded-xl border border-moon-400/30 bg-moon-400/5 px-3 py-2.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-moon-300">{t('game.anancySwappedMeTitle')}</p>
+                  <p className="mt-1 text-sm text-moon-200/90">{t('game.anancySwappedMe')}</p>
                 </div>
               )}
               {/* Réservé aux Loups (voir wolfNightRecap ci-dessus) — jamais

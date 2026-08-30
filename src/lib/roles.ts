@@ -14,6 +14,7 @@ export type RoleId =
   | 'enfant_sauvage'
   | 'griot'
   | 'sans_visage'
+  | 'anancy'
 
 // Les noms/descriptions ne sont plus stockés en dur ici : ce sont des clés du
 // dictionnaire i18n (voir src/i18n/translations.ts, namespace `role.*`), pour
@@ -22,7 +23,11 @@ export type RoleId =
 // ci-dessous), jamais directement.
 export interface RoleInfo {
   id: RoleId
-  team: 'village' | 'loups'
+  // 'neutre' (voir migration 0119, Anancy) : premier camp indépendant du
+  // jeu — ne gagne ni avec le village ni avec les loups, condition de
+  // victoire personnelle. isWolfTeam() reste inchangée (false pour
+  // 'neutre', comme pour 'village').
+  team: 'village' | 'loups' | 'neutre'
   emoji: string
   color: string
   nameKey: TranslationKey
@@ -152,6 +157,17 @@ export const ROLES: Record<RoleId, RoleInfo> = {
     nameKey: 'role.sans_visage.name',
     descriptionKey: 'role.sans_visage.description',
   },
+  // Camp neutre (voir migration 0119) — ne gagne ni avec le village ni avec
+  // les loups. Pas de nightActionKey : AnancyPanel (ActionPanel.tsx) a son
+  // propre texte dédié plutôt qu'un simple rappel générique.
+  anancy: {
+    id: 'anancy',
+    team: 'neutre',
+    emoji: '🕸️',
+    color: '#7a5c99',
+    nameKey: 'role.anancy.name',
+    descriptionKey: 'role.anancy.description',
+  },
 }
 
 export const ROLE_ORDER: RoleId[] = [
@@ -167,6 +183,7 @@ export const ROLE_ORDER: RoleId[] = [
   'voleur',
   'enfant_sauvage',
   'griot',
+  'anancy',
   'villageois',
 ]
 
@@ -195,8 +212,10 @@ export function roleNightAction(id: RoleId, t: Translate): string | undefined {
   return key ? t(key) : undefined
 }
 
-export function roleTeamLabel(team: 'village' | 'loups', t: Translate): string {
-  return team === 'loups' ? t('role.team.loups') : t('role.team.village')
+export function roleTeamLabel(team: 'village' | 'loups' | 'neutre', t: Translate): string {
+  if (team === 'loups') return t('role.team.loups')
+  if (team === 'neutre') return t('role.team.neutre')
+  return t('role.team.village')
 }
 
 /** true si l'id de rôle donné appartient au camp des Loups (Loup-Garou

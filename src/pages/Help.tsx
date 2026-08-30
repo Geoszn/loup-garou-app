@@ -132,7 +132,11 @@ function RulesContent() {
                   <span>{role.emoji}</span> {t(role.nameKey)}
                   <span
                     className={`ml-auto rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wider ${
-                      role.team === 'loups' ? 'bg-blood-700/30 text-blood-400' : 'bg-night-700/60 text-moon-200/60'
+                      role.team === 'loups'
+                        ? 'bg-blood-700/30 text-blood-400'
+                        : role.team === 'neutre'
+                          ? 'bg-moon-400/20 text-moon-300'
+                          : 'bg-night-700/60 text-moon-200/60'
                     }`}
                   >
                     {roleTeamLabel(role.team, t)}

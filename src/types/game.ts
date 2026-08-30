@@ -17,6 +17,7 @@ export type NightStep =
   | 'griot'
   | 'loup_garou'
   | 'sorciere'
+  | 'anancy'
   | 'resolve'
   | null
 
@@ -45,6 +46,10 @@ export interface RoleCounts {
   // différence, gérée entièrement côté serveur : la Voyante le voit
   // toujours comme "villageois".
   sans_visage: boolean
+  // Anancy (voir migration 0119) : camp neutre, échange les rôles de deux
+  // joueurs chaque nuit (jamais deux fois le même) — gagne seul s'il est
+  // vivant à l'aube du cinquième jour.
+  anancy: boolean
 }
 
 export interface GameSettings {
@@ -272,6 +277,16 @@ export interface MyGameView {
   // date de la nuit d'avant — voir compute_griot_phrase côté serveur et
   // GRIOT_REVEAL_KEYS côté client pour la traduction de chaque `kind`).
   griot_reveals: { target_id: string; night_number: number; kind: string }[]
+  // Anancy (voir migration 0119) : true si mon rôle a été échangé la nuit
+  // qui vient de se résoudre — révélé une fois, sans jamais dire par qui ni
+  // vers quel rôle (je le découvre juste en regardant ma propre carte).
+  // Toujours false hors du statut 'day_reveal'.
+  anancy_swapped_me: boolean
+  // Réservé à Anancy lui-même : qui il a déjà échangé (donc devenu
+  // intouchable) — jamais leur rôle actuel, juste leur identité, pour
+  // griser ces joueurs dans sa propre grille de cibles. null pour tout le
+  // monde d'autre.
+  anancy_used_target_ids: string[] | null
   witch_heal_used: boolean
   witch_poison_used: boolean
   pending_action_required: NightStep | 'vote' | 'hunter' | 'captain_vote' | 'captain_succession' | null

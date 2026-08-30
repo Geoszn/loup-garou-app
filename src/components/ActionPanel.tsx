@@ -48,6 +48,8 @@ export function ActionPanel({ view, gameId, selfId }: { view: MyGameView; gameId
             return <WolfPanel view={view} gameId={gameId} selfId={selfId} />
           case 'sorciere':
             return <SorcierePanel view={view} gameId={gameId} selfId={selfId} />
+          case 'anancy':
+            return <AnancyPanel view={view} gameId={gameId} selfId={selfId} />
           case 'vote':
             return <VotePanel view={view} gameId={gameId} selfId={selfId} />
           case 'hunter':
@@ -246,6 +248,99 @@ function GriotPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string
       <Button className="mt-4 w-full" disabled={!selected || loading} onClick={confirm}>
         {loading ? t('common.sending') : t('action.griot.confirm')}
       </Button>
+    </PanelShell>
+  )
+}
+
+// Anancy (voir migration 0119) : choisit 0 ou 2 joueurs vivants (jamais
+// lui-même, jamais un joueur déjà "touché" — griselé via anancy_used_target_ids)
+// pour échanger secrètement leurs rôles, ou explicitement ne rien faire
+// cette nuit. PlayerGrid ne gère qu'une sélection unique nativement — la
+// sélection à deux est gérée ici via un tableau local, affichée avec
+// highlightIds plutôt que selectedId. Aucun retour ne lui est jamais donné
+// sur l'échange (ni ici, ni plus tard) : contrairement à Voyante/Griot, ce
+// panneau ne montre aucun historique.
+function AnancyPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
+  const { t } = useLanguage()
+  const [selected, setSelected] = useState<string[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [doNothingOpen, setDoNothingOpen] = useState(false)
+  const usedIds = new Set(view.anancy_used_target_ids ?? [])
+  const alive = view.players.filter((p) => p.is_alive && p.user_id !== selfId)
+
+  function toggle(id: string) {
+    if (usedIds.has(id)) return
+    setSelected((cur) => {
+      if (cur.includes(id)) return cur.filter((x) => x !== id)
+      if (cur.length >= 2) return cur
+      return [...cur, id]
+    })
+  }
+
+  async function confirmSwap() {
+    if (selected.length !== 2) return
+    setLoading(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('submit_anancy', {
+      p_game_id: gameId,
+      p_target1: selected[0],
+      p_target2: selected[1],
+    })
+    setLoading(false)
+    setConfirmOpen(false)
+    if (rpcError) setError(rpcError.message)
+  }
+
+  async function doNothing() {
+    setLoading(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('submit_anancy', {
+      p_game_id: gameId,
+      p_target1: null,
+      p_target2: null,
+    })
+    setLoading(false)
+    setDoNothingOpen(false)
+    if (rpcError) setError(rpcError.message)
+  }
+
+  const names = selected.map((id) => view.players.find((p) => p.user_id === id)?.display_name ?? '?')
+
+  return (
+    <PanelShell emoji="🕸️" title={t('action.anancy.title')} subtitle={t('action.anancy.subtitle')}>
+      <PlayerGrid players={alive} selectable compact disabledIds={[...usedIds]} highlightIds={selected} onSelect={toggle} />
+      <p className="mt-2.5 text-xs text-moon-200/50">{t('action.anancy.selected', { count: selected.length })}</p>
+      <ErrorText>{error}</ErrorText>
+      <Button className="mt-4 w-full" disabled={selected.length !== 2 || loading} onClick={() => setConfirmOpen(true)}>
+        {loading ? t('common.sending') : t('action.anancy.confirm')}
+      </Button>
+      <button
+        type="button"
+        onClick={() => setDoNothingOpen(true)}
+        disabled={loading}
+        className="mt-3 w-full rounded-xl border border-night-600 px-4 py-2.5 text-sm font-semibold text-moon-200/60 transition-colors hover:border-night-500 hover:text-moon-200 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        🤷 {t('action.anancy.doNothing')}
+      </button>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={t('action.anancy.confirmTitle')}
+        message={t('action.anancy.confirmMessage', { name1: names[0] ?? '', name2: names[1] ?? '' })}
+        confirmLabel={t('action.anancy.confirm')}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={confirmSwap}
+      />
+      <ConfirmDialog
+        open={doNothingOpen}
+        title={t('action.anancy.doNothing')}
+        message={t('action.anancy.subtitle')}
+        confirmLabel={t('action.anancy.doNothing')}
+        onCancel={() => setDoNothingOpen(false)}
+        onConfirm={doNothing}
+      />
     </PanelShell>
   )
 }
