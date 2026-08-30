@@ -8,6 +8,7 @@ import { ROLES, ROLE_ORDER, type RoleId } from '../lib/roles'
 import { translations, type TranslationKey } from '../i18n/translations'
 import type { EventBannerColor, EventBonusType, GameEvent } from '../types/events'
 import { continentEmoji, continentName } from '../lib/continents'
+import { compressImageForUpload } from '../lib/imageCompress'
 
 // ============================================================================
 // Dashboard administrateur. Volontairement en français uniquement, pas
@@ -1332,9 +1333,22 @@ function RoleImagesSection() {
   async function handleUpload(roleId: RoleId, file: File) {
     setBusyRole(roleId)
     setError(null)
-    const { error: uploadError } = await supabase.storage.from('role-cards').upload(`${roleId}.jpg`, file, {
+    // Redimensionne/compresse avant l'envoi (voir imageCompress.ts) : une
+    // carte de rôle ne s'affiche jamais au-delà de ~320px de large (voir
+    // RoleCard.tsx, max-w-xs) — inutile de faire télécharger à chaque
+    // joueur la photo brute d'un téléphone (souvent plusieurs Mo). 900×1350
+    // couvre confortablement l'affichage en écran retina. En cas d'échec de
+    // compression (très vieux navigateur), on retombe sur le fichier
+    // original plutôt que de bloquer l'upload.
+    let toUpload: Blob = file
+    try {
+      toUpload = await compressImageForUpload(file, { maxWidth: 900, maxHeight: 1350 })
+    } catch {
+      // ignore, on envoie l'original
+    }
+    const { error: uploadError } = await supabase.storage.from('role-cards').upload(`${roleId}.jpg`, toUpload, {
       upsert: true,
-      contentType: file.type || 'image/jpeg',
+      contentType: 'image/jpeg',
       cacheControl: '300',
     })
     setBusyRole(null)
@@ -2087,10 +2101,20 @@ function EventBannerImageUpload({
   async function handleUpload(file: File) {
     setBusy(true)
     setError(null)
+    // Même optimisation que les cartes de rôle (voir RoleImagesSection,
+    // imageCompress.ts) : la bannière s'affiche au plus large que le
+    // tableau de bord (max-w-3xl, ~768px) sur un ratio 3/1 — 1600×533
+    // couvre confortablement le retina sans faire télécharger une photo brute.
+    let toUpload: Blob = file
+    try {
+      toUpload = await compressImageForUpload(file, { maxWidth: 1600, maxHeight: 533 })
+    } catch {
+      // ignore, on envoie l'original
+    }
     const path = `${event.id}-${lang}.jpg`
-    const { error: uploadError } = await supabase.storage.from('event-banners').upload(path, file, {
+    const { error: uploadError } = await supabase.storage.from('event-banners').upload(path, toUpload, {
       upsert: true,
-      contentType: file.type || 'image/jpeg',
+      contentType: 'image/jpeg',
       cacheControl: '300',
     })
     if (uploadError) {
