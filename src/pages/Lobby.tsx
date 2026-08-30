@@ -31,6 +31,9 @@ const DEFAULT_COUNTS: RoleCounts = {
   voleur: false,
   enfant_sauvage: false,
   capitaine: true,
+  // Nouveau rôle (voir migration 0116) — désactivé par défaut comme
+  // Chasseur/Cupidon ci-dessus, à activer volontairement par l'hôte.
+  griot: false,
 }
 
 // Durées des phases, modifiables par l'hôte au même titre que les rôles —
@@ -315,7 +318,8 @@ export default function Lobby() {
     Number(counts.cupidon) +
     Number(counts.ancien) +
     Number(counts.voleur) +
-    Number(counts.enfant_sauvage)
+    Number(counts.enfant_sauvage) +
+    Number(counts.griot)
   const rolesOverflow = customized && specialTotal > playerCount
   // Contrainte du Loup Alpha (voir migration 0088, assouplie en 0094 —
   // demande utilisateur : retrait du plafond de 2 Loups-Garous simples,
@@ -596,6 +600,7 @@ export default function Lobby() {
               <RoleToggle label={`🧓 ${t(ROLES.ancien.nameKey)}`} checked={counts.ancien} onChange={(v) => { setCounts((c) => ({ ...c, ancien: v })); setCustomized(true) }} />
               <RoleToggle label={`🃏 ${t(ROLES.voleur.nameKey)}`} checked={counts.voleur} onChange={(v) => { setCounts((c) => ({ ...c, voleur: v })); setCustomized(true) }} />
               <RoleToggle label={`🐾 ${t(ROLES.enfant_sauvage.nameKey)}`} checked={counts.enfant_sauvage} onChange={(v) => { setCounts((c) => ({ ...c, enfant_sauvage: v })); setCustomized(true) }} />
+              <RoleToggle label={`🎭 ${t(ROLES.griot.nameKey)}`} checked={counts.griot} onChange={(v) => { setCounts((c) => ({ ...c, griot: v })); setCustomized(true) }} />
               <div className="border-t border-night-700/60 pt-3">
                 <RoleToggle label={`🎖️ ${t('role.capitaine.name')}`} checked={counts.capitaine} onChange={(v) => { setCounts((c) => ({ ...c, capitaine: v })); setCustomized(true) }} />
                 <p className="mt-1.5 text-xs text-moon-200/40">{t('lobby.captainToggleHint')}</p>

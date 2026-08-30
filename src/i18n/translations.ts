@@ -413,6 +413,15 @@ export const translations = {
     fr: 'Choisissez secrètement votre mentor (uniquement la première nuit).',
     en: 'Secretly choose your mentor (first night only).',
   },
+  'role.griot.name': { fr: 'Griot', en: 'Griot' },
+  'role.griot.description': {
+    fr: "Vous êtes le gardien de la mémoire du village. À partir de la deuxième nuit, vous désignez chaque nuit un joueur et apprenez une trace de ce qu'il a fait la nuit précédente — jamais son rôle ni son camp, uniquement une description vague de son action.",
+    en: "You are the keeper of the village's memory. Starting from the second night, you designate a player each night and learn a trace of what they did the night before — never their role or team, only a vague description of their action.",
+  },
+  'role.griot.nightAction': {
+    fr: 'Choisissez un joueur : vous apprendrez une trace de son action lors de la nuit précédente (rien avant la deuxième nuit).',
+    en: "Choose a player: you'll learn a trace of their action from the previous night (nothing before the second night).",
+  },
   'role.capitaine.name': { fr: 'Capitaine', en: 'Captain' },
 
   // --- Salon d'attente (Lobby.tsx) --------------------------------------------
@@ -786,6 +795,40 @@ export const translations = {
   'action.voyante.title': { fr: "Sondez le camp d'un joueur", en: "Probe a player's side" },
   'action.voyante.pastVisions': { fr: 'Vos visions passées', en: 'Your past visions' },
   'action.voyante.confirm': { fr: 'Sonder ce joueur', en: 'Probe this player' },
+  'action.griot.title': { fr: 'Choisissez qui observer', en: 'Choose who to watch' },
+  'action.griot.subtitle': {
+    fr: 'Vous apprendrez une trace de son action lors de la nuit précédente — jamais son rôle.',
+    en: "You'll learn a trace of their action from the previous night — never their role.",
+  },
+  'action.griot.pastReveals': { fr: 'Vos observations passées', en: 'Your past observations' },
+  'action.griot.confirm': { fr: 'Observer ce joueur', en: 'Watch this player' },
+  'action.griot.nightLabel': { fr: 'Nuit {{night}}', en: 'Night {{night}}' },
+  'griot.reveal.observed_card': { fr: "a observé la carte d'un autre joueur.", en: "observed another player's card." },
+  'griot.reveal.watched_wolves': {
+    fr: 'a observé discrètement les activités des loups.',
+    en: "secretly watched the werewolves' activity.",
+  },
+  'griot.reveal.wolf_vote': {
+    fr: 'a participé à la désignation de la victime des loups.',
+    en: "took part in designating the werewolves' victim.",
+  },
+  'griot.reveal.used_power': { fr: "a utilisé l'un de ses pouvoirs.", en: 'used one of their powers.' },
+  'griot.reveal.linked_lovers': {
+    fr: 'a lié deux personnes par un lien amoureux.',
+    en: 'bound two people together with a romantic link.',
+  },
+  'griot.reveal.swapped_role': {
+    fr: 'a échangé sa carte de rôle avec une autre.',
+    en: 'swapped their role card with another.',
+  },
+  'griot.reveal.chose_mentor': {
+    fr: 'a choisi secrètement un mentor à observer.',
+    en: 'secretly chose a mentor to watch over.',
+  },
+  'griot.reveal.no_action': {
+    fr: "n'a effectué aucune action particulière durant la nuit.",
+    en: 'took no particular action during the night.',
+  },
   'action.wolf.title': { fr: 'Choisissez votre victime', en: 'Choose your victim' },
   'action.wolf.subtitle': { fr: 'Concertez-vous avec votre meute.', en: 'Coordinate with your pack.' },
   // Refonte en assistant à 3 temps (retour utilisateur : "le choix entre

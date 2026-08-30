@@ -12,6 +12,7 @@ export type RoleId =
   | 'ancien'
   | 'voleur'
   | 'enfant_sauvage'
+  | 'griot'
 
 // Les noms/descriptions ne sont plus stockés en dur ici : ce sont des clés du
 // dictionnaire i18n (voir src/i18n/translations.ts, namespace `role.*`), pour
@@ -129,6 +130,15 @@ export const ROLES: Record<RoleId, RoleInfo> = {
     descriptionKey: 'role.enfant_sauvage.description',
     nightActionKey: 'role.enfant_sauvage.nightAction',
   },
+  griot: {
+    id: 'griot',
+    team: 'village',
+    emoji: '🎭',
+    color: '#a68fd6',
+    nameKey: 'role.griot.name',
+    descriptionKey: 'role.griot.description',
+    nightActionKey: 'role.griot.nightAction',
+  },
 }
 
 export const ROLE_ORDER: RoleId[] = [
@@ -142,6 +152,7 @@ export const ROLE_ORDER: RoleId[] = [
   'ancien',
   'voleur',
   'enfant_sauvage',
+  'griot',
   'villageois',
 ]
 

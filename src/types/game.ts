@@ -14,6 +14,7 @@ export type NightStep =
   | 'cupidon'
   | 'enfant_sauvage'
   | 'voyante'
+  | 'griot'
   | 'loup_garou'
   | 'sorciere'
   | 'resolve'
@@ -35,6 +36,10 @@ export interface RoleCounts {
   voleur: boolean
   enfant_sauvage: boolean
   capitaine: boolean
+  // Le Griot (voir migration 0116) : joue toujours juste après la Voyante,
+  // jamais la nuit 1 (rien à raconter avant qu'une première nuit se soit
+  // écoulée) — voir next_night_step côté serveur.
+  griot: boolean
 }
 
 export interface GameSettings {
@@ -256,6 +261,12 @@ export interface MyGameView {
   // visuellement dans la liste (badge).
   wolf_alpha_id: string | null
   seer_reveals: { target_id: string; role: string; night_number: number }[]
+  // Griot : jamais le rôle ni le camp du joueur observé, uniquement une
+  // trace générique de son action DE LA NUIT PRÉCÉDENTE (night_number ici
+  // est la nuit où LE GRIOT a choisi sa cible ; l'action décrite par `kind`
+  // date de la nuit d'avant — voir compute_griot_phrase côté serveur et
+  // GRIOT_REVEAL_KEYS côté client pour la traduction de chaque `kind`).
+  griot_reveals: { target_id: string; night_number: number; kind: string }[]
   witch_heal_used: boolean
   witch_poison_used: boolean
   pending_action_required: NightStep | 'vote' | 'hunter' | 'captain_vote' | 'captain_succession' | null

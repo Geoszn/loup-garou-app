@@ -5,6 +5,7 @@ import { PlayerGrid } from './PlayerGrid'
 import { Button, Card, ConfirmDialog, ErrorText, Modal } from './ui'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { MyGameView } from '../types/game'
+import type { TranslationKey } from '../i18n/translations'
 
 export function ActionPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
   const action = view.pending_action_required
@@ -41,6 +42,8 @@ export function ActionPanel({ view, gameId, selfId }: { view: MyGameView; gameId
             return <EnfantSauvagePanel view={view} gameId={gameId} selfId={selfId} />
           case 'voyante':
             return <VoyantePanel view={view} gameId={gameId} selfId={selfId} />
+          case 'griot':
+            return <GriotPanel view={view} gameId={gameId} selfId={selfId} />
           case 'loup_garou':
             return <WolfPanel view={view} gameId={gameId} selfId={selfId} />
           case 'sorciere':
@@ -175,6 +178,71 @@ function VoyantePanel({ view, gameId, selfId }: { view: MyGameView; gameId: stri
       <ErrorText>{error}</ErrorText>
       <Button className="mt-4 w-full" disabled={!selected || loading} onClick={confirm}>
         {loading ? t('common.sending') : t('action.voyante.confirm')}
+      </Button>
+    </PanelShell>
+  )
+}
+
+// Doit couvrir toutes les valeurs de `kind` renvoyées par
+// compute_griot_phrase côté serveur (migration 0116) — jamais le rôle ni
+// le camp du joueur observé, uniquement une trace générique de son action
+// DE LA NUIT PRÉCÉDENTE (voir griot_reveals, types/game.ts).
+const GRIOT_REVEAL_KEYS: Record<string, TranslationKey> = {
+  observed_card: 'griot.reveal.observed_card',
+  watched_wolves: 'griot.reveal.watched_wolves',
+  wolf_vote: 'griot.reveal.wolf_vote',
+  used_power: 'griot.reveal.used_power',
+  linked_lovers: 'griot.reveal.linked_lovers',
+  swapped_role: 'griot.reveal.swapped_role',
+  chose_mentor: 'griot.reveal.chose_mentor',
+  no_action: 'griot.reveal.no_action',
+}
+
+// Le Griot ne joue jamais la nuit 1 (rien à raconter avant qu'une première
+// nuit se soit écoulée, voir next_night_step côté serveur) — ce panneau
+// n'est donc jamais monté cette nuit-là. Même forme qu'un choix à une seule
+// cible (VoyantePanel), avec en plus l'historique des observations passées
+// juste en dessous (griot_reveals) — jamais le rôle du joueur observé,
+// uniquement une phrase générique traduite via GRIOT_REVEAL_KEYS.
+function GriotPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
+  const { t } = useLanguage()
+  const [selected, setSelected] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const alive = view.players.filter((p) => p.is_alive && p.user_id !== selfId)
+
+  async function confirm() {
+    if (!selected) return
+    setLoading(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('submit_griot', { p_game_id: gameId, p_target: selected })
+    setLoading(false)
+    if (rpcError) setError(rpcError.message)
+  }
+
+  return (
+    <PanelShell emoji="🎭" title={t('action.griot.title')} subtitle={t('action.griot.subtitle')}>
+      <PlayerGrid players={alive} selectable compact selectedId={selected} onSelect={setSelected} />
+      {view.griot_reveals.length > 0 && (
+        <div className="mt-4 space-y-1 border-t border-night-600/60 pt-3">
+          <p className="mb-1 text-xs uppercase tracking-wider text-moon-200/40">{t('action.griot.pastReveals')}</p>
+          {[...view.griot_reveals]
+            .sort((a, b) => b.night_number - a.night_number)
+            .map((r, i) => {
+              const p = view.players.find((pl) => pl.user_id === r.target_id)
+              return (
+                <p key={i} className="text-sm text-moon-200/70">
+                  <span className="text-moon-200/40">{t('action.griot.nightLabel', { night: r.night_number - 1 })} — </span>
+                  <span className="text-moon-200">{p?.display_name}</span>{' '}
+                  {t(GRIOT_REVEAL_KEYS[r.kind] ?? 'griot.reveal.no_action')}
+                </p>
+              )
+            })}
+        </div>
+      )}
+      <ErrorText>{error}</ErrorText>
+      <Button className="mt-4 w-full" disabled={!selected || loading} onClick={confirm}>
+        {loading ? t('common.sending') : t('action.griot.confirm')}
       </Button>
     </PanelShell>
   )
