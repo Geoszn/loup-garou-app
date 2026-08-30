@@ -620,6 +620,7 @@ export const translations = {
   'game.readyDone': { fr: 'Vous êtes prêt(e)', en: "You're ready" },
   'game.readyButton': { fr: 'Je suis prêt(e)', en: "I'm ready" },
   'game.seerVisionTitle': { fr: 'Vision de cette nuit', en: "Tonight's vision" },
+  'game.griotResultTitle': { fr: 'Ce que vous avez appris', en: 'What you learned' },
   'game.seerVisionResult': { fr: '{{target}} est {{role}}.', en: '{{target}} is {{role}}.' },
   'game.logEmpty': { fr: 'Rien à signaler pour le moment.', en: 'Nothing to report yet.' },
   'game.callVoteHeading': { fr: 'Passage au vote', en: 'Move to vote' },

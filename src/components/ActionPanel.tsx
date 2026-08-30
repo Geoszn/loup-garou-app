@@ -187,7 +187,9 @@ function VoyantePanel({ view, gameId, selfId }: { view: MyGameView; gameId: stri
 // compute_griot_phrase côté serveur (migration 0116) — jamais le rôle ni
 // le camp du joueur observé, uniquement une trace générique de son action
 // DE LA NUIT PRÉCÉDENTE (voir griot_reveals, types/game.ts).
-const GRIOT_REVEAL_KEYS: Record<string, TranslationKey> = {
+// Exporté : réutilisé par NightResultPanel (GameRoom.tsx) pour afficher le
+// résultat du Griot juste après son envoi (voir son commentaire dédié).
+export const GRIOT_REVEAL_KEYS: Record<string, TranslationKey> = {
   observed_card: 'griot.reveal.observed_card',
   watched_wolves: 'griot.reveal.watched_wolves',
   wolf_vote: 'griot.reveal.wolf_vote',

@@ -13,7 +13,7 @@ import { RoleCard } from '../components/RoleCard'
 import { AvatarIcon } from '../components/AvatarIcon'
 import { PlayerGrid } from '../components/PlayerGrid'
 import { ReadyGrid } from '../components/ReadyGrid'
-import { ActionPanel, VotePanel, CaptainVotePanel, WolfPanel } from '../components/ActionPanel'
+import { ActionPanel, VotePanel, CaptainVotePanel, WolfPanel, GRIOT_REVEAL_KEYS } from '../components/ActionPanel'
 import { ChatPanel } from '../components/ChatPanel'
 import { VoteRecapModal } from '../components/VoteRecapModal'
 import { NightRecapModal } from '../components/NightRecapModal'
@@ -995,6 +995,32 @@ function NightResultPanel({ view }: { view: MyGameView }) {
                 target: target?.display_name ?? '?',
                 role: roleLabel(current.role, t),
               })}
+            </p>
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
+  // Même besoin que le bloc Voyante juste au-dessus (retour utilisateur,
+  // migration 0116) : submit_griot fait avancer la phase dans la foulée de
+  // l'envoi (comme submit_voyante), donc GriotPanel disparaît avant que le
+  // joueur ait eu le temps de lire son résultat — sans ce bloc persistant
+  // (indépendant de pending_action_required), l'impression est que "le
+  // système passe directement à la suite" sans jamais montrer la réponse.
+  if (view.my_role === 'griot') {
+    const current = view.griot_reveals.find((r) => r.night_number === nightNumber)
+    if (!current) return null
+    const target = view.players.find((p) => p.user_id === current.target_id)
+    return (
+      <Card className="animate-fade-in border-moon-400/30 bg-gradient-to-b from-night-700/40 to-night-900/40">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">🎭</span>
+          <div>
+            <p className="font-display text-sm text-moon-200">{t('game.griotResultTitle')}</p>
+            <p className="text-sm text-moon-200/70">
+              <span className="text-moon-200">{target?.display_name ?? '?'}</span>{' '}
+              {t(GRIOT_REVEAL_KEYS[current.kind] ?? 'griot.reveal.no_action')}
             </p>
           </div>
         </div>
