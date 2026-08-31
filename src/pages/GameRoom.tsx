@@ -441,6 +441,14 @@ export default function GameRoom() {
                 modération — CallVotePanel se masque lui-même dans tous les
                 autres cas où il n'a rien à afficher. */}
             {(alive || isHost) && <CallVotePanel view={view} gameId={gameId!} selfId={user.id} me={me} isHost={isHost} />}
+            {/* Retour utilisateur : le rappel de rôle n'existait que la nuit
+                (RolePanel, déjà plus bas) — en journée, rien ne permettait de
+                revérifier son rôle sans revenir sur la carte de révélation
+                initiale. Utile en toute circonstance, mais d'autant plus
+                depuis Anancy (échange de rôles en cours de partie, voir
+                migration 0119) : un joueur peut légitimement ne plus être
+                certain de son rôle ACTUEL. */}
+            {alive && <RolePanel myRole={view.my_role} />}
           </div>
         )}
 
@@ -492,6 +500,7 @@ export default function GameRoom() {
                 grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />}
               />
             )}
+            {alive && <RolePanel myRole={view.my_role} />}
           </div>
         )}
 
@@ -1072,11 +1081,14 @@ function NightResultPanel({ view }: { view: MyGameView }) {
   return null
 }
 
-/** Rappel discret du rôle du joueur pendant la nuit — une simple puce
- * dépliable plutôt qu'une carte pleine toujours affichée : le joueur connaît
- * déjà son rôle (révélé en tout début de partie), pas besoin de lui
- * réserver en permanence tout un bloc pour ça au milieu de l'action de la
- * nuit. Un tap dépasse rappelle la description au besoin. */
+/** Rappel discret du rôle du joueur — une simple puce dépliable plutôt qu'une
+ * carte pleine toujours affichée : le joueur connaît déjà son rôle (révélé en
+ * tout début de partie), pas besoin de lui réserver en permanence tout un
+ * bloc pour ça au milieu de l'action. Un tap dessus rappelle la description
+ * au besoin. Affiché la nuit ET en journée (day_discussion, day_vote) —
+ * retour utilisateur : utile à tout moment, d'autant plus depuis Anancy
+ * (échange de rôles en cours de partie) où un joueur peut légitimement ne
+ * plus être certain de son rôle actuel. */
 function RolePanel({ myRole }: { myRole: string | null }) {
   const { t } = useLanguage()
   const [open, setOpen] = useState(false)
