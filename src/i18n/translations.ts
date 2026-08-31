@@ -629,6 +629,7 @@ export const translations = {
   'impact.seer_wolf_reveal': { fr: '🔮 Loup-Garou démasqué', en: '🔮 Werewolf unmasked' },
   'impact.seer_wolf_reveal_count': { fr: '🔮 Loups-Garous démasqués ({{count}})', en: '🔮 Werewolves unmasked ({{count}})' },
   'impact.ancien_extra_life': { fr: '👴 Résilience de l’Ancien', en: '👴 Elder’s resilience' },
+  'impact.anancy_solo_win': { fr: '🕸️ Victoire solitaire d’Anancy', en: '🕸️ Anancy’s solo win' },
 
   'game.yourRole': { fr: 'Votre rôle', en: 'Your role' },
   'role.wolfPack.title': { fr: 'Votre meute', en: 'Your pack' },

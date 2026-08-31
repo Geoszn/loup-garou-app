@@ -354,6 +354,7 @@ export type ImpactKind =
   | 'hunter_shot_wolf'
   | 'seer_wolf_reveal'
   | 'ancien_extra_life'
+  | 'anancy_solo_win'
 
 export interface ImpactDetail {
   kind: ImpactKind
