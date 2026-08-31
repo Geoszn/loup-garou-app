@@ -38,6 +38,10 @@ const DEFAULT_COUNTS: RoleCounts = {
   sans_visage: false,
   // Anancy (voir migration 0119) — même principe, désactivé par défaut.
   anancy: false,
+  // Ange et Grand Méchant Loup (voir migration 0121) — même principe,
+  // désactivés par défaut.
+  ange: false,
+  grand_mechant_loup: false,
 }
 
 // Durées des phases, modifiables par l'hôte au même titre que les rôles —
@@ -325,7 +329,9 @@ export default function Lobby() {
     Number(counts.enfant_sauvage) +
     Number(counts.griot) +
     Number(counts.sans_visage) +
-    Number(counts.anancy)
+    Number(counts.anancy) +
+    Number(counts.ange) +
+    Number(counts.grand_mechant_loup)
   const rolesOverflow = customized && specialTotal > playerCount
   // Contrainte du Loup Alpha (voir migration 0088, assouplie en 0094 —
   // demande utilisateur : retrait du plafond de 2 Loups-Garous simples,
@@ -609,6 +615,17 @@ export default function Lobby() {
                 />
                 <p className="mt-1.5 text-xs text-moon-200/40">{t('lobby.sansVisageToggleHint')}</p>
               </div>
+              <div>
+                <RoleToggle
+                  label={`👹 ${t(ROLES.grand_mechant_loup.nameKey)}`}
+                  checked={counts.grand_mechant_loup}
+                  onChange={(v) => {
+                    setCounts((c) => ({ ...c, grand_mechant_loup: v }))
+                    setCustomized(true)
+                  }}
+                />
+                <p className="mt-1.5 text-xs text-moon-200/40">{t('lobby.grandMechantLoupToggleHint')}</p>
+              </div>
               <RoleToggle label={`🔮 ${t(ROLES.voyante.nameKey)}`} checked={counts.voyante} onChange={(v) => { setCounts((c) => ({ ...c, voyante: v })); setCustomized(true) }} />
               <RoleToggle label={`🧪 ${t(ROLES.sorciere.nameKey)}`} checked={counts.sorciere} onChange={(v) => { setCounts((c) => ({ ...c, sorciere: v })); setCustomized(true) }} />
               <RoleToggle label={`🏹 ${t(ROLES.chasseur.nameKey)}`} checked={counts.chasseur} onChange={(v) => { setCounts((c) => ({ ...c, chasseur: v })); setCustomized(true) }} />
@@ -628,6 +645,17 @@ export default function Lobby() {
                   }}
                 />
                 <p className="mt-1.5 text-xs text-moon-200/40">{t('lobby.anancyToggleHint')}</p>
+              </div>
+              <div>
+                <RoleToggle
+                  label={`👼 ${t(ROLES.ange.nameKey)}`}
+                  checked={counts.ange}
+                  onChange={(v) => {
+                    setCounts((c) => ({ ...c, ange: v }))
+                    setCustomized(true)
+                  }}
+                />
+                <p className="mt-1.5 text-xs text-moon-200/40">{t('lobby.angeToggleHint')}</p>
               </div>
               <div className="border-t border-night-700/60 pt-3">
                 <RoleToggle label={`🎖️ ${t('role.capitaine.name')}`} checked={counts.capitaine} onChange={(v) => { setCounts((c) => ({ ...c, capitaine: v })); setCustomized(true) }} />

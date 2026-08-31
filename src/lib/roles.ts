@@ -15,6 +15,8 @@ export type RoleId =
   | 'griot'
   | 'sans_visage'
   | 'anancy'
+  | 'ange'
+  | 'grand_mechant_loup'
 
 // Les noms/descriptions ne sont plus stockés en dur ici : ce sont des clés du
 // dictionnaire i18n (voir src/i18n/translations.ts, namespace `role.*`), pour
@@ -168,12 +170,40 @@ export const ROLES: Record<RoleId, RoleInfo> = {
     nameKey: 'role.anancy.name',
     descriptionKey: 'role.anancy.description',
   },
+  // Rôle entièrement passif (aucune nightActionKey, aucun écran de nuit) :
+  // sa seule mécanique est une condition de victoire vérifiée côté serveur
+  // (check_and_apply_ange_win, migration 0121) dès qu'il meurt, de quelque
+  // cause que ce soit, pendant le tout premier cycle nuit 1 + jour 1 —
+  // variante maison, plus généreuse que la règle officielle (qui exige un
+  // vote du village), demande explicite de l'utilisateur.
+  ange: {
+    id: 'ange',
+    team: 'village',
+    emoji: '👼',
+    color: '#a8c8e8',
+    nameKey: 'role.ange.name',
+    descriptionKey: 'role.ange.description',
+  },
+  // Vote avec la meute exactement comme un loup simple (WolfPanel générique,
+  // voir sans_visage plus haut), puis dispose d'un second tour de nuit
+  // dédié (night_step='grand_mechant_loup', voir GrandMechantLoupPanel dans
+  // ActionPanel.tsx) tant qu'aucun loup n'est encore mort dans la partie.
+  grand_mechant_loup: {
+    id: 'grand_mechant_loup',
+    team: 'loups',
+    emoji: '👹',
+    color: '#701f2b',
+    nameKey: 'role.grand_mechant_loup.name',
+    descriptionKey: 'role.grand_mechant_loup.description',
+    nightActionKey: 'role.grand_mechant_loup.nightAction',
+  },
 }
 
 export const ROLE_ORDER: RoleId[] = [
   'loup_garou',
   'loup_alpha',
   'sans_visage',
+  'grand_mechant_loup',
   'voyante',
   'sorciere',
   'chasseur',
@@ -183,6 +213,7 @@ export const ROLE_ORDER: RoleId[] = [
   'voleur',
   'enfant_sauvage',
   'griot',
+  'ange',
   'anancy',
   'villageois',
 ]

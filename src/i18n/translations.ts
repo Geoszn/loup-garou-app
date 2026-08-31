@@ -438,6 +438,20 @@ export const translations = {
   },
   'role.team.neutre': { fr: 'Neutre', en: 'Neutral' },
   'role.capitaine.name': { fr: 'Capitaine', en: 'Captain' },
+  'role.ange.name': { fr: 'Ange', en: 'Angel' },
+  'role.ange.description': {
+    fr: "Vous n'avez aucun pouvoir. Votre seul but : mourir, de quelque façon que ce soit, dès la toute première nuit ou le tout premier jour de la partie — si vous y parvenez, vous gagnez immédiatement et seul, peu importe l'état du reste de la partie. Passé ce premier jour, vous redevenez un simple villageois.",
+    en: "You have no power. Your only goal: die, in any way, during the very first night or the very first day of the game — if you manage it, you win immediately and alone, no matter the rest of the game's outcome. Past that first day, you become an ordinary villager.",
+  },
+  'role.grand_mechant_loup.name': { fr: 'Grand Méchant Loup', en: 'Big Bad Wolf' },
+  'role.grand_mechant_loup.description': {
+    fr: "Vous votez avec le reste de la meute exactement comme un Loup simple. Tant qu'aucun Loup n'est encore mort dans la partie, vous pouvez EN PLUS dévorer seul une seconde victime chaque nuit — différente de celle de la meute, jamais un coéquipier, et invisible pour la Sorcière. Ce pouvoir disparaît pour de bon dès qu'un Loup meurt, vous y compris.",
+    en: "You vote with the rest of the pack exactly like a simple Wolf. As long as no Wolf has died in the game yet, you may ALSO devour a second victim alone each night — different from the pack's, never a teammate, and invisible to the Witch. This power disappears for good the moment any Wolf dies, yourself included.",
+  },
+  'role.grand_mechant_loup.nightAction': {
+    fr: "Choisissez une seconde victime (facultatif) — différente de celle de la meute, jamais un autre Loup. Frappe garantie : la Sorcière ne peut pas la sauver.",
+    en: "Choose a second victim (optional) — different from the pack's, never another Wolf. Guaranteed strike: the Witch cannot save them.",
+  },
 
   // --- Salon d'attente (Lobby.tsx) --------------------------------------------
   'lobby.notFound': {
@@ -630,6 +644,7 @@ export const translations = {
   'impact.seer_wolf_reveal_count': { fr: '🔮 Loups-Garous démasqués ({{count}})', en: '🔮 Werewolves unmasked ({{count}})' },
   'impact.ancien_extra_life': { fr: '👴 Résilience de l’Ancien', en: '👴 Elder’s resilience' },
   'impact.anancy_solo_win': { fr: '🕸️ Victoire solitaire d’Anancy', en: '🕸️ Anancy’s solo win' },
+  'impact.gml_second_kill': { fr: '👹 Seconde victime dévorée', en: '👹 Second victim devoured' },
 
   'game.yourRole': { fr: 'Votre rôle', en: 'Your role' },
   'role.wolfPack.title': { fr: 'Votre meute', en: 'Your pack' },
@@ -758,6 +773,11 @@ export const translations = {
     fr: '{{name}} a survécu jusqu’à l’aube du cinquième jour — sa victoire personnelle l’emporte, peu importe le camp dominant.',
     en: '{{name}} survived until dawn on the fifth day — their personal victory stands, no matter which camp dominates.',
   },
+  'game.endAngeWin': { fr: '👼 L’Ange l’emporte !', en: '👼 The Angel wins!' },
+  'game.endAngeExplain': {
+    fr: '{{name}} est mort(e) dès le tout premier cycle, exactement comme espéré — sa victoire personnelle l’emporte, peu importe le camp dominant.',
+    en: '{{name}} died during the very first cycle, exactly as hoped — their personal victory stands, no matter which camp dominates.',
+  },
   // --- Section personnelle de l'écran de fin (EndScreen, migration 0073) -----
   // Détail du calcul de points pour CE joueur sur cette partie — lu depuis
   // my_game_result (game_results, permanent). "Résultat de la partie" =
@@ -838,6 +858,18 @@ export const translations = {
   'action.anancy.doNothing': { fr: 'Ne rien faire cette nuit', en: 'Do nothing tonight' },
   'action.anancy.selected': { fr: '{{count}}/2 sélectionné(s)', en: '{{count}}/2 selected' },
   'action.anancy.alreadyTouched': { fr: 'déjà intouchable', en: 'already untouchable' },
+  'action.grandMechantLoup.title': { fr: 'Choisissez une seconde victime', en: 'Choose a second victim' },
+  'action.grandMechantLoup.subtitle': {
+    fr: "Différente de celle de la meute, jamais un autre Loup. Invisible pour la Sorcière — une frappe garantie.",
+    en: "Different from the pack's, never another Wolf. Invisible to the Witch — a guaranteed strike.",
+  },
+  'action.grandMechantLoup.confirm': { fr: 'Dévorer ce joueur', en: 'Devour this player' },
+  'action.grandMechantLoup.skip': { fr: 'Ne pas utiliser ce pouvoir cette nuit', en: 'Skip this power tonight' },
+  'action.grandMechantLoup.confirmTitle': { fr: 'Confirmer la seconde victime', en: 'Confirm the second victim' },
+  'action.grandMechantLoup.confirmMessage': {
+    fr: 'Vous êtes sur le point de dévorer {{name}} — invisible pour la Sorcière, cette attaque ne peut pas être contrée.',
+    en: 'You are about to devour {{name}} — invisible to the Witch, this attack cannot be countered.',
+  },
   'action.anancy.confirmTitle': { fr: 'Confirmer l’échange', en: 'Confirm the swap' },
   'action.anancy.confirmMessage': {
     fr: 'Vous êtes sur le point d’échanger secrètement les rôles de {{name1}} et {{name2}}. Vous ne saurez jamais lesquels. Les deux deviendront définitivement intouchables.',
@@ -851,6 +883,14 @@ export const translations = {
   'lobby.anancyToggleHint': {
     fr: 'Camp neutre. Chaque nuit, il peut échanger secrètement les rôles de deux joueurs (jamais deux fois le même). Il gagne seul s’il est vivant à l’aube du cinquième jour.',
     en: 'Neutral camp. Each night, they may secretly swap the roles of two players (never the same one twice). They win alone if alive at dawn on the fifth day.',
+  },
+  'lobby.angeToggleHint': {
+    fr: "Aucun pouvoir. Gagne seul, immédiatement, s'il meurt (peu importe la cause) pendant la toute première nuit ou le tout premier jour de la partie — sinon redevient un simple villageois.",
+    en: "No power. Wins alone, immediately, if they die (any cause) during the very first night or day of the game — otherwise becomes an ordinary villager.",
+  },
+  'lobby.grandMechantLoupToggleHint': {
+    fr: "Vote avec le reste de la meute comme un Loup simple. Tant qu'aucun Loup n'est mort dans la partie, il peut aussi dévorer seul une seconde victime chaque nuit (différente de celle de la meute, invisible pour la Sorcière) — pouvoir perdu pour de bon dès qu'un Loup meurt.",
+    en: "Votes with the rest of the pack like a simple Wolf. As long as no Wolf has died in the game, they may also devour a second victim alone each night (different from the pack's, invisible to the Witch) — power lost for good the moment a Wolf dies.",
   },
   'griot.reveal.observed_card': { fr: "a observé la carte d'un autre joueur.", en: "observed another player's card." },
   'griot.reveal.watched_wolves': {

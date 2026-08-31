@@ -1146,7 +1146,9 @@ function EndScreen({
         ? t('game.endWolvesWin')
         : winner === 'anancy'
           ? t('game.endAnancyWin')
-          : t('game.endLoversWin')
+          : winner === 'ange'
+            ? t('game.endAngeWin')
+            : t('game.endLoversWin')
 
   // Explication de la cause de la victoire : le serveur ne renvoie que
   // winner_team ('village' | 'loups' | 'amoureux'), sans détail structuré —
@@ -1171,6 +1173,13 @@ function EndScreen({
   const anancyEntry = winner === 'anancy' ? (view.final_reveal ?? []).find((r) => r.role === 'anancy') : null
   const anancyName = anancyEntry ? (view.players.find((p) => p.user_id === anancyEntry.user_id)?.display_name ?? '') : ''
 
+  // Nom de l'Ange pour l'explication — cherché dans TOUS les joueurs (jamais
+  // seulement les vivants, contrairement à Anancy) : sa victoire exige
+  // justement d'être mort, donc il n'apparaît par définition jamais dans
+  // alivePlayers.
+  const angeEntry = winner === 'ange' ? (view.final_reveal ?? []).find((r) => r.role === 'ange') : null
+  const angeName = angeEntry ? (view.players.find((p) => p.user_id === angeEntry.user_id)?.display_name ?? '') : ''
+
   const explanation =
     winner === 'village'
       ? t('game.endVillageExplain', { survivors: String(alivePlayers.length) })
@@ -1178,10 +1187,12 @@ function EndScreen({
         ? t('game.endWolvesExplain', { wolves: String(wolvesAliveCount), others: String(othersAliveCount) })
         : winner === 'anancy'
           ? t('game.endAnancyExplain', { name: anancyName })
-          : t('game.endLoversExplain', {
-              lover1: alivePlayers[0]?.display_name ?? '',
-              lover2: alivePlayers[1]?.display_name ?? '',
-            })
+          : winner === 'ange'
+            ? t('game.endAngeExplain', { name: angeName })
+            : t('game.endLoversExplain', {
+                lover1: alivePlayers[0]?.display_name ?? '',
+                lover2: alivePlayers[1]?.display_name ?? '',
+              })
 
   // Rôle "gagnant" pour la mise en avant visuelle de la liste ci-dessous :
   // toute l'équipe du camp vainqueur pour village/loups, ou seulement les
@@ -1190,6 +1201,7 @@ function EndScreen({
   function isWinningEntry(userId: string, role: string): boolean {
     if (winner === 'amoureux') return alivePlayers.some((p) => p.user_id === userId)
     if (winner === 'anancy') return role === 'anancy'
+    if (winner === 'ange') return role === 'ange'
     const team = ROLES[role as RoleId]?.team
     return winner === 'loups' ? team === 'loups' : team === 'village'
   }

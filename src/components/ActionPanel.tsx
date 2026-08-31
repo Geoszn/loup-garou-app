@@ -50,6 +50,8 @@ export function ActionPanel({ view, gameId, selfId }: { view: MyGameView; gameId
             return <SorcierePanel view={view} gameId={gameId} selfId={selfId} />
           case 'anancy':
             return <AnancyPanel view={view} gameId={gameId} selfId={selfId} />
+          case 'grand_mechant_loup':
+            return <GrandMechantLoupPanel view={view} gameId={gameId} selfId={selfId} />
           case 'vote':
             return <VotePanel view={view} gameId={gameId} selfId={selfId} />
           case 'hunter':
@@ -340,6 +342,90 @@ function AnancyPanel({ view, gameId, selfId }: { view: MyGameView; gameId: strin
         confirmLabel={t('action.anancy.doNothing')}
         onCancel={() => setDoNothingOpen(false)}
         onConfirm={doNothing}
+      />
+    </PanelShell>
+  )
+}
+
+// Seconde victime personnelle du Grand Méchant Loup — étape de nuit
+// distincte de WolfPanel (night_step='grand_mechant_loup', juste après le
+// vote partagé de la meute), affichée uniquement tant qu'aucun loup n'est
+// mort dans la partie (voir next_night_step côté serveur : ce pouvoir est
+// perdu pour de bon dès qu'un loup meurt, lui compris). La cible ne peut
+// être ni un coéquipier loup ni celle déjà désignée par la meute (validé
+// côté serveur, submit_grand_mechant_loup) ; disabledIds exclut déjà les
+// coéquipiers pour éviter l'erreur la plupart du temps, le serveur reste la
+// seule source de vérité pour l'autre contrainte (cible différente de celle
+// de la meute), affichée via ErrorText le cas échéant. Choix explicite de
+// l'utilisateur : invisible et impossible à sauver pour la Sorcière,
+// contrairement à la victime classique de la meute.
+function GrandMechantLoupPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
+  const { t } = useLanguage()
+  const [selected, setSelected] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [skipOpen, setSkipOpen] = useState(false)
+  const teammates = new Set(view.wolf_teammates ?? [])
+  const alive = view.players.filter((p) => p.is_alive && p.user_id !== selfId && !teammates.has(p.user_id))
+  const targetName = view.players.find((p) => p.user_id === selected)?.display_name ?? ''
+
+  async function confirm() {
+    if (!selected) return
+    setLoading(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('submit_grand_mechant_loup', { p_game_id: gameId, p_target: selected })
+    setLoading(false)
+    setConfirmOpen(false)
+    if (rpcError) setError(rpcError.message)
+  }
+
+  async function skip() {
+    setLoading(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('submit_grand_mechant_loup', { p_game_id: gameId, p_target: null })
+    setLoading(false)
+    setSkipOpen(false)
+    if (rpcError) setError(rpcError.message)
+  }
+
+  return (
+    <PanelShell emoji="👹" title={t('action.grandMechantLoup.title')} subtitle={t('action.grandMechantLoup.subtitle')}>
+      <PlayerGrid
+        players={alive}
+        selectable
+        compact
+        selectedId={selected}
+        onSelect={(id) => {
+          setSelected(id)
+          setConfirmOpen(true)
+        }}
+      />
+      <ErrorText>{error}</ErrorText>
+      <button
+        type="button"
+        onClick={() => setSkipOpen(true)}
+        disabled={loading}
+        className="mt-3 w-full rounded-xl border border-night-600 px-4 py-2.5 text-sm font-semibold text-moon-200/60 transition-colors hover:border-night-500 hover:text-moon-200 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        🤷 {t('action.grandMechantLoup.skip')}
+      </button>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={t('action.grandMechantLoup.confirmTitle')}
+        message={t('action.grandMechantLoup.confirmMessage', { name: targetName })}
+        confirmLabel={t('action.grandMechantLoup.confirm')}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={confirm}
+      />
+      <ConfirmDialog
+        open={skipOpen}
+        title={t('action.grandMechantLoup.skip')}
+        message={t('action.grandMechantLoup.subtitle')}
+        confirmLabel={t('action.grandMechantLoup.skip')}
+        onCancel={() => setSkipOpen(false)}
+        onConfirm={skip}
       />
     </PanelShell>
   )

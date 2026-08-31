@@ -16,6 +16,7 @@ export type NightStep =
   | 'voyante'
   | 'griot'
   | 'loup_garou'
+  | 'grand_mechant_loup'
   | 'sorciere'
   | 'anancy'
   | 'resolve'
@@ -50,6 +51,16 @@ export interface RoleCounts {
   // joueurs chaque nuit (jamais deux fois le même) — gagne seul s'il est
   // vivant à l'aube du cinquième jour.
   anancy: boolean
+  // L'Ange (voir migration 0121) : entièrement passif, aucune étape de nuit.
+  // Gagne seul, immédiatement, s'il meurt (peu importe la cause) pendant le
+  // tout premier cycle nuit 1 + jour 1 — sinon redevient un villageois
+  // ordinaire pour le reste de la partie.
+  ange: boolean
+  // Le Grand Méchant Loup (voir migration 0121) : vote avec la meute comme
+  // un loup simple, puis peut dévorer une seconde victime (jamais un
+  // coéquipier, invisible pour la Sorcière) tant qu'aucun loup n'est encore
+  // mort dans la partie — pouvoir perdu pour de bon dès qu'un loup meurt.
+  grand_mechant_loup: boolean
 }
 
 export interface GameSettings {
@@ -355,6 +366,7 @@ export type ImpactKind =
   | 'seer_wolf_reveal'
   | 'ancien_extra_life'
   | 'anancy_solo_win'
+  | 'gml_second_kill'
 
 export interface ImpactDetail {
   kind: ImpactKind
