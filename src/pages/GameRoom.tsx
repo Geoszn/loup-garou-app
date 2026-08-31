@@ -356,6 +356,7 @@ export default function GameRoom() {
               nightTab={nightTab}
               setNightTab={setNightTab}
               players={view.players}
+              villageMuted={view.village_muted}
             />
             <WolfPackList view={view} myRole={view.my_role} />
             <RolePanel myRole={view.my_role} />
@@ -391,6 +392,7 @@ export default function GameRoom() {
                 channel={voiceChannel}
                 displayName={me?.display_name ?? t('common.playerFallback')}
                 selfUserId={user.id}
+                listenOnly={view.village_muted}
                 players={view.players}
               />
             )}
@@ -411,10 +413,19 @@ export default function GameRoom() {
                     channel={voiceChannel}
                     displayName={me?.display_name ?? t('common.playerFallback')}
                     selfUserId={user.id}
+                    listenOnly={view.village_muted}
                     players={view.players}
                   />
                 }
-                chat={<ChatPanel gameId={gameId!} channel="village" selfId={user.id} />}
+                chat={
+                  <ChatPanel
+                    gameId={gameId!}
+                    channel="village"
+                    selfId={user.id}
+                    readOnly={view.village_muted}
+                    note={view.village_muted ? t('game.villageMutedNote') : undefined}
+                  />
+                }
                 grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />}
               />
             ) : (
@@ -464,10 +475,20 @@ export default function GameRoom() {
                     channel={voiceChannel}
                     displayName={me?.display_name ?? t('common.playerFallback')}
                     selfUserId={user.id}
+                    listenOnly={view.village_muted}
                     players={view.players}
                   />
                 }
-                chat={<ChatPanel gameId={gameId!} channel="village" selfId={user.id} compact />}
+                chat={
+                  <ChatPanel
+                    gameId={gameId!}
+                    channel="village"
+                    selfId={user.id}
+                    compact
+                    readOnly={view.village_muted}
+                    note={view.village_muted ? t('game.villageMutedNote') : undefined}
+                  />
+                }
                 grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />}
               />
             )}
@@ -653,6 +674,7 @@ function NightChat({
   nightTab,
   setNightTab,
   players,
+  villageMuted,
 }: {
   gameId: string
   code: string
@@ -662,6 +684,11 @@ function NightChat({
   nightTab: 'village' | 'wolves'
   setNightTab: (t: 'village' | 'wolves') => void
   players: PublicPlayer[]
+  /** Anancy vient de faire quitter le camp des Loups à ce joueur (voir
+   * migration 0123) — muet au village jusqu'à la nuit suivante. Ne concerne
+   * jamais le salon 'wolves' (celui-ci n'est de toute façon plus accessible
+   * une fois qu'on n'est plus loup). */
+  villageMuted: boolean
 }) {
   const { t } = useLanguage()
 
@@ -676,7 +703,15 @@ function NightChat({
   // `night_step === 'loup_garou'`, inchangé. Voir migration 0078 côté
   // serveur (can_access_channel/can_read_channel pour le salon 'wolves').
   if (!isWolf) {
-    return <ChatPanel gameId={gameId} channel="village" selfId={selfId} note={t('game.nightChatNote')} />
+    return (
+      <ChatPanel
+        gameId={gameId}
+        channel="village"
+        selfId={selfId}
+        readOnly={villageMuted}
+        note={villageMuted ? t('game.villageMutedNote') : t('game.nightChatNote')}
+      />
+    )
   }
 
   return (
@@ -691,7 +726,13 @@ function NightChat({
         onChange={setNightTab}
       />
       {nightTab === 'village' ? (
-        <ChatPanel gameId={gameId} channel="village" selfId={selfId} note={t('game.nightChatNote')} />
+        <ChatPanel
+          gameId={gameId}
+          channel="village"
+          selfId={selfId}
+          readOnly={villageMuted}
+          note={villageMuted ? t('game.villageMutedNote') : t('game.nightChatNote')}
+        />
       ) : (
         <ChatPanel gameId={gameId} channel="wolves" selfId={selfId} />
       )}

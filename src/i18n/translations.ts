@@ -805,6 +805,14 @@ export const translations = {
     fr: '🎭 Chat anonyme le temps de la nuit — personne ne sait qui écrit quoi (sauf la Petite Fille, si elle est en vie).',
     en: "🎭 Anonymous chat for the night — no one knows who wrote what (except the Little Girl, if she's alive).",
   },
+  // Anancy vient de vous faire quitter le camp des Loups (voir migration
+  // 0123) : vous connaissez encore l'identité de vos ex-coéquipiers, ce
+  // silence forcé (une nuit + un jour complets) évite de pouvoir les trahir
+  // immédiatement avec une crédibilité de "simple villageois".
+  'game.villageMutedNote': {
+    fr: '🤐 Le destin vient de vous changer de camp — vous ne pouvez ni écrire ni parler au village jusqu’à la prochaine nuit.',
+    en: '🤐 Fate just moved you to a new camp — you cannot write or speak to the village until the next night.',
+  },
   'game.leaveConfirmTitle': { fr: 'Quitter la partie ?', en: 'Leave the game?' },
   'game.leaveConfirmMessageEnded': { fr: 'Vous allez retourner à l’accueil.', en: "You'll go back to the home screen." },
   'game.leaveConfirmMessageActive': {

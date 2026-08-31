@@ -188,6 +188,13 @@ export interface MyGameView {
   players: PublicPlayer[]
   my_role: string | null
   my_alive: boolean
+  // Anancy vient de me faire quitter le camp des Loups (voir migration
+  // 0123) : je garde en mémoire mes ex-coéquipiers, donc muet au village —
+  // ni écrire (ChatPanel readOnly) ni parler (VoiceChat listenOnly) —
+  // jusqu'à ce que la nuit suivante commence. false pour tout le monde
+  // d'autre, y compris un loup qui vient de REJOINDRE la meute (aucun
+  // secret d'ex-coéquipier à trahir dans ce sens-là).
+  village_muted: boolean
   lover_id: string | null
   // Mentor secrètement choisi par l'Enfant Sauvage (voir migration 0052) —
   // toujours la donnée propre à SA ligne game_roles_secret, même une fois
