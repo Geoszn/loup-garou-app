@@ -85,6 +85,15 @@ export default {
           '0%': { opacity: '0', transform: 'translateX(24px)' },
           '100%': { opacity: '1', transform: 'translateX(0)' },
         },
+        // Petit "pop" avec léger dépassement (voir PlayerGrid.tsx) : le badge
+        // ✓ d'un joueur qu'on vient de sélectionner surgit plutôt que
+        // d'apparaître à plat, pour que l'œil le remarque immédiatement même
+        // dans une grille dense.
+        'check-in': {
+          '0%': { opacity: '0', transform: 'scale(0)' },
+          '60%': { opacity: '1', transform: 'scale(1.2)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
       },
       animation: {
         breathe: 'breathe 4s ease-in-out infinite',
@@ -93,6 +102,7 @@ export default {
         'overlay-in': 'overlay-in 0.2s ease-out',
         'modal-in': 'modal-in 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
         'drawer-in': 'drawer-in 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+        'check-in': 'check-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
       },
     },
   },

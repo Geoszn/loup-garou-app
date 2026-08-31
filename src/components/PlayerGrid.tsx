@@ -88,6 +88,13 @@ export function PlayerGrid({
         const isDisabled = !p.is_alive || disabledIds.includes(p.user_id)
         const isSelected = selectedId === p.user_id
         const isHighlighted = highlightIds.includes(p.user_id)
+        // Un seul style "choisi" fort pour les deux mécanismes de sélection
+        // du composant (selectedId : une seule cible ; highlightIds : cibles
+        // multiples, ex. Cupidon/Anancy qui choisissent 2 joueurs) — retour
+        // utilisateur : le contour doré discret jusqu'ici réservé à
+        // highlightIds seul ne suffisait pas à voir clairement qui était
+        // sélectionné.
+        const isPicked = isSelected || isHighlighted
         const clickable = selectable && !isDisabled && onSelect
         const canAddFriend = !selectable && !!selfId && p.user_id !== selfId
 
@@ -103,9 +110,8 @@ export function PlayerGrid({
                   setOpenId((cur) => (cur === p.user_id ? null : p.user_id))
                 }
               }}
-              className={`group relative flex w-full flex-col items-center gap-1 rounded-xl border text-center shadow-card transition-all ${compact ? 'p-1.5' : 'p-2'}
-                ${isSelected ? 'border-blood-500 bg-gradient-to-b from-blood-700/30 to-blood-700/10 shadow-blood-glow' : 'border-night-600/60 bg-gradient-to-b from-night-700/50 to-night-900/50'}
-                ${isHighlighted && !isSelected ? 'border-moon-400/60' : ''}
+              className={`group relative flex w-full flex-col items-center gap-1 rounded-xl border-2 text-center shadow-card transition-all ${compact ? 'p-1.5' : 'p-2'}
+                ${isPicked ? 'scale-[1.04] border-blood-400 bg-gradient-to-b from-blood-600/45 to-blood-700/25 shadow-blood-glow' : 'border-night-600/60 bg-gradient-to-b from-night-700/50 to-night-900/50'}
                 ${!p.is_alive ? 'opacity-40 grayscale' : ''}
                 ${clickable || canAddFriend ? 'cursor-pointer hover:border-moon-400/50 hover:from-night-600/60 active:scale-95' : ''}
               `}
@@ -136,7 +142,11 @@ export function PlayerGrid({
                   />
                 )}
               </span>
-              <span className={`max-w-full truncate font-medium text-moon-200/90 ${compact ? 'text-[10px]' : 'text-xs'}`}>
+              <span
+                className={`max-w-full truncate font-medium ${compact ? 'text-[10px]' : 'text-xs'} ${
+                  isPicked ? 'font-semibold text-moon-200' : 'text-moon-200/90'
+                }`}
+              >
                 {p.display_name}
                 {p.user_id === selfId ? ` (${t('common.you')})` : ''}
               </span>
@@ -147,6 +157,18 @@ export function PlayerGrid({
               {p.is_captain && (
                 <span className="absolute -left-1 -top-1 text-xs" title={t('common.captain')}>
                   🎖️
+                </span>
+              )}
+              {/* Badge ✓, en plus (pas à la place) du contour/fond déjà mis en
+                  évidence ci-dessus : retour utilisateur — le contour seul
+                  restait trop discret pour être certain, d'un coup d'œil,
+                  d'avoir cliqué sur la bonne personne dans une grille dense.
+                  Coin bas-droit de la carte, jamais utilisé par 👑/🎖️
+                  (coins du haut) ni par le voyant en ligne (ancré sur
+                  l'avatar, pas sur la carte). */}
+              {isPicked && (
+                <span className="absolute -bottom-1 -right-1 flex h-5 w-5 animate-check-in items-center justify-center rounded-full border-2 border-night-900 bg-blood-400 text-[11px] font-bold leading-none text-night-950 shadow-blood-btn">
+                  ✓
                 </span>
               )}
             </button>

@@ -15,6 +15,10 @@ export const translations = {
   'common.confirm': { fr: 'Confirmer', en: 'Confirm' },
   'common.back': { fr: '← Retour', en: '← Back' },
   'common.close': { fr: 'Fermer', en: 'Close' },
+  // Bandeau affiché quand un nouveau déploiement remplace le service worker
+  // pendant que l'onglet est déjà ouvert — voir UpdateBanner.tsx.
+  'update.available': { fr: 'Nouvelle version disponible', en: 'New version available' },
+  'update.reload': { fr: 'Recharger', en: 'Reload' },
   // Libellé temporaire affiché sur un CopyButton (voir ui.tsx) juste après
   // un clic — remplace le libellé normal pendant ~2s, seul retour visuel
   // qu'un joueur ait qu'une copie presse-papiers a bien fonctionné.

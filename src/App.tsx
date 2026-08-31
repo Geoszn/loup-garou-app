@@ -14,6 +14,7 @@ import PendingApproval from './pages/PendingApproval'
 import JoinByLink from './pages/JoinByLink'
 import NotFound from './pages/NotFound'
 import { FullScreenLoader } from './components/FullScreenLoader'
+import { UpdateBanner } from './components/UpdateBanner'
 import { isAdminHost } from './lib/adminHost'
 
 // Dashboard admin : route volontairement chargée en lazy (jamais dans le
@@ -114,25 +115,29 @@ export default function App() {
     // connecté (sinon "?redirect=" pointerait vers un chemin sans route sur
     // ce domaine) — tout le reste ("*") mène directement au dashboard.
     return (
-      <Routes>
-        <Route path="/connexion" element={<Login />} />
-        <Route path="/verifier-email" element={<VerifyEmail />} />
-        <Route
-          path="*"
-          element={
-            <ProtectedRoute>
-              <Suspense fallback={<FullScreenLoader />}>
-                <AdminDashboard />
-              </Suspense>
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
+      <>
+        <UpdateBanner />
+        <Routes>
+          <Route path="/connexion" element={<Login />} />
+          <Route path="/verifier-email" element={<VerifyEmail />} />
+          <Route
+            path="*"
+            element={
+              <ProtectedRoute>
+                <Suspense fallback={<FullScreenLoader />}>
+                  <AdminDashboard />
+                </Suspense>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </>
     )
   }
 
   return (
     <>
+      <UpdateBanner />
       <LanguageProfileSync />
       <Routes>
       <Route path="/" element={<Landing />} />
