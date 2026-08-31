@@ -514,6 +514,64 @@ export const translations = {
     fr: 'Élu par le village juste avant la première nuit (garde son vrai rôle) — vote compte double, et tranche les égalités. Ne prend pas de place de rôle spécial.',
     en: "Elected by the village just before the first night (keeps their real role) — their vote counts double and breaks ties. Doesn't take up a special role slot.",
   },
+  // --- Refonte du panneau de réglages (retour utilisateur : trop de
+  // boutons empilés, difficile à parcourir) : onglets Rôles/Durées/
+  // Modération + rôles groupés en cartes au lieu d'une liste plate. Chaque
+  // rôle activable garde son texte d'explication, mais affiché à la demande
+  // (ⓘ) plutôt qu'en permanence sous chaque interrupteur. ---------------
+  'common.info': { fr: 'Infos', en: 'Info' },
+  'lobby.roleGroup.loups': { fr: 'Loups', en: 'Wolves' },
+  'lobby.roleGroup.village': { fr: 'Village', en: 'Village' },
+  'lobby.roleGroup.villageHint': { fr: 'rôles classiques', en: 'classic roles' },
+  'lobby.roleGroup.maison': { fr: 'Rôles maison', en: 'House roles' },
+  'lobby.roleGroup.maisonHint': { fr: 'exclusifs à ce jeu', en: 'exclusive to this game' },
+  'lobby.roleGroup.other': { fr: 'Autre', en: 'Other' },
+  'lobby.settingsTab.roles': { fr: 'Rôles', en: 'Roles' },
+  'lobby.settingsTab.durations': { fr: 'Durées', en: 'Durations' },
+  'lobby.settingsTab.moderation': { fr: 'Modération', en: 'Moderation' },
+  'lobby.voyanteToggleHint': {
+    fr: 'Chaque nuit, sonde le rôle d’un joueur vivant.',
+    en: 'Each night, checks the role of a living player.',
+  },
+  'lobby.sorciereToggleHint': {
+    fr: 'Une potion de vie et une potion de mort, chacune utilisable une seule fois par partie.',
+    en: 'One healing potion and one poison potion, each usable once per game.',
+  },
+  'lobby.chasseurToggleHint': {
+    fr: 'À sa mort, élimine immédiatement un autre joueur de son choix.',
+    en: 'When they die, immediately eliminates another player of their choice.',
+  },
+  'lobby.petiteFilleToggleHint': {
+    fr: 'Peut risquer un œil pendant le tour des Loups, au péril de sa vie.',
+    en: "Can risk peeking during the Wolves' turn, at the risk of their life.",
+  },
+  'lobby.cupidonToggleHint': {
+    fr: 'Lie deux joueurs par l’amour la première nuit — s’ils meurent, c’est ensemble.',
+    en: "Links two players in love on the first night — if they die, it's together.",
+  },
+  'lobby.ancienToggleHint': {
+    fr: 'Survit à une première attaque des Loups-Garous.',
+    en: 'Survives a first Werewolf attack.',
+  },
+  'lobby.voleurToggleHint': {
+    fr: 'Échange sa carte contre une des deux cartes restantes en début de partie.',
+    en: 'Swaps their card for one of the two leftover cards at the start of the game.',
+  },
+  'lobby.enfantSauvageToggleHint': {
+    fr: 'Choisit un mentor la nuit 1 — si celui-ci meurt, rejoint secrètement les Loups.',
+    en: 'Chooses a mentor on night 1 — if that player dies, secretly joins the Wolves.',
+  },
+  'lobby.griotToggleHint': {
+    fr: 'À partir de la nuit 2, apprend une trace vague de l’action d’un joueur la nuit précédente — jamais son rôle.',
+    en: "Starting night 2, learns a vague trace of a player's action from the previous night — never their role.",
+  },
+  'lobby.durationsPreset.fast': { fr: 'Rapide', en: 'Fast' },
+  'lobby.durationsPreset.fastHint': { fr: 'parties courtes', en: 'short games' },
+  'lobby.durationsPreset.normal': { fr: 'Normal', en: 'Normal' },
+  'lobby.durationsPreset.normalHint': { fr: 'recommandé', en: 'recommended' },
+  'lobby.durationsPreset.long': { fr: 'Long', en: 'Long' },
+  'lobby.durationsPreset.longHint': { fr: 'débats détendus', en: 'relaxed debates' },
+  'lobby.durationsAdvanced': { fr: 'Réglages avancés ({{count}})', en: 'Advanced settings ({{count}})' },
   'lobby.durationsTitle': { fr: '⏱️ Durées des phases', en: '⏱️ Phase durations' },
   'lobby.duration.roleReveal': { fr: '🎭 Distribution des rôles', en: '🎭 Role distribution' },
   'lobby.duration.discussion': { fr: '💬 Débat', en: '💬 Discussion' },

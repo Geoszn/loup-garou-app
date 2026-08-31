@@ -5,7 +5,7 @@ import { useGame } from '../hooks/useGame'
 import { useNotificationSound } from '../hooks/useNotificationSound'
 import { supabase } from '../lib/supabase'
 import { notifyGameInvite, notifyGameStarted, isStandaloneDisplay } from '../lib/pushSubscription'
-import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, SideDrawer } from '../components/ui'
+import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, Segmented, SideDrawer } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { PlayerProfileModal } from '../components/PlayerProfileModal'
 import { ModerationPanel } from '../components/ModerationPanel'
@@ -13,6 +13,7 @@ import { JoinRequestsPanel } from '../components/JoinRequestsPanel'
 import { VoiceChat } from '../components/VoiceChat'
 import { AvatarIcon } from '../components/AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
+import type { TranslationKey } from '../i18n/translations'
 import { ROLES } from '../lib/roles'
 import type { RoleCounts } from '../types/game'
 
@@ -78,6 +79,60 @@ const DEFAULT_DURATIONS: PhaseDurations = {
   sorciere_seconds: 70,
 }
 
+// Préréglages de durée (refonte du panneau de réglages, retour utilisateur :
+// 8 curseurs à régler un par un est trop pour la quasi-totalité des hôtes,
+// qui veulent juste "rapide/normal/long"). 'normal' reprend exactement
+// DEFAULT_DURATIONS — les deux DOIVENT rester synchronisés. Le détail fin
+// reste accessible ensuite via les 8 DurationStepper existants, repliés par
+// défaut (voir durationsAdvancedOpen).
+const DURATION_PRESETS: {
+  key: 'fast' | 'normal' | 'long'
+  icon: string
+  labelKey: TranslationKey
+  hintKey: TranslationKey
+  values: PhaseDurations
+}[] = [
+  {
+    key: 'fast',
+    icon: '⚡',
+    labelKey: 'lobby.durationsPreset.fast',
+    hintKey: 'lobby.durationsPreset.fastHint',
+    values: {
+      role_reveal_intro_seconds: 30,
+      discussion_seconds: 120,
+      vote_seconds: 30,
+      vote_recap_seconds: 15,
+      night_step_seconds: 40,
+      wolf_chat_seconds: 90,
+      voyante_seconds: 30,
+      sorciere_seconds: 30,
+    },
+  },
+  {
+    key: 'normal',
+    icon: '🌙',
+    labelKey: 'lobby.durationsPreset.normal',
+    hintKey: 'lobby.durationsPreset.normalHint',
+    values: DEFAULT_DURATIONS,
+  },
+  {
+    key: 'long',
+    icon: '🕰️',
+    labelKey: 'lobby.durationsPreset.long',
+    hintKey: 'lobby.durationsPreset.longHint',
+    values: {
+      role_reveal_intro_seconds: 90,
+      discussion_seconds: 600,
+      vote_seconds: 60,
+      vote_recap_seconds: 60,
+      night_step_seconds: 100,
+      wolf_chat_seconds: 240,
+      voyante_seconds: 100,
+      sorciere_seconds: 100,
+    },
+  },
+]
+
 function formatDuration(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60)
   const s = totalSeconds % 60
@@ -99,6 +154,21 @@ export default function Lobby() {
   const [durations, setDurations] = useState<PhaseDurations>(DEFAULT_DURATIONS)
   const [customized, setCustomized] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  // Onglet actif du panneau de réglages (refonte — voir plus bas) : Rôles /
+  // Durées / Modération, au lieu d'une seule liste qui empilait tout.
+  const [settingsTab, setSettingsTab] = useState<'roles' | 'durees' | 'mod'>('roles')
+  // Description affichée à la demande (ⓘ) pour UN SEUL rôle à la fois, par
+  // groupe — évite d'afficher un paragraphe d'explication en permanence
+  // sous chaque rôle activable (retour utilisateur : trop de texte à
+  // scroller pour un hôte qui connaît déjà les rôles).
+  const [openHint, setOpenHint] = useState<{ group: string; key: string; text: string } | null>(null)
+  function toggleHint(group: string, key: string, text: string) {
+    setOpenHint((cur) => (cur?.key === key ? null : { group, key, text }))
+  }
+  // Repliés par défaut : la quasi-totalité des hôtes n'a besoin que d'un
+  // préréglage (voir DURATION_PRESETS) et ne touche jamais aux 8 réglages
+  // fins individuels.
+  const [durationsAdvancedOpen, setDurationsAdvancedOpen] = useState(false)
   const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [friends, setFriends] = useState<{ user_id: string; username: string; avatar_icon: string }[]>([])
@@ -332,6 +402,23 @@ export default function Lobby() {
     Number(counts.anancy) +
     Number(counts.ange) +
     Number(counts.grand_mechant_loup)
+  // Répartition Loups/Village affichée en barre (voir la refonte du panneau
+  // ci-dessous) — équilibre lisible d'un coup d'œil plutôt qu'un calcul de
+  // tête. Anancy (camp neutre) n'est compté ni comme loup ni comme village,
+  // comme dans RosterSummary.tsx.
+  const balanceWolves = counts.loup_garou + Number(counts.loup_alpha) + Number(counts.sans_visage) + Number(counts.grand_mechant_loup)
+  const balanceVillage =
+    Number(counts.voyante) +
+    Number(counts.sorciere) +
+    Number(counts.chasseur) +
+    Number(counts.petite_fille) +
+    Number(counts.cupidon) +
+    Number(counts.ancien) +
+    Number(counts.voleur) +
+    Number(counts.enfant_sauvage) +
+    Number(counts.griot) +
+    Number(counts.ange)
+  const balanceTotal = Math.max(balanceWolves + balanceVillage, 1)
   const rolesOverflow = customized && specialTotal > playerCount
   // Contrainte du Loup Alpha (voir migration 0088, assouplie en 0094 —
   // demande utilisateur : retrait du plafond de 2 Loups-Garous simples,
@@ -574,153 +661,249 @@ export default function Lobby() {
 
       {isHost && user && (
         <SideDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} title={t('lobby.settingsDrawerTitle')}>
-          <div className="flex flex-col gap-5">
-            <p className="text-xs text-moon-200/50">
-              {t('lobby.rolesSummary', { special: specialTotal, players: playerCount })}
-              {playerCount - specialTotal >= 0 ? t('lobby.villagersSuffix', { count: playerCount - specialTotal }) : '.'}
-            </p>
+          <div className="flex flex-col gap-4">
+            {/* Résumé + répartition Loups/Village : toujours visibles, quel
+                que soit l'onglet actif — vérifier l'équilibre de la partie
+                ne devrait jamais nécessiter d'aller chercher un onglet. */}
+            <div>
+              <p className="text-xs text-moon-200/50">
+                {t('lobby.rolesSummary', { special: specialTotal, players: playerCount })}
+                {playerCount - specialTotal >= 0 ? t('lobby.villagersSuffix', { count: playerCount - specialTotal }) : '.'}
+              </p>
+              <div className="mt-2.5 flex h-2 overflow-hidden rounded-full bg-night-700">
+                <div
+                  className="bg-gradient-to-r from-blood-600 to-blood-400 transition-all"
+                  style={{ width: `${(balanceWolves / balanceTotal) * 100}%` }}
+                />
+                <div
+                  className="bg-gradient-to-r from-moon-400/70 to-moon-300/50 transition-all"
+                  style={{ width: `${(balanceVillage / balanceTotal) * 100}%` }}
+                />
+              </div>
+              <div className="mt-1.5 flex justify-between text-[10.5px] text-moon-200/35">
+                <span>
+                  {t('roster.wolves')} ({balanceWolves})
+                </span>
+                <span>
+                  {t('roster.village')} ({balanceVillage})
+                </span>
+              </div>
+            </div>
+
             {rolesOverflow && <ErrorText>{t('lobby.rolesOverflow')}</ErrorText>}
             {alphaConstraintViolated && <ErrorText>{t('lobby.alphaConstraintViolated')}</ErrorText>}
 
-            <div className="flex flex-col gap-4">
-              <RoleStepper
-                label={`🐺 ${t(ROLES.loup_garou.nameKey)}`}
-                value={counts.loup_garou}
-                min={1}
-                max={Math.max(1, Math.floor(playerCount / 2))}
-                onChange={(v) => {
-                  setCounts((c) => ({ ...c, loup_garou: v }))
-                  setCustomized(true)
-                }}
-              />
-              <div>
-                <RoleToggle
-                  label={`👑 ${t(ROLES.loup_alpha.nameKey)}`}
-                  checked={counts.loup_alpha}
-                  onChange={(v) => {
-                    setCounts((c) => ({ ...c, loup_alpha: v }))
-                    setCustomized(true)
-                  }}
-                />
-                <p className="mt-1.5 text-xs text-moon-200/40">{t('lobby.alphaToggleHint')}</p>
-              </div>
-              <div>
-                <RoleToggle
-                  label={`👤 ${t(ROLES.sans_visage.nameKey)}`}
-                  checked={counts.sans_visage}
-                  onChange={(v) => {
-                    setCounts((c) => ({ ...c, sans_visage: v }))
-                    setCustomized(true)
-                  }}
-                />
-                <p className="mt-1.5 text-xs text-moon-200/40">{t('lobby.sansVisageToggleHint')}</p>
-              </div>
-              <div>
-                <RoleToggle
-                  label={`👹 ${t(ROLES.grand_mechant_loup.nameKey)}`}
-                  checked={counts.grand_mechant_loup}
-                  onChange={(v) => {
-                    setCounts((c) => ({ ...c, grand_mechant_loup: v }))
-                    setCustomized(true)
-                  }}
-                />
-                <p className="mt-1.5 text-xs text-moon-200/40">{t('lobby.grandMechantLoupToggleHint')}</p>
-              </div>
-              <RoleToggle label={`🔮 ${t(ROLES.voyante.nameKey)}`} checked={counts.voyante} onChange={(v) => { setCounts((c) => ({ ...c, voyante: v })); setCustomized(true) }} />
-              <RoleToggle label={`🧪 ${t(ROLES.sorciere.nameKey)}`} checked={counts.sorciere} onChange={(v) => { setCounts((c) => ({ ...c, sorciere: v })); setCustomized(true) }} />
-              <RoleToggle label={`🏹 ${t(ROLES.chasseur.nameKey)}`} checked={counts.chasseur} onChange={(v) => { setCounts((c) => ({ ...c, chasseur: v })); setCustomized(true) }} />
-              <RoleToggle label={`🎀 ${t(ROLES.petite_fille.nameKey)}`} checked={counts.petite_fille} onChange={(v) => { setCounts((c) => ({ ...c, petite_fille: v })); setCustomized(true) }} />
-              <RoleToggle label={`💘 ${t(ROLES.cupidon.nameKey)}`} checked={counts.cupidon} onChange={(v) => { setCounts((c) => ({ ...c, cupidon: v })); setCustomized(true) }} />
-              <RoleToggle label={`🧓 ${t(ROLES.ancien.nameKey)}`} checked={counts.ancien} onChange={(v) => { setCounts((c) => ({ ...c, ancien: v })); setCustomized(true) }} />
-              <RoleToggle label={`🃏 ${t(ROLES.voleur.nameKey)}`} checked={counts.voleur} onChange={(v) => { setCounts((c) => ({ ...c, voleur: v })); setCustomized(true) }} />
-              <RoleToggle label={`🐾 ${t(ROLES.enfant_sauvage.nameKey)}`} checked={counts.enfant_sauvage} onChange={(v) => { setCounts((c) => ({ ...c, enfant_sauvage: v })); setCustomized(true) }} />
-              <RoleToggle label={`🎭 ${t(ROLES.griot.nameKey)}`} checked={counts.griot} onChange={(v) => { setCounts((c) => ({ ...c, griot: v })); setCustomized(true) }} />
-              <div>
-                <RoleToggle
-                  label={`🕸️ ${t(ROLES.anancy.nameKey)}`}
-                  checked={counts.anancy}
-                  onChange={(v) => {
-                    setCounts((c) => ({ ...c, anancy: v }))
-                    setCustomized(true)
-                  }}
-                />
-                <p className="mt-1.5 text-xs text-moon-200/40">{t('lobby.anancyToggleHint')}</p>
-              </div>
-              <div>
-                <RoleToggle
-                  label={`👼 ${t(ROLES.ange.nameKey)}`}
-                  checked={counts.ange}
-                  onChange={(v) => {
-                    setCounts((c) => ({ ...c, ange: v }))
-                    setCustomized(true)
-                  }}
-                />
-                <p className="mt-1.5 text-xs text-moon-200/40">{t('lobby.angeToggleHint')}</p>
-              </div>
-              <div className="border-t border-night-700/60 pt-3">
-                <RoleToggle label={`🎖️ ${t('role.capitaine.name')}`} checked={counts.capitaine} onChange={(v) => { setCounts((c) => ({ ...c, capitaine: v })); setCustomized(true) }} />
-                <p className="mt-1.5 text-xs text-moon-200/40">{t('lobby.captainToggleHint')}</p>
-              </div>
-            </div>
+            <Segmented
+              tabs={[
+                { id: 'roles' as const, label: t('lobby.settingsTab.roles') },
+                { id: 'durees' as const, label: t('lobby.settingsTab.durations') },
+                { id: 'mod' as const, label: t('lobby.settingsTab.moderation') },
+              ]}
+              active={settingsTab}
+              onChange={setSettingsTab}
+            />
 
-            <div className="border-t border-night-700/60 pt-4">
-              <h3 className="mb-3 font-display text-sm text-moon-300">{t('lobby.durationsTitle')}</h3>
-              <div className="flex flex-col gap-3">
-                <DurationStepper
-                  label={t('lobby.duration.roleReveal')}
-                  value={durations.role_reveal_intro_seconds}
-                  min={15} max={180} step={15}
-                  onChange={(v) => { setDurations((d) => ({ ...d, role_reveal_intro_seconds: v })); setCustomized(true) }}
-                />
-                <DurationStepper
-                  label={t('lobby.duration.discussion')}
-                  value={durations.discussion_seconds}
-                  min={60} max={900} step={30}
-                  onChange={(v) => { setDurations((d) => ({ ...d, discussion_seconds: v })); setCustomized(true) }}
-                />
-                <DurationStepper
-                  label={t('lobby.duration.vote')}
-                  value={durations.vote_seconds}
-                  min={15} max={120} step={15}
-                  onChange={(v) => { setDurations((d) => ({ ...d, vote_seconds: v })); setCustomized(true) }}
-                />
-                <DurationStepper
-                  label={t('lobby.duration.voteRecap')}
-                  value={durations.vote_recap_seconds}
-                  min={15} max={180} step={15}
-                  onChange={(v) => { setDurations((d) => ({ ...d, vote_recap_seconds: v })); setCustomized(true) }}
-                />
-                <DurationStepper
-                  label={t('lobby.duration.voyante')}
-                  value={durations.voyante_seconds}
-                  min={20} max={180} step={10}
-                  onChange={(v) => { setDurations((d) => ({ ...d, voyante_seconds: v })); setCustomized(true) }}
-                />
-                <DurationStepper
-                  label={t('lobby.duration.sorciere')}
-                  value={durations.sorciere_seconds}
-                  min={20} max={180} step={10}
-                  onChange={(v) => { setDurations((d) => ({ ...d, sorciere_seconds: v })); setCustomized(true) }}
-                />
-                <DurationStepper
-                  label={t('lobby.duration.nightSteps')}
-                  value={durations.night_step_seconds}
-                  min={30} max={180} step={10}
-                  onChange={(v) => { setDurations((d) => ({ ...d, night_step_seconds: v })); setCustomized(true) }}
-                />
-                <DurationStepper
-                  label={t('lobby.duration.wolfChat')}
-                  value={durations.wolf_chat_seconds}
-                  min={60} max={300} step={30}
-                  onChange={(v) => { setDurations((d) => ({ ...d, wolf_chat_seconds: v })); setCustomized(true) }}
-                />
-              </div>
-            </div>
+            {settingsTab === 'roles' && (
+              <div className="flex flex-col">
+                {/* --- Loups --- */}
+                <div>
+                  <div className="mb-2.5 flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-sm bg-blood-500" />
+                    <h4 className="font-display text-[11px] font-semibold uppercase tracking-wider text-moon-300">
+                      {t('lobby.roleGroup.loups')}
+                    </h4>
+                  </div>
+                  <div className="mb-2.5 flex items-center justify-between rounded-xl border border-blood-500/35 bg-gradient-to-b from-blood-600/15 to-blood-600/5 px-3.5 py-2.5">
+                    <span className="flex items-center gap-2 text-sm font-semibold text-moon-200">🐺 {t(ROLES.loup_garou.nameKey)}</span>
+                    <RoleStepperControls
+                      value={counts.loup_garou}
+                      min={1}
+                      max={Math.max(1, Math.floor(playerCount / 2))}
+                      onChange={(v) => {
+                        setCounts((c) => ({ ...c, loup_garou: v }))
+                        setCustomized(true)
+                      }}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <RoleChip
+                      emoji="👑"
+                      label={t(ROLES.loup_alpha.nameKey)}
+                      checked={counts.loup_alpha}
+                      onChange={(v) => { setCounts((c) => ({ ...c, loup_alpha: v })); setCustomized(true) }}
+                      hintOpen={openHint?.key === 'loup_alpha'}
+                      onToggleHint={() => toggleHint('loups', 'loup_alpha', t('lobby.alphaToggleHint'))}
+                    />
+                    <RoleChip
+                      emoji="👤"
+                      label={t(ROLES.sans_visage.nameKey)}
+                      checked={counts.sans_visage}
+                      onChange={(v) => { setCounts((c) => ({ ...c, sans_visage: v })); setCustomized(true) }}
+                      hintOpen={openHint?.key === 'sans_visage'}
+                      onToggleHint={() => toggleHint('loups', 'sans_visage', t('lobby.sansVisageToggleHint'))}
+                    />
+                    <RoleChip
+                      emoji="👹"
+                      label={t(ROLES.grand_mechant_loup.nameKey)}
+                      checked={counts.grand_mechant_loup}
+                      onChange={(v) => { setCounts((c) => ({ ...c, grand_mechant_loup: v })); setCustomized(true) }}
+                      hintOpen={openHint?.key === 'grand_mechant_loup'}
+                      onToggleHint={() => toggleHint('loups', 'grand_mechant_loup', t('lobby.grandMechantLoupToggleHint'))}
+                    />
+                  </div>
+                  {openHint?.group === 'loups' && <RoleHintBox text={openHint.text} />}
+                </div>
 
-            <div className="border-t border-night-700/60 pt-4">
-              <h3 className="mb-3 font-display text-sm text-moon-300">{t('moderation.title')}</h3>
-              <ModerationPanel view={view} gameId={gameId!} selfId={user.id} />
-            </div>
+                {/* --- Village --- */}
+                <div className="mt-5">
+                  <div className="mb-2.5 flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-sm bg-moon-400" />
+                    <h4 className="font-display text-[11px] font-semibold uppercase tracking-wider text-moon-300">
+                      {t('lobby.roleGroup.village')}
+                    </h4>
+                    <span className="ml-auto text-[11px] text-moon-200/35">{t('lobby.roleGroup.villageHint')}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <RoleChip emoji="🔮" label={t(ROLES.voyante.nameKey)} checked={counts.voyante} onChange={(v) => { setCounts((c) => ({ ...c, voyante: v })); setCustomized(true) }} hintOpen={openHint?.key === 'voyante'} onToggleHint={() => toggleHint('village', 'voyante', t('lobby.voyanteToggleHint'))} />
+                    <RoleChip emoji="🧪" label={t(ROLES.sorciere.nameKey)} checked={counts.sorciere} onChange={(v) => { setCounts((c) => ({ ...c, sorciere: v })); setCustomized(true) }} hintOpen={openHint?.key === 'sorciere'} onToggleHint={() => toggleHint('village', 'sorciere', t('lobby.sorciereToggleHint'))} />
+                    <RoleChip emoji="🏹" label={t(ROLES.chasseur.nameKey)} checked={counts.chasseur} onChange={(v) => { setCounts((c) => ({ ...c, chasseur: v })); setCustomized(true) }} hintOpen={openHint?.key === 'chasseur'} onToggleHint={() => toggleHint('village', 'chasseur', t('lobby.chasseurToggleHint'))} />
+                    <RoleChip emoji="🎀" label={t(ROLES.petite_fille.nameKey)} checked={counts.petite_fille} onChange={(v) => { setCounts((c) => ({ ...c, petite_fille: v })); setCustomized(true) }} hintOpen={openHint?.key === 'petite_fille'} onToggleHint={() => toggleHint('village', 'petite_fille', t('lobby.petiteFilleToggleHint'))} />
+                    <RoleChip emoji="💘" label={t(ROLES.cupidon.nameKey)} checked={counts.cupidon} onChange={(v) => { setCounts((c) => ({ ...c, cupidon: v })); setCustomized(true) }} hintOpen={openHint?.key === 'cupidon'} onToggleHint={() => toggleHint('village', 'cupidon', t('lobby.cupidonToggleHint'))} />
+                    <RoleChip emoji="🧓" label={t(ROLES.ancien.nameKey)} checked={counts.ancien} onChange={(v) => { setCounts((c) => ({ ...c, ancien: v })); setCustomized(true) }} hintOpen={openHint?.key === 'ancien'} onToggleHint={() => toggleHint('village', 'ancien', t('lobby.ancienToggleHint'))} />
+                    <RoleChip emoji="🃏" label={t(ROLES.voleur.nameKey)} checked={counts.voleur} onChange={(v) => { setCounts((c) => ({ ...c, voleur: v })); setCustomized(true) }} hintOpen={openHint?.key === 'voleur'} onToggleHint={() => toggleHint('village', 'voleur', t('lobby.voleurToggleHint'))} />
+                    <RoleChip emoji="🐾" label={t(ROLES.enfant_sauvage.nameKey)} checked={counts.enfant_sauvage} onChange={(v) => { setCounts((c) => ({ ...c, enfant_sauvage: v })); setCustomized(true) }} hintOpen={openHint?.key === 'enfant_sauvage'} onToggleHint={() => toggleHint('village', 'enfant_sauvage', t('lobby.enfantSauvageToggleHint'))} />
+                  </div>
+                  {openHint?.group === 'village' && <RoleHintBox text={openHint.text} />}
+                </div>
+
+                {/* --- Rôles maison --- */}
+                <div className="mt-5">
+                  <div className="mb-2.5 flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-sm bg-moon-300" />
+                    <h4 className="font-display text-[11px] font-semibold uppercase tracking-wider text-moon-300">
+                      {t('lobby.roleGroup.maison')}
+                    </h4>
+                    <span className="ml-auto text-[11px] text-moon-200/35">{t('lobby.roleGroup.maisonHint')}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <RoleChip emoji="🎭" label={t(ROLES.griot.nameKey)} checked={counts.griot} onChange={(v) => { setCounts((c) => ({ ...c, griot: v })); setCustomized(true) }} hintOpen={openHint?.key === 'griot'} onToggleHint={() => toggleHint('maison', 'griot', t('lobby.griotToggleHint'))} />
+                    <RoleChip emoji="🕸️" label={t(ROLES.anancy.nameKey)} neutral checked={counts.anancy} onChange={(v) => { setCounts((c) => ({ ...c, anancy: v })); setCustomized(true) }} hintOpen={openHint?.key === 'anancy'} onToggleHint={() => toggleHint('maison', 'anancy', t('lobby.anancyToggleHint'))} />
+                    <RoleChip emoji="👼" label={t(ROLES.ange.nameKey)} checked={counts.ange} onChange={(v) => { setCounts((c) => ({ ...c, ange: v })); setCustomized(true) }} hintOpen={openHint?.key === 'ange'} onToggleHint={() => toggleHint('maison', 'ange', t('lobby.angeToggleHint'))} />
+                  </div>
+                  {openHint?.group === 'maison' && <RoleHintBox text={openHint.text} />}
+                </div>
+
+                {/* --- Autre --- */}
+                <div className="mt-5">
+                  <div className="mb-2.5 flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-sm bg-moon-200/40" />
+                    <h4 className="font-display text-[11px] font-semibold uppercase tracking-wider text-moon-300">
+                      {t('lobby.roleGroup.other')}
+                    </h4>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <RoleChip emoji="🎖️" label={t('role.capitaine.name')} checked={counts.capitaine} onChange={(v) => { setCounts((c) => ({ ...c, capitaine: v })); setCustomized(true) }} hintOpen={openHint?.key === 'capitaine'} onToggleHint={() => toggleHint('autre', 'capitaine', t('lobby.captainToggleHint'))} />
+                  </div>
+                  {openHint?.group === 'autre' && <RoleHintBox text={openHint.text} />}
+                </div>
+              </div>
+            )}
+
+            {settingsTab === 'durees' && (
+              <div>
+                <p className="mb-3.5 text-xs leading-relaxed text-moon-200/40">{t('lobby.durationsTitle')}</p>
+                <div className="mb-3.5 flex gap-2">
+                  {DURATION_PRESETS.map((preset) => {
+                    const active = JSON.stringify(durations) === JSON.stringify(preset.values)
+                    return (
+                      <button
+                        key={preset.key}
+                        type="button"
+                        onClick={() => {
+                          setDurations(preset.values)
+                          setCustomized(true)
+                        }}
+                        className={`flex-1 rounded-xl border px-2 py-3 text-center transition-colors ${
+                          active
+                            ? 'border-blood-400/60 bg-gradient-to-b from-blood-600/24 to-blood-600/10'
+                            : 'border-night-600/70 bg-night-900/40 hover:border-moon-400/40'
+                        }`}
+                      >
+                        <span className="block text-base leading-none">{preset.icon}</span>
+                        <span className={`mt-1.5 block font-display text-[11.5px] font-semibold ${active ? 'text-moon-200' : 'text-moon-200/80'}`}>
+                          {t(preset.labelKey)}
+                        </span>
+                        <span className="mt-0.5 block text-[10px] text-moon-200/40">{t(preset.hintKey)}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setDurationsAdvancedOpen((v) => !v)}
+                  className="flex w-full items-center justify-between rounded-xl border border-night-600/60 bg-night-900/30 px-3.5 py-2.5 text-xs font-semibold text-moon-200/60 transition-colors hover:text-moon-200"
+                >
+                  <span>{t('lobby.durationsAdvanced', { count: 8 })}</span>
+                  <span className={`transition-transform ${durationsAdvancedOpen ? 'rotate-180' : ''}`}>▾</span>
+                </button>
+
+                {durationsAdvancedOpen && (
+                  <div className="mt-3 flex flex-col gap-3">
+                    <DurationStepper
+                      label={t('lobby.duration.roleReveal')}
+                      value={durations.role_reveal_intro_seconds}
+                      min={15} max={180} step={15}
+                      onChange={(v) => { setDurations((d) => ({ ...d, role_reveal_intro_seconds: v })); setCustomized(true) }}
+                    />
+                    <DurationStepper
+                      label={t('lobby.duration.discussion')}
+                      value={durations.discussion_seconds}
+                      min={60} max={900} step={30}
+                      onChange={(v) => { setDurations((d) => ({ ...d, discussion_seconds: v })); setCustomized(true) }}
+                    />
+                    <DurationStepper
+                      label={t('lobby.duration.vote')}
+                      value={durations.vote_seconds}
+                      min={15} max={120} step={15}
+                      onChange={(v) => { setDurations((d) => ({ ...d, vote_seconds: v })); setCustomized(true) }}
+                    />
+                    <DurationStepper
+                      label={t('lobby.duration.voteRecap')}
+                      value={durations.vote_recap_seconds}
+                      min={15} max={180} step={15}
+                      onChange={(v) => { setDurations((d) => ({ ...d, vote_recap_seconds: v })); setCustomized(true) }}
+                    />
+                    <DurationStepper
+                      label={t('lobby.duration.voyante')}
+                      value={durations.voyante_seconds}
+                      min={20} max={180} step={10}
+                      onChange={(v) => { setDurations((d) => ({ ...d, voyante_seconds: v })); setCustomized(true) }}
+                    />
+                    <DurationStepper
+                      label={t('lobby.duration.sorciere')}
+                      value={durations.sorciere_seconds}
+                      min={20} max={180} step={10}
+                      onChange={(v) => { setDurations((d) => ({ ...d, sorciere_seconds: v })); setCustomized(true) }}
+                    />
+                    <DurationStepper
+                      label={t('lobby.duration.nightSteps')}
+                      value={durations.night_step_seconds}
+                      min={30} max={180} step={10}
+                      onChange={(v) => { setDurations((d) => ({ ...d, night_step_seconds: v })); setCustomized(true) }}
+                    />
+                    <DurationStepper
+                      label={t('lobby.duration.wolfChat')}
+                      value={durations.wolf_chat_seconds}
+                      min={60} max={300} step={30}
+                      onChange={(v) => { setDurations((d) => ({ ...d, wolf_chat_seconds: v })); setCustomized(true) }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {settingsTab === 'mod' && <ModerationPanel view={view} gameId={gameId!} selfId={user.id} />}
           </div>
         </SideDrawer>
       )}
@@ -728,61 +911,118 @@ export default function Lobby() {
   )
 }
 
-function RoleStepper({
-  label,
+/** Juste les contrôles −/N/+ (sans libellé) : le Loup-Garou est le seul rôle
+ * à effectif variable, mis en avant dans un encart dédié (voir l'onglet
+ * Rôles ci-dessus) où le libellé est déjà rendu séparément dans cet
+ * encart. */
+function RoleStepperControls({
   value,
   min,
   max,
   onChange,
 }: {
-  label: string
   value: number
   min: number
   max: number
   onChange: (v: number) => void
 }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-moon-200/80">{label}</span>
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => onChange(Math.max(min, value - 1))}
-          className="h-8 w-8 rounded-lg border border-night-500 text-moon-200 hover:bg-night-700"
-        >
-          −
-        </button>
-        <span className="w-6 text-center font-semibold text-moon-200">{value}</span>
-        <button
-          type="button"
-          onClick={() => onChange(Math.min(max, value + 1))}
-          className="h-8 w-8 rounded-lg border border-night-500 text-moon-200 hover:bg-night-700"
-        >
-          +
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function RoleToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-moon-200/80">{label}</span>
+    <div className="flex items-center gap-3">
       <button
         type="button"
-        onClick={() => onChange(!checked)}
-        className={`relative h-7 w-12 rounded-full transition-colors ${checked ? 'bg-blood-600' : 'bg-night-600'}`}
+        onClick={() => onChange(Math.max(min, value - 1))}
+        className="h-8 w-8 rounded-lg border border-night-500 text-moon-200 hover:bg-night-700"
       >
-        <span
-          className={`absolute top-1 h-5 w-5 rounded-full bg-moon-200 transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`}
-        />
+        −
+      </button>
+      <span className="w-6 text-center font-semibold text-moon-200">{value}</span>
+      <button
+        type="button"
+        onClick={() => onChange(Math.min(max, value + 1))}
+        className="h-8 w-8 rounded-lg border border-night-500 text-moon-200 hover:bg-night-700"
+      >
+        +
       </button>
     </div>
   )
 }
 
-/** Même patron que RoleStepper, mais pour une durée en secondes : affiche
+/** Carte compacte pour activer/désactiver un rôle (remplace l'ancienne ligne
+ * "libellé + interrupteur" empilée verticalement — retour utilisateur :
+ * trop de lignes identiques à parcourir). Deux zones cliquables distinctes :
+ * la carte entière bascule le rôle, le bouton ⓘ affiche/masque sa
+ * description sans y toucher (voir RoleHintBox, un seul ouvert à la fois
+ * par groupe). `neutral` affiche le petit badge "neutre" (Anancy, seul rôle
+ * hors camp Loups/Village). */
+function RoleChip({
+  emoji,
+  label,
+  checked,
+  onChange,
+  hintOpen,
+  onToggleHint,
+  neutral = false,
+}: {
+  emoji: string
+  label: string
+  checked: boolean
+  onChange: (v: boolean) => void
+  hintOpen: boolean
+  onToggleHint: () => void
+  neutral?: boolean
+}) {
+  const { t } = useLanguage()
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => onChange(!checked)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onChange(!checked)
+        }
+      }}
+      className={`relative flex cursor-pointer items-center gap-1.5 rounded-xl border px-2.5 py-2 transition-colors ${
+        checked
+          ? 'border-blood-400/60 bg-gradient-to-b from-blood-600/28 to-blood-600/14'
+          : 'border-night-600/70 bg-night-900/45 hover:border-moon-400/40'
+      }`}
+    >
+      {neutral && (
+        <span className="absolute -top-2 right-2 rounded-full border border-moon-400/50 bg-night-800 px-1.5 py-px font-display text-[8px] font-semibold uppercase tracking-wide text-moon-300">
+          {t('role.team.neutre')}
+        </span>
+      )}
+      <span className="text-sm leading-none">{emoji}</span>
+      <span className={`min-w-0 flex-1 truncate text-xs font-semibold ${checked ? 'text-moon-200' : 'text-moon-200/80'}`}>{label}</span>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          onToggleHint()
+        }}
+        aria-label={t('common.info')}
+        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[9px] transition-colors ${
+          hintOpen ? 'border-moon-400 text-moon-300' : 'border-night-500 text-moon-200/40 hover:border-moon-400/50 hover:text-moon-300'
+        }`}
+      >
+        i
+      </button>
+    </div>
+  )
+}
+
+/** Description d'un rôle, affichée sous la grille de son groupe uniquement
+ * quand son ⓘ est activé (voir RoleChip) — un seul texte à la fois par
+ * groupe, jamais un paragraphe permanent par rôle. */
+function RoleHintBox({ text }: { text: string }) {
+  return (
+    <p className="mt-2 rounded-xl border border-moon-400/25 bg-moon-400/5 px-3 py-2.5 text-xs leading-relaxed text-moon-200/70">{text}</p>
+  )
+}
+
+/** Même patron que RoleStepperControls, mais pour une durée en secondes : affiche
  * "5min" / "90s" / "2min 30s" plutôt qu'un nombre brut, plus lisible pour
  * des valeurs qui montent à plusieurs centaines de secondes. */
 function DurationStepper({
