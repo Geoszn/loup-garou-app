@@ -8,14 +8,19 @@ import { Modal } from './ui'
 import { useLanguage } from '../i18n/LanguageContext'
 
 // Rôles spéciaux qu'on affiche en détail (statut vivant/éliminé).
-// Volontairement sans 'loup_garou', 'loup_alpha' ni 'sans_visage' (tous les
-// trois comptés à part, camp par camp, dans totalWolves/deadWolves plus bas
-// — le Sans-Visage fonctionne exactement comme un Loup-Garou simple, voir
-// migration 0118) ni 'capitaine' (un titre, pas un rôle avec sa propre
-// carte). 'anancy' est inclus ici malgré son camp neutre (voir migration
-// 0119) : contrairement aux loups, il n'est pas comptabilisé dans les totaux
-// Loups/Village (voir totalNeutral plus bas), donc son statut individuel
-// est la seule façon de le suivre dans ce panneau.
+// Volontairement sans 'loup_garou', 'loup_alpha', 'sans_visage' ni
+// 'grand_mechant_loup' (tous les quatre comptés à part, camp par camp, dans
+// totalWolves/deadWolves plus bas — Sans-Visage et Grand Méchant Loup
+// fonctionnent tous deux exactement comme un Loup-Garou simple pour le vote
+// et le décompte, voir migrations 0118/0121) ni 'capitaine' (un titre, pas
+// un rôle avec sa propre carte). 'anancy' est inclus ici malgré son camp
+// neutre (voir migration 0119) : contrairement aux loups, il n'est pas
+// comptabilisé dans les totaux Loups/Village (voir totalNeutral plus bas),
+// donc son statut individuel est la seule façon de le suivre dans ce
+// panneau. 'ange' (voir migration 0121) est un rôle village comme les
+// autres de cette liste — inclus pour la même raison qu'eux (suivre s'il
+// est encore en vie), même si sa fenêtre de victoire personnelle ne dure
+// que le tout premier cycle.
 const SPECIAL_ROLE_KEYS: RoleId[] = [
   'voyante',
   'sorciere',
@@ -26,6 +31,7 @@ const SPECIAL_ROLE_KEYS: RoleId[] = [
   'voleur',
   'enfant_sauvage',
   'griot',
+  'ange',
   'anancy',
 ]
 
@@ -109,12 +115,16 @@ export function RosterSummary({
     (roleCounts?.loup_garou ?? 0) +
     (roleCounts?.loup_alpha ? 1 : 0) +
     (roleCounts?.sans_visage ? 1 : 0) +
+    (roleCounts?.grand_mechant_loup ? 1 : 0) +
     (infectionOccurred ? 1 : 0) +
     (wildChildConversionOccurred ? 1 : 0)
   const deadWolves = players.filter(
     (p) =>
       !p.is_alive &&
-      (p.revealed_role === 'loup_garou' || p.revealed_role === 'loup_alpha' || p.revealed_role === 'sans_visage')
+      (p.revealed_role === 'loup_garou' ||
+        p.revealed_role === 'loup_alpha' ||
+        p.revealed_role === 'sans_visage' ||
+        p.revealed_role === 'grand_mechant_loup')
   ).length
   const remainingWolves = Math.max(totalWolves - deadWolves, 0)
   // Anancy (voir migration 0119) : camp neutre, ni loup ni village — sans
