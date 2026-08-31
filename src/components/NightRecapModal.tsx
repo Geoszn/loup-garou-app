@@ -27,18 +27,17 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
   const entries = view.night_recap ?? []
 
   // Cupidon et l'Enfant Sauvage n'agissent qu'à la nuit 1 (voir
-  // next_night_step, 0052_enfant_sauvage.sql) — lover_id/mentee_ids restent
-  // vrais tout le reste de la partie (migration 0061), mais on ne les
-  // affiche ici que la toute première fois, au moment où ça vient de se
+  // next_night_step, 0052_enfant_sauvage.sql) — lover_id/chosen_as_mentor
+  // restent vrais tout le reste de la partie (migration 0061), mais on ne
+  // les affiche ici que la toute première fois, au moment où ça vient de se
   // décider. Ces deux infos sont privées : jamais dans le journal public
   // (night_recap/entries), pour ne pas les révéler à tout le village.
   const isFirstNight = view.game.night_number === 1
   const loverName = isFirstNight && view.lover_id ? view.players.find((p) => p.user_id === view.lover_id)?.display_name : null
-  const mentees = isFirstNight
-    ? (view.mentee_ids ?? [])
-        .map((id) => ({ id, name: view.players.find((p) => p.user_id === id)?.display_name }))
-        .filter((m): m is { id: string; name: string } => !!m.name)
-    : []
+  // Volontairement un simple booléen (voir chosen_as_mentor, migration 0126)
+  // — contrairement à loverName ci-dessus, jamais l'identité de l'Enfant
+  // Sauvage : le mentor sait QU'IL a été désigné, jamais PAR QUI.
+  const isMentor = isFirstNight && view.chosen_as_mentor
 
   // Potion de la Sorcière : contrairement au journal public (entries,
   // toujours anonyme pour le soin, et noyé parmi le reste pour le poison),
@@ -49,7 +48,7 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
   const witchPoisonedMe = view.witch_poisoned_me
 
   // Conversion de l'Enfant Sauvage à la mort de son mentor : peut survenir
-  // n'importe quelle nuit (contrairement à Cupidon/mentee_ids, réservés à la
+  // n'importe quelle nuit (contrairement à Cupidon/chosen_as_mentor, réservés à la
   // nuit 1), donc pas de garde `isFirstNight` ici. Strictement personnel
   // (voir migration 0069) — avant ce correctif, kill_player annonçait ce
   // changement en clair dans le journal public, révélant l'identité de
@@ -125,7 +124,7 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
 
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {(loverName ||
-            mentees.length > 0 ||
+            isMentor ||
             witchSavedMe ||
             witchPoisonedMe ||
             wildChildTurnedWolf ||
@@ -141,12 +140,12 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
                   <p className="mt-1 text-sm text-moon-200/90">{t('game.loverReveal', { name: loverName })}</p>
                 </div>
               )}
-              {mentees.map((m) => (
-                <div key={m.id} className="animate-fade-in rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2.5">
+              {isMentor && (
+                <div className="animate-fade-in rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2.5">
                   <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">{t('game.mentorRevealTitle')}</p>
-                  <p className="mt-1 text-sm text-moon-200/90">{t('game.mentorReveal', { name: m.name })}</p>
+                  <p className="mt-1 text-sm text-moon-200/90">{t('game.mentorReveal')}</p>
                 </div>
-              ))}
+              )}
               {/* Encart personnel pour la cible de la potion — jamais visible
                   pour qui que ce soit d'autre (voir witch_saved_me/
                   witch_poisoned_me, migration 0068). Le journal public reste

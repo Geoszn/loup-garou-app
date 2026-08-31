@@ -201,15 +201,18 @@ export interface MyGameView {
   // converti en Loup-Garou après la mort de ce mentor. null tant qu'il n'a
   // pas encore choisi, ou pour tout autre rôle.
   wild_child_mentor: string | null
-  // Inverse de wild_child_mentor : les Enfants Sauvages qui ME choisissent
-  // comme mentor (voir migration 0061). Toujours calculé, mais uniquement
-  // affiché à la nuit 1 par NightRecapModal — seul moment où ce choix a
-  // lieu (voir next_night_step, 0052_enfant_sauvage.sql).
-  mentee_ids: string[]
+  // Inverse de wild_child_mentor : est-ce qu'un (ou plusieurs) Enfant
+  // Sauvage m'a choisi comme mentor (voir migration 0061, durcie en 0126) ?
+  // Volontairement un simple booléen, jamais l'identité de l'Enfant Sauvage
+  // — retour utilisateur explicite : le mentor doit savoir QU'IL a été
+  // désigné, jamais PAR QUI. Toujours calculé, mais uniquement affiché à la
+  // nuit 1 par NightRecapModal — seul moment où ce choix a lieu (voir
+  // next_night_step, 0052_enfant_sauvage.sql).
+  chosen_as_mentor: boolean
   // Personnel (calculé côté serveur à partir de auth.uid(), voir migration
   // 0068) : est-ce que MOI j'ai été la cible de la potion de vie / de mort
   // de la Sorcière CETTE nuit — vrai uniquement pendant le récap de nuit
-  // correspondant (statut 'day_reveal'), comme lover_id/mentee_ids ci-dessus.
+  // correspondant (statut 'day_reveal'), comme lover_id/chosen_as_mentor ci-dessus.
   witch_saved_me: boolean
   witch_poisoned_me: boolean
   // Personnel (calculé côté serveur, voir migration 0069) : est-ce que MOI

@@ -739,9 +739,12 @@ export const translations = {
     en: 'Cupid has struck: you are in love with {{name}}. If one of you dies, the other will die of heartbreak.',
   },
   'game.mentorRevealTitle': { fr: '🌱 Modèle choisi', en: '🌱 Chosen as a role model' },
+  // Volontairement anonyme (voir chosen_as_mentor, migration 0126) : le
+  // mentor sait qu'il a été désigné, jamais par qui — l'Enfant Sauvage garde
+  // son identité secrète, y compris vis-à-vis de son propre mentor.
   'game.mentorReveal': {
-    fr: '{{name}} vous a choisi(e) comme mentor. Si vous mourez, {{name}} rejoindra les Loups-Garous par vengeance.',
-    en: '{{name}} has chosen you as their role model. If you die, {{name}} will join the Werewolves out of revenge.',
+    fr: 'Quelqu’un vous a secrètement choisi(e) comme mentor. Si vous mourez, cette personne rejoindra les Loups-Garous par vengeance — vous ne saurez jamais qui.',
+    en: 'Someone has secretly chosen you as their role model. If you die, they will join the Werewolves out of revenge — you will never know who.',
   },
   'game.witchSavedMeTitle': { fr: '🧪 Sauvé(e) de justesse', en: '🧪 Saved just in time' },
   'game.witchSavedMe': {
