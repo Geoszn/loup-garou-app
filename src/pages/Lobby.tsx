@@ -143,7 +143,7 @@ function formatDuration(totalSeconds: number): string {
 
 export default function Lobby() {
   const { code } = useParams()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const navigate = useNavigate()
   const { t } = useLanguage()
   const [gameId, setGameId] = useState<string | null>(null)
@@ -174,6 +174,12 @@ export default function Lobby() {
   const [friends, setFriends] = useState<{ user_id: string; username: string; avatar_icon: string }[]>([])
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
   const [inviteError, setInviteError] = useState<string | null>(null)
+  // Mode de test solo (voir migration 0127) : réservé à l'admin, jamais
+  // affiché pour un autre compte. addingBot évite un double-clic pendant
+  // l'aller-retour réseau (chaque bot ajouté déclenche un re-fetch de la
+  // partie via Realtime, pas besoin de mettre à jour l'état local ici).
+  const [addingBot, setAddingBot] = useState(false)
+  const [botError, setBotError] = useState<string | null>(null)
   // Id du joueur dont la fiche (PlayerProfileModal) est actuellement
   // ouverte — plus besoin d'écouteur "clic en dehors" comme avec l'ancien
   // popover ancré : Modal gère déjà son propre clic sur le fond pour se
@@ -359,6 +365,22 @@ export default function Lobby() {
     // commentaire de notifyGameInvite) — la plupart des amis n'auront pas
     // encore activé les notifications.
     void notifyGameInvite(gameId, friendId)
+  }
+
+  async function addBot() {
+    if (!gameId) return
+    setAddingBot(true)
+    setBotError(null)
+    const { error } = await supabase.rpc('admin_add_bot', { p_game_id: gameId })
+    setAddingBot(false)
+    if (error) setBotError(error.message)
+  }
+
+  async function removeBot(botId: string) {
+    if (!gameId) return
+    setBotError(null)
+    const { error } = await supabase.rpc('admin_remove_bot', { p_game_id: gameId, p_bot_id: botId })
+    if (error) setBotError(error.message)
   }
 
   async function handleLeave() {
@@ -547,18 +569,35 @@ export default function Lobby() {
         />
 
         <Card>
-          <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-display text-lg text-moon-200">{t('lobby.playersTitle', { count: playerCount })}</h2>
-            {invitableFriends.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setInviteOpen((v) => !v)}
-                className="shrink-0 text-xs font-semibold text-moon-300 underline underline-offset-4 transition-colors hover:text-moon-200"
-              >
-                {inviteOpen ? t('lobby.closeInvite') : t('lobby.inviteFriendsToggle')}
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {/* Mode de test solo (voir migration 0127) : réservé à l'admin
+                  ET à ses propres salons (isHost) — jamais visible pour un
+                  autre compte, ni pour l'admin dans le salon de quelqu'un
+                  d'autre. */}
+              {profile?.is_admin && isHost && (
+                <button
+                  type="button"
+                  onClick={addBot}
+                  disabled={addingBot}
+                  className="shrink-0 text-xs font-semibold text-moon-300 underline underline-offset-4 transition-colors hover:text-moon-200 disabled:opacity-50"
+                >
+                  {addingBot ? t('common.sending') : t('lobby.addBotButton')}
+                </button>
+              )}
+              {invitableFriends.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setInviteOpen((v) => !v)}
+                  className="shrink-0 text-xs font-semibold text-moon-300 underline underline-offset-4 transition-colors hover:text-moon-200"
+                >
+                  {inviteOpen ? t('lobby.closeInvite') : t('lobby.inviteFriendsToggle')}
+                </button>
+              )}
+            </div>
           </div>
+          {botError && <ErrorText>{botError}</ErrorText>}
 
           {inviteOpen && invitableFriends.length > 0 && (
             <div className="mb-4 flex flex-col gap-2 border-b border-night-700/60 pb-4">
@@ -587,8 +626,23 @@ export default function Lobby() {
           <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {view.players.map((p) => {
               const isSelf = p.user_id === user?.id
+              // Détection légère : les bots sont ajoutés avec ce préfixe
+              // (voir admin_add_bot, migration 0127) — évite de faire
+              // transiter is_bot jusque dans get_my_game_view juste pour ce
+              // petit bouton admin.
+              const isBot = p.display_name.startsWith('🤖 ')
               return (
                 <li key={p.id} className="relative">
+                  {profile?.is_admin && isHost && isBot && (
+                    <button
+                      type="button"
+                      onClick={() => removeBot(p.user_id)}
+                      title={t('lobby.removeBotButton')}
+                      className="absolute -right-1.5 -top-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full border border-night-600 bg-night-800 text-[10px] text-moon-200/60 transition-colors hover:border-blood-500/60 hover:text-blood-400"
+                    >
+                      ✕
+                    </button>
+                  )}
                   <button
                     type="button"
                     disabled={isSelf}

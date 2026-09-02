@@ -477,6 +477,9 @@ export const translations = {
   'lobby.playersTitle': { fr: 'Joueurs ({{count}}/25)', en: 'Players ({{count}}/25)' },
   'lobby.closeInvite': { fr: 'Fermer', en: 'Close' },
   'lobby.inviteFriendsToggle': { fr: '+ Inviter des amis', en: '+ Invite friends' },
+  // Mode de test solo (voir migration 0127) — réservé à l'admin.
+  'lobby.addBotButton': { fr: '🤖 Ajouter un bot', en: '🤖 Add a bot' },
+  'lobby.removeBotButton': { fr: 'Retirer ce bot', en: 'Remove this bot' },
   'lobby.invited': { fr: 'Invité ✓', en: 'Invited ✓' },
   'lobby.inviteButton': { fr: 'Inviter', en: 'Invite' },
   'lobby.needMorePlayers': { fr: 'Il faut au moins 4 joueurs', en: 'At least 4 players are needed' },
@@ -804,6 +807,8 @@ export const translations = {
   },
   'game.menuTitle': { fr: 'Réglages de la partie', en: 'Game settings' },
   'game.leaveGameMenuItem': { fr: '🚪 Quitter la partie', en: '🚪 Leave the game' },
+  // Mode de test solo (voir migration 0127) — réservé à l'admin.
+  'game.autoPlayBotsButton': { fr: '🤖 Faire jouer les bots', en: '🤖 Auto-play bots' },
   'game.nightChatNote': {
     fr: '🎭 Chat anonyme le temps de la nuit — personne ne sait qui écrit quoi (sauf la Petite Fille, si elle est en vie).',
     en: "🎭 Anonymous chat for the night — no one knows who wrote what (except the Little Girl, if she's alive).",

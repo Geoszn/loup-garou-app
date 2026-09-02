@@ -33,7 +33,7 @@ import type { VoiceChannel } from '../hooks/useVoiceChat'
 
 export default function GameRoom() {
   const { code } = useParams()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
   const { setMyStatus } = usePresence()
   const navigate = useNavigate()
   const { t } = useLanguage()
@@ -87,6 +87,9 @@ export default function GameRoom() {
   const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false)
   const [modOpen, setModOpen] = useState(false)
   const [showDeathImpact, setShowDeathImpact] = useState(false)
+  // Mode de test solo (voir migration 0127) — réservé à l'admin.
+  const [botPlayLoading, setBotPlayLoading] = useState(false)
+  const [botPlayError, setBotPlayError] = useState<string | null>(null)
   // Voir handleRestart plus bas : état du bouton "Rejouer avec ce groupe"
   // (écran de fin de partie, EndScreen).
   const [restarting, setRestarting] = useState(false)
@@ -206,6 +209,18 @@ export default function GameRoom() {
     if (error) setRestartError(error.message)
   }
 
+  // Mode de test solo (voir migration 0127) : résout en un clic tous les
+  // bots en attente d'un choix pour l'étape EN COURS uniquement — jamais
+  // d'enchaînement automatique de plusieurs étapes, pour que l'hôte garde
+  // la main et observe chaque étape à son rythme.
+  async function handleAutoPlayBots() {
+    setBotPlayLoading(true)
+    setBotPlayError(null)
+    const { error } = await supabase.rpc('admin_auto_play_bots', { p_game_id: gameId })
+    setBotPlayLoading(false)
+    if (error) setBotPlayError(error.message)
+  }
+
   const isNight = view.game.status === 'night' || view.game.status === 'role_reveal'
 
   // Salon vocal piloté automatiquement par la phase de jeu (le texte, lui,
@@ -270,6 +285,27 @@ export default function GameRoom() {
           return error?.message ?? null
         }}
       />
+
+      {/* Mode de test solo (voir migration 0127) : réservé à l'admin ET à
+          ses propres parties (isHost) — visible pendant toute phase où un
+          bot pourrait avoir un choix en attente. Un clic résout UNE seule
+          étape (voir handleAutoPlayBots) : jamais d'enchaînement automatique,
+          l'admin garde la main pour observer chaque étape. */}
+      {profile?.is_admin &&
+        isHost &&
+        ['captain_election', 'night', 'day_vote'].includes(view.game.status) && (
+          <div className="mx-auto mt-3 flex max-w-3xl flex-col gap-1.5 px-4">
+            <button
+              type="button"
+              onClick={handleAutoPlayBots}
+              disabled={botPlayLoading}
+              className="w-full rounded-xl border border-moon-400/30 bg-moon-400/5 px-4 py-2.5 text-sm font-semibold text-moon-300 transition-colors hover:border-moon-400/50 disabled:opacity-50"
+            >
+              {botPlayLoading ? t('common.sending') : t('game.autoPlayBotsButton')}
+            </button>
+            {botPlayError && <ErrorText>{botPlayError}</ErrorText>}
+          </div>
+        )}
 
       <div className={`mx-auto flex max-w-3xl flex-col gap-4 px-4 pt-4 ${view.game.status === 'role_reveal' ? 'pb-28' : 'pb-4'}`}>
         {/* Le Capitaine qui vient de mourir doit désigner son successeur —

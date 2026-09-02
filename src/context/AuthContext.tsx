@@ -23,6 +23,12 @@ interface Profile {
   login_streak: number
   login_streak_best: number
   continent: string | null
+  // Réservé au compte admin — jamais affiché ni exploité pour un autre
+  // compte. Gate le mode de test solo (bots, voir migration 0127) : bouton
+  // "+ Ajouter un bot" en salon d'attente, "Faire jouer les bots" en
+  // partie. Chargé ici (RLS profiles_select_own autorise déjà chacun à lire
+  // sa propre ligne en entier) plutôt que via un aller-retour RPC dédié.
+  is_admin: boolean
 }
 
 interface AuthContextValue {
@@ -45,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data } = await supabase
       .from('profiles')
       .select(
-        'id, username, avatar_icon, lang, username_changed_at, rank_points, current_streak, best_streak, login_streak, login_streak_best, continent',
+        'id, username, avatar_icon, lang, username_changed_at, rank_points, current_streak, best_streak, login_streak, login_streak_best, continent, is_admin',
       )
       .eq('id', userId)
       .maybeSingle()
