@@ -71,3 +71,70 @@ export async function sendPushToUser(
 
   return { sent, removed }
 }
+
+/**
+ * Envoie/finalise une campagne de notification (voir migration
+ * 0129_notification_campaigns.sql) : verrouille la ligne en 'sending' (le
+ * `.eq('status', 'sending' via update...eq('status','scheduled')` fait
+ * office de verrou optimiste — si le cron ET un clic "Envoyer maintenant"
+ * la ramassent en même temps, un seul des deux update affecte une ligne),
+ * diffuse à tous les joueurs abonnés (hors bots de test), puis marque la
+ * ligne 'sent'/'failed'. Utilisée par api/admin-send-campaign.ts (clic
+ * immédiat) ET api/cron-send-campaigns.ts (envoi programmé) — un seul
+ * chemin d'envoi pour ne pas dupliquer cette logique.
+ */
+export async function dispatchNotificationCampaign(
+  serviceClient: SupabaseClient,
+  campaignId: string
+): Promise<{ handled: boolean; sent: number; removed: number }> {
+  const { data: locked } = await serviceClient
+    .from('notification_campaigns')
+    .update({ status: 'sending' })
+    .eq('id', campaignId)
+    .eq('status', 'scheduled')
+    .select('id, push_title, push_body, push_url')
+    .maybeSingle()
+
+  if (!locked) return { handled: false, sent: 0, removed: 0 }
+
+  try {
+    const [{ data: subscriptions }, { data: bots }] = await Promise.all([
+      serviceClient.from('push_subscriptions').select('id, endpoint, p256dh, auth_key, user_id'),
+      serviceClient.from('profiles').select('id').eq('is_bot', true),
+    ])
+
+    const botIds = new Set((bots ?? []).map((b) => b.id))
+    const targets = (subscriptions ?? []).filter((sub) => !botIds.has(sub.user_id))
+
+    let sent = 0
+    let removed = 0
+    const body = JSON.stringify({ title: locked.push_title, body: locked.push_body, url: locked.push_url ?? '/dashboard' })
+
+    await Promise.all(
+      targets.map(async (sub) => {
+        try {
+          await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } }, body)
+          sent++
+        } catch (err: any) {
+          if (err?.statusCode === 404 || err?.statusCode === 410) {
+            await serviceClient.from('push_subscriptions').delete().eq('id', sub.id)
+            removed++
+          }
+        }
+      })
+    )
+
+    await serviceClient
+      .from('notification_campaigns')
+      .update({ status: 'sent', sent_at: new Date().toISOString(), sent_count: sent, removed_count: removed })
+      .eq('id', campaignId)
+
+    return { handled: true, sent, removed }
+  } catch (err: any) {
+    await serviceClient
+      .from('notification_campaigns')
+      .update({ status: 'failed', error: String(err?.message ?? err) })
+      .eq('id', campaignId)
+    throw err
+  }
+}

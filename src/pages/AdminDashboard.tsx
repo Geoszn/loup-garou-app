@@ -9,6 +9,7 @@ import { translations, type TranslationKey } from '../i18n/translations'
 import type { EventBannerColor, EventBonusType, GameEvent } from '../types/events'
 import { continentEmoji, continentName } from '../lib/continents'
 import { compressImageForUpload } from '../lib/imageCompress'
+import { sendNotificationCampaignNow } from '../lib/pushSubscription'
 
 // ============================================================================
 // Dashboard administrateur. Volontairement en français uniquement, pas
@@ -27,7 +28,7 @@ import { compressImageForUpload } from '../lib/imageCompress'
 // l'écran "Accès refusé".
 // ============================================================================
 
-type Tab = 'stats' | 'users' | 'games' | 'content' | 'events' | 'quests' | 'messages' | 'security' | 'settings'
+type Tab = 'stats' | 'users' | 'games' | 'content' | 'events' | 'quests' | 'messages' | 'notifications' | 'security' | 'settings'
 
 const TAB_ITEMS: { id: Tab; label: string; icon: string }[] = [
   { id: 'stats', label: 'Vue d’ensemble', icon: '📊' },
@@ -46,6 +47,12 @@ const TAB_ITEMS: { id: Tab; label: string; icon: string }[] = [
   // migration 0056), il ne manquait qu'un écran pour les lire directement ici
   // sans dépendre de l'email (voir migration 0071).
   { id: 'messages', label: 'Messages', icon: '💬' },
+  // Envoi de notifications push à tous les joueurs abonnés, immédiat ou
+  // programmé, avec aperçu avant envoi (voir migration 0129,
+  // NotificationsTab plus bas) — jusqu'ici seules les notifications
+  // automatiques liées à un événement de jeu existaient (invitation, ami,
+  // partie lancée...), rien pour une annonce libre côté admin.
+  { id: 'notifications', label: 'Notifications', icon: '📣' },
   { id: 'security', label: 'Sécurité', icon: '🔒' },
   { id: 'settings', label: 'Réglages', icon: '⚙️' },
 ]
@@ -357,6 +364,7 @@ export default function AdminDashboard() {
         {tab === 'events' && <EventsTab />}
         {tab === 'quests' && <QuestTemplatesTab />}
         {tab === 'messages' && <MessagesTab />}
+        {tab === 'notifications' && <NotificationsTab />}
         {tab === 'security' && <SecurityTab />}
         {tab === 'settings' && <SettingsTab />}
       </div>
@@ -2596,6 +2604,288 @@ function MessagesTab() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ----------------------------------------------------------------------------
+// Onglet Notifications : composer/envoyer/programmer une notification push
+// libre à tous les joueurs abonnés, avec aperçu avant envoi (voir migration
+// 0129_notification_campaigns.sql, api/admin-send-campaign.ts et
+// api/cron-send-campaigns.ts). Deux sous-écrans (Segmented) plutôt que tout
+// empiler : composer une nouvelle campagne, ou consulter l'historique de
+// celles déjà créées.
+// ----------------------------------------------------------------------------
+
+interface NotificationCampaign {
+  id: string
+  push_title: string
+  push_body: string
+  push_url: string
+  status: 'scheduled' | 'sending' | 'sent' | 'canceled' | 'failed'
+  scheduled_at: string
+  sent_at: string | null
+  created_at: string
+  recipient_count: number
+  sent_count: number
+  removed_count: number
+  error: string | null
+}
+
+const CAMPAIGN_STATUS_LABELS: Record<NotificationCampaign['status'], string> = {
+  scheduled: 'Programmée',
+  sending: 'Envoi en cours',
+  sent: 'Envoyée',
+  canceled: 'Annulée',
+  failed: 'Échec',
+}
+
+const CAMPAIGN_STATUS_CLASSES: Record<NotificationCampaign['status'], string> = {
+  scheduled: 'bg-moon-400/15 text-moon-300',
+  sending: 'bg-moon-400/15 text-moon-300',
+  sent: 'bg-emerald-700/20 text-emerald-400',
+  canceled: 'bg-night-600 text-moon-200/60',
+  failed: 'bg-blood-700/20 text-blood-400',
+}
+
+function NotificationsTab() {
+  const [screen, setScreen] = useState<'compose' | 'history'>('compose')
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Segmented
+        tabs={[
+          { id: 'compose', label: '✏️ Composer' },
+          { id: 'history', label: '🕘 Historique' },
+        ]}
+        active={screen}
+        onChange={setScreen}
+      />
+      {screen === 'compose' ? <ComposeCampaignPanel onSent={() => setScreen('history')} /> : <CampaignHistoryPanel />}
+    </div>
+  )
+}
+
+/** Formulaire de composition, avec aperçu qui se met à jour en direct à
+ * chaque frappe — pas d'aller-retour serveur pour ça, l'aperçu n'est qu'un
+ * rendu local du titre/texte déjà saisis, dans une bulle stylée comme une
+ * vraie notification (voir sendPushToUser : title + body + icône fixe 🐺,
+ * même format que toutes les autres notifications de l'app). */
+function ComposeCampaignPanel({ onSent }: { onSent: () => void }) {
+  const [pushTitle, setPushTitle] = useState('')
+  const [pushBody, setPushBody] = useState('')
+  const [pushUrl, setPushUrl] = useState('/dashboard')
+  const [scheduleEnabled, setScheduleEnabled] = useState(false)
+  const [scheduledAtLocal, setScheduledAtLocal] = useState('')
+  const [recipientCount, setRecipientCount] = useState<number | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  useEffect(() => {
+    supabase.rpc('admin_get_push_subscriber_count').then(({ data }) => {
+      if (typeof data === 'number') setRecipientCount(data)
+    })
+  }, [])
+
+  const isScheduledInFuture = scheduleEnabled && scheduledAtLocal !== '' && new Date(scheduledAtLocal).getTime() > Date.now()
+  const canSubmit = pushTitle.trim() !== '' && pushBody.trim() !== '' && (!scheduleEnabled || scheduledAtLocal !== '')
+
+  async function submit() {
+    setConfirmOpen(false)
+    setBusy(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      const { data, error: rpcError } = await supabase.rpc('admin_create_notification_campaign', {
+        p_push_title: pushTitle.trim(),
+        p_push_body: pushBody.trim(),
+        p_push_url: pushUrl.trim() || '/dashboard',
+        p_scheduled_at: isScheduledInFuture ? new Date(scheduledAtLocal).toISOString() : null,
+      })
+      if (rpcError) throw new Error(rpcError.message)
+      const campaign = data as { id: string }
+
+      if (isScheduledInFuture) {
+        setSuccess(`Notification programmée pour le ${fmtDate(new Date(scheduledAtLocal).toISOString())}.`)
+      } else {
+        const result = await sendNotificationCampaignNow(campaign.id)
+        setSuccess(`Notification envoyée à ${result.sent} appareil(s)${result.removed > 0 ? ` (${result.removed} abonnement(s) expiré(s) retiré(s))` : ''}.`)
+      }
+
+      setPushTitle('')
+      setPushBody('')
+      setPushUrl('/dashboard')
+      setScheduleEnabled(false)
+      setScheduledAtLocal('')
+      onSent()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Envoi impossible.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <Card className="flex flex-col gap-4 p-4">
+        <div>
+          <Label>Titre de la notification</Label>
+          <Input
+            placeholder="🐺 Nouveau mode disponible !"
+            value={pushTitle}
+            onChange={(e) => setPushTitle(e.target.value)}
+            maxLength={80}
+          />
+        </div>
+        <div>
+          <Label>Texte</Label>
+          <textarea
+            rows={3}
+            placeholder="Le mode de test solo est arrivé, viens l'essayer..."
+            value={pushBody}
+            onChange={(e) => setPushBody(e.target.value)}
+            maxLength={200}
+            className="w-full rounded-xl border border-night-500 bg-night-800/80 px-4 py-3 text-sm text-moon-200 placeholder:text-moon-200/30 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20"
+          />
+        </div>
+        <div>
+          <Label>Lien au clic (optionnel)</Label>
+          <Input placeholder="/dashboard" value={pushUrl} onChange={(e) => setPushUrl(e.target.value)} />
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-moon-200/80">
+          <input
+            type="checkbox"
+            checked={scheduleEnabled}
+            onChange={(e) => setScheduleEnabled(e.target.checked)}
+            className="h-4 w-4 rounded border-night-600/70 bg-night-900/50 accent-blood-600"
+          />
+          Programmer l’envoi plutôt que l’envoyer maintenant
+        </label>
+        {scheduleEnabled && (
+          <div>
+            <Label>Date et heure d’envoi</Label>
+            <Input type="datetime-local" value={scheduledAtLocal} onChange={(e) => setScheduledAtLocal(e.target.value)} />
+            <p className="mt-1.5 text-xs text-moon-200/40">
+              L’envoi programmé est traité une fois par jour (limite du plan d’hébergement) — l’heure exacte n’est donc pas garantie
+              à la minute près. Pour un envoi précis, décoche cette case et clique sur « Envoyer maintenant ».
+            </p>
+          </div>
+        )}
+
+        <p className="text-xs text-moon-200/50">
+          {recipientCount === null ? 'Chargement du nombre de destinataires...' : `📣 ${recipientCount} destinataire(s) abonné(s) aux notifications.`}
+        </p>
+
+        <ErrorText>{error}</ErrorText>
+        <SuccessText>{success}</SuccessText>
+
+        <Button disabled={!canSubmit || busy} onClick={() => setConfirmOpen(true)}>
+          {isScheduledInFuture ? 'Programmer l’envoi' : 'Envoyer maintenant'}
+        </Button>
+      </Card>
+
+      <div className="flex flex-col gap-2">
+        <p className="text-xs font-semibold uppercase tracking-wider text-moon-200/50">Aperçu</p>
+        <div className="flex items-start gap-3 rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/90 to-night-900/95 p-4 shadow-card">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blood-600 text-lg">🐺</span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-moon-200">{pushTitle.trim() || 'Titre de la notification'}</p>
+            <p className="mt-0.5 text-xs text-moon-200/70">{pushBody.trim() || 'Le texte de la notification apparaîtra ici.'}</p>
+            <p className="mt-1 text-[10px] uppercase tracking-wide text-moon-200/30">Loup Garou d’Afrique</p>
+          </div>
+        </div>
+        <p className="text-xs text-moon-200/40">Rendu approximatif — l’apparence exacte dépend du système d’exploitation du joueur.</p>
+      </div>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={isScheduledInFuture ? 'Programmer cette notification ?' : 'Envoyer cette notification maintenant ?'}
+        message={
+          isScheduledInFuture
+            ? `Elle sera envoyée à ${recipientCount ?? '?'} destinataire(s) le ${scheduledAtLocal ? fmtDate(new Date(scheduledAtLocal).toISOString()) : ''}.`
+            : `Elle sera envoyée immédiatement à ${recipientCount ?? '?'} destinataire(s). Action irréversible.`
+        }
+        confirmLabel={isScheduledInFuture ? 'Programmer' : 'Envoyer'}
+        cancelLabel="Annuler"
+        onConfirm={submit}
+        onCancel={() => setConfirmOpen(false)}
+      />
+    </div>
+  )
+}
+
+function CampaignHistoryPanel() {
+  const [campaigns, setCampaigns] = useState<NotificationCampaign[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    const { data, error: rpcError } = await supabase.rpc('admin_list_notification_campaigns', { p_limit: 30 })
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    setError(null)
+    setCampaigns((data ?? []) as NotificationCampaign[])
+  }, [])
+
+  useEffect(() => {
+    load()
+    // Rafraîchit tant qu'une campagne programmée/en cours peut changer de
+    // statut (cron, ou un autre onglet admin ouvert ailleurs) — même
+    // fréquence que les autres listes du dashboard.
+    const interval = setInterval(load, 5000)
+    return () => clearInterval(interval)
+  }, [load])
+
+  async function cancel(id: string) {
+    setBusyId(id)
+    const { error: rpcError } = await supabase.rpc('admin_cancel_notification_campaign', { p_campaign_id: id })
+    setBusyId(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    load()
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <ErrorText>{error}</ErrorText>
+      {campaigns === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
+      {campaigns !== null && campaigns.length === 0 && (
+        <p className="text-sm text-moon-200/50">Aucune notification envoyée ou programmée pour l’instant.</p>
+      )}
+      {campaigns?.map((c) => (
+        <Card key={c.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
+          <div className="min-w-0">
+            <div className="mb-1 flex flex-wrap items-center gap-2">
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${CAMPAIGN_STATUS_CLASSES[c.status]}`}>
+                {CAMPAIGN_STATUS_LABELS[c.status]}
+              </span>
+              <p className="text-sm font-semibold text-moon-200">{c.push_title}</p>
+            </div>
+            <p className="mb-1 text-xs text-moon-200/60">{c.push_body}</p>
+            <p className="text-xs text-moon-200/40">
+              {c.status === 'sent' && c.sent_at
+                ? `Envoyée le ${fmtDate(c.sent_at)} · ${c.sent_count} reçue(s)${c.removed_count > 0 ? `, ${c.removed_count} abonnement(s) expiré(s) retiré(s)` : ''}`
+                : c.status === 'scheduled'
+                  ? `Programmée pour le ${fmtDate(c.scheduled_at)} · ${c.recipient_count} destinataire(s) prévu(s)`
+                  : c.status === 'failed'
+                    ? `Échec : ${c.error ?? 'raison inconnue'}`
+                    : `Créée le ${fmtDate(c.created_at)}`}
+            </p>
+          </div>
+          {c.status === 'scheduled' && (
+            <Button variant="ghost" className="shrink-0 px-3 py-1.5 text-xs" disabled={busyId === c.id} onClick={() => cancel(c.id)}>
+              Annuler
+            </Button>
+          )}
+        </Card>
+      ))}
     </div>
   )
 }
