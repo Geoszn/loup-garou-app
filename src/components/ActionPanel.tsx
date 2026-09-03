@@ -68,9 +68,25 @@ export function ActionPanel({ view, gameId, selfId }: { view: MyGameView; gameId
   )
 }
 
-function PanelShell({ emoji, title, subtitle, children }: { emoji: string; title: string; subtitle?: string; children: ReactNode }) {
+function PanelShell({
+  emoji,
+  title,
+  subtitle,
+  children,
+  urgent = false,
+}: {
+  emoji: string
+  title: string
+  subtitle?: string
+  children: ReactNode
+  // Anneau pulsant en plus du glow habituel — réservé aux décisions
+  // ponctuelles et inattendues (succession du Capitaine) où rater le délai
+  // a des conséquences irréversibles, contrairement aux actions de nuit
+  // récurrentes où le glow rouge standard suffit déjà à attirer l'œil.
+  urgent?: boolean
+}) {
   return (
-    <Card className="animate-fade-in border-blood-700/40 shadow-blood-glow">
+    <Card className={`animate-fade-in border-blood-700/40 shadow-blood-glow ${urgent ? 'ring-2 ring-amber-400/70 animate-pulse' : ''}`}>
       <div className="mb-4 flex items-center gap-2.5">
         <span className="text-2xl">{emoji}</span>
         <div>
@@ -1213,7 +1229,16 @@ function CaptainSuccessionPanel({ view, gameId, selfId }: { view: MyGameView; ga
       emoji="🎖️"
       title={t('action.captainSuccession.title')}
       subtitle={t('action.captainSuccession.subtitle')}
+      urgent
     >
+      {/* Retour utilisateur : "le capitaine n'a pas eu l'opportunité de
+          voter son successeur" — le panneau s'affichait bien mais rien ne le
+          distinguait d'une action de nuit ordinaire, facile à laisser filer
+          juste après avoir appris sa propre mort. Anneau pulsant (voir
+          `urgent` sur PanelShell) + rappel explicite du compte à rebours,
+          en plus de la vibration + auto-scroll déjà déclenchés à
+          l'apparition de `pending_action_required` (voir ActionPanel). */}
+      <p className="mb-3 animate-pulse text-xs font-semibold text-amber-400">{t('action.captainSuccession.urgent')}</p>
       <PlayerGrid players={alive} selfId={selfId} selectable compact onSelect={choose} />
       <ErrorText>{error}</ErrorText>
       {loading && <p className="mt-2 text-xs text-moon-200/40">{t('common.sending')}</p>}

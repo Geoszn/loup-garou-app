@@ -1139,6 +1139,10 @@ export const translations = {
     fr: 'Vous étiez le Capitaine — dans votre dernier souffle, désignez votre successeur.',
     en: 'You were the Captain — with your dying breath, choose your successor.',
   },
+  'action.captainSuccession.urgent': {
+    fr: '⏱️ Choisissez vite : passé le délai, le sort décidera à votre place.',
+    en: '⏱️ Choose quickly: once time runs out, fate will decide for you.',
+  },
   'action.hunter.title': { fr: 'Votre dernière flèche', en: 'Your last arrow' },
   'action.hunter.subtitle': {
     fr: 'Vous êtes éliminé, mais vous emportez quelqu’un avec vous.',
