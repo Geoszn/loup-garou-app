@@ -1132,7 +1132,10 @@ export function VotePanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
   const [selected, setSelected] = useState<string | null>(view.my_vote_target)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const alive = view.players.filter((p) => p.is_alive)
+  // Auto-vote interdit pour l'élimination (demande utilisateur, submit_vote
+  // le refuse désormais aussi côté serveur) — exclu ici pour ne pas laisser
+  // cliquer sa propre carte et tomber sur une erreur.
+  const alive = view.players.filter((p) => p.is_alive && p.user_id !== selfId)
   // Un vote existe dès que le serveur ne réclame plus l'action 'vote' pour
   // ce joueur (voir get_my_game_view) — distinct de `selected === null`, qui
   // peut aussi bien vouloir dire "pas encore voté" que "vote pour
