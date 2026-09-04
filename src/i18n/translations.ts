@@ -801,6 +801,7 @@ export const translations = {
     en: "💬 Discuss to unmask the Werewolves — the vote opens automatically once time runs out, or sooner if the Captain calls it with the whole village's agreement.",
   },
   'game.logTitle': { fr: '📜 Journal de la partie', en: '📜 Game log' },
+  'game.playersGridTitle': { fr: '👥 Joueurs ({{count}})', en: '👥 Players ({{count}})' },
   'game.homeLinkTitle': {
     fr: 'Retour à l’accueil (la partie continue sans vous quitter)',
     en: 'Back to home (the game keeps running without you leaving)',
@@ -882,6 +883,10 @@ export const translations = {
   'nightStep.voyante': { fr: 'La Voyante consulte son destin...', en: 'The Seer is consulting fate...' },
   'nightStep.loup_garou': { fr: 'Les Loups-Garous choisissent leur victime...', en: 'The Werewolves are choosing their victim...' },
   'nightStep.sorciere': { fr: 'La Sorcière prépare ses potions...', en: 'The Witch is preparing her potions...' },
+  'nightStep.enfant_sauvage': { fr: "L'Enfant Sauvage choisit son mentor...", en: 'The Wild Child is choosing their mentor...' },
+  'nightStep.griot': { fr: 'Le Griot interroge les esprits...', en: 'The Griot is questioning the spirits...' },
+  'nightStep.grand_mechant_loup': { fr: 'Le Grand Méchant Loup choisit une seconde victime...', en: 'The Big Bad Wolf is choosing a second victim...' },
+  'nightStep.anancy': { fr: 'Anancy tisse le destin...', en: 'Anancy is weaving fate...' },
   'nightStep.resolve': { fr: 'Le sort en est jeté...', en: 'The die is cast...' },
   'phase.lobby': { fr: 'Salon', en: 'Lobby' },
   'phase.role_reveal': { fr: 'Distribution des rôles', en: 'Role distribution' },

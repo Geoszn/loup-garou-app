@@ -27,11 +27,19 @@ const PHASE_INFO: Record<GameStatus, { titleKey: TranslationKey; emoji: string }
 export const NIGHT_STEP_LABEL: Record<string, TranslationKey> = {
   voleur: 'nightStep.voleur',
   cupidon: 'nightStep.cupidon',
+  enfant_sauvage: 'nightStep.enfant_sauvage',
   voyante: 'nightStep.voyante',
+  griot: 'nightStep.griot',
   // Refonte 0093 : le Loup Alpha n'a plus d'étape de nuit dédiée, il vote
   // avec le reste de la meute pendant 'loup_garou'.
   loup_garou: 'nightStep.loup_garou',
+  grand_mechant_loup: 'nightStep.grand_mechant_loup',
   sorciere: 'nightStep.sorciere',
+  // Retour utilisateur (capture d'écran : "en attente des autres joueurs"
+  // générique pendant qu'Anancy agissait) : ces 4 étapes manquaient de ce
+  // tableau, tombant systématiquement sur le texte générique de repli dans
+  // WaitingCard (GameRoom.tsx) faute de nightLabelKey correspondant.
+  anancy: 'nightStep.anancy',
   resolve: 'nightStep.resolve',
 }
 
@@ -44,9 +52,13 @@ export const NIGHT_STEP_LABEL: Record<string, TranslationKey> = {
 export const NIGHT_STEP_ICON: Record<string, string> = {
   voleur: '🃏',
   cupidon: '💘',
+  enfant_sauvage: '🐾',
   voyante: '🔮',
+  griot: '🎭',
   loup_garou: '🐺',
+  grand_mechant_loup: '👹',
   sorciere: '🧪',
+  anancy: '🕸️',
   resolve: '🌙',
 }
 

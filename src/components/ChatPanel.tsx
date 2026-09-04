@@ -32,6 +32,7 @@ export const ChatPanel = memo(function ChatPanel({
   channel,
   selfId,
   compact = false,
+  compactHeightClassName = 'h-64',
   readOnly = false,
   note,
 }: {
@@ -39,6 +40,13 @@ export const ChatPanel = memo(function ChatPanel({
   channel: ChatChannel
   selfId: string
   compact?: boolean
+  /** Hauteur utilisée quand `compact` est vrai — h-64 par défaut. Permet à
+   * un appelant précis (ex: le cimetière côté GhostPanel, retour
+   * utilisateur : "agrandir la taille du chat du cimetière") de garder le
+   * mode compact (pas de vh, stable même clavier ouvert) tout en lui
+   * laissant plus de hauteur qu'un chat secondaire comme le village en
+   * lecture seule. */
+  compactHeightClassName?: string
   /** Salon consultable mais pas écrit — utilisé par les fantômes qui
    * suivent le chat du village sans pouvoir y participer. Le serveur
    * refuse de toute façon l'écriture (can_access_channel), ceci ne fait
@@ -256,7 +264,9 @@ export const ChatPanel = memo(function ChatPanel({
       // clavier" sur iPhone : coût de repaint répété pour une transition qui
       // n'apportait de toute façon aucun bénéfice visuel perceptible ici.
       className={`flex flex-col border border-night-600/60 ${
-        expanded ? 'rounded-none bg-night-900/95' : `rounded-2xl bg-night-900/50 ${compact ? 'h-64' : 'h-[65vh] max-h-[30rem]'}`
+        expanded
+          ? 'rounded-none bg-night-900/95'
+          : `rounded-2xl bg-night-900/50 ${compact ? compactHeightClassName : 'h-[65vh] max-h-[30rem]'}`
       }`}
     >
       <div className="flex items-center gap-2 border-b border-night-600/50 px-4 py-2.5">

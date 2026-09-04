@@ -290,9 +290,15 @@ export default function GameRoom() {
           ses propres parties (isHost) — visible pendant toute phase où un
           bot pourrait avoir un choix en attente. Un clic résout UNE seule
           étape (voir handleAutoPlayBots) : jamais d'enchaînement automatique,
-          l'admin garde la main pour observer chaque étape. */}
+          l'admin garde la main pour observer chaque étape.
+          Retour utilisateur (capture d'écran) : le bouton restait affiché
+          même dans une partie sans aucun bot, où il n'a jamais rien à
+          résoudre — repli sur la même détection heuristique que Lobby.tsx
+          (préfixe "🤖 " du pseudo, is_bot n'étant pas exposé par
+          get_my_game_view). */}
       {profile?.is_admin &&
         isHost &&
+        view.players.some((p) => p.display_name.startsWith('🤖 ')) &&
         ['captain_election', 'night', 'day_vote'].includes(view.game.status) && (
           <div className="mx-auto mt-3 flex max-w-3xl flex-col gap-1.5 px-4">
             <button
@@ -416,7 +422,7 @@ export default function GameRoom() {
             {alive ? (
               <CaptainVotePanel view={view} gameId={gameId!} selfId={user.id} />
             ) : (
-              <PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
+              <CollapsiblePlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
             )}
             {/* Vocal ouvert pendant l'élection (voir migration 0066) pour que
                 le village puisse discuter à voix haute avant de voter — le
@@ -465,7 +471,7 @@ export default function GameRoom() {
                 grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />}
               />
             ) : (
-              <PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
+              <CollapsiblePlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
             )}
             {/* Sous le chat/vocal/grille plutôt qu'au-dessus (retour
                 utilisateur) : on discute d'abord, on décide de voter ensuite
@@ -507,7 +513,7 @@ export default function GameRoom() {
                 <VotePanel view={view} gameId={gameId!} selfId={user.id} />
               )
             ) : (
-              <PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
+              <CollapsiblePlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
             )}
             {alive && (
               <DayTabs
@@ -684,8 +690,52 @@ function GhostPanel({
         <VoiceChat gameId={gameId} code={code} channel="village" displayName={displayName} selfUserId={selfId} listenOnly players={players} />
       )}
       <ChatPanel gameId={gameId} channel="village" selfId={selfId} compact readOnly />
-      <ChatPanel gameId={gameId} channel="graveyard" selfId={selfId} compact />
+      {/* Retour utilisateur : "agrandir la taille du chat du cimetière" —
+          c'est là que les fantômes passent le plus clair de leur temps une
+          fois éliminés, contrairement au village en lecture seule
+          au-dessus. h-96 (24rem) plutôt que le h-64 (16rem) par défaut. */}
+      <ChatPanel gameId={gameId} channel="graveyard" selfId={selfId} compact compactHeightClassName="h-96" />
     </div>
+  )
+}
+
+/** Grille des joueurs repliée par défaut — utilisée là où elle s'affiche
+ * inconditionnellement à côté du chat/vocal du fantôme (élection du
+ * Capitaine, débat, vote) sans passer par l'onglet dédié de DayTabs (celui-
+ * là reste toujours ouvert d'un clic volontaire, pas concerné). Retour
+ * utilisateur (capture d'écran) : "ce n'est pas nécessaire que ça prenne
+ * autant de place" — la grille prenait plusieurs écrans de hauteur en
+ * dessous du chat du cimetière, déjà agrandi. Même style de bouton que le
+ * journal de la partie plus bas (Card + libellé/compteur + afficher/masquer).*/
+function CollapsiblePlayerGrid({
+  players,
+  selfId,
+  onlineUserIds,
+}: {
+  players: PublicPlayer[]
+  selfId: string
+  onlineUserIds: Set<string>
+}) {
+  const { t } = useLanguage()
+  const [open, setOpen] = useState(false)
+  return (
+    <Card className="!p-0 border-night-700/60 bg-night-900/40">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-4 py-3 text-left"
+      >
+        <span className="text-xs uppercase tracking-widest text-moon-200/40">
+          {t('game.playersGridTitle', { count: String(players.length) })}
+        </span>
+        <span className="text-xs text-moon-200/40">{open ? t('common.hide') : t('common.show')}</span>
+      </button>
+      {open && (
+        <div className="px-4 pb-4">
+          <PlayerGrid players={players} selfId={selfId} onlineUserIds={onlineUserIds} />
+        </div>
+      )}
+    </Card>
   )
 }
 
