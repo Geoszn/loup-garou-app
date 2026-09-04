@@ -2661,7 +2661,7 @@ function NotificationsTab() {
         active={screen}
         onChange={setScreen}
       />
-      {screen === 'compose' ? <ComposeCampaignPanel onSent={() => setScreen('history')} /> : <CampaignHistoryPanel />}
+      {screen === 'compose' ? <ComposeCampaignPanel /> : <CampaignHistoryPanel />}
     </div>
   )
 }
@@ -2671,7 +2671,12 @@ function NotificationsTab() {
  * rendu local du titre/texte déjà saisis, dans une bulle stylée comme une
  * vraie notification (voir sendPushToUser : title + body + icône fixe 🐺,
  * même format que toutes les autres notifications de l'app). */
-function ComposeCampaignPanel({ onSent }: { onSent: () => void }) {
+// Retour utilisateur : le formulaire basculait automatiquement vers
+// l'Historique après chaque envoi/programmation — impossible d'enchaîner
+// plusieurs notifications programmées sans recliquer sur "Composer" à
+// chaque fois. Reste maintenant sur cet écran : le formulaire se vide et le
+// message de succès confirme l'action, prêt pour la suivante.
+function ComposeCampaignPanel() {
   const [pushTitle, setPushTitle] = useState('')
   const [pushBody, setPushBody] = useState('')
   const [pushUrl, setPushUrl] = useState('/dashboard')
@@ -2719,7 +2724,6 @@ function ComposeCampaignPanel({ onSent }: { onSent: () => void }) {
       setPushUrl('/dashboard')
       setScheduleEnabled(false)
       setScheduledAtLocal('')
-      onSent()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Envoi impossible.')
     } finally {
