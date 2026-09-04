@@ -60,35 +60,79 @@ export function QuestsCard() {
           const done = q.progress >= q.target
           const claimed = !!q.claimed_at
           const label = lang === 'en' ? q.label_en : q.label_fr
+          // Segments individuels (une case par palier) plutôt qu'une barre
+          // continue : retour utilisateur — "un visuel bien clair et
+          // progressif qui montre l'évolution de la quête". Les objectifs
+          // restent petits (voir quest_templates, catalogue admin), donc un
+          // segment par étape reste lisible ; repli sur une barre continue
+          // au-delà d'un certain nombre pour ne jamais tasser l'affichage.
+          const segments = q.target > 0 && q.target <= 12 ? q.target : null
+
           return (
-            <li key={q.template_id} className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between gap-2 text-sm">
-                <span className={claimed ? 'text-moon-200/40 line-through' : 'text-moon-200/90'}>{label}</span>
-                {claimed ? (
-                  <span className="shrink-0 text-xs text-emerald-400" aria-hidden="true">
+            <li
+              key={q.template_id}
+              className={`flex flex-col gap-2 rounded-xl border p-3 transition-colors ${
+                claimed
+                  ? 'border-night-700/40 bg-night-800/20'
+                  : done
+                    ? 'border-amber-400/40 bg-amber-400/[0.06]'
+                    : 'border-night-700/50 bg-night-800/30'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                {/* La récompense passe devant le libellé (retour utilisateur
+                    — "met devant la récompense attendue") : jusqu'ici elle
+                    n'apparaissait que sur le bouton "Réclamer", une fois la
+                    quête déjà terminée — impossible de savoir si ça valait
+                    le coup avant de s'y mettre. */}
+                <span
+                  className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${
+                    claimed ? 'bg-night-700/50 text-moon-200/40' : 'bg-amber-400/15 text-amber-300'
+                  }`}
+                >
+                  🏆 +{q.reward_points}
+                </span>
+                <span className={`min-w-0 flex-1 text-sm ${claimed ? 'text-moon-200/40 line-through' : 'text-moon-200/90'}`}>
+                  {label}
+                </span>
+                {claimed && (
+                  <span className="shrink-0 text-sm text-emerald-400" aria-hidden="true">
                     ✓
-                  </span>
-                ) : done ? (
-                  <Button
-                    className="shrink-0 px-2.5 py-1 text-[11px]"
-                    disabled={claiming === q.template_id}
-                    onClick={() => claim(q.template_id)}
-                  >
-                    {claiming === q.template_id ? t('common.sending') : t('quest.claim', { points: q.reward_points })}
-                  </Button>
-                ) : (
-                  <span className="shrink-0 text-xs text-moon-200/40">
-                    {q.progress}/{q.target}
                   </span>
                 )}
               </div>
-              {!claimed && (
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-night-800">
-                  <div
-                    className="h-full rounded-full bg-moon-300 transition-all"
-                    style={{ width: `${Math.min(100, (q.progress / q.target) * 100)}%` }}
-                  />
+
+              {!claimed && !done && (
+                <div className="flex items-center gap-2.5">
+                  {segments ? (
+                    <div className="flex flex-1 gap-1">
+                      {Array.from({ length: segments }).map((_, i) => (
+                        <div
+                          key={i}
+                          className={`h-2 flex-1 rounded-full transition-colors ${
+                            i < q.progress ? 'bg-moon-300' : 'bg-night-700'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-night-800">
+                      <div
+                        className="h-full rounded-full bg-moon-300 transition-all"
+                        style={{ width: `${Math.min(100, (q.progress / q.target) * 100)}%` }}
+                      />
+                    </div>
+                  )}
+                  <span className="shrink-0 text-xs tabular-nums text-moon-200/50">
+                    {q.progress}/{q.target}
+                  </span>
                 </div>
+              )}
+
+              {done && !claimed && (
+                <Button className="w-full py-2 text-sm" disabled={claiming === q.template_id} onClick={() => claim(q.template_id)}>
+                  {claiming === q.template_id ? t('common.sending') : t('quest.claim', { points: q.reward_points })}
+                </Button>
               )}
             </li>
           )
