@@ -369,11 +369,18 @@ export function Modal({
   onClose,
   title,
   children,
+  // 'sm' (défaut, max-w-sm) reste inchangé pour tous les usages existants
+  // — feuille modale mobile étroite. 'lg' (max-w-2xl) est réservé aux
+  // écrans admin desktop avec du contenu dense (fiche joueur...) où la
+  // largeur mobile forçait un long défilement vertical sans raison, tout
+  // l'espace horizontal du bureau restant inutilisé.
+  size = 'sm',
 }: {
   open: boolean
   onClose: () => void
   title: string
   children: ReactNode
+  size?: 'sm' | 'lg'
 }) {
   const { t } = useLanguage()
   const dragControls = useDragControls()
@@ -429,7 +436,7 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-full w-full max-w-sm animate-modal-in flex-col rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/95 to-night-900/95 shadow-card"
+        className={`flex max-h-full w-full ${size === 'lg' ? 'max-w-2xl' : 'max-w-sm'} animate-modal-in flex-col rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/95 to-night-900/95 shadow-card`}
         // Glissement vers le bas pour fermer, comme une feuille modale
         // mobile classique — bloqué vers le haut (dragConstraints à 0) pour
         // ne jamais laisser la pop-up "s'échapper" au-dessus de l'écran. Le

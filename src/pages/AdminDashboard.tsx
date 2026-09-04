@@ -425,6 +425,27 @@ function StatCard({ label, value, onClick }: { label: string; value: string | nu
   )
 }
 
+// Nom français lisible d'un rôle (ex: "sans_visage" -> "Sans-Visage") — ce
+// dashboard reste volontairement hors du système i18n (voir en-tête de
+// fichier), donc lecture directe de translations plutôt que via t().
+function roleNameFr(id: string): string {
+  const role = ROLES[id as RoleId]
+  return role ? translations[role.nameKey].fr : id
+}
+
+// Une paire libellé/valeur en bloc plutôt qu'une ligne de tableau dense —
+// texte plus grand, un vrai espace vertical entre le libellé et la valeur,
+// pensé pour la largeur d'écran d'un dashboard admin plutôt que pour la
+// feuille modale mobile étroite (voir Modal size="lg" dans UserDetailModal).
+function Field({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-moon-200/40">{label}</p>
+      <p className="mt-1 text-sm text-moon-200">{value}</p>
+    </div>
+  )
+}
+
 function StatsTab({ onGoToTab }: { onGoToTab: (target: Tab, usersFilter?: Omit<UsersSeed, 'nonce'>) => void }) {
   const [stats, setStats] = useState<Stats | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -824,99 +845,117 @@ function UserDetailModal({ userId, onClose }: { userId: string; onClose: () => v
     }
   }, [userId])
 
+  const statusLabel = detail?.is_banned
+    ? `🚫 Suspendu${detail.banned_reason ? ` (${detail.banned_reason})` : ''}`
+    : detail?.is_admin
+      ? '⭐ Admin actif'
+      : '✅ Actif'
+  const statusClasses = detail?.is_banned
+    ? 'bg-blood-700/20 text-blood-400'
+    : detail?.is_admin
+      ? 'bg-moon-400/15 text-moon-300'
+      : 'bg-emerald-700/20 text-emerald-400'
+  const winRate =
+    detail && detail.stats.games_played > 0 ? Math.round((detail.stats.games_won / detail.stats.games_played) * 100) : null
+
   return (
-    <Modal open onClose={onClose} title={detail ? detail.username : 'Fiche utilisateur'}>
+    <Modal open onClose={onClose} title={detail ? detail.username : 'Fiche utilisateur'} size="lg">
       <ErrorText>{error}</ErrorText>
       {!detail && !error && <p className="text-sm text-moon-200/50">Chargement...</p>}
       {detail && (
-        <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
-            <span className="text-moon-200/40">Email</span>
-            <span className="text-moon-200">
-              {detail.email}
-              {detail.email_confirmed_at ? (
-                <span className="ml-1 text-emerald-400" title={`Confirmé le ${fmtDate(detail.email_confirmed_at)}`}>
-                  ✓
-                </span>
-              ) : (
-                <span className="ml-1 text-blood-400" title="Email non confirmé">
-                  ✕
-                </span>
-              )}
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-night-700/80 text-2xl">
+              {detail.avatar_icon || '👤'}
             </span>
-            <span className="text-moon-200/40">Inscrit le</span>
-            <span className="text-moon-200">{fmtDate(detail.created_at)}</span>
-            <span className="text-moon-200/40">Dernière connexion</span>
-            <span className="text-moon-200">{detail.last_sign_in_at ? fmtDate(detail.last_sign_in_at) : '—'}</span>
-            <span className="text-moon-200/40">Langue</span>
-            <span className="text-moon-200">{detail.lang}</span>
-            <span className="text-moon-200/40">Continent</span>
-            <span className="text-moon-200">
-              {detail.continent ? `${continentEmoji(detail.continent)} ${continentName(detail.continent, 'fr')}` : '—'}
-            </span>
-            <span className="text-moon-200/40">Code ami</span>
-            <span className="text-moon-200">{detail.friend_code}</span>
-            <span className="text-moon-200/40">Amis</span>
-            <span className="text-moon-200">{detail.friends_count}</span>
-            <span className="text-moon-200/40">Pseudo modifié</span>
-            <span className="text-moon-200">{detail.username_changed_at ? fmtDate(detail.username_changed_at) : 'Jamais'}</span>
-            <span className="text-moon-200/40">Statut</span>
-            <span className="text-moon-200">
-              {detail.is_admin && 'Admin '}
-              {detail.is_banned ? `Suspendu${detail.banned_reason ? ` (${detail.banned_reason})` : ''}` : 'Actif'}
-            </span>
+            <div className="min-w-0">
+              <p className="flex items-center gap-1.5 text-sm text-moon-200">
+                {detail.email}
+                {detail.email_confirmed_at ? (
+                  <span className="text-emerald-400" title={`Confirmé le ${fmtDate(detail.email_confirmed_at)}`}>
+                    ✓
+                  </span>
+                ) : (
+                  <span className="text-blood-400" title="Email non confirmé">
+                    ✕
+                  </span>
+                )}
+              </p>
+              <p className="text-xs text-moon-200/40">
+                Inscrit le {fmtDate(detail.created_at)} · Vu {detail.last_sign_in_at ? timeSince(detail.last_sign_in_at) : 'jamais'}
+              </p>
+            </div>
+            <span className={`ml-auto shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${statusClasses}`}>{statusLabel}</span>
           </div>
 
-          <div className="border-t border-night-600/60 pt-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-moon-200/50">Classement</p>
-            <div className="mb-3 grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-4 border-t border-night-600/60 pt-4 sm:grid-cols-4">
+            <Field label="Langue" value={detail.lang.toUpperCase()} />
+            <Field
+              label="Continent"
+              value={detail.continent ? `${continentEmoji(detail.continent)} ${continentName(detail.continent, 'fr')}` : '—'}
+            />
+            <Field label="Code ami" value={detail.friend_code} />
+            <Field label="Amis" value={detail.friends_count} />
+            <Field label="Pseudo modifié" value={detail.username_changed_at ? fmtDate(detail.username_changed_at) : 'Jamais'} />
+          </div>
+
+          <div className="border-t border-night-600/60 pt-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-moon-200/50">Classement</p>
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5">
               <StatCard label="Points" value={detail.rank_points} />
               <StatCard label="Plancher de palier" value={detail.rank_floor} />
               <StatCard label="Série en cours" value={detail.current_streak} />
               <StatCard label="Meilleure série" value={detail.best_streak} />
+              <StatCard
+                label={detail.role_streak > 1 ? `Dernier rôle (x${detail.role_streak})` : 'Dernier rôle'}
+                value={detail.last_role ? roleNameFr(detail.last_role) : '—'}
+              />
             </div>
-            {detail.last_role && (
-              <p className="text-xs text-moon-200/60">
-                Dernier rôle joué : <span className="text-moon-200">{detail.last_role}</span>
-                {detail.role_streak > 1 && ` (${detail.role_streak} fois de suite)`}
-              </p>
-            )}
           </div>
 
-          <div className="border-t border-night-600/60 pt-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-moon-200/50">Statistiques</p>
-            <div className="mb-3 grid grid-cols-2 gap-2">
+          <div className="border-t border-night-600/60 pt-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-moon-200/50">Statistiques</p>
+            <div className="mb-4 grid grid-cols-3 gap-2.5">
               <StatCard label="Parties jouées" value={detail.stats.games_played} />
               <StatCard label="Parties gagnées" value={detail.stats.games_won} />
+              <StatCard label="Taux de victoire" value={winRate === null ? '—' : `${winRate}%`} />
             </div>
-            {detail.stats.by_role.length > 0 && (
-              <div className="mb-3 flex flex-col gap-1">
-                {detail.stats.by_role.map((r) => (
-                  <div key={r.role} className="flex justify-between text-xs text-moon-200/70">
-                    <span>{r.role}</span>
-                    <span>
-                      {r.won}/{r.played} victoire(s)
-                    </span>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              {detail.stats.by_role.length > 0 && (
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-moon-200/50">Par rôle</p>
+                  <div className="flex flex-col gap-1.5">
+                    {detail.stats.by_role.map((r) => (
+                      <div key={r.role} className="flex justify-between text-sm text-moon-200/70">
+                        <span>{roleNameFr(r.role)}</span>
+                        <span className="text-moon-200">
+                          {r.won}/{r.played}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-            {detail.stats.recent_games.length > 0 && (
-              <div className="flex flex-col gap-1">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-moon-200/50">Parties récentes</p>
-                {detail.stats.recent_games.slice(0, 8).map((g) => (
-                  <div key={g.game_id} className="flex justify-between text-xs text-moon-200/60">
-                    <span>
-                      {g.code} · {g.role ?? '?'}
-                    </span>
-                    <span className={g.won ? 'text-emerald-400' : 'text-blood-400'}>
-                      {g.won ? 'Gagné' : 'Perdu'} ({g.points_gained >= 0 ? '+' : ''}
-                      {g.points_gained})
-                    </span>
+                </div>
+              )}
+              {detail.stats.recent_games.length > 0 && (
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-moon-200/50">Parties récentes</p>
+                  <div className="flex flex-col gap-1.5">
+                    {detail.stats.recent_games.slice(0, 8).map((g) => (
+                      <div key={g.game_id} className="flex justify-between text-sm text-moon-200/60">
+                        <span>
+                          {g.code} · {g.role ? roleNameFr(g.role) : '?'}
+                        </span>
+                        <span className={g.won ? 'text-emerald-400' : 'text-blood-400'}>
+                          {g.won ? 'Gagné' : 'Perdu'} ({g.points_gained >= 0 ? '+' : ''}
+                          {g.points_gained})
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
