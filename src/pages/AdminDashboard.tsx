@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { Button, Card, ConfirmDialog, ErrorText, Input, Label, Modal, Segmented, SideDrawer, SuccessText } from '../components/ui'
@@ -56,6 +57,10 @@ const TAB_ITEMS: { id: Tab; label: string; icon: string }[] = [
   { id: 'security', label: 'Sécurité', icon: '🔒' },
   { id: 'settings', label: 'Réglages', icon: '⚙️' },
 ]
+
+function isTab(value: string | null): value is Tab {
+  return TAB_ITEMS.some((item) => item.id === value)
+}
 
 interface Stats {
   total_users: number
@@ -280,10 +285,27 @@ export default function AdminDashboard() {
   const { user, signOut } = useAuth()
   const [checking, setChecking] = useState(true)
   const [allowed, setAllowed] = useState(false)
-  const [tab, setTab] = useState<Tab>('stats')
+  // Retour utilisateur : "à chaque fois que je recharge une page du
+  // dashboard je suis redirigé vers la page d'accueil" — l'onglet actif
+  // n'était qu'un useState local, jamais reflété dans l'URL, donc perdu (et
+  // ramené à 'stats' par défaut) à chaque rechargement de page. Lu depuis
+  // ?tab=... au montage et réécrit dans l'URL à chaque changement
+  // (replace: true pour ne pas empiler une entrée d'historique par clic).
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const [tab, setTabState] = useState<Tab>(isTab(tabParam) ? tabParam : 'stats')
   const [menuOpen, setMenuOpen] = useState(false)
   const [usersSeed, setUsersSeed] = useState<UsersSeed | null>(null)
   const current = TAB_ITEMS.find((t) => t.id === tab)!
+
+  function setTab(target: Tab) {
+    setTabState(target)
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('tab', target)
+      return next
+    }, { replace: true })
+  }
 
   // Passée à StatsTab pour que ses cartes puissent renvoyer directement vers
   // l'onglet concerné — avec un filtre pré-appliqué quand ça a du sens (voir
