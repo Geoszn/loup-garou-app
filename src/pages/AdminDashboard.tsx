@@ -142,6 +142,9 @@ interface AdminGameDetail {
     is_captain: boolean
     seat_number: number
     pending: boolean
+    // null tant que les rôles n'ont pas encore été distribués (partie
+    // encore en salon d'attente).
+    role: string | null
   }[]
 }
 
@@ -1151,11 +1154,16 @@ function GameDetailModal({ gameId, onClose }: { gameId: string; onClose: () => v
                     p.pending ? 'border-blood-700/50 bg-blood-700/10' : 'border-night-600/60 bg-night-800/40'
                   }`}
                 >
-                  <span className={p.is_alive ? 'text-moon-200' : 'text-moon-200/40 line-through'}>
+                  <span className={`min-w-0 flex-1 truncate ${p.is_alive ? 'text-moon-200' : 'text-moon-200/40 line-through'}`}>
                     {p.display_name}
                     {p.is_host && ' · 👑'}
                     {p.is_captain && ' · 🎖️'}
                   </span>
+                  {/* Rôle de chaque joueur — demande utilisateur ("je verrais
+                      les participants ainsi que le rôle de chacun") : absent
+                      tant que les rôles n'ont pas été distribués (statut
+                      lobby/role_reveal en cours). */}
+                  <span className="shrink-0 text-moon-200/50">{p.role ? roleNameFr(p.role) : '—'}</span>
                   {p.pending && <span className="shrink-0 font-semibold text-blood-400">en attente</span>}
                 </div>
               ))}
