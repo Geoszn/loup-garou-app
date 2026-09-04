@@ -485,6 +485,7 @@ export default function GameRoom() {
                 migration 0119) : un joueur peut légitimement ne plus être
                 certain de son rôle ACTUEL. */}
             {alive && <RolePanel myRole={view.my_role} />}
+            {alive && <AnancySwapNotice swapped={view.anancy_swapped_me} />}
           </div>
         )}
 
@@ -537,6 +538,7 @@ export default function GameRoom() {
               />
             )}
             {alive && <RolePanel myRole={view.my_role} />}
+            {alive && <AnancySwapNotice swapped={view.anancy_swapped_me} />}
           </div>
         )}
 
@@ -1144,6 +1146,25 @@ function RolePanel({ myRole }: { myRole: string | null }) {
       </div>
       {open && <p className="mt-2 text-xs text-moon-200/50">{t(role.descriptionKey)}</p>}
     </button>
+  )
+}
+
+/** Rappel discret et persistant qu'Anancy a échangé mon rôle avec un autre
+ * joueur cette nuit-là — jamais avec qui ni contre quel rôle (voir
+ * anancy_swapped_me, get_my_game_view). Retour utilisateur : le seul avis
+ * existant jusqu'ici (NightRecapModal) ne restait affiché que 15-30s au
+ * moment précis du bilan de nuit — manqué, il disparaissait pour de bon.
+ * Affiché ici à côté de RolePanel (même endroit, même esprit) tant que
+ * anancy_swapped_me reste vrai côté serveur, soit tout le jour de
+ * l'échange et la nuit qui suit. */
+function AnancySwapNotice({ swapped }: { swapped: boolean }) {
+  const { t } = useLanguage()
+  if (!swapped) return null
+  return (
+    <div className="animate-fade-in rounded-xl border border-moon-400/30 bg-moon-400/5 px-3 py-2.5">
+      <p className="text-xs font-semibold uppercase tracking-wide text-moon-300">{t('game.anancySwappedMeTitle')}</p>
+      <p className="mt-1 text-xs text-moon-200/70">{t('game.anancySwappedMe')}</p>
+    </div>
   )
 }
 
