@@ -153,6 +153,18 @@ export interface JoinRequest {
   created_at: string
 }
 
+// Vue en lecture seule d'une partie en cours pour quelqu'un qui n'en est pas
+// (encore) membre — sa demande pour la rejoindre reste "en attente" tant que
+// la partie tourne (voir get_my_join_request_status / PendingApproval.tsx) et
+// il peut en attendant observer la partie sans y participer (voir
+// get_spectator_game_view, migration 0140). Volontairement un sous-ensemble
+// de MyGameView : jamais de rôle, jamais de vote/action en cours.
+export interface SpectatorGameView {
+  game: GameRow
+  players: PublicPlayer[]
+  log: { id: string; message: string; created_at: string }[]
+}
+
 export interface PublicPlayer {
   id: string
   game_id: string

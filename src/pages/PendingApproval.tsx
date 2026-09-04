@@ -92,6 +92,11 @@ export default function PendingApproval() {
             <p className="mb-5 text-sm text-moon-200/60">
               {gameInProgress ? t('pending.inProgressBody') : t('pending.waitingBody')}
             </p>
+            {gameInProgress && (
+              <Button onClick={() => navigate(`/attente/${gameId}/observer`)} className="mb-2.5 w-full">
+                {t('pending.watchButton')}
+              </Button>
+            )}
             <Button variant="ghost" onClick={cancel} disabled={cancelling} className="w-full">
               {cancelling ? t('pending.cancelling') : t('pending.cancelButton')}
             </Button>

@@ -49,6 +49,7 @@ const Account = lazy(() => import('./pages/Account'))
 const Stats = lazy(() => import('./pages/Stats'))
 const Friends = lazy(() => import('./pages/Friends'))
 const Lobby = lazy(() => import('./pages/Lobby'))
+const SpectateGame = lazy(() => import('./pages/SpectateGame'))
 // GameRoom entraîne avec lui tout le SDK vocal Daily.co/WebRTC (le plus
 // gros contributeur de poids du bundle après React/Supabase) — inutile
 // avant qu'une partie ne démarre réellement, donc chargé à ce moment-là
@@ -225,6 +226,16 @@ export default function App() {
         element={
           <ProtectedRoute>
             <PendingApproval />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/attente/:gameId/observer"
+        element={
+          <ProtectedRoute>
+            <Suspense fallback={<FullScreenLoader />}>
+              <SpectateGame />
+            </Suspense>
           </ProtectedRoute>
         }
       />

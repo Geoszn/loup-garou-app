@@ -1574,6 +1574,14 @@ export const translations = {
     fr: "Cette demande n'existe plus — la partie a peut-être été fermée entre-temps.",
     en: 'This request no longer exists — the game may have been closed in the meantime.',
   },
+  'pending.watchButton': { fr: '👁️ Voir la partie en cours', en: '👁️ Watch the ongoing game' },
+
+  'spectate.badge': { fr: 'Vous observez — pas encore dans la partie', en: 'You are watching — not in the game yet' },
+  'spectate.subtitle': {
+    fr: "Vous n'êtes pas encore membre de cette partie. Vous pouvez suivre le village et le cimetière en lecture seule — vous la rejoindrez officiellement dès que l'hôte validera votre demande.",
+    en: "You're not a member of this game yet. You can follow the village and the graveyard in read-only mode — you'll officially join as soon as the host approves your request.",
+  },
+  'spectate.backToWaiting': { fr: "Retour à l'attente", en: 'Back to waiting' },
 
   // --- Rejoindre par lien (JoinByLink.tsx) -------------------------------------
   'joinByLink.cannotJoinTitle': { fr: 'Impossible de rejoindre', en: 'Unable to join' },
