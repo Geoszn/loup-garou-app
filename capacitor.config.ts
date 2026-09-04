@@ -51,6 +51,30 @@ const config: CapacitorConfig = {
       overlaysWebView: true,
       style: 'DARK',
     },
+    // Mises à jour en direct (Capgo, @capgo/capacitor-updater) : livre les
+    // correctifs JS/HTML/CSS directement aux appareils déjà installés,
+    // sans repasser par l'App Store/Play Store (autorisé par la charte
+    // développeur Apple 3.3.2 depuis 2015 — seul le code interprété
+    // change, jamais le binaire natif). Répond à une demande explicite :
+    // pouvoir mettre à jour l'app sans bouton "recharger" ni fermeture
+    // manuelle, contrairement au web (voir UpdateBanner.tsx) qui, lui, ne
+    // s'applique pas ici puisque webDir embarque un build figé dans le
+    // binaire (voir commentaire en tête de fichier).
+    //
+    // 'atBackground' (comportement par défaut du plugin, explicité ici
+    // pour que le choix reste documenté) : la nouvelle version est
+    // téléchargée dès que l'app repasse au premier plan, puis appliquée la
+    // prochaine fois qu'elle repasse en arrière-plan — jamais en pleine
+    // partie, jamais besoin de fermer/rouvrir l'app à la main. Voir
+    // main.tsx pour CapacitorUpdater.notifyAppReady(), le filet de
+    // sécurité qui annule automatiquement une mise à jour cassée.
+    CapacitorUpdater: {
+      autoUpdate: 'atBackground',
+      // Revérifie aussi toutes les heures pendant qu'une partie reste
+      // ouverte longtemps (une partie peut durer 30-40 min) plutôt que de
+      // dépendre uniquement des passages au premier plan.
+      periodCheckDelay: 3600,
+    },
   },
 }
 

@@ -5,6 +5,7 @@ import * as Sentry from '@sentry/react'
 import { Capacitor } from '@capacitor/core'
 import { StatusBar, Style } from '@capacitor/status-bar'
 import { SplashScreen } from '@capacitor/splash-screen'
+import { CapacitorUpdater } from '@capgo/capacitor-updater'
 import './index.css'
 import App from './App'
 import { AuthProvider } from './context/AuthContext'
@@ -79,6 +80,16 @@ if (Capacitor.isNativePlatform()) {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       SplashScreen.hide().catch(() => {})
+      // Confirme au plugin Capgo (mises à jour en direct, voir
+      // capacitor.config.ts) que ce paquet de code a bien démarré — sans
+      // cet appel, le plugin considère le démarrage en échec et revient
+      // tout seul à la version précédente (filet de sécurité intégré).
+      // Volontairement ici, juste après le premier vrai rendu confirmé
+      // (même repère que SplashScreen.hide() ci-dessus) : appeler ça avant
+      // même que React ait fini de monter viderait le filet de sécurité de
+      // tout son sens, puisqu'un bundle cassé qui plante au premier rendu
+      // serait quand même déclaré "prêt".
+      CapacitorUpdater.notifyAppReady().catch(() => {})
     })
   })
 }

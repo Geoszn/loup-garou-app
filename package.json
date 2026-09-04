@@ -21,6 +21,7 @@
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.3",
+    "@capgo/capacitor-updater": "^8.51.15",
     "@daily-co/daily-js": "^0.68.0",
     "@sentry/react": "^8.42.0",
     "@supabase/supabase-js": "^2.45.4",
