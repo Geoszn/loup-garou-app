@@ -10,7 +10,12 @@ import { translateGameLogMessage } from '../lib/gameLogTranslate'
 import { Button, Card } from '../components/ui'
 import { ChatPanel } from '../components/ChatPanel'
 import { PlayerGrid } from '../components/PlayerGrid'
+import { VoiceChat } from '../components/VoiceChat'
 import { FullScreenLoader } from '../components/FullScreenLoader'
+
+// Mêmes statuts que GhostPanel (GameRoom.tsx) : phases où les vivants
+// discutent réellement au vocal du village.
+const VILLAGE_VOICE_STATUSES: GameStatus[] = ['day_reveal', 'day_discussion', 'day_vote', 'captain_election']
 
 const PHASE_TITLE_KEY: Record<GameStatus, TranslationKey> = {
   lobby: 'phase.lobby',
@@ -145,6 +150,9 @@ export default function SpectateGame() {
           )}
         </Card>
 
+        {VILLAGE_VOICE_STATUSES.includes(game.status) && (
+          <VoiceChat gameId={gameId} code={game.code} channel="village" displayName={t('common.playerFallback')} selfUserId={user.id} listenOnly players={players} />
+        )}
         <ChatPanel gameId={gameId} channel="village" selfId={user.id} compact readOnly />
         <ChatPanel gameId={gameId} channel="graveyard" selfId={user.id} compact compactHeightClassName="h-96" readOnly />
 

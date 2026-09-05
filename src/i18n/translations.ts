@@ -1578,8 +1578,8 @@ export const translations = {
 
   'spectate.badge': { fr: 'Vous observez — pas encore dans la partie', en: 'You are watching — not in the game yet' },
   'spectate.subtitle': {
-    fr: "Vous n'êtes pas encore membre de cette partie. Vous pouvez suivre le village et le cimetière en lecture seule — vous la rejoindrez officiellement dès que l'hôte validera votre demande.",
-    en: "You're not a member of this game yet. You can follow the village and the graveyard in read-only mode — you'll officially join as soon as the host approves your request.",
+    fr: "Vous n'êtes pas encore membre de cette partie. Vous pouvez suivre le village et le cimetière en lecture seule, et écouter le vocal pendant les débats — vous la rejoindrez officiellement dès que l'hôte validera votre demande.",
+    en: "You're not a member of this game yet. You can follow the village and the graveyard in read-only mode, and listen in on voice during debates — you'll officially join as soon as the host approves your request.",
   },
   'spectate.backToWaiting': { fr: "Retour à l'attente", en: 'Back to waiting' },
 
