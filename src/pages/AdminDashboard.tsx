@@ -31,31 +31,36 @@ import { sendNotificationCampaignNow } from '../lib/pushSubscription'
 
 type Tab = 'stats' | 'users' | 'games' | 'content' | 'events' | 'quests' | 'messages' | 'notifications' | 'security' | 'settings'
 
-const TAB_ITEMS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'stats', label: 'Vue d’ensemble', icon: '📊' },
-  { id: 'users', label: 'Utilisateurs', icon: '👤' },
-  { id: 'games', label: 'Salons', icon: '🎲' },
-  { id: 'content', label: 'Contenu du jeu', icon: '📝' },
-  { id: 'events', label: 'Événements', icon: '🎉' },
+const TAB_ITEMS: { id: Tab; label: string; icon: string; description: string }[] = [
+  { id: 'stats', label: 'Vue d’ensemble', icon: '📊', description: 'Chiffres clés et raccourcis vers les autres sections.' },
+  { id: 'users', label: 'Utilisateurs', icon: '👤', description: 'Rechercher, modérer et gérer les comptes joueurs.' },
+  { id: 'games', label: 'Salons', icon: '🎲', description: 'Salons en cours, historique et modération des parties.' },
+  { id: 'content', label: 'Contenu du jeu', icon: '📝', description: 'Textes, images et réglages du contenu affiché en jeu.' },
+  { id: 'events', label: 'Événements', icon: '🎉', description: 'Bannières et bonus temporaires affichés aux joueurs.' },
   // Catalogue des quêtes quotidiennes (voir QuestsCard.tsx côté joueur,
   // migration 0112) : texte/objectif/récompense/activation, sans passer par
   // un déploiement de code — même principe que l'onglet Événements ci-dessus.
-  { id: 'quests', label: 'Quêtes', icon: '📜' },
+  {
+    id: 'quests',
+    label: 'Quêtes',
+    icon: '📜',
+    description: 'Catalogue des quêtes quotidiennes et leurs récompenses en Loup Coins 🪙.',
+  },
   // Messages reçus des joueurs (bouton "feedback" en jeu, voir
   // FeedbackButton.tsx) : jusqu'ici uniquement envoyés par email via Resend
   // (api/feedback.ts, "best effort", pas encore configuré côté Vercel) —
   // toujours enregistrés en base quoi qu'il arrive côté email (submit_feedback,
   // migration 0056), il ne manquait qu'un écran pour les lire directement ici
   // sans dépendre de l'email (voir migration 0071).
-  { id: 'messages', label: 'Messages', icon: '💬' },
+  { id: 'messages', label: 'Messages', icon: '💬', description: 'Messages envoyés par les joueurs via le bouton feedback.' },
   // Envoi de notifications push à tous les joueurs abonnés, immédiat ou
   // programmé, avec aperçu avant envoi (voir migration 0129,
   // NotificationsTab plus bas) — jusqu'ici seules les notifications
   // automatiques liées à un événement de jeu existaient (invitation, ami,
   // partie lancée...), rien pour une annonce libre côté admin.
-  { id: 'notifications', label: 'Notifications', icon: '📣' },
-  { id: 'security', label: 'Sécurité', icon: '🔒' },
-  { id: 'settings', label: 'Réglages', icon: '⚙️' },
+  { id: 'notifications', label: 'Notifications', icon: '📣', description: 'Composer et programmer des notifications push.' },
+  { id: 'security', label: 'Sécurité', icon: '🔒', description: 'Journal des tentatives d’accès et des actions sensibles.' },
+  { id: 'settings', label: 'Réglages', icon: '⚙️', description: 'Réglages globaux de l’application.' },
 ]
 
 function isTab(value: string | null): value is Tab {
@@ -349,29 +354,58 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-6 sm:px-8">
-      <div className="mx-auto max-w-5xl">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          {/* Un seul bouton menu (☰) plutôt que 5 onglets affichés en
-              permanence : l'écran reste simple d'un coup d'œil, la
-              navigation elle-même se fait dans le tiroir (voir SideDrawer
-              ci-dessous), sur le même principe que les réglages de
-              Lobby.tsx ailleurs dans l'app. */}
+    <div className="min-h-screen lg:flex">
+      {/* Sidebar persistante (≥lg) : chaque entrée bascule immédiatement
+          vers une page dédiée en pleine largeur, plutôt qu'un contenu
+          coincé sous un bouton menu qu'il fallait rouvrir à chaque fois.
+          Sous lg, l'espace ne le permet pas : bouton ☰ + tiroir (SideDrawer)
+          repris ci-dessous, comme avant. */}
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-night-700/60 bg-night-900/40 lg:flex">
+        <div className="px-5 py-6">
+          <p className="font-display text-lg text-moon-200">🐺 Administration</p>
+        </div>
+        <nav className="flex flex-1 flex-col gap-1 px-3">
+          {TAB_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setTab(item.id)}
+              className={`flex items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-semibold transition-colors ${
+                tab === item.id ? 'bg-blood-600 text-[#fdf6e3]' : 'text-moon-200/70 hover:bg-night-700/60 hover:text-moon-200'
+              }`}
+            >
+              <span className="text-lg leading-none">{item.icon}</span>
+              {item.label}
+            </button>
+          ))}
+        </nav>
+        <div className="border-t border-night-700/60 px-5 py-4">
+          <p className="truncate text-xs text-moon-200/50">{user?.email}</p>
+          <button
+            type="button"
+            onClick={() => signOut()}
+            className="mt-2 rounded-lg border border-night-600/70 px-3 py-1.5 text-xs font-semibold text-blood-400 transition-colors hover:border-blood-600/60 hover:bg-blood-700/10"
+          >
+            Se déconnecter
+          </button>
+        </div>
+      </aside>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Barre du haut, mobile/tablette uniquement (<lg, sidebar masquée) :
+            bouton ☰ générique (le titre de la page vit désormais dans l'en-
+            tête de page ci-dessous, plus dans ce bouton) + email/déconnexion. */}
+        <div className="flex items-center justify-between gap-3 border-b border-night-700/60 px-4 py-4 sm:px-8 lg:hidden">
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
-            className="flex items-center gap-3 rounded-xl border border-night-600/70 bg-night-800/50 px-4 py-2.5 text-left transition-colors hover:border-moon-400/40"
+            className="flex items-center gap-2.5 rounded-xl border border-night-600/70 bg-night-800/50 px-4 py-2.5 text-left font-display text-sm text-moon-200 transition-colors hover:border-moon-400/40"
           >
             <span className="text-xl leading-none">☰</span>
-            <span>
-              <span className="block font-display text-lg text-moon-200">
-                {current.icon} {current.label}
-              </span>
-              <span className="block text-[11px] text-moon-200/40">Menu administration</span>
-            </span>
+            Menu
           </button>
           <div className="flex items-center gap-3">
-            <p className="text-xs text-moon-200/50">{user?.email}</p>
+            <p className="hidden text-xs text-moon-200/50 sm:block">{user?.email}</p>
             <button
               type="button"
               onClick={() => signOut()}
@@ -382,16 +416,30 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {tab === 'stats' && <StatsTab onGoToTab={goToTab} />}
-        {tab === 'users' && <UsersTab currentUserId={user?.id ?? null} seed={usersSeed} />}
-        {tab === 'games' && <GamesTab />}
-        {tab === 'content' && <ContentTab />}
-        {tab === 'events' && <EventsTab />}
-        {tab === 'quests' && <QuestTemplatesTab />}
-        {tab === 'messages' && <MessagesTab />}
-        {tab === 'notifications' && <NotificationsTab />}
-        {tab === 'security' && <SecurityTab />}
-        {tab === 'settings' && <SettingsTab />}
+        <main className="flex-1 px-4 py-6 sm:px-8 lg:px-10 lg:py-8">
+          <div className="mx-auto max-w-5xl">
+            {/* En-tête de page : icône + titre + description — chaque
+                section ouverte depuis le menu se lit comme une page à part
+                entière, pas comme un bloc qui a juste remplacé le précédent. */}
+            <div className="mb-6 flex flex-col gap-0.5 border-b border-night-700/60 pb-4">
+              <h1 className="flex items-center gap-2.5 font-display text-2xl text-moon-200">
+                <span>{current.icon}</span> {current.label}
+              </h1>
+              <p className="text-sm text-moon-200/50">{current.description}</p>
+            </div>
+
+            {tab === 'stats' && <StatsTab onGoToTab={goToTab} />}
+            {tab === 'users' && <UsersTab currentUserId={user?.id ?? null} seed={usersSeed} />}
+            {tab === 'games' && <GamesTab />}
+            {tab === 'content' && <ContentTab />}
+            {tab === 'events' && <EventsTab />}
+            {tab === 'quests' && <QuestTemplatesTab />}
+            {tab === 'messages' && <MessagesTab />}
+            {tab === 'notifications' && <NotificationsTab />}
+            {tab === 'security' && <SecurityTab />}
+            {tab === 'settings' && <SettingsTab />}
+          </div>
+        </main>
       </div>
 
       <SideDrawer open={menuOpen} onClose={() => setMenuOpen(false)} title="Administration">
@@ -2276,6 +2324,23 @@ const QUEST_CONDITION_LABELS: Record<QuestConditionKey, string> = {
   win_streak_reached: 'Atteindre une série de victoires',
 }
 
+// Explication en clair de chaque condition, affichée sous le sélecteur dans
+// le formulaire — demande explicite : rendre le système compréhensible sans
+// avoir à relire la migration SQL pour savoir ce que chaque condition vérifie
+// exactement (ex. la différence entre "avance à chaque partie" et "avance
+// seulement en cas de victoire").
+const QUEST_CONDITION_HELP: Record<QuestConditionKey, string> = {
+  games_played: 'Avance à chaque partie terminée, gagnée ou perdue.',
+  games_won: 'Avance uniquement quand le joueur gagne une partie, quel que soit son rôle.',
+  survived: 'Avance quand le joueur termine une partie encore vivant, qu’il ait gagné ou perdu.',
+  won_as_wolf: 'Avance quand le joueur gagne en étant dans le camp des Loups (Loup-Garou, Alpha, Sans-Visage, Grand Méchant Loup).',
+  won_as_village: 'Avance quand le joueur gagne en étant dans le camp du Village (tout rôle hors Loups, Anancy et Ange).',
+  played_as_role: 'Avance dès qu’une partie est jouée avec le rôle choisi ci-dessous, gagnée ou perdue.',
+  won_as_role: 'Avance uniquement si la partie est gagnée avec le rôle choisi ci-dessous.',
+  win_streak_reached:
+    'Se valide dès que le joueur atteint, à un moment de la journée, une série de victoires d’affilée au moins égale à l’objectif — une défaite ensuite ne fait pas perdre la quête déjà validée ce jour-là.',
+}
+
 // Rôles utilisables pour played_as_role/won_as_role — mêmes id que
 // src/lib/roles.ts, mêmes libellés FR que le reste de ce dashboard (voir
 // translations[role.nameKey].fr, déjà utilisé ailleurs dans ce fichier).
@@ -2294,8 +2359,11 @@ interface QuestTemplate {
   created_at: string
 }
 
+type QuestFilter = 'all' | 'active' | 'inactive'
+
 function QuestTemplatesTab() {
   const [templates, setTemplates] = useState<QuestTemplate[] | null>(null)
+  const [filter, setFilter] = useState<QuestFilter>('all')
   const [error, setError] = useState<string | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<QuestTemplate | null>(null)
@@ -2360,27 +2428,58 @@ function QuestTemplatesTab() {
     load()
   }
 
+  const filtered = templates?.filter((qt) => filter === 'all' || (filter === 'active') === qt.active) ?? null
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-moon-200/60">
-          {templates?.length ?? 0} quête(s) au catalogue — 3 tirées au hasard chaque jour parmi celles actives.
+      {/* Explication permanente, pas repliable : le mécanisme (tirage
+          pondéré, conditions par rôle, série de victoires) n'est plus
+          devinable d'un coup d'œil comme au tout début (5 conditions
+          simples) — mieux vaut le rappeler en permanence ici que de
+          compter sur le souvenir de chaque admin. */}
+      <Card className="border-moon-400/25 bg-moon-400/[0.05] p-4 text-xs leading-relaxed text-moon-200/70">
+        <p className="mb-1 font-semibold text-moon-200/90">ℹ️ Comment ça marche</p>
+        <p>
+          Chaque jour, 3 quêtes <em>actives</em> sont tirées au sort dans le catalogue — un <strong>poids</strong> plus
+          élevé augmente les chances d'être tirée, sans jamais la garantir (poids 2 = deux fois plus de chances qu'une
+          quête à poids 1). Une fois son objectif atteint, le joueur réclame la quête depuis son tableau de bord et
+          reçoit sa récompense en <strong>🪙 Loup Coins</strong> — jamais en points de rang, complètement séparés.
         </p>
-        <Button className="px-3.5 py-2 text-xs" onClick={openCreate}>
-          + Nouvelle quête
-        </Button>
+      </Card>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-moon-200/60">
+          {filtered?.length ?? 0} / {templates?.length ?? 0} quête(s) affichée(s)
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Segmented
+            tabs={[
+              { id: 'all', label: 'Toutes' },
+              { id: 'active', label: 'Actives' },
+              { id: 'inactive', label: 'Désactivées' },
+            ]}
+            active={filter}
+            onChange={setFilter}
+          />
+          <Button className="px-3.5 py-2 text-xs" onClick={openCreate}>
+            + Nouvelle quête
+          </Button>
+        </div>
       </div>
 
       <ErrorText>{error}</ErrorText>
 
       {templates === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
       {templates !== null && templates.length === 0 && <p className="text-sm text-moon-200/50">Aucune quête au catalogue.</p>}
+      {templates !== null && templates.length > 0 && filtered?.length === 0 && (
+        <p className="text-sm text-moon-200/50">Aucune quête ne correspond à ce filtre.</p>
+      )}
 
       <div className="flex flex-col gap-2">
-        {templates?.map((qt) => (
-          <Card key={qt.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
-            <div>
-              <p className="flex items-center gap-2 text-sm font-semibold text-moon-200">
+        {filtered?.map((qt) => (
+          <Card key={qt.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-moon-200">
                 {qt.label_fr}
                 {!qt.active && (
                   <span className="rounded-full bg-night-700/60 px-2 py-0.5 text-[10px] uppercase text-moon-200/50">
@@ -2388,14 +2487,28 @@ function QuestTemplatesTab() {
                   </span>
                 )}
               </p>
-              <p className="mt-1 text-xs text-moon-200/50">
-                {QUEST_CONDITION_LABELS[qt.condition_key]}
-                {qt.condition_role && ` (${translations[ROLES[qt.condition_role].nameKey].fr})`}
-                {' '}· objectif {qt.target} · +{qt.reward_coins} 🪙 · poids {qt.weight}
-              </p>
               <p className="mt-1 text-xs text-moon-200/40">🇫🇷 {qt.label_fr} · 🇬🇧 {qt.label_en}</p>
+              {/* Chips séparés plutôt qu'une ligne dense jointe par "·" :
+                  chaque information (condition, objectif, récompense, poids)
+                  se repère d'un coup d'œil, plus besoin de lire toute la
+                  phrase pour trouver celle qui compte. */}
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <span className="rounded-full bg-night-700/50 px-2 py-0.5 text-[11px] text-moon-200/70">
+                  {QUEST_CONDITION_LABELS[qt.condition_key]}
+                  {qt.condition_role && ` · ${translations[ROLES[qt.condition_role].nameKey].fr}`}
+                </span>
+                <span className="rounded-full bg-night-700/50 px-2 py-0.5 text-[11px] text-moon-200/70">
+                  🎯 Objectif {qt.target}
+                </span>
+                <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[11px] font-semibold text-amber-300">
+                  🪙 +{qt.reward_coins}
+                </span>
+                <span className="rounded-full bg-night-700/50 px-2 py-0.5 text-[11px] text-moon-200/70">
+                  ⚖️ Poids {qt.weight}
+                </span>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex shrink-0 flex-wrap gap-2">
               <Button variant="ghost" className="px-3 py-1.5 text-xs" disabled={busyId === qt.id} onClick={() => openEdit(qt)}>
                 Modifier
               </Button>
@@ -2537,98 +2650,151 @@ function QuestTemplateFormDrawer({
     onSaved()
   }
 
+  const targetLabel = form.condition_key === 'win_streak_reached' ? 'Série de victoires visée' : 'Objectif'
+
   return (
     <SideDrawer open={open} onClose={onClose} title={template ? 'Modifier la quête' : 'Nouvelle quête'}>
-      <form className="flex flex-col gap-4" onSubmit={save}>
-        <div>
-          <Label>Condition suivie</Label>
-          <Segmented
-            tabs={(Object.keys(QUEST_CONDITION_LABELS) as QuestConditionKey[]).map((id) => ({
-              id,
-              label: QUEST_CONDITION_LABELS[id],
-            }))}
-            active={form.condition_key}
-            onChange={(id) =>
-              setForm((f) => ({ ...f, condition_key: id, condition_role: QUEST_CONDITIONS_WITH_ROLE.includes(id) ? f.condition_role : '' }))
-            }
-          />
-        </div>
-
-        {QUEST_CONDITIONS_WITH_ROLE.includes(form.condition_key) && (
-          <div>
-            <Label>Rôle concerné</Label>
-            <Segmented
-              tabs={ROLE_ORDER.map((id) => ({ id, label: `${ROLES[id].emoji} ${translations[ROLES[id].nameKey].fr}` }))}
-              active={(form.condition_role || ROLE_ORDER[0]) as RoleId}
-              onChange={(id) => setForm((f) => ({ ...f, condition_role: id }))}
-            />
+      <form className="flex flex-col gap-5" onSubmit={save}>
+        <section className="flex flex-col gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-moon-200/40">Quand est-elle validée ?</p>
+          {/* Grille (pas Segmented) : 8 conditions ne tiennent pas sur une
+              seule ligne sans devenir illisibles — chaque option reste un
+              bouton pleinement lisible, qui passe à la ligne suivante s'il
+              le faut. */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {(Object.keys(QUEST_CONDITION_LABELS) as QuestConditionKey[]).map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() =>
+                  setForm((f) => ({
+                    ...f,
+                    condition_key: id,
+                    condition_role: QUEST_CONDITIONS_WITH_ROLE.includes(id) ? f.condition_role : '',
+                  }))
+                }
+                className={`rounded-xl border px-3 py-2 text-left text-xs font-semibold transition-colors ${
+                  form.condition_key === id
+                    ? 'border-blood-500 bg-blood-600 text-[#fdf6e3]'
+                    : 'border-night-600/60 bg-night-900/40 text-moon-200/70 hover:border-moon-400/40 hover:text-moon-200'
+                }`}
+              >
+                {QUEST_CONDITION_LABELS[id]}
+              </button>
+            ))}
           </div>
-        )}
+          <p className="text-xs text-moon-200/40">{QUEST_CONDITION_HELP[form.condition_key]}</p>
 
-        <div>
-          <Label>Texte affiché — Français</Label>
-          <Input
-            value={form.label_fr}
-            onChange={(ev) => setForm((f) => ({ ...f, label_fr: ev.target.value }))}
-            placeholder="Ex. Gagne une partie"
-          />
-        </div>
-        <div>
-          <Label>Texte affiché — English</Label>
-          <Input
-            value={form.label_en}
-            onChange={(ev) => setForm((f) => ({ ...f, label_en: ev.target.value }))}
-            placeholder="Ex. Win a game"
-          />
-        </div>
+          {QUEST_CONDITIONS_WITH_ROLE.includes(form.condition_key) && (
+            <div className="mt-1">
+              <Label>Rôle concerné</Label>
+              <select
+                value={form.condition_role}
+                onChange={(ev) => setForm((f) => ({ ...f, condition_role: ev.target.value as RoleId }))}
+                className="w-full rounded-xl border border-night-500 bg-night-800/80 px-3 py-2.5 text-sm text-moon-200 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20"
+              >
+                <option value="" disabled>
+                  Choisir un rôle...
+                </option>
+                {ROLE_ORDER.map((id) => (
+                  <option key={id} value={id}>
+                    {ROLES[id].emoji} {translations[ROLES[id].nameKey].fr}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </section>
 
-        <div className="grid grid-cols-3 gap-3">
+        <section className="flex flex-col gap-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-moon-200/40">Textes affichés aux joueurs</p>
           <div>
-            <Label>Objectif</Label>
+            <Label>Français</Label>
             <Input
-              type="number"
-              min={1}
-              value={form.target}
-              onChange={(ev) => setForm((f) => ({ ...f, target: ev.target.value }))}
+              value={form.label_fr}
+              onChange={(ev) => setForm((f) => ({ ...f, label_fr: ev.target.value }))}
+              placeholder="Ex. Gagne une partie"
             />
           </div>
           <div>
-            <Label>Récompense (🪙 Loup Coins)</Label>
+            <Label>English</Label>
             <Input
-              type="number"
-              min={0}
-              value={form.reward_coins}
-              onChange={(ev) => setForm((f) => ({ ...f, reward_coins: ev.target.value }))}
+              value={form.label_en}
+              onChange={(ev) => setForm((f) => ({ ...f, label_en: ev.target.value }))}
+              placeholder="Ex. Win a game"
             />
           </div>
-          <div>
-            <Label>Poids (rareté)</Label>
-            <Input
-              type="number"
-              min={1}
-              value={form.weight}
-              onChange={(ev) => setForm((f) => ({ ...f, weight: ev.target.value }))}
-            />
-          </div>
-        </div>
-        <p className="-mt-2 text-xs text-moon-200/40">
-          Un poids plus élevé augmente les chances que cette quête soit tirée chaque jour (poids 1 = normal, 2 = deux fois plus de
-          chances, etc.) — sans jamais garantir qu'elle le soit.
-        </p>
+        </section>
 
-        <label className="flex items-center gap-2 text-sm text-moon-200/80">
-          <input
-            type="checkbox"
-            checked={form.active}
-            onChange={(ev) => setForm((f) => ({ ...f, active: ev.target.checked }))}
-            className="h-4 w-4 rounded border-night-600/70 bg-night-900/50 accent-blood-600"
-          />
-          Active (peut être tirée au sort chaque jour)
-        </label>
+        <section className="flex flex-col gap-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-moon-200/40">Réglages</p>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Label>{targetLabel}</Label>
+              <Input
+                type="number"
+                min={1}
+                value={form.target}
+                onChange={(ev) => setForm((f) => ({ ...f, target: ev.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>🪙 Loup Coins</Label>
+              <Input
+                type="number"
+                min={0}
+                value={form.reward_coins}
+                onChange={(ev) => setForm((f) => ({ ...f, reward_coins: ev.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>Poids (rareté)</Label>
+              <Input
+                type="number"
+                min={1}
+                value={form.weight}
+                onChange={(ev) => setForm((f) => ({ ...f, weight: ev.target.value }))}
+              />
+            </div>
+          </div>
+          <p className="-mt-1 text-xs text-moon-200/40">
+            Un poids plus élevé augmente les chances que cette quête soit tirée chaque jour (poids 1 = normal, 2 = deux fois plus
+            de chances, etc.) — sans jamais garantir qu'elle le soit.
+          </p>
+
+          <label className="flex items-center gap-2 text-sm text-moon-200/80">
+            <input
+              type="checkbox"
+              checked={form.active}
+              onChange={(ev) => setForm((f) => ({ ...f, active: ev.target.checked }))}
+              className="h-4 w-4 rounded border-night-600/70 bg-night-900/50 accent-blood-600"
+            />
+            Active (peut être tirée au sort chaque jour)
+          </label>
+        </section>
+
+        {/* Aperçu joueur : reprend le style exact de QuestsCard.tsx côté
+            joueur, mis à jour en direct à chaque frappe — pour que l'admin
+            voie immédiatement le résultat final plutôt que d'avoir à
+            l'imaginer à partir de champs séparés. */}
+        <section className="flex flex-col gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-moon-200/40">Aperçu joueur</p>
+          <div className="flex items-center gap-2 rounded-xl border border-night-700/50 bg-night-800/30 p-3">
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-400/15 px-2 py-0.5 text-xs font-semibold text-amber-300">
+              🪙 +{form.reward_coins || 0}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-sm text-moon-200/90">
+              {form.label_fr || 'Texte affiché au joueur...'}
+            </span>
+          </div>
+          <p className="text-[11px] text-moon-200/40">
+            {targetLabel} : {form.target || '?'}
+          </p>
+        </section>
 
         <ErrorText>{error}</ErrorText>
 
-        <div className="mt-2 flex gap-3">
+        <div className="mt-1 flex gap-3">
           <Button type="button" variant="ghost" className="flex-1" onClick={onClose}>
             Annuler
           </Button>
