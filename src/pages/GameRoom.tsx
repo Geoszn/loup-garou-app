@@ -164,6 +164,14 @@ export default function GameRoom() {
   const me = view.players.find((p) => p.user_id === user.id)
   const alive = me?.is_alive ?? false
   const isHost = me?.is_host ?? false
+  // Demande utilisateur : dès qu'un vrai second joueur (donc plus juste
+  // l'admin lui-même, éventuellement entouré de bots) participe, le mode de
+  // test solo n'a plus lieu d'être — masque "Faire jouer les bots" pour ne
+  // jamais pouvoir l'actionner par erreur dans ce qui n'est plus un test
+  // solo. Même heuristique que plus bas (préfixe 🤖 du pseudo).
+  const hasOtherRealPlayer = view.players.some(
+    (p) => p.user_id !== user.id && !p.display_name.startsWith('🤖 ')
+  )
 
   // L'hôte vous a exclu de cette partie (kick_player) : contrairement à une
   // élimination normale, on ne montre pas l'écran fantôme habituel (chat du
@@ -295,9 +303,11 @@ export default function GameRoom() {
           même dans une partie sans aucun bot, où il n'a jamais rien à
           résoudre — repli sur la même détection heuristique que Lobby.tsx
           (préfixe "🤖 " du pseudo, is_bot n'étant pas exposé par
-          get_my_game_view). */}
+          get_my_game_view). Masqué dès qu'un vrai second joueur participe
+          (voir hasOtherRealPlayer) : ce n'est plus un test solo. */}
       {profile?.is_admin &&
         isHost &&
+        !hasOtherRealPlayer &&
         view.players.some((p) => p.display_name.startsWith('🤖 ')) &&
         // 'day_discussion' ajouté (voir migration 0144) : admin_auto_play_bots
         // gère désormais aussi le débat (accord de la meute-bots pour lancer

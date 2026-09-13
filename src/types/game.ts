@@ -394,6 +394,7 @@ export type ImpactKind =
   | 'ancien_extra_life'
   | 'anancy_solo_win'
   | 'gml_second_kill'
+  | 'wolf_team_win'
 
 export interface ImpactDetail {
   kind: ImpactKind

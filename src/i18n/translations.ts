@@ -730,6 +730,7 @@ export const translations = {
   'impact.ancien_extra_life': { fr: '👴 Résilience de l’Ancien', en: '👴 Elder’s resilience' },
   'impact.anancy_solo_win': { fr: '🕸️ Victoire solitaire d’Anancy', en: '🕸️ Anancy’s solo win' },
   'impact.gml_second_kill': { fr: '👹 Seconde victime dévorée', en: '👹 Second victim devoured' },
+  'impact.wolf_team_win': { fr: '🐺 Victoire en tant que Loup-Garou', en: '🐺 Victory as a Werewolf' },
 
   'game.yourRole': { fr: 'Votre rôle', en: 'Your role' },
   'role.wolfPack.title': { fr: 'Votre meute', en: 'Your pack' },

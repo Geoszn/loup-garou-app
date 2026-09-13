@@ -420,6 +420,15 @@ export default function Lobby() {
   if (!view) return <FullScreenLoader />
 
   const playerCount = view.players.length
+  // Demande utilisateur : dès qu'un vrai second joueur (donc plus juste
+  // l'admin lui-même, éventuellement entouré de bots) est dans le salon,
+  // le mode de test solo n'a plus lieu d'être — masque "+ Ajouter un bot"
+  // pour ne jamais pouvoir l'actionner par erreur dans ce qui n'est plus un
+  // test solo. Même heuristique que isBot plus bas (préfixe 🤖 du pseudo,
+  // is_bot n'étant pas exposé par get_my_game_view).
+  const hasOtherRealPlayer = view.players.some(
+    (p) => p.user_id !== user?.id && !p.display_name.startsWith('🤖 ')
+  )
   const invitableFriends = friends.filter((f) => !view.players.some((p) => p.user_id === f.user_id))
   const specialTotal =
     counts.loup_garou +
@@ -588,8 +597,9 @@ export default function Lobby() {
               {/* Mode de test solo (voir migration 0127) : réservé à l'admin
                   ET à ses propres salons (isHost) — jamais visible pour un
                   autre compte, ni pour l'admin dans le salon de quelqu'un
-                  d'autre. */}
-              {profile?.is_admin && isHost && (
+                  d'autre. Masqué dès qu'un vrai second joueur rejoint (voir
+                  hasOtherRealPlayer) : ce n'est plus un test solo. */}
+              {profile?.is_admin && isHost && !hasOtherRealPlayer && (
                 <button
                   type="button"
                   onClick={addBot}
