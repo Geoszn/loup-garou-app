@@ -212,6 +212,11 @@ function RankingContent() {
       </div>
 
       <div>
+        <h3 className="mb-1.5 font-display text-sm text-moon-300">{t('help.ranking.loupCoins.title')}</h3>
+        <p>{t('help.ranking.loupCoins.text')}</p>
+      </div>
+
+      <div>
         <h3 className="mb-2 font-display text-sm text-moon-300">{t('help.ranking.tiers.title')}</h3>
         <p className="mb-2">{t('help.ranking.tiers.text')}</p>
         <div className="flex flex-col gap-1.5">

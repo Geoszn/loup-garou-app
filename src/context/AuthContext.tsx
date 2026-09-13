@@ -15,6 +15,11 @@ interface Profile {
   rank_points: number
   current_streak: number
   best_streak: number
+  // Monnaie dédiée (voir migration 0146) : gagnée uniquement via les quêtes
+  // quotidiennes (claim_quest_reward), totalement séparée de rank_points
+  // ci-dessus. Chargée ici pour le même motif que rank_points (RLS
+  // profiles_select_own), affichée dans Dashboard.tsx et Stats.tsx.
+  loup_coins: number
   // Série de connexion quotidienne (voir migration 0110) : distincte de
   // current_streak ci-dessus (victoires d'affilée) — comptée à chaque
   // ouverture de l'app un jour différent, gagné ou perdu. claim_daily_login()
@@ -51,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data } = await supabase
       .from('profiles')
       .select(
-        'id, username, avatar_icon, lang, username_changed_at, rank_points, current_streak, best_streak, login_streak, login_streak_best, continent, is_admin',
+        'id, username, avatar_icon, lang, username_changed_at, rank_points, current_streak, best_streak, loup_coins, login_streak, login_streak_best, continent, is_admin',
       )
       .eq('id', userId)
       .maybeSingle()

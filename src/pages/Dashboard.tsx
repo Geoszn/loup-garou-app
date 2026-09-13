@@ -7,6 +7,7 @@ import { Button, Card, ErrorText, Input, Label, Modal } from '../components/ui'
 import { AccountMenu } from '../components/AccountMenu'
 import { RankBadge } from '../components/RankBadge'
 import { LoginStreakBadge } from '../components/LoginStreakBadge'
+import { LoupCoinsBadge } from '../components/LoupCoinsBadge'
 import { DailyLoginBanner } from '../components/DailyLoginBanner'
 import { FriendsOnlineWidget, type FriendPerson } from '../components/FriendsOnlineWidget'
 import { QuestsCard } from '../components/QuestsCard'
@@ -278,6 +279,7 @@ export default function Dashboard() {
           </Link>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             {profile && <RankBadge points={profile.rank_points} streak={profile.current_streak} />}
+            {profile && <LoupCoinsBadge coins={profile.loup_coins} />}
             {profile && <LoginStreakBadge streak={profile.login_streak} />}
             <AccountMenu
               username={profile?.username}

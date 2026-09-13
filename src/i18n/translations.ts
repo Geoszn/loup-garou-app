@@ -1272,6 +1272,11 @@ export const translations = {
     en: 'Some standout actions earn extra points — whether you win or lose the game, as soon as the action pays off:',
   },
   'help.ranking.impact.seerNote': { fr: '(jusqu’à 2 fois par partie)', en: '(up to 2 times per game)' },
+  'help.ranking.loupCoins.title': { fr: '🪙 Les Loup Coins', en: '🪙 Loup Coins' },
+  'help.ranking.loupCoins.text': {
+    fr: 'Une monnaie à part, séparée des points de rang : les Loup Coins se gagnent uniquement en réclamant tes quêtes quotidiennes (voir le tableau de bord). Ils n’influencent ni ton palier ni ta position au classement — ton total accumulé est visible dans tes statistiques.',
+    en: 'A separate currency from rank points: Loup Coins are earned only by claiming your daily quests (see your dashboard). They don’t affect your tier or leaderboard position — your accumulated total is shown in your stats.',
+  },
   'help.ranking.tiers.title': { fr: '🎖️ Les paliers', en: '🎖️ Tiers' },
   'help.ranking.tiers.text': {
     fr: 'Tes points te placent dans un palier, du plus modeste au plus prestigieux :',
@@ -1354,7 +1359,13 @@ export const translations = {
   'friendsOnline.inGame': { fr: 'en partie', en: 'in a game' },
   'friendsOnline.idle': { fr: 'disponible', en: 'available' },
   'quest.title': { fr: 'Quêtes du jour', en: 'Daily quests' },
-  'quest.claim': { fr: 'Réclamer (+{{points}})', en: 'Claim (+{{points}})' },
+  'quest.claim': { fr: 'Réclamer (+{{coins}} 🪙)', en: 'Claim (+{{coins}} 🪙)' },
+  'loupCoins.dashboardLabel': { fr: '{{count}} 🪙', en: '{{count}} 🪙' },
+  'loupCoins.title': { fr: 'Loup Coins', en: 'Loup Coins' },
+  'loupCoins.subtitle': {
+    fr: 'Gagnés en réclamant tes quêtes quotidiennes.',
+    en: 'Earned by claiming your daily quests.',
+  },
   'account.notifications.title': { fr: 'Notifications', en: 'Notifications' },
   'account.notifications.description': {
     fr: 'Reçois une alerte quand c’est ton tour de jouer ou qu’un ami te lance une invitation.',

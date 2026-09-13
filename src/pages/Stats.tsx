@@ -204,6 +204,8 @@ export default function Stats() {
               <StatBox label={t('stats.winRate')} value={`${winRate}%`} />
             </div>
 
+            {profile && <LoupCoinsCard coins={profile.loup_coins} />}
+
             <VolumeTitleCard gamesPlayed={stats.games_played} />
 
             <Card>
@@ -365,6 +367,25 @@ function VolumeTitleCard({ gamesPlayed }: { gamesPlayed: number }) {
           ? t('stats.volume.nextTitle', { count: next.remaining, s: next.remaining > 1 ? 's' : '', title: t(next.next.nameKey) })
           : t('stats.volume.maxTitle')}
       </p>
+    </Card>
+  )
+}
+
+/** Carte dédiée au total de Loup Coins (migration 0146) — monnaie séparée du
+ * rang, gagnée uniquement en réclamant des quêtes quotidiennes (voir
+ * QuestsCard.tsx). Un StatBox de plus dans la grille 3 colonnes existante
+ * l'aurait noyée parmi des chiffres de partie ; une carte à part, juste
+ * après la carte de rang, lui donne la même importance visuelle qu'au reste
+ * de la progression du joueur. */
+function LoupCoinsCard({ coins }: { coins: number }) {
+  const { t } = useLanguage()
+  return (
+    <Card className="flex items-center justify-between gap-3">
+      <div>
+        <p className="text-[11px] uppercase tracking-wider text-moon-200/50">{t('loupCoins.title')}</p>
+        <p className="mt-0.5 text-xs text-moon-200/40">{t('loupCoins.subtitle')}</p>
+      </div>
+      <p className="shrink-0 font-display text-2xl text-amber-300">🪙 {coins}</p>
     </Card>
   )
 }

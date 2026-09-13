@@ -2245,13 +2245,25 @@ function EventBannerImageUpload({
 // au-dessus : upsert unique (p_id null = création), toggle Activer/
 // Désactiver en un clic, suppression définitive.
 //
-// `condition_key` reste un choix parmi un ensemble FERMÉ de 5 valeurs (voir
-// le commentaire en tête de migration 0112) : chacune correspond à un bloc
-// de code précis dans sync_daily_quests_for_game, l'admin ne peut pas en
-// inventer une sixième depuis cet écran — seuls texte/objectif/récompense/
-// activation sont librement modifiables.
+// `condition_key` reste un choix parmi un ensemble FERMÉ de 8 valeurs (voir
+// le commentaire en tête de migration 0146) : chacune correspond à un bloc
+// de code précis dans sync_daily_quests_for_game/_for_all_players, l'admin
+// ne peut pas en inventer une neuvième depuis cet écran. Deux d'entre elles
+// (played_as_role/won_as_role) prennent en plus un rôle précis
+// (`condition_role`). La récompense (migration 0146) est désormais en Loup
+// Coins, plus en points de rang, et un poids (`weight`) contrôle la rareté
+// de chaque quête dans le tirage quotidien — texte/objectif/récompense/
+// poids/rôle/activation restent tous librement modifiables.
 // ----------------------------------------------------------------------------
-type QuestConditionKey = 'games_played' | 'games_won' | 'survived' | 'won_as_wolf' | 'won_as_village'
+type QuestConditionKey =
+  | 'games_played'
+  | 'games_won'
+  | 'survived'
+  | 'won_as_wolf'
+  | 'won_as_village'
+  | 'played_as_role'
+  | 'won_as_role'
+  | 'win_streak_reached'
 
 const QUEST_CONDITION_LABELS: Record<QuestConditionKey, string> = {
   games_played: 'Nombre de parties jouées',
@@ -2259,15 +2271,25 @@ const QUEST_CONDITION_LABELS: Record<QuestConditionKey, string> = {
   survived: 'Survivre jusqu’à la fin',
   won_as_wolf: 'Gagner en tant que Loup',
   won_as_village: 'Gagner en tant que Villageois',
+  played_as_role: 'Jouer un rôle précis',
+  won_as_role: 'Gagner avec un rôle précis',
+  win_streak_reached: 'Atteindre une série de victoires',
 }
+
+// Rôles utilisables pour played_as_role/won_as_role — mêmes id que
+// src/lib/roles.ts, mêmes libellés FR que le reste de ce dashboard (voir
+// translations[role.nameKey].fr, déjà utilisé ailleurs dans ce fichier).
+const QUEST_CONDITIONS_WITH_ROLE: QuestConditionKey[] = ['played_as_role', 'won_as_role']
 
 interface QuestTemplate {
   id: string
   condition_key: QuestConditionKey
+  condition_role: RoleId | null
   label_fr: string
   label_en: string
   target: number
-  reward_points: number
+  reward_coins: number
+  weight: number
   active: boolean
   created_at: string
 }
@@ -2309,10 +2331,12 @@ function QuestTemplatesTab() {
     const { error: rpcError } = await supabase.rpc('admin_upsert_quest_template', {
       p_id: qt.id,
       p_condition_key: qt.condition_key,
+      p_condition_role: qt.condition_role,
       p_label_fr: qt.label_fr,
       p_label_en: qt.label_en,
       p_target: qt.target,
-      p_reward_points: qt.reward_points,
+      p_reward_coins: qt.reward_coins,
+      p_weight: qt.weight,
       p_active: !qt.active,
     })
     setBusyId(null)
@@ -2365,7 +2389,9 @@ function QuestTemplatesTab() {
                 )}
               </p>
               <p className="mt-1 text-xs text-moon-200/50">
-                {QUEST_CONDITION_LABELS[qt.condition_key]} · objectif {qt.target} · +{qt.reward_points} pts
+                {QUEST_CONDITION_LABELS[qt.condition_key]}
+                {qt.condition_role && ` (${translations[ROLES[qt.condition_role].nameKey].fr})`}
+                {' '}· objectif {qt.target} · +{qt.reward_coins} 🪙 · poids {qt.weight}
               </p>
               <p className="mt-1 text-xs text-moon-200/40">🇫🇷 {qt.label_fr} · 🇬🇧 {qt.label_en}</p>
             </div>
@@ -2410,19 +2436,23 @@ function QuestTemplatesTab() {
 
 interface QuestTemplateFormState {
   condition_key: QuestConditionKey
+  condition_role: RoleId | ''
   label_fr: string
   label_en: string
   target: string
-  reward_points: string
+  reward_coins: string
+  weight: string
   active: boolean
 }
 
 const EMPTY_QUEST_FORM: QuestTemplateFormState = {
   condition_key: 'games_played',
+  condition_role: '',
   label_fr: '',
   label_en: '',
   target: '1',
-  reward_points: '5',
+  reward_coins: '5',
+  weight: '1',
   active: true,
 }
 
@@ -2446,10 +2476,12 @@ function QuestTemplateFormDrawer({
     if (template) {
       setForm({
         condition_key: template.condition_key,
+        condition_role: template.condition_role ?? '',
         label_fr: template.label_fr,
         label_en: template.label_en,
         target: String(template.target),
-        reward_points: String(template.reward_points),
+        reward_coins: String(template.reward_coins),
+        weight: String(template.weight),
         active: template.active,
       })
     } else {
@@ -2464,8 +2496,14 @@ function QuestTemplateFormDrawer({
       setError('Texte requis (FR et EN).')
       return
     }
+    const needsRole = QUEST_CONDITIONS_WITH_ROLE.includes(form.condition_key)
+    if (needsRole && !form.condition_role) {
+      setError('Choisis un rôle pour cette condition.')
+      return
+    }
     const target = Number(form.target)
-    const reward = Number(form.reward_points)
+    const reward = Number(form.reward_coins)
+    const weight = Number(form.weight)
     if (!Number.isFinite(target) || target <= 0) {
       setError('Objectif invalide.')
       return
@@ -2474,15 +2512,21 @@ function QuestTemplateFormDrawer({
       setError('Récompense invalide.')
       return
     }
+    if (!Number.isFinite(weight) || weight <= 0) {
+      setError('Poids invalide.')
+      return
+    }
     setBusy(true)
     setError(null)
     const { error: rpcError } = await supabase.rpc('admin_upsert_quest_template', {
       p_id: template?.id ?? null,
       p_condition_key: form.condition_key,
+      p_condition_role: needsRole ? form.condition_role : null,
       p_label_fr: form.label_fr,
       p_label_en: form.label_en,
       p_target: target,
-      p_reward_points: reward,
+      p_reward_coins: reward,
+      p_weight: weight,
       p_active: form.active,
     })
     setBusy(false)
@@ -2504,9 +2548,22 @@ function QuestTemplateFormDrawer({
               label: QUEST_CONDITION_LABELS[id],
             }))}
             active={form.condition_key}
-            onChange={(id) => setForm((f) => ({ ...f, condition_key: id }))}
+            onChange={(id) =>
+              setForm((f) => ({ ...f, condition_key: id, condition_role: QUEST_CONDITIONS_WITH_ROLE.includes(id) ? f.condition_role : '' }))
+            }
           />
         </div>
+
+        {QUEST_CONDITIONS_WITH_ROLE.includes(form.condition_key) && (
+          <div>
+            <Label>Rôle concerné</Label>
+            <Segmented
+              tabs={ROLE_ORDER.map((id) => ({ id, label: `${ROLES[id].emoji} ${translations[ROLES[id].nameKey].fr}` }))}
+              active={(form.condition_role || ROLE_ORDER[0]) as RoleId}
+              onChange={(id) => setForm((f) => ({ ...f, condition_role: id }))}
+            />
+          </div>
+        )}
 
         <div>
           <Label>Texte affiché — Français</Label>
@@ -2525,7 +2582,7 @@ function QuestTemplateFormDrawer({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <div>
             <Label>Objectif</Label>
             <Input
@@ -2536,15 +2593,28 @@ function QuestTemplateFormDrawer({
             />
           </div>
           <div>
-            <Label>Récompense (points)</Label>
+            <Label>Récompense (🪙 Loup Coins)</Label>
             <Input
               type="number"
               min={0}
-              value={form.reward_points}
-              onChange={(ev) => setForm((f) => ({ ...f, reward_points: ev.target.value }))}
+              value={form.reward_coins}
+              onChange={(ev) => setForm((f) => ({ ...f, reward_coins: ev.target.value }))}
+            />
+          </div>
+          <div>
+            <Label>Poids (rareté)</Label>
+            <Input
+              type="number"
+              min={1}
+              value={form.weight}
+              onChange={(ev) => setForm((f) => ({ ...f, weight: ev.target.value }))}
             />
           </div>
         </div>
+        <p className="-mt-2 text-xs text-moon-200/40">
+          Un poids plus élevé augmente les chances que cette quête soit tirée chaque jour (poids 1 = normal, 2 = deux fois plus de
+          chances, etc.) — sans jamais garantir qu'elle le soit.
+        </p>
 
         <label className="flex items-center gap-2 text-sm text-moon-200/80">
           <input

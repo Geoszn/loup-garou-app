@@ -10,7 +10,7 @@ interface Quest {
   label_en: string
   progress: number
   target: number
-  reward_points: number
+  reward_coins: number
   claimed_at: string | null
 }
 
@@ -18,12 +18,13 @@ interface Quest {
  * 3 quêtes assignées au hasard chaque jour, parmi un catalogue géré depuis
  * l'onglet "Quêtes" du dashboard admin (voir migration 0112,
  * quest_templates — plus de catalogue en dur côté client : label_fr/
- * label_en/target/reward_points viennent directement de get_my_quests).
+ * label_en/target/reward_coins viennent directement de get_my_quests).
  * La progression avance côté serveur à la fin de chaque partie
  * (sync_daily_quests_for_game, appelée depuis EndScreen), ce composant ne
  * fait qu'afficher l'état courant et permettre de réclamer la récompense
- * d'une quête terminée. Invisible tant que get_my_quests n'a pas répondu,
- * pour ne jamais montrer une carte vide qui se remplit après coup.
+ * d'une quête terminée — en Loup Coins depuis la migration 0146 (plus des
+ * points de rang). Invisible tant que get_my_quests n'a pas répondu, pour
+ * ne jamais montrer une carte vide qui se remplit après coup.
  */
 export function QuestsCard() {
   const { refreshProfile } = useAuth()
@@ -90,7 +91,7 @@ export function QuestsCard() {
                     claimed ? 'bg-night-700/50 text-moon-200/40' : 'bg-amber-400/15 text-amber-300'
                   }`}
                 >
-                  🏆 +{q.reward_points}
+                  🪙 +{q.reward_coins}
                 </span>
                 <span className={`min-w-0 flex-1 text-sm ${claimed ? 'text-moon-200/40 line-through' : 'text-moon-200/90'}`}>
                   {label}
@@ -131,7 +132,7 @@ export function QuestsCard() {
 
               {done && !claimed && (
                 <Button className="w-full py-2 text-sm" disabled={claiming === q.template_id} onClick={() => claim(q.template_id)}>
-                  {claiming === q.template_id ? t('common.sending') : t('quest.claim', { points: q.reward_points })}
+                  {claiming === q.template_id ? t('common.sending') : t('quest.claim', { coins: q.reward_coins })}
                 </Button>
               )}
             </li>
