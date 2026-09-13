@@ -539,6 +539,9 @@ export const translations = {
     en: 'Let the system choose a balanced composition based on player count.',
   },
   'lobby.autoRoles.previewLoading': { fr: 'Calcul de la composition...', en: 'Computing composition...' },
+  'lobby.autoRoles.previewHeading': { fr: 'Ce qui sera utilisé', en: 'What will be used' },
+  'lobby.autoRoles.recalculating': { fr: 'Recalcul...', en: 'Recalculating...' },
+  'lobby.autoRoles.upToDate': { fr: 'À jour', en: 'Up to date' },
   'lobby.autoRoles.previewError': {
     fr: 'Impossible de calculer l’aperçu pour le moment.',
     en: 'Could not compute the preview right now.',

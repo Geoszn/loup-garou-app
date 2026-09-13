@@ -418,13 +418,51 @@ const MessageRow = memo(function MessageRow({
     (g) => g.entries.length > 0
   )
 
+  // Qui a réagi avec tel emoji (voir la petite carte sous la pastille,
+  // demande utilisateur : "savoir qui a fait une réaction comme sur
+  // WhatsApp") — un tap court sur une pastille continue de basculer SA
+  // PROPRE réaction (comportement existant, ne doit pas changer) ; un appui
+  // long révèle la liste des noms à la place, même geste et même minuteur
+  // (LONG_PRESS_MS) que celui déjà utilisé sur la bulle elle-même juste
+  // au-dessus. `title` (infobulle native) reste en place en plus, pour la
+  // souris sur ordinateur — cette carte comble le même besoin sur tactile,
+  // où survoler n'existe pas.
+  const [namesFor, setNamesFor] = useState<ReactionEmoji | null>(null)
+  const pillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const suppressNextPillClickRef = useRef(false)
+
+  useEffect(() => {
+    if (!namesFor) return
+    const close = () => setNamesFor(null)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [namesFor])
+
+  function beginPillLongPress(emoji: ReactionEmoji) {
+    if (pillTimerRef.current) clearTimeout(pillTimerRef.current)
+    pillTimerRef.current = setTimeout(() => {
+      setNamesFor(emoji)
+      suppressNextPillClickRef.current = true
+      navigator.vibrate?.(15)
+    }, LONG_PRESS_MS)
+  }
+  function cancelPillLongPress() {
+    if (pillTimerRef.current) {
+      clearTimeout(pillTimerRef.current)
+      pillTimerRef.current = null
+    }
+  }
+
   return (
-    <div className={`animate-fade-in text-sm ${isMine ? 'text-right' : ''}`}>
+    <div className={`text-sm ${isMine ? 'text-right' : ''}`}>
       {/* Réagir/répondre : appui long (tactile ou souris maintenue) sur la
           bulle elle-même plutôt que des boutons toujours visibles à côté —
           même logique que WhatsApp/Messenger. select-none + onContextMenu
           évite que le maintien du doigt ne déclenche la sélection de texte
-          ou le menu contextuel natif du navigateur pendant l'appui. */}
+          ou le menu contextuel natif du navigateur pendant l'appui.
+          animate-bubble-in (voir tailwind.config.js) : petit "pop" à
+          l'arrivée du message (échelle + léger glissement), plutôt qu'un
+          simple fondu — demande utilisateur, "un peu comme sur WhatsApp". */}
       <span
         onTouchStart={() => {
           touchActiveRef.current = true
@@ -449,7 +487,7 @@ const MessageRow = memo(function MessageRow({
         onMouseLeave={onCancelLongPress}
         onContextMenu={(e) => e.preventDefault()}
         onClick={() => onBubbleClick(m.id)}
-        className={`inline-block max-w-[85%] select-none break-words rounded-2xl px-3 py-1.5 text-left ${
+        className={`animate-bubble-in inline-block max-w-[85%] select-none break-words rounded-2xl px-3 py-1.5 text-left ${
           isMine
             ? 'bg-blood-700/30 text-moon-200'
             : m.is_anonymous
@@ -473,21 +511,56 @@ const MessageRow = memo(function MessageRow({
       {(groupedReactions.length > 0 || menuOpen) && (
         <div className={`mt-1 flex flex-wrap items-center gap-1 ${isMine ? 'justify-end' : ''}`}>
           {groupedReactions.map((g) => {
+            // Couleur "mine" volontairement sobre et unique (moon-400, déjà
+            // l'accent de survol par défaut de cette pastille juste en
+            // dessous) plutôt que le rouge vif utilisé ailleurs pour une
+            // sélection — demande utilisateur, une réaction n'a pas besoin
+            // de la même intensité visuelle qu'un choix de vote.
             const mine = g.entries.some((r) => r.user_id === selfId)
             return (
-              <button
-                key={g.emoji}
-                type="button"
-                onClick={() => onToggleReaction(m.id, g.emoji)}
-                title={g.entries.map((r) => r.display_name).join(', ')}
-                className={`rounded-full border px-1.5 py-0.5 text-xs transition-colors ${
-                  mine
-                    ? 'border-blood-500/60 bg-blood-700/20 text-moon-200'
-                    : 'border-night-600/60 bg-night-800/60 text-moon-200/70 hover:border-moon-400/40'
-                }`}
-              >
-                {g.emoji} {g.entries.length}
-              </button>
+              <span key={g.emoji} className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (suppressNextPillClickRef.current) {
+                      suppressNextPillClickRef.current = false
+                      return
+                    }
+                    onToggleReaction(m.id, g.emoji)
+                  }}
+                  onTouchStart={() => beginPillLongPress(g.emoji)}
+                  onTouchEnd={cancelPillLongPress}
+                  onTouchMove={cancelPillLongPress}
+                  onTouchCancel={cancelPillLongPress}
+                  onMouseDown={() => beginPillLongPress(g.emoji)}
+                  onMouseUp={cancelPillLongPress}
+                  onMouseLeave={cancelPillLongPress}
+                  onContextMenu={(e) => e.preventDefault()}
+                  title={g.entries.map((r) => r.display_name).join(', ')}
+                  className={`select-none rounded-full border px-1.5 py-0.5 text-xs transition-colors ${
+                    mine
+                      ? 'border-moon-400/50 bg-moon-400/10 text-moon-200'
+                      : 'border-night-600/60 bg-night-800/60 text-moon-200/70 hover:border-moon-400/40'
+                  }`}
+                >
+                  {g.emoji} {g.entries.length}
+                </button>
+                {namesFor === g.emoji && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute left-1/2 top-full z-20 mt-1.5 w-max max-w-[10rem] -translate-x-1/2 rounded-xl border border-night-600 bg-night-800 px-2.5 py-2 text-left shadow-card"
+                  >
+                    <p className="mb-1 text-center text-sm leading-none">{g.emoji}</p>
+                    <ul className="flex flex-col gap-0.5">
+                      {g.entries.map((r) => (
+                        <li key={r.id} className="truncate text-xs text-moon-200/80">
+                          {r.display_name}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </span>
             )
           })}
           {menuOpen && (
@@ -505,13 +578,18 @@ const MessageRow = memo(function MessageRow({
               {!readOnly && (
                 <>
                   <span className="h-4 w-px bg-night-600/60" />
+                  {/* Symbole seul (pas de libellé) : demande utilisateur —
+                      "le bouton répondre est trop long". Couleur sobre,
+                      cohérente avec le reste des icônes secondaires de
+                      l'appli (text-moon-200/50-60), pas de teinte dédiée. */}
                   <button
                     type="button"
                     onClick={() => onReply(m)}
                     title={t('chat.replyTo')}
-                    className="whitespace-nowrap text-xs text-moon-200/70 transition-colors hover:text-moon-200"
+                    aria-label={t('chat.replyTo')}
+                    className="flex h-5 w-5 items-center justify-center text-sm leading-none text-moon-200/60 transition-colors hover:text-moon-200"
                   >
-                    ↩ {t('chat.replyTo')}
+                    ↩
                   </button>
                 </>
               )}

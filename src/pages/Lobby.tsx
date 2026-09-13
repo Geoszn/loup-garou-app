@@ -1047,12 +1047,21 @@ function AutoRolesPreview({ gameId, playerCount }: { gameId: string; playerCount
   const { t } = useLanguage()
   const [preview, setPreview] = useState<RoleCounts | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Vrai pendant CHAQUE recalcul (pas seulement le tout premier) : retour
+  // utilisateur — l'hôte doit voir que le système réagit réellement à chaque
+  // arrivée/départ de joueur, pas juste constater un chiffre qui change sans
+  // prévenir. Le contenu (comptes, rôles) reste affiché pendant ce temps —
+  // seule son opacité baisse, plutôt que de le faire disparaître et
+  // réapparaître, ce qui serait plus perturbant qu'un simple clignotement.
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
+    setLoading(true)
     setError(null)
     supabase.rpc('preview_auto_role_counts', { p_game_id: gameId }).then(({ data, error: rpcError }) => {
       if (cancelled) return
+      setLoading(false)
       if (rpcError) {
         setError(rpcError.message)
         return
@@ -1072,38 +1081,55 @@ function AutoRolesPreview({ gameId, playerCount }: { gameId: string; playerCount
 
   return (
     <div className="rounded-2xl border border-night-600/60 bg-night-900/40 p-4">
-      <p className="text-xs text-moon-200/50">
-        {t('lobby.rolesSummary', { special: specialTotal, players: playerCount })}
-        {playerCount - specialTotal >= 0 ? t('lobby.villagersSuffix', { count: playerCount - specialTotal }) : '.'}
-      </p>
-      <p className="mt-3 text-sm font-semibold text-moon-200">
-        🐺 {t('lobby.autoRoles.wolvesCount', { count: preview.loup_garou })}
-      </p>
-      <div className="mt-3">
-        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-moon-300">
-          {t('lobby.autoRoles.specialRolesTitle')}
-        </p>
-        {specialKeys.length === 0 && !preview.capitaine ? (
-          <p className="text-xs text-moon-200/50">{t('lobby.autoRoles.noSpecialRoles')}</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {specialKeys.map((k) => (
-              <span
-                key={k}
-                className="flex items-center gap-1.5 rounded-full border border-night-600/60 bg-night-800/60 px-2.5 py-1 text-xs text-moon-200/90"
-              >
-                {ROLES[k as RoleId].emoji} {t(ROLES[k as RoleId].nameKey)}
-              </span>
-            ))}
-            {preview.capitaine && (
-              <span className="flex items-center gap-1.5 rounded-full border border-night-600/60 bg-night-800/60 px-2.5 py-1 text-xs text-moon-200/90">
-                🎖️ {t('role.capitaine.name')}
-              </span>
-            )}
-          </div>
-        )}
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="text-[10px] uppercase tracking-wide text-moon-200/40">{t('lobby.autoRoles.previewHeading')}</span>
+        {/* Pastille + libellé qui basculent pendant chaque recalcul (voir
+            `loading` ci-dessus) — la pastille pulse tant que le serveur
+            réévalue la composition pour l'effectif actuel, puis se fige en
+            vert dès la réponse reçue. */}
+        <span
+          className={`flex shrink-0 items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide transition-colors ${
+            loading ? 'text-moon-300' : 'text-emerald-400'
+          }`}
+        >
+          <span className={`h-1.5 w-1.5 rounded-full ${loading ? 'animate-pulse bg-moon-400' : 'bg-emerald-400'}`} />
+          {loading ? t('lobby.autoRoles.recalculating') : t('lobby.autoRoles.upToDate')}
+        </span>
       </div>
-      <p className="mt-3 text-xs text-moon-200/40">{t('lobby.autoRoles.note')}</p>
+      <div className={`transition-opacity duration-300 ${loading ? 'opacity-50' : 'opacity-100'}`}>
+        <p className="text-xs text-moon-200/50">
+          {t('lobby.rolesSummary', { special: specialTotal, players: playerCount })}
+          {playerCount - specialTotal >= 0 ? t('lobby.villagersSuffix', { count: playerCount - specialTotal }) : '.'}
+        </p>
+        <p className="mt-3 text-sm font-semibold text-moon-200">
+          🐺 {t('lobby.autoRoles.wolvesCount', { count: preview.loup_garou })}
+        </p>
+        <div className="mt-3">
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-moon-300">
+            {t('lobby.autoRoles.specialRolesTitle')}
+          </p>
+          {specialKeys.length === 0 && !preview.capitaine ? (
+            <p className="text-xs text-moon-200/50">{t('lobby.autoRoles.noSpecialRoles')}</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {specialKeys.map((k) => (
+                <span
+                  key={k}
+                  className="flex items-center gap-1.5 rounded-full border border-night-600/60 bg-night-800/60 px-2.5 py-1 text-xs text-moon-200/90"
+                >
+                  {ROLES[k as RoleId].emoji} {t(ROLES[k as RoleId].nameKey)}
+                </span>
+              ))}
+              {preview.capitaine && (
+                <span className="flex items-center gap-1.5 rounded-full border border-night-600/60 bg-night-800/60 px-2.5 py-1 text-xs text-moon-200/90">
+                  🎖️ {t('role.capitaine.name')}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+        <p className="mt-3 text-xs text-moon-200/40">{t('lobby.autoRoles.note')}</p>
+      </div>
     </div>
   )
 }

@@ -94,6 +94,15 @@ export default {
           '60%': { opacity: '1', transform: 'scale(1.2)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
         },
+        // Bulle de chat qui "surgit" à l'envoi/réception (voir ChatPanel.tsx)
+        // — échelle + léger glissement vers le haut, même courbe à
+        // dépassement que check-in ci-dessus, pour un effet plus vivant
+        // qu'un simple fondu (demande utilisateur : "un peu comme sur
+        // WhatsApp").
+        'bubble-in': {
+          '0%': { opacity: '0', transform: 'scale(0.85) translateY(8px)' },
+          '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
+        },
       },
       animation: {
         breathe: 'breathe 4s ease-in-out infinite',
@@ -103,6 +112,7 @@ export default {
         'modal-in': 'modal-in 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
         'drawer-in': 'drawer-in 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
         'check-in': 'check-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        'bubble-in': 'bubble-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
       },
     },
   },
