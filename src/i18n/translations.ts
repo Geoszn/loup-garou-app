@@ -532,6 +532,27 @@ export const translations = {
   'lobby.settingsTab.roles': { fr: 'Rôles', en: 'Roles' },
   'lobby.settingsTab.durations': { fr: 'Durées', en: 'Durations' },
   'lobby.settingsTab.moderation': { fr: 'Modération', en: 'Moderation' },
+  // --- Mode automatique de composition des rôles (voir migration 0143) ---
+  'lobby.autoRoles.title': { fr: 'Mode automatique', en: 'Automatic mode' },
+  'lobby.autoRoles.subtitle': {
+    fr: 'Laisse le système choisir une composition équilibrée selon le nombre de joueurs.',
+    en: 'Let the system choose a balanced composition based on player count.',
+  },
+  'lobby.autoRoles.previewLoading': { fr: 'Calcul de la composition...', en: 'Computing composition...' },
+  'lobby.autoRoles.previewError': {
+    fr: 'Impossible de calculer l’aperçu pour le moment.',
+    en: 'Could not compute the preview right now.',
+  },
+  'lobby.autoRoles.wolvesCount': { fr: 'Loups-Garous : {{count}}', en: 'Werewolves: {{count}}' },
+  'lobby.autoRoles.specialRolesTitle': { fr: 'Rôles spéciaux inclus', en: 'Special roles included' },
+  'lobby.autoRoles.noSpecialRoles': {
+    fr: 'Aucun autre rôle spécial pour cet effectif — que des Loups-Garous et des villageois.',
+    en: 'No other special role for this player count — only Werewolves and villagers.',
+  },
+  'lobby.autoRoles.note': {
+    fr: 'Recalculée automatiquement selon le nombre de joueurs présents au moment de lancer la partie.',
+    en: 'Automatically recalculated based on the number of players present when the game starts.',
+  },
   'lobby.voyanteToggleHint': {
     fr: 'Chaque nuit, sonde le rôle d’un joueur vivant.',
     en: 'Each night, checks the role of a living player.',

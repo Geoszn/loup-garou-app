@@ -15,6 +15,7 @@ import { AvatarIcon } from '../components/AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
 import { ROLES } from '../lib/roles'
+import type { RoleId } from '../lib/roles'
 import type { RoleCounts } from '../types/game'
 
 // Alignés sur compute_default_role_counts côté serveur (voir migration
@@ -153,6 +154,11 @@ export default function Lobby() {
   const [counts, setCounts] = useState<RoleCounts>(DEFAULT_COUNTS)
   const [durations, setDurations] = useState<PhaseDurations>(DEFAULT_DURATIONS)
   const [customized, setCustomized] = useState(false)
+  // Mode automatique (voir migration 0143) : laisse le serveur choisir la
+  // composition selon l'effectif présent au moment de "Lancer la partie" —
+  // voir handleStart (auto_role_counts) et AutoRolesPreview plus bas, qui
+  // affiche un aperçu fidèle de ce choix sans dupliquer sa formule ici.
+  const [autoRoles, setAutoRoles] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   // Onglet actif du panneau de réglages (refonte — voir plus bas) : Rôles /
   // Durées / Modération, au lieu d'une seule liste qui empilait tout.
@@ -335,7 +341,14 @@ export default function Lobby() {
     setActionError(null)
     setStarting(true)
     if (customized) {
-      await supabase.rpc('update_game_settings', { p_game_id: gameId, p_settings: { role_counts: counts, ...durations } })
+      // En mode auto, ne jamais renvoyer `counts` (le brouillon local, pas
+      // synchronisé avec l'effectif réel) : start_game ignore de toute façon
+      // role_counts dès que auto_role_counts est vrai (voir migration 0143),
+      // autant ne pas écrire une valeur trompeuse en base.
+      await supabase.rpc('update_game_settings', {
+        p_game_id: gameId,
+        p_settings: { auto_role_counts: autoRoles, ...(autoRoles ? {} : { role_counts: counts }), ...durations },
+      })
     }
     const { error } = await supabase.rpc('start_game', { p_game_id: gameId })
     setStarting(false)
@@ -759,6 +772,41 @@ export default function Lobby() {
 
             {settingsTab === 'roles' && (
               <div className="flex flex-col">
+                {/* Mode automatique (voir migration 0143) : coché, tout le
+                    reste de cet onglet devient un aperçu en lecture seule
+                    (AutoRolesPreview) plutôt qu'une version pré-remplie mais
+                    modifiable — retour utilisateur explicite : pas d'ambiguïté
+                    possible sur qui contrôle la composition. */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAutoRoles((v) => !v)
+                    setCustomized(true)
+                  }}
+                  className={`mb-4 flex items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition-colors ${
+                    autoRoles
+                      ? 'border-emerald-500/60 bg-gradient-to-b from-emerald-600/20 to-emerald-600/5'
+                      : 'border-night-600/70 bg-night-900/40 hover:border-moon-400/40'
+                  }`}
+                >
+                  <span className="text-2xl">🤖</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-moon-200">{t('lobby.autoRoles.title')}</span>
+                    <span className="block text-xs text-moon-200/50">{t('lobby.autoRoles.subtitle')}</span>
+                  </span>
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
+                      autoRoles ? 'bg-emerald-500 text-night-950' : 'bg-night-700 text-moon-200/50'
+                    }`}
+                  >
+                    {autoRoles ? t('common.on') : t('common.off')}
+                  </span>
+                </button>
+
+                {autoRoles && <AutoRolesPreview gameId={gameId!} playerCount={playerCount} />}
+
+                {!autoRoles && (
+                  <>
                 {/* --- Loups --- */}
                 <div>
                   <div className="mb-2.5 flex items-center gap-2">
@@ -860,6 +908,8 @@ export default function Lobby() {
                   </div>
                   {openHint?.group === 'autre' && <RoleHintBox text={openHint.text} />}
                 </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -961,6 +1011,99 @@ export default function Lobby() {
           </div>
         </SideDrawer>
       )}
+    </div>
+  )
+}
+
+// Toutes les clés de RoleCounts qui représentent un vrai rôle à carte propre
+// (booléen) — exclut loup_garou (effectif variable, affiché à part comme un
+// nombre) et capitaine (un titre, pas un rôle avec sa propre carte, voir
+// RosterSummary.tsx). Ordre repris de ROLE_ORDER pour un affichage cohérent
+// avec le reste de l'appli (Help.tsx notamment).
+const AUTO_PREVIEW_ROLE_KEYS: (keyof RoleCounts)[] = [
+  'loup_alpha',
+  'sans_visage',
+  'grand_mechant_loup',
+  'voyante',
+  'sorciere',
+  'chasseur',
+  'petite_fille',
+  'cupidon',
+  'ancien',
+  'voleur',
+  'enfant_sauvage',
+  'griot',
+  'anancy',
+  'ange',
+]
+
+/** Aperçu en lecture seule de ce que le mode automatique choisirait pour
+ * l'effectif ACTUEL du salon (voir preview_auto_role_counts, migration
+ * 0143) — recalculé à chaque changement de playerCount, jamais figé au
+ * moment où l'hôte a activé le mode. Ne duplique jamais la formule
+ * d'équilibrage elle-même (compute_default_role_counts) : uniquement de
+ * l'affichage d'un résultat déjà calculé côté serveur. */
+function AutoRolesPreview({ gameId, playerCount }: { gameId: string; playerCount: number }) {
+  const { t } = useLanguage()
+  const [preview, setPreview] = useState<RoleCounts | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setError(null)
+    supabase.rpc('preview_auto_role_counts', { p_game_id: gameId }).then(({ data, error: rpcError }) => {
+      if (cancelled) return
+      if (rpcError) {
+        setError(rpcError.message)
+        return
+      }
+      setPreview(data as RoleCounts)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [gameId, playerCount])
+
+  if (error) return <ErrorText>{error}</ErrorText>
+  if (!preview) return <p className="text-sm text-moon-200/50">{t('lobby.autoRoles.previewLoading')}</p>
+
+  const specialKeys = AUTO_PREVIEW_ROLE_KEYS.filter((k) => preview[k])
+  const specialTotal = preview.loup_garou + specialKeys.length
+
+  return (
+    <div className="rounded-2xl border border-night-600/60 bg-night-900/40 p-4">
+      <p className="text-xs text-moon-200/50">
+        {t('lobby.rolesSummary', { special: specialTotal, players: playerCount })}
+        {playerCount - specialTotal >= 0 ? t('lobby.villagersSuffix', { count: playerCount - specialTotal }) : '.'}
+      </p>
+      <p className="mt-3 text-sm font-semibold text-moon-200">
+        🐺 {t('lobby.autoRoles.wolvesCount', { count: preview.loup_garou })}
+      </p>
+      <div className="mt-3">
+        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-moon-300">
+          {t('lobby.autoRoles.specialRolesTitle')}
+        </p>
+        {specialKeys.length === 0 && !preview.capitaine ? (
+          <p className="text-xs text-moon-200/50">{t('lobby.autoRoles.noSpecialRoles')}</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {specialKeys.map((k) => (
+              <span
+                key={k}
+                className="flex items-center gap-1.5 rounded-full border border-night-600/60 bg-night-800/60 px-2.5 py-1 text-xs text-moon-200/90"
+              >
+                {ROLES[k as RoleId].emoji} {t(ROLES[k as RoleId].nameKey)}
+              </span>
+            ))}
+            {preview.capitaine && (
+              <span className="flex items-center gap-1.5 rounded-full border border-night-600/60 bg-night-800/60 px-2.5 py-1 text-xs text-moon-200/90">
+                🎖️ {t('role.capitaine.name')}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+      <p className="mt-3 text-xs text-moon-200/40">{t('lobby.autoRoles.note')}</p>
     </div>
   )
 }

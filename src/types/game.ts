@@ -72,6 +72,11 @@ export interface GameSettings {
   role_reveal_seconds: number
   role_reveal_intro_seconds: number
   role_counts?: RoleCounts | null
+  // Mode automatique (voir migration 0143, Lobby.tsx) : si vrai, start_game
+  // ignore role_counts et recalcule toujours la composition via
+  // compute_default_role_counts, selon l'effectif présent au moment réel du
+  // lancement — jamais figé au moment où l'hôte a coché la case.
+  auto_role_counts?: boolean
 }
 
 export type ChatChannel = 'village' | 'wolves' | 'graveyard'
