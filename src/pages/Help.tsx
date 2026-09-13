@@ -7,6 +7,7 @@ import { ROLES, ROLE_ORDER, roleTeamLabel } from '../lib/roles'
 import { RANK_TIERS } from '../lib/ranks'
 import { Button, Card } from '../components/ui'
 import { RankTierBadge } from '../components/RankTierBadge'
+import { LoupCoinIcon } from '../components/LoupCoinIcon'
 
 /** Page d'aide dédiée, publique (accessible sans compte) : regroupe ce qui
  * vivait avant en un seul bloc "Règles du jeu" toujours déplié au milieu de
@@ -212,7 +213,9 @@ function RankingContent() {
       </div>
 
       <div>
-        <h3 className="mb-1.5 font-display text-sm text-moon-300">{t('help.ranking.loupCoins.title')}</h3>
+        <h3 className="mb-1.5 flex items-center gap-1.5 font-display text-sm text-moon-300">
+          <LoupCoinIcon className="h-4 w-4" /> {t('help.ranking.loupCoins.title')}
+        </h3>
         <p>{t('help.ranking.loupCoins.text')}</p>
       </div>
 

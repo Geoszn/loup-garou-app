@@ -1272,7 +1272,7 @@ export const translations = {
     en: 'Some standout actions earn extra points — whether you win or lose the game, as soon as the action pays off:',
   },
   'help.ranking.impact.seerNote': { fr: '(jusqu’à 2 fois par partie)', en: '(up to 2 times per game)' },
-  'help.ranking.loupCoins.title': { fr: '🪙 Les Loup Coins', en: '🪙 Loup Coins' },
+  'help.ranking.loupCoins.title': { fr: 'Les Loup Coins', en: 'Loup Coins' },
   'help.ranking.loupCoins.text': {
     fr: 'Une monnaie à part, séparée des points de rang : les Loup Coins se gagnent uniquement en réclamant tes quêtes quotidiennes (voir le tableau de bord). Ils n’influencent ni ton palier ni ta position au classement — ton total accumulé est visible dans tes statistiques.',
     en: 'A separate currency from rank points: Loup Coins are earned only by claiming your daily quests (see your dashboard). They don’t affect your tier or leaderboard position — your accumulated total is shown in your stats.',
@@ -1359,13 +1359,32 @@ export const translations = {
   'friendsOnline.inGame': { fr: 'en partie', en: 'in a game' },
   'friendsOnline.idle': { fr: 'disponible', en: 'available' },
   'quest.title': { fr: 'Quêtes du jour', en: 'Daily quests' },
-  'quest.claim': { fr: 'Réclamer (+{{coins}} 🪙)', en: 'Claim (+{{coins}} 🪙)' },
-  'loupCoins.dashboardLabel': { fr: '{{count}} 🪙', en: '{{count}} 🪙' },
+  'quest.claim': { fr: 'Réclamer (+{{coins}})', en: 'Claim (+{{coins}})' },
   'loupCoins.title': { fr: 'Loup Coins', en: 'Loup Coins' },
   'loupCoins.subtitle': {
     fr: 'Gagnés en réclamant tes quêtes quotidiennes.',
     en: 'Earned by claiming your daily quests.',
   },
+  'loupCoins.viewStore': { fr: 'Voir le Loup Store →', en: 'View the Loup Store →' },
+  'loupStore.pageTitle': { fr: 'Loup Store', en: 'Loup Store' },
+  'loupStore.subtitle': {
+    fr: 'Ton compte de Loup Coins, tout en un endroit.',
+    en: 'Your Loup Coins account, all in one place.',
+  },
+  'loupStore.balance': { fr: 'Solde actuel', en: 'Current balance' },
+  'loupStore.totalEarned': { fr: 'Total gagné', en: 'Total earned' },
+  'loupStore.totalSpent': { fr: 'Total dépensé', en: 'Total spent' },
+  'loupStore.comingSoon': {
+    fr: 'D’autres façons d’utiliser tes Loup Coins arrivent bientôt.',
+    en: 'More ways to use your Loup Coins are coming soon.',
+  },
+  'loupStore.history.title': { fr: 'Historique', en: 'History' },
+  'loupStore.history.empty': {
+    fr: 'Aucune transaction pour l’instant. Réclame une quête pour commencer à gagner des Loup Coins !',
+    en: 'No transactions yet. Claim a quest to start earning Loup Coins!',
+  },
+  'loupStore.reason.quest_reward': { fr: 'Quête quotidienne', en: 'Daily quest' },
+  'loupStore.transaction.fallbackLabel': { fr: 'Récompense', en: 'Reward' },
   'account.notifications.title': { fr: 'Notifications', en: 'Notifications' },
   'account.notifications.description': {
     fr: 'Reçois une alerte quand c’est ton tour de jouer ou qu’un ami te lance une invitation.',

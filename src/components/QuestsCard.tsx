@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Button } from './ui'
+import { LoupCoinIcon } from './LoupCoinIcon'
 
 interface Quest {
   template_id: string
@@ -91,7 +92,7 @@ export function QuestsCard() {
                     claimed ? 'bg-night-700/50 text-moon-200/40' : 'bg-amber-400/15 text-amber-300'
                   }`}
                 >
-                  🪙 +{q.reward_coins}
+                  <LoupCoinIcon className="h-3 w-3" /> +{q.reward_coins}
                 </span>
                 <span className={`min-w-0 flex-1 text-sm ${claimed ? 'text-moon-200/40 line-through' : 'text-moon-200/90'}`}>
                   {label}
@@ -132,7 +133,14 @@ export function QuestsCard() {
 
               {done && !claimed && (
                 <Button className="w-full py-2 text-sm" disabled={claiming === q.template_id} onClick={() => claim(q.template_id)}>
-                  {claiming === q.template_id ? t('common.sending') : t('quest.claim', { coins: q.reward_coins })}
+                  {claiming === q.template_id ? (
+                    t('common.sending')
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5">
+                      {t('quest.claim', { coins: q.reward_coins })}
+                      <LoupCoinIcon className="h-3.5 w-3.5" />
+                    </span>
+                  )}
                 </Button>
               )}
             </li>

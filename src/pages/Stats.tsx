@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { roleLabel, ROLES, type RoleId } from '../lib/roles'
@@ -10,6 +10,7 @@ import { Button, Card, ErrorText, Segmented } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { AvatarIcon } from '../components/AvatarIcon'
 import { RankTierBadge } from '../components/RankTierBadge'
+import { LoupCoinIcon } from '../components/LoupCoinIcon'
 import { useLanguage } from '../i18n/LanguageContext'
 
 interface RoleStat {
@@ -376,17 +377,22 @@ function VolumeTitleCard({ gamesPlayed }: { gamesPlayed: number }) {
  * QuestsCard.tsx). Un StatBox de plus dans la grille 3 colonnes existante
  * l'aurait noyée parmi des chiffres de partie ; une carte à part, juste
  * après la carte de rang, lui donne la même importance visuelle qu'au reste
- * de la progression du joueur. */
+ * de la progression du joueur. Cliquable vers le Loup Store (solde détaillé,
+ * total gagné, historique — voir LoupStore.tsx). */
 function LoupCoinsCard({ coins }: { coins: number }) {
   const { t } = useLanguage()
   return (
-    <Card className="flex items-center justify-between gap-3">
-      <div>
-        <p className="text-[11px] uppercase tracking-wider text-moon-200/50">{t('loupCoins.title')}</p>
-        <p className="mt-0.5 text-xs text-moon-200/40">{t('loupCoins.subtitle')}</p>
-      </div>
-      <p className="shrink-0 font-display text-2xl text-amber-300">🪙 {coins}</p>
-    </Card>
+    <Link to="/loup-store" className="block">
+      <Card className="flex items-center justify-between gap-3 transition-colors hover:border-amber-400/40">
+        <div>
+          <p className="text-[11px] uppercase tracking-wider text-moon-200/50">{t('loupCoins.title')}</p>
+          <p className="mt-0.5 text-xs text-moon-200/40">{t('loupCoins.viewStore')}</p>
+        </div>
+        <p className="flex shrink-0 items-center gap-1.5 font-display text-2xl text-amber-300">
+          <LoupCoinIcon className="h-6 w-6" /> {coins}
+        </p>
+      </Card>
+    </Link>
   )
 }
 

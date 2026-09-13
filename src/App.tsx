@@ -47,6 +47,7 @@ const Help = lazy(() => import('./pages/Help'))
 // écran vu après connexion (Dashboard, resté eager).
 const Account = lazy(() => import('./pages/Account'))
 const Stats = lazy(() => import('./pages/Stats'))
+const LoupStore = lazy(() => import('./pages/LoupStore'))
 const Friends = lazy(() => import('./pages/Friends'))
 const Lobby = lazy(() => import('./pages/Lobby'))
 const SpectateGame = lazy(() => import('./pages/SpectateGame'))
@@ -203,6 +204,16 @@ export default function App() {
           <ProtectedRoute>
             <Suspense fallback={<FullScreenLoader />}>
               <Stats />
+            </Suspense>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/loup-store"
+        element={
+          <ProtectedRoute>
+            <Suspense fallback={<FullScreenLoader />}>
+              <LoupStore />
             </Suspense>
           </ProtectedRoute>
         }
