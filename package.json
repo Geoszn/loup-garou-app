@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "check:rpc": "node scripts/check-rpc-grants.mjs",
+    "check:game-view": "node scripts/check-game-view-fields.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:install": "playwright install --with-deps chromium",

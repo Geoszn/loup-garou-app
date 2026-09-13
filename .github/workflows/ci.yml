@@ -6,6 +6,8 @@ name: CI
 #   - les erreurs de typage (tsc)
 #   - les incohérences de droits RPC (create_game/send_chat_message et
 #     tout futur cas du même genre — voir scripts/check-rpc-grants.mjs)
+#   - les champs perdus dans get_my_game_view (voir migration 0044/0102 et
+#     scripts/check-game-view-fields.mjs)
 #   - le lint
 #   - les tests de bout en bout, si les secrets d'un projet Supabase de
 #     test sont configurés (voir plus bas — ce job est volontairement
@@ -30,6 +32,8 @@ jobs:
         run: npx tsc -b
       - name: Cohérence des droits RPC (migrations vs appels client)
         run: npm run check:rpc
+      - name: Cohérence des champs de get_my_game_view (migrations vs MyGameView)
+        run: npm run check:game-view
       - name: Lint
         run: npm run lint
 
