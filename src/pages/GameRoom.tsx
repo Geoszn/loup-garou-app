@@ -299,7 +299,11 @@ export default function GameRoom() {
       {profile?.is_admin &&
         isHost &&
         view.players.some((p) => p.display_name.startsWith('🤖 ')) &&
-        ['captain_election', 'night', 'day_vote'].includes(view.game.status) && (
+        // 'day_discussion' ajouté (voir migration 0144) : admin_auto_play_bots
+        // gère désormais aussi le débat (accord de la meute-bots pour lancer
+        // le vote) — jusqu'ici la phase la plus longue à devoir attendre en
+        // entier faute de bouton visible pour la faire avancer.
+        ['captain_election', 'night', 'day_discussion', 'day_vote'].includes(view.game.status) && (
           <div className="mx-auto mt-3 flex max-w-3xl flex-col gap-1.5 px-4">
             <button
               type="button"
