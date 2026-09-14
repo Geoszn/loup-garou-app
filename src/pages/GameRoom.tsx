@@ -328,6 +328,16 @@ export default function GameRoom() {
         )}
 
       <div className={`mx-auto flex max-w-3xl flex-col gap-4 px-4 pt-4 ${view.game.status === 'role_reveal' ? 'pb-28' : 'pb-4'}`}>
+        {/* Boussole du Village (artefact du Loup Store, migration 0152) :
+            en dehors de tout statut/alive comme le panneau de succession
+            juste en dessous — le propriétaire doit pouvoir consulter
+            l'historique à tout moment, vivant ou mort, quelle que soit la
+            phase en cours. null (pas juste vide) tant que l'artefact n'est
+            pas possédé (voir game_view_artifacts_fields). */}
+        {view.vote_history && (
+          <VoteHistoryPanel voteHistory={view.vote_history} players={view.players} />
+        )}
+
         {/* Le Capitaine qui vient de mourir doit désigner son successeur —
             à ce moment-là il est forcément déjà mort (`captain_pending` n'est
             posé qu'à sa mort dans kill_player), donc ce panneau ne doit PAS
@@ -360,6 +370,12 @@ export default function GameRoom() {
                 ? t('game.eliminatedNoticeWithRole', { role: roleLabel(view.my_role, t) })
                 : t('game.eliminatedNoticeNoRole')}
             </p>
+            {/* Pierre des Ancêtres (migration 0152) : me?.pending_revival
+                vient de game_players (recalculé pour chaque joueur, voir
+                types/game.ts) — juste une teaser, l'annonce publique réelle
+                arrive dans le journal de partie au prochain passage au jour
+                (voir advance_phase). */}
+            {me?.pending_revival && <p className="text-xs font-semibold text-amber-300">{t('game.pendingRevivalNotice')}</p>}
             <GhostPanel
               gameId={gameId!}
               code={code!}
@@ -515,17 +531,19 @@ export default function GameRoom() {
 
         {view.game.status === 'day_vote' && (
           <div className="flex animate-fade-in flex-col gap-4">
-            {/* 'hunter'/'captain_succession' : le vote vient d'être dépouillé
-                (avant même la fin du chrono si tout le monde avait voté) et
-                ce joueur précis a une action spéciale à jouer — la grille de
-                vote n'a alors plus lieu d'être, ActionPanel prend le relais.
-                Dans tous les autres cas (vote pas encore dépouillé, qu'on
-                ait déjà voté ou non), VotePanel reste affiché — voir son
-                bandeau "vote enregistré" une fois qu'on a voté, plutôt que
-                de basculer sur un écran d'attente qui empêchait de changer
-                d'avis. */}
+            {/* 'hunter'/'captain_succession'/'balance_ange' : le vote vient
+                d'être dépouillé (avant même la fin du chrono si tout le
+                monde avait voté) et ce joueur précis a une action spéciale à
+                jouer — la grille de vote n'a alors plus lieu d'être,
+                ActionPanel prend le relais. Dans tous les autres cas (vote
+                pas encore dépouillé, qu'on ait déjà voté ou non), VotePanel
+                reste affiché — voir son bandeau "vote enregistré" une fois
+                qu'on a voté, plutôt que de basculer sur un écran d'attente
+                qui empêchait de changer d'avis. */}
             {alive ? (
-              view.pending_action_required === 'hunter' || view.pending_action_required === 'captain_succession' ? (
+              view.pending_action_required === 'hunter' ||
+              view.pending_action_required === 'captain_succession' ||
+              view.pending_action_required === 'balance_ange' ? (
                 <ActionPanel view={view} gameId={gameId!} selfId={user.id} />
               ) : (
                 <VotePanel view={view} gameId={gameId!} selfId={user.id} />
@@ -822,6 +840,71 @@ function CollapsiblePlayerGrid({
       {open && (
         <div className="px-4 pb-4">
           <PlayerGrid players={players} selfId={selfId} onlineUserIds={onlineUserIds} />
+        </div>
+      )}
+    </Card>
+  )
+}
+
+/** Boussole du Village (artefact du Loup Store, effect_key =
+ * 'boussole_village', migration 0152) : historique des votes de tous les
+ * jours PASSÉS de la partie (le round en cours est volontairement exclu côté
+ * serveur, voir game_view_artifacts_fields) — repliée par défaut, même
+ * patron que CollapsiblePlayerGrid juste au-dessus. Personnel : seul le
+ * propriétaire de l'artefact la voit (view.vote_history est null pour tous
+ * les autres joueurs). */
+function VoteHistoryPanel({
+  voteHistory,
+  players,
+}: {
+  voteHistory: { round_number: number; voter_id: string; target_id: string }[]
+  players: PublicPlayer[]
+}) {
+  const { t } = useLanguage()
+  const [open, setOpen] = useState(false)
+  const nameOf = (id: string) => players.find((p) => p.user_id === id)?.display_name ?? t('common.playerFallback')
+
+  const rounds = new Map<number, { voter_id: string; target_id: string }[]>()
+  for (const v of voteHistory) {
+    const list = rounds.get(v.round_number) ?? []
+    list.push(v)
+    rounds.set(v.round_number, list)
+  }
+  const sortedRounds = [...rounds.entries()].sort((a, b) => a[0] - b[0])
+
+  return (
+    <Card className="!p-0 border-amber-400/25 bg-amber-400/[0.03]">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-4 py-3 text-left"
+      >
+        <span>
+          <span className="block text-xs uppercase tracking-widest text-amber-300/80">{t('game.voteHistory.title')}</span>
+          <span className="block text-[11px] text-moon-200/40">{t('game.voteHistory.subtitle')}</span>
+        </span>
+        <span className="text-xs text-moon-200/40">{open ? t('common.hide') : t('common.show')}</span>
+      </button>
+      {open && (
+        <div className="flex flex-col gap-3 px-4 pb-4">
+          {sortedRounds.length === 0 ? (
+            <p className="text-xs text-moon-200/40">{t('game.voteHistory.empty')}</p>
+          ) : (
+            sortedRounds.map(([round, votes]) => (
+              <div key={round}>
+                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-moon-200/50">
+                  {t('game.voteHistory.round', { round: String(round) })}
+                </p>
+                <ul className="flex flex-col gap-0.5">
+                  {votes.map((v, i) => (
+                    <li key={i} className="text-xs text-moon-200/70">
+                      {t('game.voteHistory.voteLine', { voter: nameOf(v.voter_id), target: nameOf(v.target_id) })}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))
+          )}
         </div>
       )}
     </Card>

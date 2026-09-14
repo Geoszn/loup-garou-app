@@ -708,6 +708,18 @@ export const translations = {
   },
   'game.lastWords.placeholder': { fr: 'Ton dernier message...', en: 'Your final message...' },
   'game.lastWords.send': { fr: 'Envoyer', en: 'Send' },
+  'game.pendingRevivalNotice': {
+    fr: '🌄 Grâce à ta Pierre des Ancêtres, tu reviendras en jeu au prochain lever du jour.',
+    en: '🌄 Thanks to your Ancestors\' Stone, you\'ll return to the game at the next dawn.',
+  },
+  'game.voteHistory.title': { fr: 'Boussole du Village', en: 'Village Compass' },
+  'game.voteHistory.subtitle': {
+    fr: 'Historique des votes des jours précédents.',
+    en: 'Voting history from previous days.',
+  },
+  'game.voteHistory.round': { fr: 'Jour {{round}}', en: 'Day {{round}}' },
+  'game.voteHistory.voteLine': { fr: '{{voter}} → {{target}}', en: '{{voter}} → {{target}}' },
+  'game.voteHistory.empty': { fr: 'Aucun vote passé pour l’instant.', en: 'No past votes yet.' },
   // --- Popup de mort (DeathImpactModal.tsx, migration 0073) ------------------
   // Affichée juste après une élimination en cours de partie : montre
   // uniquement ce qui est DÉJÀ acquis (bonus d'impact), jamais le résultat
@@ -1185,6 +1197,11 @@ export const translations = {
     fr: '⏱️ Choisissez vite : passé le délai, le sort décidera à votre place.',
     en: '⏱️ Choose quickly: once time runs out, fate will decide for you.',
   },
+  'action.balanceAnge.title': { fr: 'Balance de l’Ange', en: 'Angel\'s Scale' },
+  'action.balanceAnge.subtitle': {
+    fr: 'Égalité au vote du village — ton artefact te donne le vote décisif. Qui élimines-tu ?',
+    en: 'The village vote is tied — your artifact gives you the deciding vote. Who do you eliminate?',
+  },
   'action.hunter.title': { fr: 'Votre dernière flèche', en: 'Your last arrow' },
   'action.hunter.subtitle': {
     fr: 'Vous êtes éliminé, mais vous emportez quelqu’un avec vous.',
@@ -1219,6 +1236,14 @@ export const translations = {
   'voteRecap.tie': {
     fr: "🤝 Égalité des voix : personne n'est éliminé aujourd'hui.",
     en: '🤝 Tied vote: no one is eliminated today.',
+  },
+  'voteRecap.protectedByFeuSacre': {
+    fr: "🔥 Un feu sacré a protégé quelqu'un du bûcher aujourd'hui.",
+    en: '🔥 A sacred fire protected someone from the pyre today.',
+  },
+  'voteRecap.feuSacreSavedMe': {
+    fr: '🔥 Ton Feu Sacré des Ancêtres vient de te sauver !',
+    en: '🔥 Your Ancestors\' Sacred Fire just saved you!',
   },
   'voteRecap.votesCount': { fr: '{{n}} voix', en: '{{n}} votes' },
   'voteRecap.didNotVote': { fr: "N'ont pas voté : {{names}}", en: 'Did not vote: {{names}}' },

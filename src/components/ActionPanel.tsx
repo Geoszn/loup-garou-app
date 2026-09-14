@@ -60,6 +60,8 @@ export function ActionPanel({ view, gameId, selfId }: { view: MyGameView; gameId
             return <CaptainVotePanel view={view} gameId={gameId} selfId={selfId} />
           case 'captain_succession':
             return <CaptainSuccessionPanel view={view} gameId={gameId} selfId={selfId} />
+          case 'balance_ange':
+            return <BalanceAngePanel view={view} gameId={gameId} selfId={selfId} />
           default:
             return null
         }
@@ -1243,6 +1245,37 @@ function CaptainSuccessionPanel({ view, gameId, selfId }: { view: MyGameView; ga
           l'apparition de `pending_action_required` (voir ActionPanel). */}
       <p className="mb-3 animate-pulse text-xs font-semibold text-amber-400">{t('action.captainSuccession.urgent')}</p>
       <PlayerGrid players={alive} selfId={selfId} selectable compact onSelect={choose} />
+      <ErrorText>{error}</ErrorText>
+      {loading && <p className="mt-2 text-xs text-moon-200/40">{t('common.sending')}</p>}
+    </PanelShell>
+  )
+}
+
+/** Balance de l'Ange (artefact du Loup Store, effect_key = 'balance_ange',
+ * migration 0152) : en cas d'égalité au vote du village, son propriétaire
+ * obtient un vote décisif personnel — la liste des candidats vient de
+ * games.balance_ange_candidates (exposée automatiquement via view.game,
+ * comme tout le reste de la table games), pas d'une nouvelle fonction de
+ * domaine dédiée. Auto-exclusion (pas soi-même), même règle que le vote
+ * normal (submit_vote, migration 0133). */
+function BalanceAngePanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
+  const { t } = useLanguage()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const candidateIds = view.game.balance_ange_candidates ?? []
+  const candidates = view.players.filter((p) => candidateIds.includes(p.user_id) && p.user_id !== selfId)
+
+  async function choose(id: string) {
+    setLoading(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('submit_balance_ange_vote', { p_game_id: gameId, p_target_id: id })
+    setLoading(false)
+    if (rpcError) setError(rpcError.message)
+  }
+
+  return (
+    <PanelShell emoji="⚖️" title={t('action.balanceAnge.title')} subtitle={t('action.balanceAnge.subtitle')} urgent>
+      <PlayerGrid players={candidates} selfId={selfId} selectable compact onSelect={choose} />
       <ErrorText>{error}</ErrorText>
       {loading && <p className="mt-2 text-xs text-moon-200/40">{t('common.sending')}</p>}
     </PanelShell>

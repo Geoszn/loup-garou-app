@@ -2857,14 +2857,29 @@ const ARTIFACT_CATEGORY_LABELS: Record<ArtifactCategory, string> = {
 // à lui donner) avant de pouvoir apparaître ici. Distinct de `key`
 // (l'identifiant libre de CET artefact précis) : plusieurs artefacts
 // pourront un jour partager le même effet.
-type ArtifactEffect = 'none' | 'parchemin_griot' | 'dernier_souffle' | 'masque_griot' | 'plume_anancy'
+type ArtifactEffect =
+  | 'none'
+  | 'parchemin_griot'
+  | 'dernier_souffle'
+  | 'masque_griot'
+  | 'plume_anancy'
+  | 'boussole_village'
+  | 'masque_sans_visage'
+  | 'balance_ange'
+  | 'pierre_ancetres'
+  | 'feu_sacre_ancetres'
 
 const ARTIFACT_EFFECT_LABELS: Record<ArtifactEffect, string> = {
   none: 'Aucun effet (cosmétique / collection)',
   parchemin_griot: 'Lecture du chat des Loups après élimination (Parchemin du Griot)',
-  dernier_souffle: 'Message final envoyé au village après élimination (Dernier Souffle)',
+  dernier_souffle: 'Message final envoyé au village après élimination (Dernier Souffle / Flamme des Esprits)',
   masque_griot: 'Cadre doré en pointillés autour de l’avatar, visible en partie (Masque du Griot)',
   plume_anancy: 'Titre affiché sous le pseudo, visible en partie (Plume d’Anancy)',
+  boussole_village: 'Historique complet des votes passés de la partie (Boussole du Village)',
+  masque_sans_visage: 'Toujours vu comme Villageois par la Voyante (Masque du Sans-Visage)',
+  balance_ange: 'Vote décisif personnel en cas d’égalité au vote du village (Balance de l’Ange)',
+  pierre_ancetres: 'Revient en jeu au jour suivant après une élimination (Pierre des Ancêtres)',
+  feu_sacre_ancetres: 'Bloque une élimination par vote, une fois par partie (Feu Sacré des Ancêtres)',
 }
 
 interface StoreArtifact {

@@ -139,6 +139,12 @@ export interface GameRow {
   // invitation, lien ou code, comme avant.
   is_public: boolean
   created_at: string
+  // Balance de l'Ange (artefact du Loup Store, migration 0152) : qui doit
+  // départager l'égalité en cours (null la plupart du temps), et la liste
+  // des joueurs à égalité parmi lesquels choisir — voir BalanceAngePanel
+  // (ActionPanel.tsx).
+  balance_ange_pending: string | null
+  balance_ange_candidates: string[] | null
 }
 
 // Une partie publique listée sur le tableau de bord, avant qu'on en soit
@@ -213,6 +219,12 @@ export interface PublicPlayer {
   has_masque_griot: boolean
   plume_title_fr: string | null
   plume_title_en: string | null
+  // Pierre des Ancêtres (artefact du Loup Store, migration 0152) : ce joueur
+  // vient d'être éliminé mais reviendra en jeu au tout prochain passage au
+  // jour (voir advance_phase) — personnel, mais recalculé pour CHAQUE joueur
+  // de la partie comme les champs cosmétiques ci-dessus (pas seulement soi),
+  // pour que GhostPanel puisse en informer le joueur concerné.
+  pending_revival: boolean
 }
 
 export interface MyGameView {
@@ -342,7 +354,7 @@ export interface MyGameView {
   anancy_used_target_ids: string[] | null
   witch_heal_used: boolean
   witch_poison_used: boolean
-  pending_action_required: NightStep | 'vote' | 'hunter' | 'captain_vote' | 'captain_succession' | null
+  pending_action_required: NightStep | 'vote' | 'hunter' | 'captain_vote' | 'captain_succession' | 'balance_ange' | null
   wolf_target_visible_to_witch: string | null
   wolf_current_votes: { actor_id: string; target_id: string | null }[]
   // Qui a voté pour qui cette nuit (une fois résolue) — réservé aux Loups
@@ -378,6 +390,12 @@ export interface MyGameView {
     // successeur choisi à temps pendant CE round (voir migration 0053) —
     // null la plupart du temps.
     captain_random_notice: string | null
+    // Feu Sacré des Ancêtres (artefact du Loup Store, migration 0152) : le
+    // joueur le plus voté a été protégé cette fois-ci — annoncé de façon
+    // anonyme, comme la potion de guérison de la Sorcière (voir
+    // feu_sacre_saved_me plus bas pour la notice privée au protégé
+    // lui-même).
+    protected_by_feu_sacre: boolean
   } | null
   final_reveal: { user_id: string; role: string }[] | null
   // Demandes en attente pour une partie publique — uniquement rempli côté
@@ -407,6 +425,17 @@ export interface MyGameView {
   my_owns_parchemin_griot: boolean
   my_owns_dernier_souffle: boolean
   my_dernier_souffle_used: boolean
+  // Boussole du Village (artefact du Loup Store, effect_key =
+  // 'boussole_village', migration 0152) : historique complet des votes de
+  // TOUS les jours PASSÉS de cette partie (round_number > 0, jamais le round
+  // 0 de l'élection du Capitaine ni le round en cours) — null si le joueur
+  // ne possède pas cet artefact. Personnel : jamais montré aux autres.
+  vote_history: { round_number: number; voter_id: string; target_id: string }[] | null
+  // Feu Sacré des Ancêtres (effect_key = 'feu_sacre_ancetres', migration
+  // 0152) : vrai uniquement pour le joueur protégé, uniquement le jour où la
+  // protection a joué (voir vote_recap.protected_by_feu_sacre pour
+  // l'annonce publique anonyme, symétrique à witch_saved_me).
+  feu_sacre_saved_me: boolean
 }
 
 // Un geste de rôle mesurable ayant rapporté des points, quel que soit le

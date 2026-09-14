@@ -22,6 +22,14 @@ export function VoteRecapModal({ view, gameId, selfId }: { view: MyGameView; gam
   // depuis été désigné — voir migration 0029).
   const captainVoterId = view.vote_recap?.captain_voter_id ?? null
   const captainRandomNotice = view.vote_recap?.captain_random_notice ?? null
+  // Feu Sacré des Ancêtres (artefact du Loup Store, migration 0152) :
+  // annonce anonyme (personne ne meurt, mais ce n'était PAS une égalité —
+  // sans ce champ, l'écran afficherait à tort "Égalité des voix"). La
+  // notice privée (feuSacreSavedMe) ne s'affiche qu'au joueur protégé
+  // lui-même, en plus de l'annonce publique anonyme — même principe que
+  // witch_saved_me dans NightRecapModal.
+  const protectedByFeuSacre = view.vote_recap?.protected_by_feu_sacre ?? false
+  const feuSacreSavedMe = view.feu_sacre_saved_me
 
   const byId = new Map<string, PublicPlayer>(view.players.map((p) => [p.user_id, p]))
 
@@ -103,9 +111,19 @@ export function VoteRecapModal({ view, gameId, selfId }: { view: MyGameView; gam
             <p className="rounded-xl border border-night-600/60 bg-night-800/60 px-3 py-2.5 text-moon-200/80">
               {t('voteRecap.noVotes')}
             </p>
+          ) : protectedByFeuSacre ? (
+            <p className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-2.5 text-moon-200">
+              {t('voteRecap.protectedByFeuSacre')}
+            </p>
           ) : (
             <p className="rounded-xl border border-night-600/60 bg-night-800/60 px-3 py-2.5 text-moon-200/80">
               {t('voteRecap.tie')}
+            </p>
+          )}
+
+          {feuSacreSavedMe && (
+            <p className="rounded-xl border border-amber-400/50 bg-amber-400/[0.08] px-3 py-2.5 font-semibold text-amber-300">
+              {t('voteRecap.feuSacreSavedMe')}
             </p>
           )}
 
