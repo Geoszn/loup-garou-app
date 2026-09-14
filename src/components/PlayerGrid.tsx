@@ -29,6 +29,15 @@ function tierRingClass(tier: string | null | undefined): string {
   }
 }
 
+// Masque du Griot (artefact du Loup Store, effect_key = 'masque_griot', voir
+// migration 0151) : un cadre acheté, pas gagné par la progression — style
+// délibérément différent de tierRingClass ci-dessus (pointillé, pas un
+// anneau plein) pour qu'on ne confonde jamais les deux à l'oeil.
+// `outline` (pas `ring`, déjà pris par le cadre de palier) : les deux
+// coexistent sans se marcher dessus, l'un dans le box-shadow, l'autre dans
+// une propriété CSS séparée.
+const MASQUE_GRIOT_CLASS = 'outline outline-2 outline-dashed outline-amber-400/80 outline-offset-2'
+
 interface Props {
   players: PublicPlayer[]
   selfId?: string
@@ -67,7 +76,7 @@ export function PlayerGrid({
   // (selectable), pour ne jamais gêner le choix d'une cible pendant un vote.
   // Un seul avatar ouvert à la fois ; un clic n'importe où ailleurs le ferme.
   const [openId, setOpenId] = useState<string | null>(null)
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
 
   useEffect(() => {
     if (!openId) return
@@ -124,7 +133,7 @@ export function PlayerGrid({
                 <span
                   className={`flex items-center justify-center rounded-full font-bold text-[#05070d] ring-offset-2 ${compact ? 'h-8 w-8 text-xs' : 'h-10 w-10 text-sm'} ${
                     p.rank_tier ? `ring-offset-night-900 ${tierRingClass(p.rank_tier)}` : ''
-                  }`}
+                  } ${p.has_masque_griot ? MASQUE_GRIOT_CLASS : ''}`}
                   style={{ backgroundColor: p.avatar_color }}
                 >
                   {p.avatar_icon ? (
@@ -150,6 +159,15 @@ export function PlayerGrid({
                 {p.display_name}
                 {p.user_id === selfId ? ` (${t('common.you')})` : ''}
               </span>
+              {/* Plume d'Anancy (artefact du Loup Store, effect_key =
+                  'plume_anancy', migration 0151) : reprend le nom de
+                  l'artefact tel qu'édité côté admin, jamais un libellé fixé
+                  ici — si l'admin le renomme, ce titre suit automatiquement. */}
+              {(p.plume_title_fr || p.plume_title_en) && (
+                <span className={`-mt-0.5 truncate italic text-purple-300/70 ${compact ? 'text-[8px]' : 'text-[9px]'}`}>
+                  {(lang === 'en' ? p.plume_title_en : p.plume_title_fr) ?? p.plume_title_fr}
+                </span>
+              )}
               {!p.is_alive && showDeathReveal && p.revealed_role && (
                 <span className="text-[10px] text-blood-400">💀 {roleLabel(p.revealed_role, t)}</span>
               )}

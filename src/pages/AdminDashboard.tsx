@@ -2857,12 +2857,14 @@ const ARTIFACT_CATEGORY_LABELS: Record<ArtifactCategory, string> = {
 // à lui donner) avant de pouvoir apparaître ici. Distinct de `key`
 // (l'identifiant libre de CET artefact précis) : plusieurs artefacts
 // pourront un jour partager le même effet.
-type ArtifactEffect = 'none' | 'parchemin_griot' | 'dernier_souffle'
+type ArtifactEffect = 'none' | 'parchemin_griot' | 'dernier_souffle' | 'masque_griot' | 'plume_anancy'
 
 const ARTIFACT_EFFECT_LABELS: Record<ArtifactEffect, string> = {
   none: 'Aucun effet (cosmétique / collection)',
   parchemin_griot: 'Lecture du chat des Loups après élimination (Parchemin du Griot)',
   dernier_souffle: 'Message final envoyé au village après élimination (Dernier Souffle)',
+  masque_griot: 'Cadre doré en pointillés autour de l’avatar, visible en partie (Masque du Griot)',
+  plume_anancy: 'Titre affiché sous le pseudo, visible en partie (Plume d’Anancy)',
 }
 
 interface StoreArtifact {

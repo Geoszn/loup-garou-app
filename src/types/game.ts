@@ -204,6 +204,15 @@ export interface PublicPlayer {
   // AUTRES joueurs, pas seulement sur son propre profil. null si le profil a
   // été supprimé entre-temps (cas limite, RLS empêchant normalement ça).
   rank_tier: string | null
+  // Effets cosmétiques du Loup Store (artefacts à effect_key = 'masque_griot'
+  // / 'plume_anancy', migration 0151) — comme rank_tier ci-dessus, visibles
+  // pour TOUS les joueurs de la partie, pas seulement le propriétaire.
+  // plume_title_fr/en reprend name_fr/name_en de l'artefact tel qu'édité
+  // dans le dashboard admin (jamais recopié en dur côté client) : null si le
+  // joueur ne possède aucun artefact à effet 'plume_anancy'.
+  has_masque_griot: boolean
+  plume_title_fr: string | null
+  plume_title_en: string | null
 }
 
 export interface MyGameView {
