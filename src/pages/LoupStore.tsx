@@ -27,7 +27,10 @@ interface LoupCoinsSummary {
 const ARTIFACT_CATEGORIES = ['outils', 'rares', 'cosmetiques', 'fragments'] as const
 type ArtifactCategory = (typeof ARTIFACT_CATEGORIES)[number]
 
-const CATEGORY_LABEL_KEYS: Record<ArtifactCategory, TranslationKey> = {
+// Libellés COURTS pour les chips de filtre (pas la phrase complète utilisée
+// côté admin, voir ARTIFACT_CATEGORY_LABELS) — plusieurs chips doivent
+// pouvoir tenir sur une ligne qui passe à la ligne suivante si besoin.
+const CATEGORY_FILTER_LABEL_KEYS: Record<ArtifactCategory, TranslationKey> = {
   outils: 'loupStore.category.outils',
   rares: 'loupStore.category.rares',
   cosmetiques: 'loupStore.category.cosmetiques',
@@ -79,6 +82,7 @@ export default function LoupStore() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [purchasing, setPurchasing] = useState<string | null>(null)
+  const [categoryFilter, setCategoryFilter] = useState<ArtifactCategory | 'all'>('all')
   const [detailTarget, setDetailTarget] = useState<StoreArtifact | null>(null)
   const [confirmTarget, setConfirmTarget] = useState<StoreArtifact | null>(null)
 
@@ -165,24 +169,38 @@ export default function LoupStore() {
               {!artifacts || artifacts.length === 0 ? (
                 <p className="text-sm text-moon-200/50">{t('loupStore.boutique.empty')}</p>
               ) : (
-                <div className="flex flex-col gap-5">
-                  {ARTIFACT_CATEGORIES.map((cat) => {
-                    const items = artifacts.filter((a) => a.category === cat)
-                    if (items.length === 0) return null
-                    return (
-                      <div key={cat} className="flex flex-col gap-2">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-moon-200/40">
-                          {t(CATEGORY_LABEL_KEYS[cat])}
-                        </p>
-                        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-                          {items.map((a) => (
-                            <ArtifactCard key={a.id} artifact={a} onClick={() => setDetailTarget(a)} />
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
+                <>
+                  {/* Filtre par catégorie plutôt qu'un empilement de toutes
+                      les catégories à la fois (retour utilisateur : ça
+                      prenait trop de place à l'écran) — "Tout" mélange tout
+                      le catalogue dans une seule grille, une catégorie
+                      précise réduit à sa seule sous-liste. Chips qui
+                      passent à la ligne (pas Segmented, qui écraserait des
+                      libellés déjà courts mais nombreux) : n'affiche que les
+                      catégories qui contiennent réellement un artefact actif. */}
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    <CategoryChip
+                      active={categoryFilter === 'all'}
+                      label={t('loupStore.filter.all')}
+                      onClick={() => setCategoryFilter('all')}
+                    />
+                    {ARTIFACT_CATEGORIES.filter((cat) => artifacts.some((a) => a.category === cat)).map((cat) => (
+                      <CategoryChip
+                        key={cat}
+                        active={categoryFilter === cat}
+                        label={t(CATEGORY_FILTER_LABEL_KEYS[cat])}
+                        onClick={() => setCategoryFilter(cat)}
+                      />
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                    {artifacts
+                      .filter((a) => categoryFilter === 'all' || a.category === categoryFilter)
+                      .map((a) => (
+                        <ArtifactCard key={a.id} artifact={a} onClick={() => setDetailTarget(a)} />
+                      ))}
+                  </div>
+                </>
               )}
             </Card>
 
@@ -327,6 +345,25 @@ function ArtifactCard({ artifact, onClick }: { artifact: StoreArtifact; onClick:
       <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-300">
         <LoupCoinIcon className="h-3 w-3" /> {artifact.price_coins}
       </span>
+    </button>
+  )
+}
+
+/** Chip de filtre par catégorie — pilule qui passe à la ligne (flex-wrap sur
+ * son conteneur), pas un Segmented à largeur égale : le nombre de catégories
+ * varie selon ce qui est réellement en vente, pas de largeur fixe à prévoir. */
+function CategoryChip({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+        active
+          ? 'border-blood-500 bg-blood-600 text-[#fdf6e3]'
+          : 'border-night-600/60 bg-night-900/40 text-moon-200/60 hover:border-moon-400/40 hover:text-moon-200'
+      }`}
+    >
+      {label}
     </button>
   )
 }

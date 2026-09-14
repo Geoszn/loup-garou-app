@@ -1405,10 +1405,15 @@ export const translations = {
     en: 'Special artifacts, unlocked for good with your Loup Coins.',
   },
   'loupStore.boutique.empty': { fr: 'Aucun artefact disponible pour l’instant.', en: 'No artifacts available right now.' },
-  'loupStore.category.outils': { fr: 'Outils utilisables en partie', en: 'Tools usable in-game' },
-  'loupStore.category.rares': { fr: 'Objets rares et légendaires', en: 'Rare and legendary items' },
-  'loupStore.category.cosmetiques': { fr: 'Objets cosmétiques', en: 'Cosmetic items' },
-  'loupStore.category.fragments': { fr: 'Fragments et objets de collection', en: 'Fragments and collectibles' },
+  // Libellés courts (chips de filtre, LoupStore.tsx) — la phrase complète
+  // ("Outils utilisables en partie", etc.) reste uniquement côté dashboard
+  // admin (ARTIFACT_CATEGORY_LABELS, AdminDashboard.tsx), où il n'y a qu'une
+  // seule catégorie affichée à la fois (menu déroulant du formulaire).
+  'loupStore.filter.all': { fr: 'Tout', en: 'All' },
+  'loupStore.category.outils': { fr: 'Outils', en: 'Tools' },
+  'loupStore.category.rares': { fr: 'Rares', en: 'Rare' },
+  'loupStore.category.cosmetiques': { fr: 'Cosmétiques', en: 'Cosmetics' },
+  'loupStore.category.fragments': { fr: 'Fragments', en: 'Fragments' },
   'loupStore.boutique.buy': { fr: 'Acheter', en: 'Buy' },
   'loupStore.boutique.owned': { fr: 'Possédé', en: 'Owned' },
   'loupStore.boutique.confirmTitle': { fr: 'Confirmer l’achat', en: 'Confirm purchase' },

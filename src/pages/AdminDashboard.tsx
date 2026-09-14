@@ -2851,10 +2851,25 @@ const ARTIFACT_CATEGORY_LABELS: Record<ArtifactCategory, string> = {
   fragments: 'Fragments et objets de collection',
 }
 
+// Effet réellement câblé dans le moteur de jeu (voir migration 0150) —
+// ensemble FERMÉ, même patron que quest_templates.condition_key : un
+// nouvel effet demande toujours sa propre migration (le comportement en jeu
+// à lui donner) avant de pouvoir apparaître ici. Distinct de `key`
+// (l'identifiant libre de CET artefact précis) : plusieurs artefacts
+// pourront un jour partager le même effet.
+type ArtifactEffect = 'none' | 'parchemin_griot' | 'dernier_souffle'
+
+const ARTIFACT_EFFECT_LABELS: Record<ArtifactEffect, string> = {
+  none: 'Aucun effet (cosmétique / collection)',
+  parchemin_griot: 'Lecture du chat des Loups après élimination (Parchemin du Griot)',
+  dernier_souffle: 'Message final envoyé au village après élimination (Dernier Souffle)',
+}
+
 interface StoreArtifact {
   id: string
   key: string
   category: ArtifactCategory
+  effect_key: ArtifactEffect
   image_path: string | null
   name_fr: string
   name_en: string
@@ -2913,6 +2928,7 @@ function StoreArtifactsTab() {
       p_description_en: sa.description_en,
       p_price_coins: sa.price_coins,
       p_category: sa.category,
+      p_effect_key: sa.effect_key,
       p_active: !sa.active,
     })
     setBusyId(null)
@@ -2978,6 +2994,9 @@ function StoreArtifactsTab() {
                   <span className="inline-flex items-center gap-1">
                     · <LoupCoinIcon className="h-3 w-3" /> {sa.price_coins}
                   </span>
+                </p>
+                <p className="mt-1 text-[11px] text-moon-200/40">
+                  Effet : {ARTIFACT_EFFECT_LABELS[sa.effect_key]}
                 </p>
                 <p className="mt-1 text-xs text-moon-200/40">🇫🇷 {sa.description_fr}</p>
                 <p className="text-xs text-moon-200/40">🇬🇧 {sa.description_en}</p>
@@ -3090,6 +3109,7 @@ function ArtifactIconUpload({ artifact, onUploaded }: { artifact: StoreArtifact;
 interface StoreArtifactFormState {
   key: string
   category: ArtifactCategory
+  effect_key: ArtifactEffect
   name_fr: string
   name_en: string
   description_fr: string
@@ -3101,6 +3121,7 @@ interface StoreArtifactFormState {
 const EMPTY_ARTIFACT_FORM: StoreArtifactFormState = {
   key: '',
   category: 'outils',
+  effect_key: 'none',
   name_fr: '',
   name_en: '',
   description_fr: '',
@@ -3130,6 +3151,7 @@ function StoreArtifactFormDrawer({
       setForm({
         key: artifact.key,
         category: artifact.category,
+        effect_key: artifact.effect_key,
         name_fr: artifact.name_fr,
         name_en: artifact.name_en,
         description_fr: artifact.description_fr,
@@ -3173,6 +3195,7 @@ function StoreArtifactFormDrawer({
       p_description_en: form.description_en,
       p_price_coins: price,
       p_category: form.category,
+      p_effect_key: form.effect_key,
       p_active: form.active,
     })
     setBusy(false)
@@ -3217,6 +3240,26 @@ function StoreArtifactFormDrawer({
               </option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <Label>Effet</Label>
+          <select
+            value={form.effect_key}
+            onChange={(ev) => setForm((f) => ({ ...f, effect_key: ev.target.value as ArtifactEffect }))}
+            className="w-full rounded-xl border border-night-500 bg-night-800/80 px-3 py-2.5 text-sm text-moon-200 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20"
+          >
+            {(Object.keys(ARTIFACT_EFFECT_LABELS) as ArtifactEffect[]).map((id) => (
+              <option key={id} value={id}>
+                {ARTIFACT_EFFECT_LABELS[id]}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-moon-200/40">
+            Le comportement en jeu de chaque effet est câblé dans le moteur (voir migration 0150) — impossible d'en
+            inventer un nouveau depuis cet écran, ça demande toujours une migration. Plusieurs artefacts peuvent
+            partager le même effet.
+          </p>
         </div>
 
         <div>
