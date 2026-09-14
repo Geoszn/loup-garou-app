@@ -2893,6 +2893,10 @@ interface StoreArtifact {
   description_fr: string
   description_en: string
   price_coins: number
+  // Stock/cooldown : uniquement pour la catégorie "rares" (voir migration
+  // 0153) — null pour tout le reste, achat unique classique.
+  max_stock: number | null
+  repurchase_cooldown_days: number | null
   active: boolean
   created_at: string
 }
@@ -2946,6 +2950,8 @@ function StoreArtifactsTab() {
       p_price_coins: sa.price_coins,
       p_category: sa.category,
       p_effect_key: sa.effect_key,
+      p_max_stock: sa.max_stock,
+      p_repurchase_cooldown_days: sa.repurchase_cooldown_days,
       p_active: !sa.active,
     })
     setBusyId(null)
@@ -3015,6 +3021,11 @@ function StoreArtifactsTab() {
                 <p className="mt-1 text-[11px] text-moon-200/40">
                   Effet : {ARTIFACT_EFFECT_LABELS[sa.effect_key]}
                 </p>
+                {sa.max_stock !== null && (
+                  <p className="mt-0.5 text-[11px] text-amber-300/80">
+                    Stock max {sa.max_stock} par joueur · rachat tous les {sa.repurchase_cooldown_days} jours
+                  </p>
+                )}
                 <p className="mt-1 text-xs text-moon-200/40">🇫🇷 {sa.description_fr}</p>
                 <p className="text-xs text-moon-200/40">🇬🇧 {sa.description_en}</p>
                 <div className="mt-2">
@@ -3132,6 +3143,8 @@ interface StoreArtifactFormState {
   description_fr: string
   description_en: string
   price_coins: string
+  max_stock: string
+  repurchase_cooldown_days: string
   active: boolean
 }
 
@@ -3144,6 +3157,8 @@ const EMPTY_ARTIFACT_FORM: StoreArtifactFormState = {
   description_fr: '',
   description_en: '',
   price_coins: '20',
+  max_stock: '1',
+  repurchase_cooldown_days: '10',
   active: true,
 }
 
@@ -3174,6 +3189,8 @@ function StoreArtifactFormDrawer({
         description_fr: artifact.description_fr,
         description_en: artifact.description_en,
         price_coins: String(artifact.price_coins),
+        max_stock: String(artifact.max_stock ?? 1),
+        repurchase_cooldown_days: String(artifact.repurchase_cooldown_days ?? 10),
         active: artifact.active,
       })
     } else {
@@ -3201,6 +3218,17 @@ function StoreArtifactFormDrawer({
       setError('Prix invalide.')
       return
     }
+    const isRare = form.category === 'rares'
+    const maxStock = Number(form.max_stock)
+    const cooldownDays = Number(form.repurchase_cooldown_days)
+    if (isRare && (!Number.isFinite(maxStock) || maxStock <= 0)) {
+      setError('Stock maximum invalide.')
+      return
+    }
+    if (isRare && (!Number.isFinite(cooldownDays) || cooldownDays <= 0)) {
+      setError('Délai de rachat invalide.')
+      return
+    }
     setBusy(true)
     setError(null)
     const { error: rpcError } = await supabase.rpc('admin_upsert_store_artifact', {
@@ -3213,6 +3241,8 @@ function StoreArtifactFormDrawer({
       p_price_coins: price,
       p_category: form.category,
       p_effect_key: form.effect_key,
+      p_max_stock: isRare ? maxStock : null,
+      p_repurchase_cooldown_days: isRare ? cooldownDays : null,
       p_active: form.active,
     })
     setBusy(false)
@@ -3258,6 +3288,33 @@ function StoreArtifactFormDrawer({
             ))}
           </select>
         </div>
+
+        {form.category === 'rares' && (
+          <div className="grid grid-cols-2 gap-3 rounded-xl border border-amber-400/25 bg-amber-400/[0.04] p-3">
+            <div>
+              <Label>Stock max par joueur</Label>
+              <Input
+                type="number"
+                min={1}
+                value={form.max_stock}
+                onChange={(ev) => setForm((f) => ({ ...f, max_stock: ev.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>Rachat tous les (jours)</Label>
+              <Input
+                type="number"
+                min={1}
+                value={form.repurchase_cooldown_days}
+                onChange={(ev) => setForm((f) => ({ ...f, repurchase_cooldown_days: ev.target.value }))}
+              />
+            </div>
+            <p className="col-span-2 text-xs text-moon-200/40">
+              Catégorie "rares" : cet artefact devient rechargeable au lieu d'un achat unique — un joueur peut en
+              racheter jusqu'à ce plafond, au rythme maximum d'un achat tous les N jours.
+            </p>
+          </div>
+        )}
 
         <div>
           <Label>Effet</Label>

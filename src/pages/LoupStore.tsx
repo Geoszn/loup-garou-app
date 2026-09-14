@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useLanguage } from '../i18n/LanguageContext'
-import { Button, Card, ConfirmDialog, ErrorText, Modal } from '../components/ui'
+import { Button, Card, ConfirmDialog, ErrorText, Modal, Segmented } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { LoupCoinIcon } from '../components/LoupCoinIcon'
 import type { TranslationKey } from '../i18n/translations'
@@ -46,7 +46,31 @@ interface StoreArtifact {
   description_fr: string
   description_en: string
   price_coins: number
+  // Stock (catégorie "rares" uniquement, voir migration 0153) : max_stock
+  // null = artefact classique (achat unique, `owned` seul suffit). Sinon,
+  // `quantity` est le stock actuellement détenu et `can_purchase` tient déjà
+  // compte du plafond ET du délai de rachat — jamais à recalculer côté
+  // client.
+  max_stock: number | null
+  quantity: number
   owned: boolean
+  can_purchase: boolean
+}
+
+interface MyArtifact {
+  id: string
+  name_fr: string
+  name_en: string
+  description_fr: string
+  description_en: string
+  category: ArtifactCategory
+  image_path: string | null
+  quantity: number
+  max_stock: number | null
+  repurchase_cooldown_days: number | null
+  // Horodatage à partir duquel un rachat redevient possible — seulement pour
+  // un artefact à stock (max_stock non nul), null sinon.
+  next_purchase_at: string | null
 }
 
 /** URL publique d'une icône d'artefact (bucket "artifact-icons", migration
@@ -74,11 +98,15 @@ const REASON_LABELS: Record<string, TranslationKey> = {
  * get_my_loup_coins() renvoie déjà total_spent et amount négatif possible
  * côté transactions pour ne pas avoir à retoucher le backend à ce moment-là.
  */
+type LoupStoreTab = 'boutique' | 'mes_artefacts' | 'historique'
+
 export default function LoupStore() {
   const navigate = useNavigate()
   const { t, lang } = useLanguage()
+  const [tab, setTab] = useState<LoupStoreTab>('boutique')
   const [summary, setSummary] = useState<LoupCoinsSummary | null>(null)
   const [artifacts, setArtifacts] = useState<StoreArtifact[] | null>(null)
+  const [myArtifacts, setMyArtifacts] = useState<MyArtifact[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [purchasing, setPurchasing] = useState<string | null>(null)
@@ -87,13 +115,19 @@ export default function LoupStore() {
   const [confirmTarget, setConfirmTarget] = useState<StoreArtifact | null>(null)
 
   const load = useCallback(async () => {
-    const [{ data: coinsData, error: coinsError }, { data: storeData, error: storeError }] = await Promise.all([
+    const [
+      { data: coinsData, error: coinsError },
+      { data: storeData, error: storeError },
+      { data: myArtifactsData, error: myArtifactsError },
+    ] = await Promise.all([
       supabase.rpc('get_my_loup_coins'),
       supabase.rpc('get_store_artifacts'),
+      supabase.rpc('get_my_artifacts'),
     ])
     if (coinsError) setError(coinsError.message)
     else setSummary(coinsData as LoupCoinsSummary)
     if (!storeError) setArtifacts(storeData as StoreArtifact[])
+    if (!myArtifactsError) setMyArtifacts(myArtifactsData as MyArtifact[])
     setLoading(false)
   }, [])
 
@@ -163,84 +197,119 @@ export default function LoupStore() {
               <p className="mt-5 text-xs text-moon-200/40">{t('loupStore.comingSoon')}</p>
             </Card>
 
-            <Card>
-              <h2 className="mb-1 font-display text-lg text-moon-200">{t('loupStore.boutique.title')}</h2>
-              <p className="mb-4 text-sm text-moon-200/50">{t('loupStore.boutique.subtitle')}</p>
-              {!artifacts || artifacts.length === 0 ? (
-                <p className="text-sm text-moon-200/50">{t('loupStore.boutique.empty')}</p>
-              ) : (
-                <>
-                  {/* Filtre par catégorie plutôt qu'un empilement de toutes
-                      les catégories à la fois (retour utilisateur : ça
-                      prenait trop de place à l'écran) — "Tout" mélange tout
-                      le catalogue dans une seule grille, une catégorie
-                      précise réduit à sa seule sous-liste. Chips qui
-                      passent à la ligne (pas Segmented, qui écraserait des
-                      libellés déjà courts mais nombreux) : n'affiche que les
-                      catégories qui contiennent réellement un artefact actif. */}
-                  <div className="mb-3 flex flex-wrap gap-2">
-                    <CategoryChip
-                      active={categoryFilter === 'all'}
-                      label={t('loupStore.filter.all')}
-                      onClick={() => setCategoryFilter('all')}
-                    />
-                    {ARTIFACT_CATEGORIES.filter((cat) => artifacts.some((a) => a.category === cat)).map((cat) => (
-                      <CategoryChip
-                        key={cat}
-                        active={categoryFilter === cat}
-                        label={t(CATEGORY_FILTER_LABEL_KEYS[cat])}
-                        onClick={() => setCategoryFilter(cat)}
-                      />
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-                    {artifacts
-                      .filter((a) => categoryFilter === 'all' || a.category === categoryFilter)
-                      .map((a) => (
-                        <ArtifactCard key={a.id} artifact={a} onClick={() => setDetailTarget(a)} />
-                      ))}
-                  </div>
-                </>
-              )}
-            </Card>
+            {/* Onglets plutôt qu'un empilement de 3 sections (retour
+                utilisateur, même logique que le filtre par catégorie
+                ci-dessous) : Boutique/Mes Artefacts/Historique sont trois
+                usages bien distincts, pas besoin de tout garder visible en
+                même temps. */}
+            <Segmented
+              tabs={[
+                { id: 'boutique', label: t('loupStore.tabs.boutique') },
+                { id: 'mes_artefacts', label: t('loupStore.tabs.myArtifacts') },
+                { id: 'historique', label: t('loupStore.tabs.history') },
+              ]}
+              active={tab}
+              onChange={setTab}
+            />
 
-            <Card>
-              <h2 className="mb-4 font-display text-lg text-moon-200">{t('loupStore.history.title')}</h2>
-              {summary.transactions.length === 0 ? (
-                <p className="text-sm text-moon-200/50">{t('loupStore.history.empty')}</p>
-              ) : (
-                <ul className="flex flex-col gap-2">
-                  {summary.transactions.map((tx) => (
-                    <li
-                      key={tx.id}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-night-600/60 bg-night-900/40 px-4 py-2.5 text-sm"
-                    >
-                      <div className="flex min-w-0 flex-col">
-                        <span className="truncate text-moon-200/90">
-                          {tx.label || t(REASON_LABELS[tx.reason] ?? 'loupStore.transaction.fallbackLabel')}
-                        </span>
-                        <span className="text-xs text-moon-200/40">
-                          {new Date(tx.created_at).toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-US', {
-                            day: 'numeric',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      </div>
-                      <span
-                        className={`shrink-0 flex items-center gap-1 font-display font-semibold ${
-                          tx.amount >= 0 ? 'text-emerald-400' : 'text-blood-400'
-                        }`}
+            {tab === 'boutique' && (
+              <Card>
+                <h2 className="mb-1 font-display text-lg text-moon-200">{t('loupStore.boutique.title')}</h2>
+                <p className="mb-4 text-sm text-moon-200/50">{t('loupStore.boutique.subtitle')}</p>
+                {!artifacts || artifacts.length === 0 ? (
+                  <p className="text-sm text-moon-200/50">{t('loupStore.boutique.empty')}</p>
+                ) : (
+                  <>
+                    {/* Filtre par catégorie plutôt qu'un empilement de toutes
+                        les catégories à la fois (retour utilisateur : ça
+                        prenait trop de place à l'écran) — "Tout" mélange tout
+                        le catalogue dans une seule grille, une catégorie
+                        précise réduit à sa seule sous-liste. Chips qui
+                        passent à la ligne (pas Segmented, qui écraserait des
+                        libellés déjà courts mais nombreux) : n'affiche que les
+                        catégories qui contiennent réellement un artefact actif. */}
+                    <div className="mb-3 flex flex-wrap gap-2">
+                      <CategoryChip
+                        active={categoryFilter === 'all'}
+                        label={t('loupStore.filter.all')}
+                        onClick={() => setCategoryFilter('all')}
+                      />
+                      {ARTIFACT_CATEGORIES.filter((cat) => artifacts.some((a) => a.category === cat)).map((cat) => (
+                        <CategoryChip
+                          key={cat}
+                          active={categoryFilter === cat}
+                          label={t(CATEGORY_FILTER_LABEL_KEYS[cat])}
+                          onClick={() => setCategoryFilter(cat)}
+                        />
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                      {artifacts
+                        .filter((a) => categoryFilter === 'all' || a.category === categoryFilter)
+                        .map((a) => (
+                          <ArtifactCard key={a.id} artifact={a} onClick={() => setDetailTarget(a)} />
+                        ))}
+                    </div>
+                  </>
+                )}
+              </Card>
+            )}
+
+            {tab === 'mes_artefacts' && (
+              <Card>
+                <h2 className="mb-1 font-display text-lg text-moon-200">{t('loupStore.myArtifacts.title')}</h2>
+                <p className="mb-4 text-sm text-moon-200/50">{t('loupStore.myArtifacts.subtitle')}</p>
+                {!myArtifacts || myArtifacts.length === 0 ? (
+                  <p className="text-sm text-moon-200/50">{t('loupStore.myArtifacts.empty')}</p>
+                ) : (
+                  <ul className="flex flex-col gap-2">
+                    {myArtifacts.map((a) => (
+                      <MyArtifactRow key={a.id} artifact={a} />
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            )}
+
+            {tab === 'historique' && (
+              <Card>
+                <h2 className="mb-4 font-display text-lg text-moon-200">{t('loupStore.history.title')}</h2>
+                {summary.transactions.length === 0 ? (
+                  <p className="text-sm text-moon-200/50">{t('loupStore.history.empty')}</p>
+                ) : (
+                  <ul className="flex flex-col gap-2">
+                    {summary.transactions.map((tx) => (
+                      <li
+                        key={tx.id}
+                        className="flex items-center justify-between gap-3 rounded-xl border border-night-600/60 bg-night-900/40 px-4 py-2.5 text-sm"
                       >
-                        {tx.amount >= 0 ? '+' : ''}
-                        {tx.amount} <LoupCoinIcon className="h-3.5 w-3.5" />
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card>
+                        <div className="flex min-w-0 flex-col">
+                          <span className="truncate text-moon-200/90">
+                            {tx.label || t(REASON_LABELS[tx.reason] ?? 'loupStore.transaction.fallbackLabel')}
+                          </span>
+                          <span className="text-xs text-moon-200/40">
+                            {new Date(tx.created_at).toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-US', {
+                              day: 'numeric',
+                              month: 'short',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                        <span
+                          className={`shrink-0 flex items-center gap-1 font-display font-semibold ${
+                            tx.amount >= 0 ? 'text-emerald-400' : 'text-blood-400'
+                          }`}
+                        >
+                          {tx.amount >= 0 ? '+' : ''}
+                          {tx.amount} <LoupCoinIcon className="h-3.5 w-3.5" />
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            )}
           </>
         )}
       </div>
@@ -259,27 +328,38 @@ export default function LoupStore() {
             <span className="flex items-center gap-1.5 font-display text-xl font-semibold text-amber-300">
               <LoupCoinIcon className="h-5 w-5" /> {detailTarget.price_coins}
             </span>
+            {/* Stock (catégorie "rares" uniquement) : affiché ici même si le
+                joueur ne peut pas encore racheter — sinon "Possédé" seul
+                laisserait croire à tort qu'un rachat n'est jamais possible. */}
+            {detailTarget.max_stock !== null && (
+              <p className="text-xs text-moon-200/50">
+                {t('loupStore.boutique.stock', { quantity: detailTarget.quantity, max: detailTarget.max_stock })}
+              </p>
+            )}
             <div className="mt-2 flex w-full gap-3">
               <Button variant="ghost" className="flex-1" onClick={() => setDetailTarget(null)}>
                 {t('common.back')}
               </Button>
-              {detailTarget.owned ? (
+              {detailTarget.max_stock === null && detailTarget.owned ? (
                 <Button className="flex-1" disabled>
                   {t('loupStore.boutique.owned')}
                 </Button>
               ) : (
                 <Button
                   className="flex-1"
-                  disabled={!summary || summary.balance < detailTarget.price_coins}
+                  disabled={!detailTarget.can_purchase || !summary || summary.balance < detailTarget.price_coins}
                   onClick={() => {
                     setConfirmTarget(detailTarget)
                     setDetailTarget(null)
                   }}
                 >
-                  {t('loupStore.boutique.buy')}
+                  {detailTarget.owned ? t('loupStore.boutique.buyMore') : t('loupStore.boutique.buy')}
                 </Button>
               )}
             </div>
+            {detailTarget.owned && detailTarget.max_stock !== null && !detailTarget.can_purchase && (
+              <p className="text-[11px] text-moon-200/40">{t('loupStore.boutique.onCooldown')}</p>
+            )}
           </div>
         </Modal>
       )}
@@ -335,9 +415,18 @@ function ArtifactCard({ artifact, onClick }: { artifact: StoreArtifact; onClick:
     >
       <div className="relative">
         <ArtifactIcon artifact={artifact} size="h-16 w-16" />
-        {artifact.owned && (
+        {/* Classique (max_stock null) : overlay plein "Possédé" une fois
+            acheté, plus rien à faire dessus. À stock : un petit badge de
+            quantité en coin plutôt qu'un overlay plein — le joueur doit
+            encore pouvoir cliquer pour éventuellement racheter. */}
+        {artifact.max_stock === null && artifact.owned && (
           <span className="absolute inset-0 flex items-center justify-center rounded-2xl bg-night-950/70 text-[9px] font-semibold uppercase tracking-wide text-emerald-400">
             {t('loupStore.boutique.owned')}
+          </span>
+        )}
+        {artifact.max_stock !== null && artifact.quantity > 0 && (
+          <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-night-900 bg-amber-400 px-1 text-[10px] font-bold text-night-950">
+            {artifact.quantity}
           </span>
         )}
       </div>
@@ -365,5 +454,55 @@ function CategoryChip({ active, label, onClick }: { active: boolean; label: stri
     >
       {label}
     </button>
+  )
+}
+
+/** Une ligne de l'onglet "Mes Artefacts" : ce que le joueur possède, avec le
+ * stock restant et la prochaine date de rachat pour un artefact à stock
+ * (voir migration 0153). Informatif uniquement, pas cliquable — pour
+ * racheter, direction l'onglet Boutique (aucun raccourci direct ici, pour
+ * garder ce menu simple). */
+function MyArtifactRow({ artifact }: { artifact: MyArtifact }) {
+  const { t, lang } = useLanguage()
+  const name = lang === 'en' ? artifact.name_en : artifact.name_fr
+  const description = lang === 'en' ? artifact.description_en : artifact.description_fr
+  const url = artifactImageUrl(artifact.image_path)
+  const isStockBased = artifact.max_stock !== null
+  const canBuyNow = isStockBased && artifact.next_purchase_at !== null && new Date(artifact.next_purchase_at) <= new Date()
+
+  return (
+    <li className="flex items-center gap-3 rounded-xl border border-night-600/60 bg-night-900/40 px-3 py-2.5">
+      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-night-600/60 bg-night-800/60">
+        {url ? (
+          <img src={url} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center font-display text-sm text-moon-200/30">
+            {name.charAt(0).toUpperCase()}
+          </div>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-moon-200">{name}</p>
+        <p className="truncate text-xs text-moon-200/50">{description}</p>
+        {isStockBased && (
+          <p className="mt-0.5 text-[11px] text-amber-300/80">
+            {t('loupStore.myArtifacts.stock', { quantity: artifact.quantity, max: artifact.max_stock ?? 0 })}
+            {artifact.quantity < (artifact.max_stock ?? 0) && artifact.next_purchase_at && (
+              <>
+                {' · '}
+                {canBuyNow
+                  ? t('loupStore.myArtifacts.canBuyNow')
+                  : t('loupStore.myArtifacts.nextPurchase', {
+                      date: new Date(artifact.next_purchase_at).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', {
+                        day: 'numeric',
+                        month: 'short',
+                      }),
+                    })}
+              </>
+            )}
+          </p>
+        )}
+      </div>
+    </li>
   )
 }
