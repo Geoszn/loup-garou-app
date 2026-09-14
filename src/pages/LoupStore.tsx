@@ -91,7 +91,7 @@ const REASON_LABELS: Record<string, TranslationKey> = {
 
 /**
  * "Loup Store" : page dédiée au compte de Loup Coins (migration 0146/0147),
- * ouverte en cliquant sur le badge du tableau de bord (LoupCoinsBadge.tsx)
+ * ouverte en cliquant sur la ligne "Loup Coins" du menu compte (AccountMenu)
  * ou sur la carte de la page Statistiques. Première version volontairement
  * simple — solde, total gagné, historique des transactions — pensée pour
  * être complétée plus tard (une vraie boutique où dépenser les Loup Coins).

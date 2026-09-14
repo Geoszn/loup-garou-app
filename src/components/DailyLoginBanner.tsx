@@ -24,9 +24,9 @@ const AUTO_HIDE_MS = 12000
  * distincte de current_streak, qui compte les VICTOIRES d'affilée).
  * claim_daily_login() est idempotente : si le joueur a déjà rechargé la
  * page aujourd'hui, is_new_day revient à false et ce composant reste
- * silencieux. refreshProfile() fait suivre le nouveau login_streak jusqu'au
- * badge d'en-tête permanent (LoginStreakBadge), qui lui reste visible que
- * ce bandeau s'affiche ou non.
+ * silencieux. refreshProfile() fait suivre le nouveau login_streak jusqu'à
+ * la ligne "Série de connexion" du menu compte (AccountMenu), qui reste
+ * visible que ce bandeau s'affiche ou non.
  *
  * `hasActiveEvent` : Dashboard.tsx passe `events.length > 0` (voir
  * EventBanner.tsx, rendu juste au-dessus). Un événement est une

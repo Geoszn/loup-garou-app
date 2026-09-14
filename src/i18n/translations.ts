@@ -1633,6 +1633,8 @@ export const translations = {
   'continentPrompt.skip': { fr: 'Plus tard', en: 'Later' },
 
   // --- Menu compte (AccountMenu.tsx) ------------------------------------------
+  'accountMenu.loupCoins': { fr: 'Loup Coins', en: 'Loup Coins' },
+  'accountMenu.loginStreak': { fr: 'Série de connexion', en: 'Login streak' },
   'accountMenu.help': { fr: 'Aide', en: 'Help' },
   'accountMenu.myAccount': { fr: 'Mon compte', en: 'My account' },
   'accountMenu.stats': { fr: 'Statistiques', en: 'Statistics' },

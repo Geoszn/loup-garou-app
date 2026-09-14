@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AvatarIcon } from './AvatarIcon'
+import { LoupCoinIcon } from './LoupCoinIcon'
 import { useLanguage } from '../i18n/LanguageContext'
 
 /** Un seul point d'entrée "compte" (avatar + pseudo) qui déroule un menu
@@ -8,16 +9,24 @@ import { useLanguage } from '../i18n/LanguageContext'
  * rangée de plusieurs icônes séparées dans l'en-tête — moins encombré, et le
  * badge de demandes d'ami en attente reste visible qu'on l'ouvre ou non.
  * "Aide" est placé avant "Mon compte" à la demande explicite : c'est le
- * premier élément qu'on croise en déroulant le menu, avant les réglages. */
+ * premier élément qu'on croise en déroulant le menu, avant les réglages.
+ * Loup Coins et série de connexion (auparavant deux badges séparés dans
+ * l'en-tête du Dashboard) vivent maintenant ici en haut du menu : sur mobile
+ * l'en-tête ne garde que le badge de rang, pour laisser de la place au logo
+ * et au pseudo. */
 export function AccountMenu({
   username,
   avatarIcon,
   pendingFriendCount,
+  loupCoins,
+  loginStreak,
   onSignOut,
 }: {
   username?: string
   avatarIcon?: string | null
   pendingFriendCount: number
+  loupCoins?: number
+  loginStreak?: number
   onSignOut: () => void
 }) {
   const { t } = useLanguage()
@@ -60,7 +69,36 @@ export function AccountMenu({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-20 mt-2 w-52 rounded-xl border border-night-600 bg-night-800 p-1.5 shadow-card">
+        <div className="absolute right-0 top-full z-20 mt-2 w-64 rounded-xl border border-night-600 bg-night-800 p-1.5 shadow-card">
+          {(loupCoins !== undefined || (loginStreak ?? 0) >= 2) && (
+            <>
+              {loupCoins !== undefined && (
+                <Link
+                  to="/loup-store"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center justify-between gap-2 rounded-lg bg-amber-400/10 px-3 py-2 text-sm text-moon-200/80 transition-colors hover:bg-amber-400/15 hover:text-moon-200"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <LoupCoinIcon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{t('accountMenu.loupCoins')}</span>
+                  </span>
+                  <span className="shrink-0 font-semibold text-amber-300">{loupCoins}</span>
+                </Link>
+              )}
+              {(loginStreak ?? 0) >= 2 && (
+                <div className="flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm text-moon-200/80">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="shrink-0">📅</span>
+                    <span className="truncate">{t('accountMenu.loginStreak')}</span>
+                  </span>
+                  <span className="shrink-0 whitespace-nowrap font-semibold text-moon-300">
+                    {loginStreak} {t('dailyStreak.days')}
+                  </span>
+                </div>
+              )}
+              <div className="my-1 border-t border-night-700" />
+            </>
+          )}
           <MenuLink to="/aide" onNavigate={() => setOpen(false)} icon="❓" label={t('accountMenu.help')} />
           <MenuLink to="/compte" onNavigate={() => setOpen(false)} icon="⚙️" label={t('accountMenu.myAccount')} />
           <MenuLink to="/stats" onNavigate={() => setOpen(false)} icon="📊" label={t('accountMenu.stats')} />
