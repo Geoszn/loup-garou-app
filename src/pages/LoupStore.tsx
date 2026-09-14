@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useLanguage } from '../i18n/LanguageContext'
-import { Button, Card, ErrorText } from '../components/ui'
+import { Button, Card, ConfirmDialog, ErrorText } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { LoupCoinIcon } from '../components/LoupCoinIcon'
 import type { TranslationKey } from '../i18n/translations'
@@ -22,12 +22,22 @@ interface LoupCoinsSummary {
   transactions: LoupCoinsTransaction[]
 }
 
-// Libellé lisible par raison de transaction (voir migration 0147) — seule
-// 'quest_reward' existe pour l'instant, mais la clé reste ouverte pour une
-// future itération du Store (achats, etc.) qui ajoutera ses propres raisons
-// sans casser l'affichage des transactions déjà enregistrées.
+interface StoreArtifact {
+  id: string
+  name_fr: string
+  name_en: string
+  description_fr: string
+  description_en: string
+  price_coins: number
+  owned: boolean
+}
+
+// Libellé lisible par raison de transaction (voir migration 0147/0148) —
+// reste ouvert : une future raison (nouvel effet du Store) s'ajoute ici sans
+// casser l'affichage des transactions déjà enregistrées.
 const REASON_LABELS: Record<string, TranslationKey> = {
   quest_reward: 'loupStore.reason.quest_reward',
+  store_purchase: 'loupStore.reason.store_purchase',
 }
 
 /**
@@ -43,24 +53,40 @@ export default function LoupStore() {
   const navigate = useNavigate()
   const { t, lang } = useLanguage()
   const [summary, setSummary] = useState<LoupCoinsSummary | null>(null)
+  const [artifacts, setArtifacts] = useState<StoreArtifact[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [purchasing, setPurchasing] = useState<string | null>(null)
+  const [confirmTarget, setConfirmTarget] = useState<StoreArtifact | null>(null)
+
+  const load = useCallback(async () => {
+    const [{ data: coinsData, error: coinsError }, { data: storeData, error: storeError }] = await Promise.all([
+      supabase.rpc('get_my_loup_coins'),
+      supabase.rpc('get_store_artifacts'),
+    ])
+    if (coinsError) setError(coinsError.message)
+    else setSummary(coinsData as LoupCoinsSummary)
+    if (!storeError) setArtifacts(storeData as StoreArtifact[])
+    setLoading(false)
+  }, [])
 
   useEffect(() => {
-    let cancelled = false
-    supabase.rpc('get_my_loup_coins').then(({ data, error: rpcError }) => {
-      if (cancelled) return
-      if (rpcError) {
-        setError(rpcError.message)
-      } else {
-        setSummary(data as LoupCoinsSummary)
-      }
-      setLoading(false)
-    })
-    return () => {
-      cancelled = true
+    load()
+  }, [load])
+
+  async function confirmPurchase() {
+    if (!confirmTarget) return
+    setPurchasing(confirmTarget.id)
+    const { error: rpcError } = await supabase.rpc('purchase_artifact', { p_artifact_id: confirmTarget.id })
+    setPurchasing(null)
+    setConfirmTarget(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
     }
-  }, [])
+    setError(null)
+    load()
+  }
 
   if (loading) return <FullScreenLoader />
 
@@ -111,6 +137,51 @@ export default function LoupStore() {
             </Card>
 
             <Card>
+              <h2 className="mb-1 font-display text-lg text-moon-200">{t('loupStore.boutique.title')}</h2>
+              <p className="mb-4 text-sm text-moon-200/50">{t('loupStore.boutique.subtitle')}</p>
+              {!artifacts || artifacts.length === 0 ? (
+                <p className="text-sm text-moon-200/50">{t('loupStore.boutique.empty')}</p>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {artifacts.map((a) => {
+                    const name = lang === 'en' ? a.name_en : a.name_fr
+                    const description = lang === 'en' ? a.description_en : a.description_fr
+                    const affordable = summary ? summary.balance >= a.price_coins : false
+                    return (
+                      <li
+                        key={a.id}
+                        className="flex flex-col gap-2 rounded-xl border border-night-600/60 bg-night-900/40 p-3.5 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-moon-200">{name}</p>
+                          <p className="mt-0.5 text-xs text-moon-200/50">{description}</p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-3">
+                          <span className="flex items-center gap-1 font-display text-sm font-semibold text-amber-300">
+                            <LoupCoinIcon className="h-4 w-4" /> {a.price_coins}
+                          </span>
+                          {a.owned ? (
+                            <span className="rounded-full bg-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-400">
+                              {t('loupStore.boutique.owned')}
+                            </span>
+                          ) : (
+                            <Button
+                              className="px-3.5 py-1.5 text-xs"
+                              disabled={!affordable || purchasing === a.id}
+                              onClick={() => setConfirmTarget(a)}
+                            >
+                              {t('loupStore.boutique.buy')}
+                            </Button>
+                          )}
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </Card>
+
+            <Card>
               <h2 className="mb-4 font-display text-lg text-moon-200">{t('loupStore.history.title')}</h2>
               {summary.transactions.length === 0 ? (
                 <p className="text-sm text-moon-200/50">{t('loupStore.history.empty')}</p>
@@ -150,6 +221,19 @@ export default function LoupStore() {
           </>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!confirmTarget}
+        title={t('loupStore.boutique.confirmTitle')}
+        message={t('loupStore.boutique.confirmMessage', {
+          name: confirmTarget ? (lang === 'en' ? confirmTarget.name_en : confirmTarget.name_fr) : '',
+          price: confirmTarget?.price_coins ?? 0,
+        })}
+        confirmLabel={t('loupStore.boutique.buy')}
+        cancelLabel={t('common.cancel')}
+        onCancel={() => setConfirmTarget(null)}
+        onConfirm={confirmPurchase}
+      />
     </div>
   )
 }

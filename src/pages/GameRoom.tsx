@@ -367,6 +367,10 @@ export default function GameRoom() {
               displayName={me?.display_name ?? t('common.playerFallback')}
               gameStatus={view.game.status}
               players={view.players}
+              myRole={view.my_role}
+              ownsParcheminGriot={view.my_owns_parchemin_griot}
+              ownsDernierSouffle={view.my_owns_dernier_souffle}
+              dernierSouffleUsed={view.my_dernier_souffle_used}
             />
           </div>
         )}
@@ -688,6 +692,10 @@ function GhostPanel({
   displayName,
   gameStatus,
   players,
+  myRole,
+  ownsParcheminGriot,
+  ownsDernierSouffle,
+  dernierSouffleUsed,
 }: {
   gameId: string
   code: string
@@ -695,20 +703,87 @@ function GhostPanel({
   displayName: string
   gameStatus: MyGameView['game']['status']
   players: PublicPlayer[]
+  myRole: string | null
+  ownsParcheminGriot: boolean
+  ownsDernierSouffle: boolean
+  dernierSouffleUsed: boolean
 }) {
+  const { t } = useLanguage()
   const villageVoiceAvailable = ['day_reveal', 'day_discussion', 'day_vote', 'captain_election'].includes(gameStatus)
+  // Parchemin du Griot (artefact du Loup Store, migration 0148) : un loup
+  // éliminé qui possède l'artefact garde un accès en LECTURE au chat de son
+  // ex-meute — déjà vérifié côté serveur (can_read_channel), cette condition
+  // n'est là que pour ne pas monter un onglet vide/inutile pour tous les
+  // autres fantômes (villageois, ou loup sans l'artefact).
+  const showWolvesGhostPanel = gameStatus === 'night' && isWolfTeam(myRole) && ownsParcheminGriot
 
   return (
     <div className="flex flex-col gap-2">
       {villageVoiceAvailable && (
         <VoiceChat gameId={gameId} code={code} channel="village" displayName={displayName} selfUserId={selfId} listenOnly players={players} />
       )}
+      {ownsDernierSouffle && !dernierSouffleUsed && <LastWordsForm gameId={gameId} />}
       <ChatPanel gameId={gameId} channel="village" selfId={selfId} compact readOnly />
       {/* Retour utilisateur : "agrandir la taille du chat du cimetière" —
           c'est là que les fantômes passent le plus clair de leur temps une
           fois éliminés, contrairement au village en lecture seule
           au-dessus. h-96 (24rem) plutôt que le h-64 (16rem) par défaut. */}
       <ChatPanel gameId={gameId} channel="graveyard" selfId={selfId} compact compactHeightClassName="h-96" />
+      {showWolvesGhostPanel && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-xs text-moon-200/40">{t('game.parcheminGriot.notice')}</p>
+          <ChatPanel gameId={gameId} channel="wolves" selfId={selfId} compact readOnly />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Formulaire "Dernier Souffle" (artefact du Loup Store, migration 0148) :
+ * affiché une seule fois, juste après l'élimination, tant que l'artefact n'a
+ * pas déjà été utilisé cette partie (dernierSouffleUsed vient de
+ * get_my_game_view, recalculé à chaque lecture — pas besoin de suivre
+ * l'état "envoyé" localement au-delà du succès immédiat de l'appel). */
+function LastWordsForm({ gameId }: { gameId: string }) {
+  const { t } = useLanguage()
+  const [content, setContent] = useState('')
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  if (sent) return null
+
+  async function send() {
+    const trimmed = content.trim()
+    if (!trimmed) return
+    setSending(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('send_last_words', { p_game_id: gameId, p_content: trimmed })
+    setSending(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    setSent(true)
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-2xl border border-amber-400/30 bg-amber-400/[0.05] p-3">
+      <p className="text-xs font-semibold text-amber-300">{t('game.lastWords.title')}</p>
+      <p className="text-xs text-moon-200/50">{t('game.lastWords.subtitle')}</p>
+      <div className="flex gap-2">
+        <input
+          value={content}
+          onChange={(ev) => setContent(ev.target.value)}
+          maxLength={500}
+          placeholder={t('game.lastWords.placeholder')}
+          className="min-w-0 flex-1 rounded-xl border border-night-600/70 bg-night-900/50 px-3 py-2 text-sm text-moon-200 outline-none transition focus:border-amber-400/60"
+        />
+        <Button className="shrink-0 px-3.5 py-2 text-xs" disabled={sending || !content.trim()} onClick={send}>
+          {t('game.lastWords.send')}
+        </Button>
+      </div>
+      <ErrorText>{error}</ErrorText>
     </div>
   )
 }

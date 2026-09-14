@@ -487,14 +487,21 @@ const MessageRow = memo(function MessageRow({
         onMouseLeave={onCancelLongPress}
         onContextMenu={(e) => e.preventDefault()}
         onClick={() => onBubbleClick(m.id)}
-        className={`animate-bubble-in inline-block max-w-[85%] select-none break-words rounded-2xl px-3 py-1.5 text-left ${
-          isMine
-            ? 'bg-blood-700/30 text-moon-200'
-            : m.is_anonymous
-              ? 'bg-night-800/70 text-moon-200/80'
-              : 'bg-night-700/60 text-moon-200/90'
+        className={`animate-bubble-in inline-block max-w-[85%] select-none break-words rounded-2xl border px-3 py-1.5 text-left ${
+          m.is_last_words
+            ? 'border-amber-400/40 bg-amber-400/10 text-amber-100'
+            : isMine
+              ? 'border-transparent bg-blood-700/30 text-moon-200'
+              : m.is_anonymous
+                ? 'border-transparent bg-night-800/70 text-moon-200/80'
+                : 'border-transparent bg-night-700/60 text-moon-200/90'
         }`}
       >
+        {m.is_last_words && (
+          <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-amber-300/80">
+            🕯️ {t('chat.lastWords')}
+          </span>
+        )}
         {!isMine && (
           <span className="mr-1.5 text-xs font-semibold text-moon-300">
             {m.is_anonymous ? (label ? `🕵️ ${label}` : t('chat.anonymous')) : label}

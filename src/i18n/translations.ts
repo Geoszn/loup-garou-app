@@ -696,6 +696,18 @@ export const translations = {
     fr: '👻 Vous avez été éliminé.',
     en: "👻 You've been eliminated.",
   },
+  // --- Artefacts du Loup Store (migration 0148) ------------------------------
+  'game.parcheminGriot.notice': {
+    fr: 'Parchemin du Griot : tu continues de suivre le chat de ton ex-meute cette nuit.',
+    en: "Griot's Scroll: you keep following your former pack's chat tonight.",
+  },
+  'game.lastWords.title': { fr: 'Dernier Souffle', en: 'Last Breath' },
+  'game.lastWords.subtitle': {
+    fr: 'Envoie un ultime message à tout le village, visible de tous (une seule fois).',
+    en: 'Send one final message to the whole village, visible to everyone (once only).',
+  },
+  'game.lastWords.placeholder': { fr: 'Ton dernier message...', en: 'Your final message...' },
+  'game.lastWords.send': { fr: 'Envoyer', en: 'Send' },
   // --- Popup de mort (DeathImpactModal.tsx, migration 0073) ------------------
   // Affichée juste après une élimination en cours de partie : montre
   // uniquement ce qui est DÉJÀ acquis (bonus d'impact), jamais le résultat
@@ -1191,6 +1203,7 @@ export const translations = {
   'chat.live': { fr: 'en direct', en: 'live' },
   'chat.empty': { fr: 'Aucun message pour le moment...', en: 'No messages yet...' },
   'chat.anonymous': { fr: '🎭 Anonyme', en: '🎭 Anonymous' },
+  'chat.lastWords': { fr: 'Dernier souffle', en: 'Last breath' },
 
   // --- Récap du vote (VoteRecapModal.tsx) --------------------------------------
   'voteRecap.title': { fr: '🗳️ Résultat du vote', en: '🗳️ Vote result' },
@@ -1384,7 +1397,21 @@ export const translations = {
     en: 'No transactions yet. Claim a quest to start earning Loup Coins!',
   },
   'loupStore.reason.quest_reward': { fr: 'Quête quotidienne', en: 'Daily quest' },
+  'loupStore.reason.store_purchase': { fr: 'Achat en boutique', en: 'Store purchase' },
   'loupStore.transaction.fallbackLabel': { fr: 'Récompense', en: 'Reward' },
+  'loupStore.boutique.title': { fr: 'Boutique', en: 'Shop' },
+  'loupStore.boutique.subtitle': {
+    fr: 'Des artefacts spéciaux, à débloquer pour de bon avec tes Loup Coins.',
+    en: 'Special artifacts, unlocked for good with your Loup Coins.',
+  },
+  'loupStore.boutique.empty': { fr: 'Aucun artefact disponible pour l’instant.', en: 'No artifacts available right now.' },
+  'loupStore.boutique.buy': { fr: 'Acheter', en: 'Buy' },
+  'loupStore.boutique.owned': { fr: 'Possédé', en: 'Owned' },
+  'loupStore.boutique.confirmTitle': { fr: 'Confirmer l’achat', en: 'Confirm purchase' },
+  'loupStore.boutique.confirmMessage': {
+    fr: 'Acheter « {{name}} » pour {{price}} Loup Coins ? Cet artefact est débloqué pour toujours, dans toutes tes futures parties.',
+    en: 'Buy "{{name}}" for {{price}} Loup Coins? This artifact is unlocked forever, in all your future games.',
+  },
   'account.notifications.title': { fr: 'Notifications', en: 'Notifications' },
   'account.notifications.description': {
     fr: 'Reçois une alerte quand c’est ton tour de jouer ou qu’un ami te lance une invitation.',

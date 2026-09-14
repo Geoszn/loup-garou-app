@@ -30,7 +30,7 @@ import { sendNotificationCampaignNow } from '../lib/pushSubscription'
 // l'écran "Accès refusé".
 // ============================================================================
 
-type Tab = 'stats' | 'users' | 'games' | 'content' | 'events' | 'quests' | 'messages' | 'notifications' | 'security' | 'settings'
+type Tab = 'stats' | 'users' | 'games' | 'content' | 'events' | 'quests' | 'artifacts' | 'messages' | 'notifications' | 'security' | 'settings'
 
 const TAB_ITEMS: { id: Tab; label: string; icon: string; description: string }[] = [
   { id: 'stats', label: 'Vue d’ensemble', icon: '📊', description: 'Chiffres clés et raccourcis vers les autres sections.' },
@@ -46,6 +46,17 @@ const TAB_ITEMS: { id: Tab; label: string; icon: string; description: string }[]
     label: 'Quêtes',
     icon: '📜',
     description: 'Catalogue des quêtes quotidiennes et leurs récompenses en Loup Coins.',
+  },
+  // Catalogue des artefacts spéciaux vendus dans le Loup Store (voir
+  // LoupStore.tsx côté joueur, migration 0148) : nom/description FR+EN,
+  // prix en Loup Coins, actif/inactif — même principe que l'onglet Quêtes
+  // ci-dessus. `key` (identifiant technique reconnu par le moteur de jeu)
+  // n'est éditable qu'à la création, jamais ensuite (voir StoreArtifactsTab).
+  {
+    id: 'artifacts',
+    label: 'Artefacts',
+    icon: '🏺',
+    description: 'Catalogue des artefacts spéciaux vendus dans le Loup Store.',
   },
   // Messages reçus des joueurs (bouton "feedback" en jeu, voir
   // FeedbackButton.tsx) : jusqu'ici uniquement envoyés par email via Resend
@@ -435,6 +446,7 @@ export default function AdminDashboard() {
             {tab === 'content' && <ContentTab />}
             {tab === 'events' && <EventsTab />}
             {tab === 'quests' && <QuestTemplatesTab />}
+            {tab === 'artifacts' && <StoreArtifactsTab />}
             {tab === 'messages' && <MessagesTab />}
             {tab === 'notifications' && <NotificationsTab />}
             {tab === 'security' && <SecurityTab />}
@@ -2809,6 +2821,349 @@ function QuestTemplateFormDrawer({
           </Button>
           <Button type="submit" className="flex-1" disabled={busy}>
             {template ? 'Enregistrer' : 'Créer'}
+          </Button>
+        </div>
+      </form>
+    </SideDrawer>
+  )
+}
+
+// ----------------------------------------------------------------------------
+// Catalogue des artefacts spéciaux du Loup Store (voir LoupStore.tsx côté
+// joueur, migration 0148) — même patron que QuestTemplatesTab ci-dessus :
+// upsert unique (p_id null = création), toggle Actif/Inactif, suppression.
+//
+// `key` (identifiant technique reconnu par le moteur de jeu — can_read_channel
+// pour 'parchemin_griot', send_last_words pour 'dernier_souffle') n'est
+// éditable qu'à la création : le serveur (admin_upsert_store_artifact) ignore
+// silencieusement toute tentative de le changer ensuite, mais autant ne pas
+// donner l'illusion que c'est possible — champ désactivé dès qu'on modifie un
+// artefact existant. Créer un tout nouvel artefact avec un `key` inédit reste
+// possible, mais n'aura aucun effet en jeu tant qu'aucune migration ne lui
+// donne un comportement (voir le commentaire en tête de 0148).
+// ----------------------------------------------------------------------------
+interface StoreArtifact {
+  id: string
+  key: string
+  name_fr: string
+  name_en: string
+  description_fr: string
+  description_en: string
+  price_coins: number
+  active: boolean
+  created_at: string
+}
+
+function StoreArtifactsTab() {
+  const [artifacts, setArtifacts] = useState<StoreArtifact[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<StoreArtifact | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<StoreArtifact | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    const { data, error: rpcError } = await supabase.rpc('admin_list_store_artifacts')
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    setError(null)
+    setArtifacts((data ?? []) as StoreArtifact[])
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  function openCreate() {
+    setEditing(null)
+    setFormOpen(true)
+  }
+
+  function openEdit(sa: StoreArtifact) {
+    setEditing(sa)
+    setFormOpen(true)
+  }
+
+  async function toggleActive(sa: StoreArtifact) {
+    setBusyId(sa.id)
+    const { error: rpcError } = await supabase.rpc('admin_upsert_store_artifact', {
+      p_id: sa.id,
+      p_key: sa.key,
+      p_name_fr: sa.name_fr,
+      p_name_en: sa.name_en,
+      p_description_fr: sa.description_fr,
+      p_description_en: sa.description_en,
+      p_price_coins: sa.price_coins,
+      p_active: !sa.active,
+    })
+    setBusyId(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    load()
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    setBusyId(deleteTarget.id)
+    const { error: rpcError } = await supabase.rpc('admin_delete_store_artifact', { p_id: deleteTarget.id })
+    setBusyId(null)
+    setDeleteTarget(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    load()
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-moon-200/60">{artifacts?.length ?? 0} artefact(s) au catalogue.</p>
+        <Button className="px-3.5 py-2 text-xs" onClick={openCreate}>
+          + Nouvel artefact
+        </Button>
+      </div>
+
+      <ErrorText>{error}</ErrorText>
+
+      {artifacts === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
+      {artifacts !== null && artifacts.length === 0 && <p className="text-sm text-moon-200/50">Aucun artefact au catalogue.</p>}
+
+      <div className="flex flex-col gap-2">
+        {artifacts?.map((sa) => (
+          <Card key={sa.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
+            <div>
+              <p className="flex items-center gap-2 text-sm font-semibold text-moon-200">
+                {sa.name_fr}
+                {!sa.active && (
+                  <span className="rounded-full bg-night-700/60 px-2 py-0.5 text-[10px] uppercase text-moon-200/50">
+                    Désactivé
+                  </span>
+                )}
+              </p>
+              <p className="mt-1 flex items-center gap-1 text-xs text-moon-200/50">
+                <code className="rounded bg-night-800/70 px-1.5 py-0.5 text-[10px] text-moon-200/60">{sa.key}</code>
+                <span className="inline-flex items-center gap-1">
+                  · <LoupCoinIcon className="h-3 w-3" /> {sa.price_coins}
+                </span>
+              </p>
+              <p className="mt-1 text-xs text-moon-200/40">🇫🇷 {sa.description_fr}</p>
+              <p className="text-xs text-moon-200/40">🇬🇧 {sa.description_en}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="ghost" className="px-3 py-1.5 text-xs" disabled={busyId === sa.id} onClick={() => openEdit(sa)}>
+                Modifier
+              </Button>
+              <Button variant="ghost" className="px-3 py-1.5 text-xs" disabled={busyId === sa.id} onClick={() => toggleActive(sa)}>
+                {sa.active ? 'Désactiver' : 'Activer'}
+              </Button>
+              <Button variant="danger" className="px-3 py-1.5 text-xs" disabled={busyId === sa.id} onClick={() => setDeleteTarget(sa)}>
+                Supprimer
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <StoreArtifactFormDrawer
+        open={formOpen}
+        artifact={editing}
+        onClose={() => setFormOpen(false)}
+        onSaved={() => {
+          setFormOpen(false)
+          load()
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={`Supprimer « ${deleteTarget?.name_fr ?? ''} » ?`}
+        message="Retiré du catalogue immédiatement — plus achetable. Les joueurs qui le possèdent déjà le perdent aussi (son effet en jeu, s'il en a un, disparaît avec lui)."
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        danger
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+      />
+    </div>
+  )
+}
+
+interface StoreArtifactFormState {
+  key: string
+  name_fr: string
+  name_en: string
+  description_fr: string
+  description_en: string
+  price_coins: string
+  active: boolean
+}
+
+const EMPTY_ARTIFACT_FORM: StoreArtifactFormState = {
+  key: '',
+  name_fr: '',
+  name_en: '',
+  description_fr: '',
+  description_en: '',
+  price_coins: '20',
+  active: true,
+}
+
+function StoreArtifactFormDrawer({
+  open,
+  artifact,
+  onClose,
+  onSaved,
+}: {
+  open: boolean
+  artifact: StoreArtifact | null
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [form, setForm] = useState<StoreArtifactFormState>(EMPTY_ARTIFACT_FORM)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    if (artifact) {
+      setForm({
+        key: artifact.key,
+        name_fr: artifact.name_fr,
+        name_en: artifact.name_en,
+        description_fr: artifact.description_fr,
+        description_en: artifact.description_en,
+        price_coins: String(artifact.price_coins),
+        active: artifact.active,
+      })
+    } else {
+      setForm(EMPTY_ARTIFACT_FORM)
+    }
+    setError(null)
+  }, [open, artifact])
+
+  async function save(e: FormEvent) {
+    e.preventDefault()
+    if (!artifact && !/^[a-z0-9_]+$/.test(form.key)) {
+      setError('Identifiant technique invalide (minuscules, chiffres, underscore uniquement).')
+      return
+    }
+    if (!form.name_fr.trim() || !form.name_en.trim()) {
+      setError('Nom requis (FR et EN).')
+      return
+    }
+    if (!form.description_fr.trim() || !form.description_en.trim()) {
+      setError('Description requise (FR et EN).')
+      return
+    }
+    const price = Number(form.price_coins)
+    if (!Number.isFinite(price) || price < 0) {
+      setError('Prix invalide.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('admin_upsert_store_artifact', {
+      p_id: artifact?.id ?? null,
+      p_key: form.key,
+      p_name_fr: form.name_fr,
+      p_name_en: form.name_en,
+      p_description_fr: form.description_fr,
+      p_description_en: form.description_en,
+      p_price_coins: price,
+      p_active: form.active,
+    })
+    setBusy(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    onSaved()
+  }
+
+  return (
+    <SideDrawer open={open} onClose={onClose} title={artifact ? 'Modifier l’artefact' : 'Nouvel artefact'}>
+      <form className="flex flex-col gap-4" onSubmit={save}>
+        <div>
+          <Label>Identifiant technique</Label>
+          <Input
+            value={form.key}
+            disabled={!!artifact}
+            onChange={(ev) => setForm((f) => ({ ...f, key: ev.target.value.trim().toLowerCase() }))}
+            placeholder="ex. parchemin_griot"
+          />
+          <p className="mt-1 text-xs text-moon-200/40">
+            {artifact
+              ? 'Non modifiable après création — c\'est ce que le moteur de jeu reconnaît.'
+              : 'Minuscules, chiffres, underscore uniquement. Un artefact dont l\'identifiant n\'est reconnu nulle part dans le moteur de jeu reste un simple objet cosmétique de catalogue.'}
+          </p>
+        </div>
+
+        <div>
+          <Label>Nom — Français</Label>
+          <Input
+            value={form.name_fr}
+            onChange={(ev) => setForm((f) => ({ ...f, name_fr: ev.target.value }))}
+            placeholder="Ex. Parchemin du Griot"
+          />
+        </div>
+        <div>
+          <Label>Nom — English</Label>
+          <Input
+            value={form.name_en}
+            onChange={(ev) => setForm((f) => ({ ...f, name_en: ev.target.value }))}
+            placeholder="Ex. Griot's Scroll"
+          />
+        </div>
+        <div>
+          <Label>Description — Français</Label>
+          <Input
+            value={form.description_fr}
+            onChange={(ev) => setForm((f) => ({ ...f, description_fr: ev.target.value }))}
+            placeholder="Décrit l'effet de l'artefact pour le joueur"
+          />
+        </div>
+        <div>
+          <Label>Description — English</Label>
+          <Input
+            value={form.description_en}
+            onChange={(ev) => setForm((f) => ({ ...f, description_en: ev.target.value }))}
+            placeholder="Describes the artifact's effect for the player"
+          />
+        </div>
+
+        <div>
+          <Label>Prix (🪙 Loup Coins)</Label>
+          <Input
+            type="number"
+            min={0}
+            value={form.price_coins}
+            onChange={(ev) => setForm((f) => ({ ...f, price_coins: ev.target.value }))}
+          />
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-moon-200/80">
+          <input
+            type="checkbox"
+            checked={form.active}
+            onChange={(ev) => setForm((f) => ({ ...f, active: ev.target.checked }))}
+            className="h-4 w-4 rounded border-night-600/70 bg-night-900/50 accent-blood-600"
+          />
+          Actif (achetable dans le Loup Store)
+        </label>
+
+        <ErrorText>{error}</ErrorText>
+
+        <div className="mt-2 flex gap-3">
+          <Button type="button" variant="ghost" className="flex-1" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button type="submit" className="flex-1" disabled={busy}>
+            {artifact ? 'Enregistrer' : 'Créer'}
           </Button>
         </div>
       </form>

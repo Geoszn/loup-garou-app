@@ -98,6 +98,12 @@ export interface ChatMessage {
   // (voir ChatPanel.tsx) — plus simple qu'une jointure serveur, et suffisant
   // puisqu'on ne répond en pratique qu'à un message déjà visible à l'écran.
   reply_to_message_id: string | null
+  // Message "Dernier Souffle" (migration 0148, artefact du Loup Store) :
+  // envoyé au salon "village" par un joueur déjà éliminé, via send_last_words
+  // (jamais via send_chat_message, qui bloque tout envoi d'un mort à ce
+  // salon) — permet à ChatPanel.tsx de le distinguer visuellement (habillage
+  // "fantôme") d'un message normal.
+  is_last_words: boolean
 }
 
 // Jeu fixe de réactions (voir migration 0066, même liste côté serveur dans
@@ -381,6 +387,17 @@ export interface MyGameView {
   // game_results (permanent, jamais recalculé). Alimente la section
   // personnelle de l'écran de fin.
   my_game_result: MyGameResult | null
+  // Artefacts du Loup Store possédés par le joueur courant (migration 0148)
+  // — my_owns_parchemin_griot permet à un loup éliminé de continuer à lire
+  // le chat "wolves" de son ex-meute la nuit (voir can_read_channel côté
+  // serveur, aucun changement d'écriture) ; my_owns_dernier_souffle/
+  // my_dernier_souffle_used pilotent la proposition d'envoyer un dernier
+  // message au village juste après sa propre élimination (voir
+  // send_last_words, GhostPanel côté client) — used repart à false à
+  // chaque nouvelle partie (propre à game_artifact_uses, par partie).
+  my_owns_parchemin_griot: boolean
+  my_owns_dernier_souffle: boolean
+  my_dernier_souffle_used: boolean
 }
 
 // Un geste de rôle mesurable ayant rapporté des points, quel que soit le
