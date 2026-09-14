@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Button, Card } from '../components/ui'
@@ -8,20 +8,28 @@ import { useLanguage } from '../i18n/LanguageContext'
 export default function VerifyEmail() {
   const { session, loading } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  // Présent quand l'inscription est partie d'un lien d'invitation
+  // (JoinByLink.tsx → SignUp.tsx) : ramène directement vers la partie visée
+  // une fois l'email confirmé, au lieu du tableau de bord général. Lu
+  // depuis l'URL (et non un state de navigation) car le lien de
+  // confirmation reçu par email peut très bien s'ouvrir dans un tout autre
+  // onglet/navigateur que celui qui a rempli le formulaire d'inscription.
+  const redirect = searchParams.get('redirect')
   const { t } = useLanguage()
   const [resent, setResent] = useState(false)
   const [checking, setChecking] = useState(false)
 
   // Dès que l'email est confirmé, on file directement vers le tableau de
-  // bord plutôt que de repasser par la connexion : c'est justement cliquer
-  // sur le lien reçu par mail qui vient de créer une session confirmée dans
-  // cet onglet (Supabase la détecte dans l'URL au chargement de la page) —
-  // la faire sauter pour forcer une reconnexion manuelle n'ajoutait aucune
-  // sécurité réelle, juste une étape en plus pour un ami pressé de rejoindre
-  // une partie. (Avant : on déconnectait cette session et on renvoyait vers
-  // /connexion.)
+  // bord (ou la partie visée, voir `redirect`) plutôt que de repasser par la
+  // connexion : c'est justement cliquer sur le lien reçu par mail qui vient
+  // de créer une session confirmée dans cet onglet (Supabase la détecte
+  // dans l'URL au chargement de la page) — la faire sauter pour forcer une
+  // reconnexion manuelle n'ajoutait aucune sécurité réelle, juste une étape
+  // en plus pour un ami pressé de rejoindre une partie. (Avant : on
+  // déconnectait cette session et on renvoyait vers /connexion.)
   function goToDashboardConfirmed() {
-    navigate('/dashboard', { state: { notice: t('verifyEmail.confirmedNotice'), tone: 'success' } })
+    navigate(redirect || '/dashboard', { state: { notice: t('verifyEmail.confirmedNotice'), tone: 'success' } })
   }
 
   useEffect(() => {
@@ -45,7 +53,12 @@ export default function VerifyEmail() {
   async function resend() {
     if (!session?.user.email) return
     setChecking(true)
-    await supabase.auth.resend({ type: 'signup', email: session.user.email })
+    const verifyEmailPath = redirect ? `/verifier-email?redirect=${encodeURIComponent(redirect)}` : '/verifier-email'
+    await supabase.auth.resend({
+      type: 'signup',
+      email: session.user.email,
+      options: { emailRedirectTo: `${window.location.origin}${verifyEmailPath}` },
+    })
     setChecking(false)
     setResent(true)
     setTimeout(() => setResent(false), 4000)

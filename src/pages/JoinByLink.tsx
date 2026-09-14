@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { notifyJoinRequest } from '../lib/pushSubscription'
-import { Card, ErrorText } from '../components/ui'
+import { Card, ErrorText, LinkButton } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { useLanguage } from '../i18n/LanguageContext'
 
@@ -34,12 +34,16 @@ export default function JoinByLink() {
 
   useEffect(() => {
     if (loading) return
-    if (!session) {
-      navigate(`/connexion?redirect=/rejoindre/${code}`)
-      return
-    }
+    // Avant : redirection automatique et silencieuse vers /connexion, sans
+    // aucun contexte — un nouvel arrivant depuis un lien d'invitation
+    // (WhatsApp, etc.) se retrouvait sur un formulaire de connexion sans
+    // comprendre pourquoi, ni savoir qu'il pouvait simplement créer un
+    // compte. Le rendu ci-dessous (voir plus bas) affiche maintenant un
+    // choix explicite à la place — ce useEffect ne s'occupe donc plus que
+    // du cas "déjà connecté".
+    if (!session) return
     if (!session.user.email_confirmed_at) {
-      navigate('/verifier-email')
+      navigate(`/verifier-email?redirect=${encodeURIComponent(`/rejoindre/${code}`)}`)
       return
     }
     if (!code) return
@@ -78,6 +82,33 @@ export default function JoinByLink() {
           <div className="mb-3 text-3xl">🌫️</div>
           <h1 className="mb-2 font-display text-xl text-moon-200">{t('joinByLink.cannotJoinTitle')}</h1>
           <ErrorText>{error}</ErrorText>
+        </Card>
+      </div>
+    )
+  }
+
+  // Pas encore connecté : un choix explicite (créer un compte / se
+  // connecter) plutôt qu'une redirection automatique vers /connexion sans
+  // contexte (voir le commentaire du useEffect ci-dessus). Le paramètre
+  // `redirect` traverse toute la chaîne inscription → vérification d'email
+  // → connexion pour ramener le joueur directement ici une fois prêt,
+  // au lieu de le laisser sur le tableau de bord général sans le code.
+  if (!loading && !session) {
+    const redirect = `/rejoindre/${code}`
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <Card className="w-full max-w-md text-center">
+          <div className="mb-3 text-3xl">🐺</div>
+          <h1 className="mb-2 font-display text-xl text-moon-200">{t('joinByLink.authTitle')}</h1>
+          <p className="mb-6 text-sm text-moon-200/60">{t('joinByLink.authBody')}</p>
+          <div className="flex flex-col gap-2.5">
+            <LinkButton to={`/inscription?redirect=${encodeURIComponent(redirect)}`} className="w-full">
+              {t('joinByLink.authSignup')}
+            </LinkButton>
+            <LinkButton to={`/connexion?redirect=${encodeURIComponent(redirect)}`} variant="ghost" className="w-full">
+              {t('joinByLink.authLogin')}
+            </LinkButton>
+          </div>
         </Card>
       </div>
     )

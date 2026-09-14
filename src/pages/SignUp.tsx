@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Button, Card, ErrorText, Input, Label } from '../components/ui'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
@@ -8,6 +8,13 @@ import { useLanguage } from '../i18n/LanguageContext'
 
 export default function SignUp() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  // Ex. venu d'un lien d'invitation (JoinByLink.tsx) sans compte : ce
+  // paramètre traverse toute la chaîne inscription → vérification d'email
+  // pour ramener le joueur directement sur la partie qu'il voulait
+  // rejoindre, au lieu de le laisser sur le tableau de bord général une
+  // fois son compte confirmé.
+  const redirect = searchParams.get('redirect')
   const { t, lang } = useLanguage()
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
@@ -34,12 +41,17 @@ export default function SignUp() {
     }
 
     setLoading(true)
+    const verifyEmailPath = redirect ? `/verifier-email?redirect=${encodeURIComponent(redirect)}` : '/verifier-email'
     const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { username: username.trim(), lang, continent },
-        emailRedirectTo: `${window.location.origin}/verifier-email`,
+        // Le lien de confirmation reçu par email peut s'ouvrir dans un tout
+        // autre onglet/navigateur que celui-ci — c'est donc bien CETTE URL
+        // (avec `redirect` déjà dedans) qui doit savoir où renvoyer le
+        // joueur une fois confirmé, pas seulement le navigate() ci-dessous.
+        emailRedirectTo: `${window.location.origin}${verifyEmailPath}`,
       },
     })
     setLoading(false)
@@ -49,7 +61,7 @@ export default function SignUp() {
       return
     }
 
-    navigate('/verifier-email')
+    navigate(verifyEmailPath)
   }
 
   return (
@@ -143,7 +155,10 @@ export default function SignUp() {
 
         <p className="mt-4 text-center text-sm text-moon-200/50">
           {t('signup.hasAccount')}{' '}
-          <Link to="/connexion" className="text-moon-300 underline underline-offset-4">
+          <Link
+            to={redirect ? `/connexion?redirect=${encodeURIComponent(redirect)}` : '/connexion'}
+            className="text-moon-300 underline underline-offset-4"
+          >
             {t('signup.loginLink')}
           </Link>
         </p>

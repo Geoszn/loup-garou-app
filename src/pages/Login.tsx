@@ -111,7 +111,14 @@ export default function Login() {
 
           <p className="mt-6 text-center text-sm text-moon-200/50">
             {t('login.noAccount')}{' '}
-            <Link to="/inscription" className="text-moon-300 underline underline-offset-4">
+            <Link
+              to={
+                searchParams.get('redirect')
+                  ? `/inscription?redirect=${encodeURIComponent(searchParams.get('redirect')!)}`
+                  : '/inscription'
+              }
+              className="text-moon-300 underline underline-offset-4"
+            >
               {t('login.signupLink')}
             </Link>
           </p>

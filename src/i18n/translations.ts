@@ -1724,6 +1724,13 @@ export const translations = {
 
   // --- Rejoindre par lien (JoinByLink.tsx) -------------------------------------
   'joinByLink.cannotJoinTitle': { fr: 'Impossible de rejoindre', en: 'Unable to join' },
+  'joinByLink.authTitle': { fr: 'Rejoindre la partie', en: 'Join the game' },
+  'joinByLink.authBody': {
+    fr: 'Il te faut un compte Loup Garou d’Afrique pour rejoindre — ça prend une minute.',
+    en: "You'll need a Loup Garou d'Afrique account to join — it only takes a minute.",
+  },
+  'joinByLink.authSignup': { fr: 'Créer un compte pour rejoindre', en: 'Create an account to join' },
+  'joinByLink.authLogin': { fr: 'J’ai déjà un compte', en: 'I already have an account' },
 
   // --- Vérifier email (VerifyEmail.tsx) ----------------------------------------
   'verifyEmail.title': { fr: 'Vérifiez votre email', en: 'Verify your email' },
