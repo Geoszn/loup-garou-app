@@ -2842,9 +2842,20 @@ function QuestTemplateFormDrawer({
 // possible, mais n'aura aucun effet en jeu tant qu'aucune migration ne lui
 // donne un comportement (voir le commentaire en tête de 0148).
 // ----------------------------------------------------------------------------
+type ArtifactCategory = 'outils' | 'rares' | 'cosmetiques' | 'fragments'
+
+const ARTIFACT_CATEGORY_LABELS: Record<ArtifactCategory, string> = {
+  outils: 'Outils utilisables en partie',
+  rares: 'Objets rares et légendaires',
+  cosmetiques: 'Objets cosmétiques',
+  fragments: 'Fragments et objets de collection',
+}
+
 interface StoreArtifact {
   id: string
   key: string
+  category: ArtifactCategory
+  image_path: string | null
   name_fr: string
   name_en: string
   description_fr: string
@@ -2852,6 +2863,11 @@ interface StoreArtifact {
   price_coins: number
   active: boolean
   created_at: string
+}
+
+function artifactImageUrl(path: string | null): string | null {
+  if (!path) return null
+  return supabase.storage.from('artifact-icons').getPublicUrl(path).data.publicUrl
 }
 
 function StoreArtifactsTab() {
@@ -2896,6 +2912,7 @@ function StoreArtifactsTab() {
       p_description_fr: sa.description_fr,
       p_description_en: sa.description_en,
       p_price_coins: sa.price_coins,
+      p_category: sa.category,
       p_active: !sa.active,
     })
     setBusyId(null)
@@ -2936,23 +2953,38 @@ function StoreArtifactsTab() {
       <div className="flex flex-col gap-2">
         {artifacts?.map((sa) => (
           <Card key={sa.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
-            <div>
-              <p className="flex items-center gap-2 text-sm font-semibold text-moon-200">
-                {sa.name_fr}
-                {!sa.active && (
-                  <span className="rounded-full bg-night-700/60 px-2 py-0.5 text-[10px] uppercase text-moon-200/50">
-                    Désactivé
-                  </span>
+            <div className="flex min-w-0 gap-3">
+              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-night-600/60 bg-night-800/60">
+                {artifactImageUrl(sa.image_path) ? (
+                  <img src={artifactImageUrl(sa.image_path)!} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center font-display text-sm text-moon-200/30">
+                    {sa.name_fr.charAt(0).toUpperCase()}
+                  </div>
                 )}
-              </p>
-              <p className="mt-1 flex items-center gap-1 text-xs text-moon-200/50">
-                <code className="rounded bg-night-800/70 px-1.5 py-0.5 text-[10px] text-moon-200/60">{sa.key}</code>
-                <span className="inline-flex items-center gap-1">
-                  · <LoupCoinIcon className="h-3 w-3" /> {sa.price_coins}
-                </span>
-              </p>
-              <p className="mt-1 text-xs text-moon-200/40">🇫🇷 {sa.description_fr}</p>
-              <p className="text-xs text-moon-200/40">🇬🇧 {sa.description_en}</p>
+              </div>
+              <div className="min-w-0">
+                <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-moon-200">
+                  {sa.name_fr}
+                  {!sa.active && (
+                    <span className="rounded-full bg-night-700/60 px-2 py-0.5 text-[10px] uppercase text-moon-200/50">
+                      Désactivé
+                    </span>
+                  )}
+                </p>
+                <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-moon-200/50">
+                  <code className="rounded bg-night-800/70 px-1.5 py-0.5 text-[10px] text-moon-200/60">{sa.key}</code>
+                  <span>· {ARTIFACT_CATEGORY_LABELS[sa.category]}</span>
+                  <span className="inline-flex items-center gap-1">
+                    · <LoupCoinIcon className="h-3 w-3" /> {sa.price_coins}
+                  </span>
+                </p>
+                <p className="mt-1 text-xs text-moon-200/40">🇫🇷 {sa.description_fr}</p>
+                <p className="text-xs text-moon-200/40">🇬🇧 {sa.description_en}</p>
+                <div className="mt-2">
+                  <ArtifactIconUpload artifact={sa} onUploaded={load} />
+                </div>
+              </div>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="ghost" className="px-3 py-1.5 text-xs" disabled={busyId === sa.id} onClick={() => openEdit(sa)}>
@@ -2993,8 +3025,71 @@ function StoreArtifactsTab() {
   )
 }
 
+/** Upload direct dans le bucket "artifact-icons" (nommé "{id}.jpg", même
+ * principe que role-cards/event-banners), puis admin_set_artifact_image
+ * associe le chemin à l'artefact. Séparé du formulaire principal (comme
+ * EventBannerImageUpload) : n'a de sens qu'une fois l'artefact créé, pour
+ * avoir un id à mettre dans le nom du fichier. */
+function ArtifactIconUpload({ artifact, onUploaded }: { artifact: StoreArtifact; onUploaded: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const currentUrl = artifactImageUrl(artifact.image_path)
+
+  async function handleUpload(file: File) {
+    setBusy(true)
+    setError(null)
+    let toUpload: Blob = file
+    try {
+      toUpload = await compressImageForUpload(file, { maxWidth: 256, maxHeight: 256 })
+    } catch {
+      // ignore, on envoie l'original
+    }
+    const path = `${artifact.id}.jpg`
+    const { error: uploadError } = await supabase.storage.from('artifact-icons').upload(path, toUpload, {
+      upsert: true,
+      contentType: 'image/jpeg',
+      cacheControl: '300',
+    })
+    if (uploadError) {
+      setBusy(false)
+      setError(uploadError.message)
+      return
+    }
+    const { error: rpcError } = await supabase.rpc('admin_set_artifact_image', { p_id: artifact.id, p_path: path })
+    setBusy(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    onUploaded()
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        <label className="cursor-pointer rounded-lg border border-night-600/70 bg-night-800/50 px-2.5 py-1 text-[10px] font-semibold text-moon-200/80 transition-colors hover:border-moon-400/40">
+          {busy ? '...' : currentUrl ? '📤 Changer l’icône' : '📤 Ajouter une icône'}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            disabled={busy}
+            onChange={(ev) => {
+              const file = ev.target.files?.[0]
+              if (file) handleUpload(file)
+              ev.target.value = ''
+            }}
+          />
+        </label>
+      </div>
+      {error && <p className="text-[10px] text-blood-400">{error}</p>}
+    </div>
+  )
+}
+
 interface StoreArtifactFormState {
   key: string
+  category: ArtifactCategory
   name_fr: string
   name_en: string
   description_fr: string
@@ -3005,6 +3100,7 @@ interface StoreArtifactFormState {
 
 const EMPTY_ARTIFACT_FORM: StoreArtifactFormState = {
   key: '',
+  category: 'outils',
   name_fr: '',
   name_en: '',
   description_fr: '',
@@ -3033,6 +3129,7 @@ function StoreArtifactFormDrawer({
     if (artifact) {
       setForm({
         key: artifact.key,
+        category: artifact.category,
         name_fr: artifact.name_fr,
         name_en: artifact.name_en,
         description_fr: artifact.description_fr,
@@ -3075,6 +3172,7 @@ function StoreArtifactFormDrawer({
       p_description_fr: form.description_fr,
       p_description_en: form.description_en,
       p_price_coins: price,
+      p_category: form.category,
       p_active: form.active,
     })
     setBusy(false)
@@ -3101,6 +3199,24 @@ function StoreArtifactFormDrawer({
               ? 'Non modifiable après création — c\'est ce que le moteur de jeu reconnaît.'
               : 'Minuscules, chiffres, underscore uniquement. Un artefact dont l\'identifiant n\'est reconnu nulle part dans le moteur de jeu reste un simple objet cosmétique de catalogue.'}
           </p>
+        </div>
+
+        <div>
+          <Label>Catégorie</Label>
+          {/* <select>, pas Segmented : les libellés de catégorie sont des
+              phrases complètes (voir ARTIFACT_CATEGORY_LABELS) — illisibles
+              une fois écrasés dans 4 onglets à largeur égale. */}
+          <select
+            value={form.category}
+            onChange={(ev) => setForm((f) => ({ ...f, category: ev.target.value as ArtifactCategory }))}
+            className="w-full rounded-xl border border-night-500 bg-night-800/80 px-3 py-2.5 text-sm text-moon-200 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20"
+          >
+            {(Object.keys(ARTIFACT_CATEGORY_LABELS) as ArtifactCategory[]).map((id) => (
+              <option key={id} value={id}>
+                {ARTIFACT_CATEGORY_LABELS[id]}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>

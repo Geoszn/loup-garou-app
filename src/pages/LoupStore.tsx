@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useLanguage } from '../i18n/LanguageContext'
-import { Button, Card, ConfirmDialog, ErrorText } from '../components/ui'
+import { Button, Card, ConfirmDialog, ErrorText, Modal } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { LoupCoinIcon } from '../components/LoupCoinIcon'
 import type { TranslationKey } from '../i18n/translations'
@@ -22,14 +22,36 @@ interface LoupCoinsSummary {
   transactions: LoupCoinsTransaction[]
 }
 
+// Catégories fermées (voir migration 0149, même contrainte côté serveur) —
+// ordre d'affichage fixe, du plus "actionnable en partie" au plus "collection".
+const ARTIFACT_CATEGORIES = ['outils', 'rares', 'cosmetiques', 'fragments'] as const
+type ArtifactCategory = (typeof ARTIFACT_CATEGORIES)[number]
+
+const CATEGORY_LABEL_KEYS: Record<ArtifactCategory, TranslationKey> = {
+  outils: 'loupStore.category.outils',
+  rares: 'loupStore.category.rares',
+  cosmetiques: 'loupStore.category.cosmetiques',
+  fragments: 'loupStore.category.fragments',
+}
+
 interface StoreArtifact {
   id: string
+  category: ArtifactCategory
+  image_path: string | null
   name_fr: string
   name_en: string
   description_fr: string
   description_en: string
   price_coins: number
   owned: boolean
+}
+
+/** URL publique d'une icône d'artefact (bucket "artifact-icons", migration
+ * 0149) — même principe que les bannières d'événement/cartes de rôle :
+ * seul le CHEMIN est stocké en base, l'URL publique se reconstruit ici. */
+function artifactImageUrl(path: string | null): string | null {
+  if (!path) return null
+  return supabase.storage.from('artifact-icons').getPublicUrl(path).data.publicUrl
 }
 
 // Libellé lisible par raison de transaction (voir migration 0147/0148) —
@@ -57,6 +79,7 @@ export default function LoupStore() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [purchasing, setPurchasing] = useState<string | null>(null)
+  const [detailTarget, setDetailTarget] = useState<StoreArtifact | null>(null)
   const [confirmTarget, setConfirmTarget] = useState<StoreArtifact | null>(null)
 
   const load = useCallback(async () => {
@@ -142,42 +165,24 @@ export default function LoupStore() {
               {!artifacts || artifacts.length === 0 ? (
                 <p className="text-sm text-moon-200/50">{t('loupStore.boutique.empty')}</p>
               ) : (
-                <ul className="flex flex-col gap-2">
-                  {artifacts.map((a) => {
-                    const name = lang === 'en' ? a.name_en : a.name_fr
-                    const description = lang === 'en' ? a.description_en : a.description_fr
-                    const affordable = summary ? summary.balance >= a.price_coins : false
+                <div className="flex flex-col gap-5">
+                  {ARTIFACT_CATEGORIES.map((cat) => {
+                    const items = artifacts.filter((a) => a.category === cat)
+                    if (items.length === 0) return null
                     return (
-                      <li
-                        key={a.id}
-                        className="flex flex-col gap-2 rounded-xl border border-night-600/60 bg-night-900/40 p-3.5 sm:flex-row sm:items-center sm:justify-between"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-moon-200">{name}</p>
-                          <p className="mt-0.5 text-xs text-moon-200/50">{description}</p>
+                      <div key={cat} className="flex flex-col gap-2">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-moon-200/40">
+                          {t(CATEGORY_LABEL_KEYS[cat])}
+                        </p>
+                        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                          {items.map((a) => (
+                            <ArtifactCard key={a.id} artifact={a} onClick={() => setDetailTarget(a)} />
+                          ))}
                         </div>
-                        <div className="flex shrink-0 items-center gap-3">
-                          <span className="flex items-center gap-1 font-display text-sm font-semibold text-amber-300">
-                            <LoupCoinIcon className="h-4 w-4" /> {a.price_coins}
-                          </span>
-                          {a.owned ? (
-                            <span className="rounded-full bg-emerald-700/20 px-3 py-1.5 text-xs font-semibold text-emerald-400">
-                              {t('loupStore.boutique.owned')}
-                            </span>
-                          ) : (
-                            <Button
-                              className="px-3.5 py-1.5 text-xs"
-                              disabled={!affordable || purchasing === a.id}
-                              onClick={() => setConfirmTarget(a)}
-                            >
-                              {t('loupStore.boutique.buy')}
-                            </Button>
-                          )}
-                        </div>
-                      </li>
+                      </div>
                     )
                   })}
-                </ul>
+                </div>
               )}
             </Card>
 
@@ -222,6 +227,45 @@ export default function LoupStore() {
         )}
       </div>
 
+      {/* Aperçu détaillé : nom, description complète, prix, et les deux
+          actions demandées (Acheter / Retour) — la confirmation d'achat
+          elle-même reste un second temps (ConfirmDialog ci-dessous), pas
+          fusionnée ici, pour qu'un achat ne parte jamais d'un simple clic. */}
+      {detailTarget && (
+        <Modal open={!!detailTarget} onClose={() => setDetailTarget(null)} title={lang === 'en' ? detailTarget.name_en : detailTarget.name_fr}>
+          <div className="flex flex-col items-center gap-3 text-center">
+            <ArtifactIcon artifact={detailTarget} size="h-24 w-24" />
+            <p className="text-sm text-moon-200/70">
+              {lang === 'en' ? detailTarget.description_en : detailTarget.description_fr}
+            </p>
+            <span className="flex items-center gap-1.5 font-display text-xl font-semibold text-amber-300">
+              <LoupCoinIcon className="h-5 w-5" /> {detailTarget.price_coins}
+            </span>
+            <div className="mt-2 flex w-full gap-3">
+              <Button variant="ghost" className="flex-1" onClick={() => setDetailTarget(null)}>
+                {t('common.back')}
+              </Button>
+              {detailTarget.owned ? (
+                <Button className="flex-1" disabled>
+                  {t('loupStore.boutique.owned')}
+                </Button>
+              ) : (
+                <Button
+                  className="flex-1"
+                  disabled={!summary || summary.balance < detailTarget.price_coins}
+                  onClick={() => {
+                    setConfirmTarget(detailTarget)
+                    setDetailTarget(null)
+                  }}
+                >
+                  {t('loupStore.boutique.buy')}
+                </Button>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
+
       <ConfirmDialog
         open={!!confirmTarget}
         title={t('loupStore.boutique.confirmTitle')}
@@ -235,5 +279,54 @@ export default function LoupStore() {
         onConfirm={confirmPurchase}
       />
     </div>
+  )
+}
+
+/** Icône réelle de l'artefact (bucket "artifact-icons") avec repli propre
+ * (pas d'emoji — demande explicite) tant que l'admin n'en a pas encore
+ * mis une : un simple monogramme (première lettre du nom) sur fond neutre. */
+function ArtifactIcon({ artifact, size }: { artifact: StoreArtifact; size: string }) {
+  const { lang } = useLanguage()
+  const name = lang === 'en' ? artifact.name_en : artifact.name_fr
+  const url = artifactImageUrl(artifact.image_path)
+  return (
+    <div className={`${size} shrink-0 overflow-hidden rounded-2xl border border-night-600/60 bg-night-800/60`}>
+      {url ? (
+        <img src={url} alt="" className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center font-display text-2xl text-moon-200/30">
+          {name.charAt(0).toUpperCase()}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Carte-icône d'un artefact dans la grille de la boutique — remplace
+ * l'ancienne ligne de liste (demande explicite : représentation en icône,
+ * pas un design linéaire). Le détail (description complète, achat) vit dans
+ * la pop-up ouverte au clic, pas ici. */
+function ArtifactCard({ artifact, onClick }: { artifact: StoreArtifact; onClick: () => void }) {
+  const { t, lang } = useLanguage()
+  const name = lang === 'en' ? artifact.name_en : artifact.name_fr
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex flex-col items-center gap-1.5 rounded-2xl border border-night-600/60 bg-night-900/40 p-3 text-center transition-colors hover:border-amber-400/40"
+    >
+      <div className="relative">
+        <ArtifactIcon artifact={artifact} size="h-16 w-16" />
+        {artifact.owned && (
+          <span className="absolute inset-0 flex items-center justify-center rounded-2xl bg-night-950/70 text-[9px] font-semibold uppercase tracking-wide text-emerald-400">
+            {t('loupStore.boutique.owned')}
+          </span>
+        )}
+      </div>
+      <p className="line-clamp-2 text-xs font-semibold text-moon-200">{name}</p>
+      <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-300">
+        <LoupCoinIcon className="h-3 w-3" /> {artifact.price_coins}
+      </span>
+    </button>
   )
 }
