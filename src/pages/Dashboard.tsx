@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { notifyJoinRequest } from '../lib/pushSubscription'
-import { Button, Card, ErrorText, Input, Label, Modal } from '../components/ui'
+import { Button, Card, ErrorText, Input, Label, Modal, SectionDivider } from '../components/ui'
 import { AccountMenu } from '../components/AccountMenu'
 import { RankBadge } from '../components/RankBadge'
 import { DailyLoginBanner } from '../components/DailyLoginBanner'
@@ -424,6 +424,8 @@ export default function Dashboard() {
         <FriendsOnlineWidget friends={friends} />
 
         <DashboardLeaderboard />
+
+        <SectionDivider />
 
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-moon-200/40">
           {narrator.supported && (

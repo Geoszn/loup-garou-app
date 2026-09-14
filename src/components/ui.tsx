@@ -159,6 +159,24 @@ export function Card({
   )
 }
 
+/** Ornement horizontal (liserés dorés + glyphe central) pour marquer une
+ * respiration entre deux blocs qui se suivent directement — sans lui, la
+ * transition entre deux `Card` aux bords nets séparées par du texte flottant
+ * (ex. fin du classement du tableau de bord → liens utilitaires → carte
+ * citation) se lit comme un empilement rigide plutôt qu'une même page qui
+ * coule. Mêmes liserés dégradés que ceux déjà utilisés en haut/bas de
+ * QuoteCarousel, pour rester dans le même vocabulaire visuel plutôt que
+ * d'introduire un nouveau motif. Purement décoratif (`aria-hidden`). */
+export function SectionDivider({ glyph = '☾' }: { glyph?: string }) {
+  return (
+    <div className="flex items-center justify-center gap-3" aria-hidden="true">
+      <span className="h-px w-full max-w-20 bg-gradient-to-r from-transparent to-moon-400/40" />
+      <span className="font-display text-sm text-moon-400/70">{glyph}</span>
+      <span className="h-px w-full max-w-20 bg-gradient-to-l from-transparent to-moon-400/40" />
+    </div>
+  )
+}
+
 /** Barre d'action fixée en bas de l'écran (façon appli mobile), pour l'action
  * principale d'une page plutôt que de la laisser perdue en bas d'une longue
  * colonne qu'il faut faire défiler jusqu'au bout. Le conteneur scrollable
