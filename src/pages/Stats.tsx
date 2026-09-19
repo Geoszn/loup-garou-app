@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { roleLabel, ROLES, type RoleId } from '../lib/roles'
 import { tierInfo, tierLabel, pointsToNextTier, previousTierOf, type RankTierInfo } from '../lib/ranks'
 import { volumeTitleForGames, nextVolumeTitle } from '../lib/volumeTitles'
-import { continentEmoji, continentName } from '../lib/continents'
+import { continentEmoji, CONTINENTS } from '../lib/continents'
 import { Button, Card, ErrorText, Segmented } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { AvatarIcon } from '../components/AvatarIcon'
@@ -64,6 +64,13 @@ export default function Stats() {
   const { t, lang } = useLanguage()
   const [tab, setTab] = useState<'moi' | 'classement'>('moi')
   const [scope, setScope] = useState<'global' | 'continent'>('global')
+  // Continent PARCOURU dans le classement — état local, jamais écrit sur le
+  // profil (contrairement à ContinentSelect.tsx, "Mon compte") : rien
+  // n'empêche de regarder le classement d'un autre continent que le sien.
+  // Initialisé sur le continent du profil s'il existe (point de départ
+  // naturel), sinon le premier de la liste, pour qu'un joueur sans continent
+  // renseigné puisse quand même parcourir un classement continental.
+  const [browsedContinent, setBrowsedContinent] = useState<string>(profile?.continent ?? CONTINENTS[0].code)
   const [stats, setStats] = useState<MyStats | null>(null)
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[] | null>(null)
   const [leaderboardLoading, setLeaderboardLoading] = useState(false)
@@ -88,16 +95,17 @@ export default function Stats() {
   }, [])
 
   // Classement chargé séparément (public, indépendant de get_my_stats) et
-  // rechargé à chaque bascule mondial/continent — le scope continent reste
-  // désactivé si le joueur n'a pas encore choisi de continent (voir Mon
-  // compte), et get_public_leaderboard renvoie de toute façon un tableau
-  // vide tant qu'il n'y a pas au moins 3 joueurs éligibles sur ce continent.
+  // rechargé à chaque bascule mondial/continent ou changement de continent
+  // parcouru — get_public_leaderboard accepte n'importe quel p_continent
+  // (aucune restriction au continent du profil, voir migration 0057) et
+  // renvoie de toute façon un tableau vide tant qu'il n'y a pas au moins 3
+  // joueurs éligibles sur ce continent.
   useEffect(() => {
     if (tab !== 'classement') return
     let cancelled = false
     setLeaderboardLoading(true)
     supabase
-      .rpc('get_public_leaderboard', { p_scope: scope, p_continent: profile?.continent ?? null, p_limit: 20 })
+      .rpc('get_public_leaderboard', { p_scope: scope, p_continent: browsedContinent, p_limit: 20 })
       .then(({ data, error: rpcError }) => {
         if (cancelled) return
         if (!rpcError) setLeaderboard(data as LeaderboardEntry[])
@@ -106,7 +114,7 @@ export default function Stats() {
     return () => {
       cancelled = true
     }
-  }, [tab, scope, profile?.continent])
+  }, [tab, scope, browsedContinent])
 
   if (loading) return <FullScreenLoader />
 
@@ -281,16 +289,34 @@ export default function Stats() {
               <Segmented
                 tabs={[
                   { id: 'global', label: t('stats.leaderboard.global') },
-                  {
-                    id: 'continent',
-                    label: profile?.continent
-                      ? `${continentEmoji(profile.continent)} ${continentName(profile.continent, lang) ?? t('stats.leaderboard.continent')}`
-                      : t('stats.leaderboard.continent'),
-                  },
+                  { id: 'continent', label: t('stats.leaderboard.continent') },
                 ]}
                 active={scope}
                 onChange={setScope}
               />
+              {/* Continent PARCOURU, jamais limité à celui du profil — voir
+                  browsedContinent plus haut : un joueur peut regarder le
+                  classement de n'importe quel continent, pas seulement le
+                  sien. Simple <select>, jamais écrit sur le profil
+                  (contrairement à ContinentSelect.tsx, "Mon compte"). */}
+              {scope === 'continent' && (
+                <select
+                  value={browsedContinent}
+                  onChange={(e) => setBrowsedContinent(e.target.value)}
+                  className="mt-2.5 w-full rounded-xl border border-night-600 bg-night-800/70 px-3 py-2 text-sm text-moon-200 outline-none transition-colors focus:border-moon-400/50"
+                >
+                  {CONTINENTS.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.emoji} {lang === 'fr' ? c.fr : c.en}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {/* Concerne le joueur lui-même (absent de TOUT classement
+                  continental tant qu'il n'a pas choisi son propre continent
+                  dans "Mon compte"), indépendant du continent parcouru
+                  ci-dessus — reste donc affiché quel que soit celui choisi
+                  dans le menu. */}
               {scope === 'continent' && !profile?.continent && (
                 <p className="mt-2 text-xs text-moon-200/40">{t('stats.leaderboard.noContinent')}</p>
               )}

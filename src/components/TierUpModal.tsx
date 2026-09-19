@@ -2,14 +2,17 @@ import { motion, type PanInfo } from 'framer-motion'
 import { useLanguage } from '../i18n/LanguageContext'
 import { RankTierBadge } from './RankTierBadge'
 import { AvatarIcon } from './AvatarIcon'
-import { tierLabel, type RankTier } from '../lib/ranks'
+import { tierLabel, tierGroup, tierForPoints, type RankTier } from '../lib/ranks'
 import { AVATAR_ICON_MIN_POINTS, type AvatarIcon as AvatarIconId } from '../lib/avatars'
 import { DRAG_CLOSE_THRESHOLD, DRAG_VELOCITY_THRESHOLD } from './ui'
 
-/** Paliers à partir desquels un cadre d'avatar apparaît en partie (voir
- * tierRingClass, PlayerGrid.tsx) — nouveau_venu et villageois n'ont encore
- * aucun cadre, donc rien à annoncer de ce côté-là pour ces deux paliers. */
-const FRAME_TIERS = new Set<RankTier>(['chasseur', 'ancien', 'sage', 'legende'])
+/** GROUPES de palier à partir desquels un cadre d'avatar apparaît en partie
+ * (voir tierRingClass, PlayerGrid.tsx) — nouveau_venu et villageois n'ont
+ * encore aucun cadre, donc rien à annoncer de ce côté-là pour ces paliers.
+ * Comparé via tierGroup() (migration 0159) : les 3 sous-paliers III/II/I
+ * d'un même groupe partagent le même cadre, seul le passage à un NOUVEAU
+ * groupe (ex. villageois_1 → chasseur_3) déclenche vraiment ce message. */
+const FRAME_TIER_GROUPS = new Set(['chasseur', 'ancien', 'sage', 'legende'])
 
 /** Popup célébrant le franchissement d'un nouveau palier de rang (voir
  * EndScreen, GameRoom.tsx — seul endroit où rank_points change, à la fin
@@ -31,7 +34,13 @@ export function TierUpModal({ newTier, previousPoints, newPoints, onClose }: {
     .filter(([, min]) => min > previousPoints && min <= newPoints)
     .map(([icon]) => icon)
 
-  const unlocksFrame = FRAME_TIERS.has(newTier)
+  // Le cadre est lié au GROUPE (voir FRAME_TIER_GROUPS ci-dessus), pas au
+  // sous-palier — sans cette comparaison au groupe précédent, le message
+  // "cadre débloqué" réapparaîtrait à tort à chaque sous-palier gravi à
+  // l'intérieur d'un même groupe déjà débloqué (ex. chasseur_3 → chasseur_2).
+
+  const previousGroup = tierGroup(tierForPoints(previousPoints).id)
+  const unlocksFrame = tierGroup(newTier) !== previousGroup && FRAME_TIER_GROUPS.has(tierGroup(newTier))
 
   // Purement personnelle, comme DeathImpactModal — voir son commentaire
   // pour pourquoi ni elle ni TierUpModal ne posent de risque de

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { roleLabel } from '../lib/roles'
+import { tierGroup } from '../lib/ranks'
 import type { PublicPlayer } from '../types/game'
 import { FriendRequestPopover } from './FriendRequestPopover'
 import { AvatarIcon } from './AvatarIcon'
@@ -15,7 +16,9 @@ import { useLanguage } from '../i18n/LanguageContext'
 // Rien avant Éclaireur : un cadre dès le tout premier palier aurait rendu
 // "avoir un cadre" banal plutôt que gratifiant.
 function tierRingClass(tier: string | null | undefined): string {
-  switch (tier) {
+  // Groupe de palier (voir migration 0159) : les 3 sous-paliers III/II/I
+  // d'un même groupe partagent le même cadre, l'escalade reste par groupe.
+  switch (tierGroup(tier)) {
     case 'chasseur':
       return 'ring-2 ring-moon-300/70'
     case 'ancien':

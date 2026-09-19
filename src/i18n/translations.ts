@@ -454,8 +454,8 @@ export const translations = {
   },
   'role.daron.name': { fr: 'Daron', en: 'Guardian' },
   'role.daron.description': {
-    fr: "Chaque nuit, vous choisissez un joueur vivant à protéger (vous y compris). S'il est visé par une attaque cette même nuit — celle des Loups-Garous ou le poison de la Sorcière — l'attaque échoue et il survit. Vous ne pouvez pas protéger la même personne deux nuits de suite, et vous ne savez jamais qui vous protégez vraiment : même un Loup-Garou peut être sauvé sans le vouloir.",
-    en: "Each night, you choose a living player to protect (yourself included). If they're targeted by an attack that same night — the Werewolves' or the Witch's poison — the attack fails and they survive. You can't protect the same person two nights in a row, and you never really know who you're protecting: even a Werewolf could be saved without meaning to.",
+    fr: "Chaque nuit, protégez un joueur vivant de votre choix (vous y compris) contre les Loups-Garous et le poison de la Sorcière. Jamais la même personne deux nuits de suite — et sans jamais savoir qui vous protégez : même un Loup-Garou peut être épargné sans le vouloir.",
+    en: "Each night, protect a living player of your choice (yourself included) from the Werewolves and the Witch's poison. Never the same person two nights in a row — and you never know who you're protecting: even a Werewolf could be spared without meaning to.",
   },
   'role.daron.nightAction': {
     fr: 'Choisissez un joueur à protéger cette nuit (vous pouvez vous protéger vous-même). Pas deux nuits de suite pour la même personne.',
@@ -669,6 +669,14 @@ export const translations = {
   'moderation.ghostTag': { fr: '(fantôme)', en: '(ghost)' },
   'moderation.removeButton': { fr: 'Retirer', en: 'Remove' },
   'moderation.removing': { fr: 'Retrait...', en: 'Removing...' },
+  'moderation.transferHostTitle': { fr: '🎖️ Transférer l’hôte', en: '🎖️ Transfer host' },
+  'moderation.transferButton': { fr: 'Transférer', en: 'Transfer' },
+  'moderation.transferring': { fr: 'Transfert...', en: 'Transferring...' },
+  'moderation.transferConfirmTitle': { fr: 'Transférer l’hôte ?', en: 'Transfer host?' },
+  'moderation.transferConfirmMessage': {
+    fr: '{{name}} deviendra l’hôte du salon à votre place. Vous perdrez toutes vos fonctions de modérateur (gestion des joueurs, mots bloqués, redémarrage...).',
+    en: '{{name}} will become the host of the lobby instead of you. You will lose all your moderator functions (managing players, blocked words, restarting...).',
+  },
   'moderation.kickConfirmTitle': { fr: 'Retirer ce joueur ?', en: 'Remove this player?' },
   'moderation.kickMessageLobby': {
     fr: '{{name}} sera retiré du salon. Cette action est irréversible.',
@@ -1648,12 +1656,29 @@ export const translations = {
   // du rôle Chasseur qu'il vient de jouer. D'où Apprenti/Apprentice,
   // Éclaireur/Scout, Doyen/Veteran plutôt que Villageois/Villager,
   // Chasseur/Hunter, Ancien/Elder.
+  //
+  // Sous-paliers III/II/I (migration 0159, retour utilisateur : "on atteint
+  // déjà la limite à 4000 points") : chaque groupe nommé ci-dessus est
+  // désormais divisé en 3 échelons, III le plus bas, I le plus haut avant le
+  // groupe suivant — chiffres romains, convention déjà familière (paliers
+  // "Bronze III/II/I" d'autres jeux) plutôt que "1/2/3" qui se lirait comme
+  // une numérotation de page.
   'rank.tier.nouveau_venu': { fr: 'Nouveau Venu', en: 'Newcomer' },
-  'rank.tier.villageois': { fr: 'Apprenti', en: 'Apprentice' },
-  'rank.tier.chasseur': { fr: 'Éclaireur', en: 'Scout' },
-  'rank.tier.ancien': { fr: 'Doyen', en: 'Veteran' },
-  'rank.tier.sage': { fr: 'Sage du Village', en: 'Village Sage' },
-  'rank.tier.legende': { fr: 'Légende du Village', en: 'Village Legend' },
+  'rank.tier.villageois_3': { fr: 'Apprenti III', en: 'Apprentice III' },
+  'rank.tier.villageois_2': { fr: 'Apprenti II', en: 'Apprentice II' },
+  'rank.tier.villageois_1': { fr: 'Apprenti I', en: 'Apprentice I' },
+  'rank.tier.chasseur_3': { fr: 'Éclaireur III', en: 'Scout III' },
+  'rank.tier.chasseur_2': { fr: 'Éclaireur II', en: 'Scout II' },
+  'rank.tier.chasseur_1': { fr: 'Éclaireur I', en: 'Scout I' },
+  'rank.tier.ancien_3': { fr: 'Doyen III', en: 'Veteran III' },
+  'rank.tier.ancien_2': { fr: 'Doyen II', en: 'Veteran II' },
+  'rank.tier.ancien_1': { fr: 'Doyen I', en: 'Veteran I' },
+  'rank.tier.sage_3': { fr: 'Sage du Village III', en: 'Village Sage III' },
+  'rank.tier.sage_2': { fr: 'Sage du Village II', en: 'Village Sage II' },
+  'rank.tier.sage_1': { fr: 'Sage du Village I', en: 'Village Sage I' },
+  'rank.tier.legende_3': { fr: 'Légende du Village III', en: 'Village Legend III' },
+  'rank.tier.legende_2': { fr: 'Légende du Village II', en: 'Village Legend II' },
+  'rank.tier.legende_1': { fr: 'Légende du Village I', en: 'Village Legend I' },
 
   // --- Pop-up choix du continent (ContinentPrompt.tsx) ------------------------
   'continentPrompt.title': { fr: 'Choisis ton continent', en: 'Choose your continent' },

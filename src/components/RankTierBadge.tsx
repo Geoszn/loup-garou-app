@@ -1,4 +1,4 @@
-import type { RankTier } from '../lib/ranks'
+import { tierGroup, type RankTier } from '../lib/ranks'
 
 /** Badge vectoriel d'un palier de rang, remplace l'ancien champ `emoji` de
  * RANK_TIERS (lib/ranks.ts) — même logique que les glyphes SVG d'avatar
@@ -19,7 +19,10 @@ import type { RankTier } from '../lib/ranks'
  * jamais pilotées par le thème. */
 export function RankTierBadge({ tier, size = 28, className }: { tier: RankTier; size?: number; className?: string }) {
   const props = { width: size, height: size, className }
-  switch (tier) {
+  // Les 3 sous-paliers III/II/I d'un même groupe (voir migration 0159)
+  // partagent volontairement le même badge — seul le libellé les distingue,
+  // l'escalade visuelle reste au niveau du groupe.
+  switch (tierGroup(tier)) {
     case 'nouveau_venu':
       return <NouveauVenuBadge {...props} />
     case 'villageois':
@@ -32,6 +35,8 @@ export function RankTierBadge({ tier, size = 28, className }: { tier: RankTier; 
       return <SageBadge {...props} />
     case 'legende':
       return <LegendeBadge {...props} />
+    default:
+      return <NouveauVenuBadge {...props} />
   }
 }
 

@@ -22,8 +22,12 @@ export const DEFAULT_AVATAR_ICON: AvatarIcon = '🐺'
 // retour réseau qui échouerait de toute façon. Les 8 premières icônes
 // restent accessibles dès l'inscription (0 point) pour qu'un nouveau joueur
 // ait toujours un choix correct sans être découragé d'entrée de jeu — les 17
-// autres se débloquent ensuite par lot de 3-4 à chaque palier, jusqu'à
-// Légende du Village (2800 pts). Doit rester synchronisé avec
+// autres se débloquent ensuite par lot de 3-4, jusqu'à 2800 pts. Seuils
+// VOLONTAIREMENT restés indépendants de RANK_TIERS (lib/ranks.ts) depuis la
+// refonte des paliers (migration 0159, qui a étalé la progression jusqu'à
+// 15 000 pts) — ce système de déblocage n'a pas été réétalé en même temps,
+// donc les icônes se débloquent maintenant plus tôt dans la progression
+// (relativement) qu'avant cette refonte. Doit rester synchronisé avec
 // avatar_icon_min_points côté serveur, comme RANK_TIERS (lib/ranks.ts) doit
 // déjà rester synchronisé avec rank_tier_for_points.
 export const AVATAR_ICON_MIN_POINTS: Record<AvatarIcon, number> = {
