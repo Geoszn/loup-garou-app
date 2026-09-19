@@ -155,6 +155,15 @@ export default function Lobby() {
   const [starting, setStarting] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [counts, setCounts] = useState<RoleCounts>(DEFAULT_COUNTS)
+  // Rôles désactivés par un admin (voir migration 0161, dashboard → Contenu
+  // du jeu → Cartes des rôles) : masque la case correspondante ci-dessous et
+  // force sa valeur à false dans `counts` (au cas où le défaut — Voyante,
+  // Sorcière, Petite Fille — serait justement le rôle désactivé), pour que
+  // ni l'affichage ni ce qui serait envoyé à start_game ne proposent un rôle
+  // que le serveur refusera de toute façon. Le mode automatique n'a rien à
+  // faire ici : compute_default_role_counts filtre déjà lui-même côté
+  // serveur (seule source de vérité, voir preview_auto_role_counts).
+  const [disabledRoles, setDisabledRoles] = useState<Set<string>>(new Set())
   const [durations, setDurations] = useState<PhaseDurations>(DEFAULT_DURATIONS)
   const [customized, setCustomized] = useState(false)
   // Mode automatique (voir migration 0143) : laisse le serveur choisir la
@@ -206,6 +215,25 @@ export default function Lobby() {
   useEffect(() => {
     supabase.rpc('get_my_social').then(({ data, error }) => {
       if (!error && data) setFriends(data.friends ?? [])
+    })
+  }, [])
+
+  useEffect(() => {
+    supabase.rpc('get_disabled_roles').then(({ data, error }) => {
+      if (error || !data) return
+      const disabled = new Set<string>(data)
+      setDisabledRoles(disabled)
+      setCounts((c) => {
+        let changed = false
+        const next = { ...c }
+        for (const role of disabled) {
+          if ((next as Record<string, unknown>)[role] === true) {
+            ;(next as Record<string, unknown>)[role] = false
+            changed = true
+          }
+        }
+        return changed ? next : c
+      })
     })
   }, [])
 
@@ -858,30 +886,36 @@ export default function Lobby() {
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <RoleChip
-                      emoji="👑"
-                      label={t(ROLES.loup_alpha.nameKey)}
-                      checked={counts.loup_alpha}
-                      onChange={(v) => { setCounts((c) => ({ ...c, loup_alpha: v })); setCustomized(true) }}
-                      hintOpen={openHint?.key === 'loup_alpha'}
-                      onToggleHint={() => toggleHint('loups', 'loup_alpha', t('lobby.alphaToggleHint'))}
-                    />
-                    <RoleChip
-                      emoji="👤"
-                      label={t(ROLES.sans_visage.nameKey)}
-                      checked={counts.sans_visage}
-                      onChange={(v) => { setCounts((c) => ({ ...c, sans_visage: v })); setCustomized(true) }}
-                      hintOpen={openHint?.key === 'sans_visage'}
-                      onToggleHint={() => toggleHint('loups', 'sans_visage', t('lobby.sansVisageToggleHint'))}
-                    />
-                    <RoleChip
-                      emoji="👹"
-                      label={t(ROLES.grand_mechant_loup.nameKey)}
-                      checked={counts.grand_mechant_loup}
-                      onChange={(v) => { setCounts((c) => ({ ...c, grand_mechant_loup: v })); setCustomized(true) }}
-                      hintOpen={openHint?.key === 'grand_mechant_loup'}
-                      onToggleHint={() => toggleHint('loups', 'grand_mechant_loup', t('lobby.grandMechantLoupToggleHint'))}
-                    />
+                    {!disabledRoles.has('loup_alpha') && (
+                      <RoleChip
+                        emoji="👑"
+                        label={t(ROLES.loup_alpha.nameKey)}
+                        checked={counts.loup_alpha}
+                        onChange={(v) => { setCounts((c) => ({ ...c, loup_alpha: v })); setCustomized(true) }}
+                        hintOpen={openHint?.key === 'loup_alpha'}
+                        onToggleHint={() => toggleHint('loups', 'loup_alpha', t('lobby.alphaToggleHint'))}
+                      />
+                    )}
+                    {!disabledRoles.has('sans_visage') && (
+                      <RoleChip
+                        emoji="👤"
+                        label={t(ROLES.sans_visage.nameKey)}
+                        checked={counts.sans_visage}
+                        onChange={(v) => { setCounts((c) => ({ ...c, sans_visage: v })); setCustomized(true) }}
+                        hintOpen={openHint?.key === 'sans_visage'}
+                        onToggleHint={() => toggleHint('loups', 'sans_visage', t('lobby.sansVisageToggleHint'))}
+                      />
+                    )}
+                    {!disabledRoles.has('grand_mechant_loup') && (
+                      <RoleChip
+                        emoji="👹"
+                        label={t(ROLES.grand_mechant_loup.nameKey)}
+                        checked={counts.grand_mechant_loup}
+                        onChange={(v) => { setCounts((c) => ({ ...c, grand_mechant_loup: v })); setCustomized(true) }}
+                        hintOpen={openHint?.key === 'grand_mechant_loup'}
+                        onToggleHint={() => toggleHint('loups', 'grand_mechant_loup', t('lobby.grandMechantLoupToggleHint'))}
+                      />
+                    )}
                   </div>
                   {openHint?.group === 'loups' && <RoleHintBox text={openHint.text} />}
                 </div>
@@ -896,14 +930,14 @@ export default function Lobby() {
                     <span className="ml-auto text-[11px] text-moon-200/35">{t('lobby.roleGroup.villageHint')}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <RoleChip emoji="🔮" label={t(ROLES.voyante.nameKey)} checked={counts.voyante} onChange={(v) => { setCounts((c) => ({ ...c, voyante: v })); setCustomized(true) }} hintOpen={openHint?.key === 'voyante'} onToggleHint={() => toggleHint('village', 'voyante', t('lobby.voyanteToggleHint'))} />
-                    <RoleChip emoji="🧪" label={t(ROLES.sorciere.nameKey)} checked={counts.sorciere} onChange={(v) => { setCounts((c) => ({ ...c, sorciere: v })); setCustomized(true) }} hintOpen={openHint?.key === 'sorciere'} onToggleHint={() => toggleHint('village', 'sorciere', t('lobby.sorciereToggleHint'))} />
-                    <RoleChip emoji="🏹" label={t(ROLES.chasseur.nameKey)} checked={counts.chasseur} onChange={(v) => { setCounts((c) => ({ ...c, chasseur: v })); setCustomized(true) }} hintOpen={openHint?.key === 'chasseur'} onToggleHint={() => toggleHint('village', 'chasseur', t('lobby.chasseurToggleHint'))} />
-                    <RoleChip emoji="🎀" label={t(ROLES.petite_fille.nameKey)} checked={counts.petite_fille} onChange={(v) => { setCounts((c) => ({ ...c, petite_fille: v })); setCustomized(true) }} hintOpen={openHint?.key === 'petite_fille'} onToggleHint={() => toggleHint('village', 'petite_fille', t('lobby.petiteFilleToggleHint'))} />
-                    <RoleChip emoji="💘" label={t(ROLES.cupidon.nameKey)} checked={counts.cupidon} onChange={(v) => { setCounts((c) => ({ ...c, cupidon: v })); setCustomized(true) }} hintOpen={openHint?.key === 'cupidon'} onToggleHint={() => toggleHint('village', 'cupidon', t('lobby.cupidonToggleHint'))} />
-                    <RoleChip emoji="🧓" label={t(ROLES.ancien.nameKey)} checked={counts.ancien} onChange={(v) => { setCounts((c) => ({ ...c, ancien: v })); setCustomized(true) }} hintOpen={openHint?.key === 'ancien'} onToggleHint={() => toggleHint('village', 'ancien', t('lobby.ancienToggleHint'))} />
-                    <RoleChip emoji="🃏" label={t(ROLES.voleur.nameKey)} checked={counts.voleur} onChange={(v) => { setCounts((c) => ({ ...c, voleur: v })); setCustomized(true) }} hintOpen={openHint?.key === 'voleur'} onToggleHint={() => toggleHint('village', 'voleur', t('lobby.voleurToggleHint'))} />
-                    <RoleChip emoji="🐾" label={t(ROLES.enfant_sauvage.nameKey)} checked={counts.enfant_sauvage} onChange={(v) => { setCounts((c) => ({ ...c, enfant_sauvage: v })); setCustomized(true) }} hintOpen={openHint?.key === 'enfant_sauvage'} onToggleHint={() => toggleHint('village', 'enfant_sauvage', t('lobby.enfantSauvageToggleHint'))} />
+                    {!disabledRoles.has('voyante') && <RoleChip emoji="🔮" label={t(ROLES.voyante.nameKey)} checked={counts.voyante} onChange={(v) => { setCounts((c) => ({ ...c, voyante: v })); setCustomized(true) }} hintOpen={openHint?.key === 'voyante'} onToggleHint={() => toggleHint('village', 'voyante', t('lobby.voyanteToggleHint'))} />}
+                    {!disabledRoles.has('sorciere') && <RoleChip emoji="🧪" label={t(ROLES.sorciere.nameKey)} checked={counts.sorciere} onChange={(v) => { setCounts((c) => ({ ...c, sorciere: v })); setCustomized(true) }} hintOpen={openHint?.key === 'sorciere'} onToggleHint={() => toggleHint('village', 'sorciere', t('lobby.sorciereToggleHint'))} />}
+                    {!disabledRoles.has('chasseur') && <RoleChip emoji="🏹" label={t(ROLES.chasseur.nameKey)} checked={counts.chasseur} onChange={(v) => { setCounts((c) => ({ ...c, chasseur: v })); setCustomized(true) }} hintOpen={openHint?.key === 'chasseur'} onToggleHint={() => toggleHint('village', 'chasseur', t('lobby.chasseurToggleHint'))} />}
+                    {!disabledRoles.has('petite_fille') && <RoleChip emoji="🎀" label={t(ROLES.petite_fille.nameKey)} checked={counts.petite_fille} onChange={(v) => { setCounts((c) => ({ ...c, petite_fille: v })); setCustomized(true) }} hintOpen={openHint?.key === 'petite_fille'} onToggleHint={() => toggleHint('village', 'petite_fille', t('lobby.petiteFilleToggleHint'))} />}
+                    {!disabledRoles.has('cupidon') && <RoleChip emoji="💘" label={t(ROLES.cupidon.nameKey)} checked={counts.cupidon} onChange={(v) => { setCounts((c) => ({ ...c, cupidon: v })); setCustomized(true) }} hintOpen={openHint?.key === 'cupidon'} onToggleHint={() => toggleHint('village', 'cupidon', t('lobby.cupidonToggleHint'))} />}
+                    {!disabledRoles.has('ancien') && <RoleChip emoji="🧓" label={t(ROLES.ancien.nameKey)} checked={counts.ancien} onChange={(v) => { setCounts((c) => ({ ...c, ancien: v })); setCustomized(true) }} hintOpen={openHint?.key === 'ancien'} onToggleHint={() => toggleHint('village', 'ancien', t('lobby.ancienToggleHint'))} />}
+                    {!disabledRoles.has('voleur') && <RoleChip emoji="🃏" label={t(ROLES.voleur.nameKey)} checked={counts.voleur} onChange={(v) => { setCounts((c) => ({ ...c, voleur: v })); setCustomized(true) }} hintOpen={openHint?.key === 'voleur'} onToggleHint={() => toggleHint('village', 'voleur', t('lobby.voleurToggleHint'))} />}
+                    {!disabledRoles.has('enfant_sauvage') && <RoleChip emoji="🐾" label={t(ROLES.enfant_sauvage.nameKey)} checked={counts.enfant_sauvage} onChange={(v) => { setCounts((c) => ({ ...c, enfant_sauvage: v })); setCustomized(true) }} hintOpen={openHint?.key === 'enfant_sauvage'} onToggleHint={() => toggleHint('village', 'enfant_sauvage', t('lobby.enfantSauvageToggleHint'))} />}
                   </div>
                   {openHint?.group === 'village' && <RoleHintBox text={openHint.text} />}
                 </div>
@@ -918,10 +952,10 @@ export default function Lobby() {
                     <span className="ml-auto text-[11px] text-moon-200/35">{t('lobby.roleGroup.maisonHint')}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <RoleChip emoji="🎭" label={t(ROLES.griot.nameKey)} checked={counts.griot} onChange={(v) => { setCounts((c) => ({ ...c, griot: v })); setCustomized(true) }} hintOpen={openHint?.key === 'griot'} onToggleHint={() => toggleHint('maison', 'griot', t('lobby.griotToggleHint'))} />
-                    <RoleChip emoji="🕸️" label={t(ROLES.anancy.nameKey)} neutral checked={counts.anancy} onChange={(v) => { setCounts((c) => ({ ...c, anancy: v })); setCustomized(true) }} hintOpen={openHint?.key === 'anancy'} onToggleHint={() => toggleHint('maison', 'anancy', t('lobby.anancyToggleHint'))} />
-                    <RoleChip emoji="👼" label={t(ROLES.ange.nameKey)} checked={counts.ange} onChange={(v) => { setCounts((c) => ({ ...c, ange: v })); setCustomized(true) }} hintOpen={openHint?.key === 'ange'} onToggleHint={() => toggleHint('maison', 'ange', t('lobby.angeToggleHint'))} />
-                    <RoleChip emoji="🛡️" label={t(ROLES.daron.nameKey)} checked={counts.daron} onChange={(v) => { setCounts((c) => ({ ...c, daron: v })); setCustomized(true) }} hintOpen={openHint?.key === 'daron'} onToggleHint={() => toggleHint('maison', 'daron', t('lobby.daronToggleHint'))} />
+                    {!disabledRoles.has('griot') && <RoleChip emoji="🎭" label={t(ROLES.griot.nameKey)} checked={counts.griot} onChange={(v) => { setCounts((c) => ({ ...c, griot: v })); setCustomized(true) }} hintOpen={openHint?.key === 'griot'} onToggleHint={() => toggleHint('maison', 'griot', t('lobby.griotToggleHint'))} />}
+                    {!disabledRoles.has('anancy') && <RoleChip emoji="🕸️" label={t(ROLES.anancy.nameKey)} neutral checked={counts.anancy} onChange={(v) => { setCounts((c) => ({ ...c, anancy: v })); setCustomized(true) }} hintOpen={openHint?.key === 'anancy'} onToggleHint={() => toggleHint('maison', 'anancy', t('lobby.anancyToggleHint'))} />}
+                    {!disabledRoles.has('ange') && <RoleChip emoji="👼" label={t(ROLES.ange.nameKey)} checked={counts.ange} onChange={(v) => { setCounts((c) => ({ ...c, ange: v })); setCustomized(true) }} hintOpen={openHint?.key === 'ange'} onToggleHint={() => toggleHint('maison', 'ange', t('lobby.angeToggleHint'))} />}
+                    {!disabledRoles.has('daron') && <RoleChip emoji="🛡️" label={t(ROLES.daron.nameKey)} checked={counts.daron} onChange={(v) => { setCounts((c) => ({ ...c, daron: v })); setCustomized(true) }} hintOpen={openHint?.key === 'daron'} onToggleHint={() => toggleHint('maison', 'daron', t('lobby.daronToggleHint'))} />}
                   </div>
                   {openHint?.group === 'maison' && <RoleHintBox text={openHint.text} />}
                 </div>

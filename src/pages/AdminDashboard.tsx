@@ -1448,11 +1448,20 @@ function ContentField({
  * dans le bucket "role-cards", toujours au chemin "{roleId}.jpg" quel que
  * soit le format importé — voir roleCardImageCandidates dans RoleCard.tsx)
  * et lien de téléchargement de l'image actuellement affichée aux joueurs
- * (celle du bucket si elle existe, sinon l'asset bundlé par défaut). */
+ * (celle du bucket si elle existe, sinon l'asset bundlé par défaut).
+ *
+ * Activer/désactiver (migration 0161) : un rôle désactivé n'apparaît plus du
+ * tout en partie — ni proposable manuellement par l'hôte (case masquée dans
+ * Lobby.tsx), ni tiré au hasard par le mode automatique
+ * (compute_default_role_counts filtre déjà côté serveur). Loup-Garou et
+ * Villageois n'ont pas ce bouton : structurellement obligatoires, sans case
+ * à cocher côté hôte (voir role_config, migration 0161). */
 function RoleImagesSection() {
   const [overriddenIds, setOverriddenIds] = useState<Set<string> | null>(null)
+  const [disabledIds, setDisabledIds] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
   const [busyRole, setBusyRole] = useState<string | null>(null)
+  const [togglingRole, setTogglingRole] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     const { data, error: listError } = await supabase.storage.from('role-cards').list('')
@@ -1464,9 +1473,27 @@ function RoleImagesSection() {
     setOverriddenIds(new Set((data ?? []).map((f) => f.name.replace(/\.[^.]+$/, ''))))
   }, [])
 
+  const loadDisabled = useCallback(async () => {
+    const { data, error: rpcError } = await supabase.rpc('get_disabled_roles')
+    if (!rpcError && data) setDisabledIds(new Set(data as string[]))
+  }, [])
+
   useEffect(() => {
     load()
-  }, [load])
+    loadDisabled()
+  }, [load, loadDisabled])
+
+  async function toggleRole(roleId: RoleId, enabled: boolean) {
+    setTogglingRole(roleId)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('admin_set_role_enabled', { p_role: roleId, p_enabled: enabled })
+    setTogglingRole(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    loadDisabled()
+  }
 
   async function handleUpload(roleId: RoleId, file: File) {
     setBusyRole(roleId)
@@ -1516,10 +1543,17 @@ function RoleImagesSection() {
             const currentUrl = overridden
               ? supabase.storage.from('role-cards').getPublicUrl(`${id}.jpg`).data.publicUrl
               : DEFAULT_ROLE_IMAGES[id]
+            // Loup-Garou n'a pas de case à cocher côté hôte (nombre de base
+            // toujours ≥1, voir role_config) — rien à basculer ici.
+            const canToggle = id !== 'loup_garou'
+            const disabled = canToggle && disabledIds.has(id)
             return (
-              <Card key={id} className="p-3">
+              <Card key={id} className={`p-3 ${disabled ? 'opacity-60' : ''}`}>
                 <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-moon-200">
                   {role.emoji} {translations[role.nameKey].fr}
+                  {disabled && (
+                    <span className="rounded-full bg-blood-700/20 px-1.5 py-0.5 text-[9px] uppercase text-blood-400">Désactivé</span>
+                  )}
                 </p>
                 <div className="mb-2 flex aspect-[2/3] items-center justify-center overflow-hidden rounded-lg border border-night-600/60 bg-night-800/60">
                   {currentUrl ? (
@@ -1529,6 +1563,16 @@ function RoleImagesSection() {
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5">
+                  {canToggle && (
+                    <Button
+                      variant={disabled ? 'ghost' : 'danger'}
+                      className="px-2 py-1.5 text-[11px]"
+                      disabled={togglingRole === id}
+                      onClick={() => toggleRole(id, disabled)}
+                    >
+                      {togglingRole === id ? '...' : disabled ? '✅ Réactiver' : '🚫 Désactiver'}
+                    </Button>
+                  )}
                   <label className="cursor-pointer rounded-lg border border-night-600/70 bg-night-800/50 px-2 py-1.5 text-center text-[11px] font-semibold text-moon-200/80 transition-colors hover:border-moon-400/40">
                     {busyRole === id ? '...' : '📤 Changer l’image'}
                     <input
