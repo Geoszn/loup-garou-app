@@ -31,6 +31,7 @@ const SPECIAL_ROLE_KEYS: RoleId[] = [
   'voleur',
   'enfant_sauvage',
   'griot',
+  'daron',
   'ange',
   'anancy',
 ]

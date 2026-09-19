@@ -17,6 +17,7 @@ export type RoleId =
   | 'anancy'
   | 'ange'
   | 'grand_mechant_loup'
+  | 'daron'
 
 // Les noms/descriptions ne sont plus stockés en dur ici : ce sont des clés du
 // dictionnaire i18n (voir src/i18n/translations.ts, namespace `role.*`), pour
@@ -197,6 +198,19 @@ export const ROLES: Record<RoleId, RoleInfo> = {
     descriptionKey: 'role.grand_mechant_loup.description',
     nightActionKey: 'role.grand_mechant_loup.nightAction',
   },
+  // Protège un joueur différent chaque nuit contre l'attaque des Loups ET
+  // le poison de la Sorcière (jamais deux nuits de suite la même personne,
+  // auto-protection permise) — voir migration 0158. Aucune condition de
+  // victoire à part : gagne avec le village comme n'importe quel villageois.
+  daron: {
+    id: 'daron',
+    team: 'village',
+    emoji: '🛡️',
+    color: '#5a8fa8',
+    nameKey: 'role.daron.name',
+    descriptionKey: 'role.daron.description',
+    nightActionKey: 'role.daron.nightAction',
+  },
 }
 
 export const ROLE_ORDER: RoleId[] = [
@@ -213,6 +227,7 @@ export const ROLE_ORDER: RoleId[] = [
   'voleur',
   'enfant_sauvage',
   'griot',
+  'daron',
   'ange',
   'anancy',
   'villageois',

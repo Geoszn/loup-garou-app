@@ -10,6 +10,7 @@ export type GameStatus =
   | 'ended'
 
 export type NightStep =
+  | 'daron'
   | 'voleur'
   | 'cupidon'
   | 'enfant_sauvage'
@@ -61,6 +62,12 @@ export interface RoleCounts {
   // coéquipier, invisible pour la Sorcière) tant qu'aucun loup n'est encore
   // mort dans la partie — pouvoir perdu pour de bon dès qu'un loup meurt.
   grand_mechant_loup: boolean
+  // Le Daron (voir migration 0158) : protège un joueur différent chaque
+  // nuit (auto-protection permise, jamais deux nuits de suite la même
+  // personne) contre l'attaque des Loups ET le poison de la Sorcière —
+  // sans jamais savoir qui il protège vraiment. Disponible uniquement en
+  // configuration manuelle pour l'instant (absent du mode auto).
+  daron: boolean
 }
 
 export interface GameSettings {
@@ -239,6 +246,17 @@ export interface MyGameView {
   // d'autre, y compris un loup qui vient de REJOINDRE la meute (aucun
   // secret d'ex-coéquipier à trahir dans ce sens-là).
   village_muted: boolean
+  // Personnel au Daron (voir migration 0158) : qui il a protégé la nuit
+  // dernière (sert à griser cette cible dans son panneau — impossible de
+  // protéger la même personne deux nuits de suite) et cette nuit (son
+  // panneau d'action disparaissant dès l'envoi comme pour la Voyante/le
+  // Griot, il n'a plus que ce champ pour se souvenir de son choix) — les
+  // deux toujours calculés, jamais restreints à 'day_reveal'. Seul
+  // daron_protection_worked l'est (même principe que witch_saved_me plus
+  // bas) : la protection n'est résolue qu'à la transition nuit → récap.
+  daron_previous_target_id: string | null
+  daron_protected_id: string | null
+  daron_protection_worked: boolean
   lover_id: string | null
   // Mentor secrètement choisi par l'Enfant Sauvage (voir migration 0052) —
   // toujours la donnée propre à SA ligne game_roles_secret, même une fois
@@ -450,6 +468,7 @@ export type ImpactKind =
   | 'anancy_solo_win'
   | 'gml_second_kill'
   | 'wolf_team_win'
+  | 'daron_save'
 
 export interface ImpactDetail {
   kind: ImpactKind

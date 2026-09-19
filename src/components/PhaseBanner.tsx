@@ -25,6 +25,7 @@ const PHASE_INFO: Record<GameStatus, { titleKey: TranslationKey; emoji: string }
 // Ce sont des CLÉS de traduction (pas le texte final) : l'appelant doit les
 // passer à t() lui-même pour suivre la langue choisie.
 export const NIGHT_STEP_LABEL: Record<string, TranslationKey> = {
+  daron: 'nightStep.daron',
   voleur: 'nightStep.voleur',
   cupidon: 'nightStep.cupidon',
   enfant_sauvage: 'nightStep.enfant_sauvage',
@@ -50,6 +51,7 @@ export const NIGHT_STEP_LABEL: Record<string, TranslationKey> = {
 // pour rendre visuellement identifiable, d'un coup d'œil, quel rôle est en
 // train d'agir pendant qu'on attend.
 export const NIGHT_STEP_ICON: Record<string, string> = {
+  daron: '🛡️',
   voleur: '🃏',
   cupidon: '💘',
   enfant_sauvage: '🐾',

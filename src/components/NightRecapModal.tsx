@@ -99,6 +99,14 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
     ? view.players.find((p) => p.user_id === myGriotReveal.target_id)
     : null
 
+  // Résultat du Daron pour la nuit qui vient de se résoudre — même besoin
+  // que le bloc Griot juste au-dessus (submit_daron avance la phase dès
+  // l'envoi, comme submit_griot) : sans ça, il n'a plus aucune trace de qui
+  // il a choisi de protéger une fois son panneau disparu.
+  const daronProtectedTarget = view.daron_protected_id
+    ? view.players.find((p) => p.user_id === view.daron_protected_id)
+    : null
+
   async function handleReady() {
     setSubmitting(true)
     await supabase.rpc('submit_day_reveal_ready', { p_game_id: gameId })
@@ -242,6 +250,23 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
                     <span className="text-moon-200">{griotRevealTarget?.display_name ?? '?'}</span>{' '}
                     {t(GRIOT_REVEAL_KEYS[myGriotReveal.kind] ?? 'griot.reveal.no_action')}
                   </p>
+                </div>
+              )}
+              {/* Réservé au Daron lui-même (daron_protected_id ne contient
+                  rien pour les autres rôles, voir migration 0158) — ne
+                  révèle jamais si la cible était un Loup-Garou, seulement
+                  si l'attaque a échoué grâce à cette protection. */}
+              {daronProtectedTarget && (
+                <div className="animate-fade-in rounded-xl border border-moon-400/30 bg-moon-400/5 px-3 py-2.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-moon-300">
+                    {t('game.daronResultTitle')}
+                  </p>
+                  <p className="mt-1 text-sm text-moon-200/90">
+                    {t('game.daronProtectedNote', { name: daronProtectedTarget.display_name })}
+                  </p>
+                  {view.daron_protection_worked && (
+                    <p className="mt-1 text-sm text-emerald-400">{t('game.daronWorkedNote')}</p>
+                  )}
                 </div>
               )}
             </div>

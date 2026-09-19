@@ -174,6 +174,7 @@ const IMPACT_BONUSES: { key: TranslationKey; points: number; note?: TranslationK
   { key: 'impact.seer_wolf_reveal', points: 5, note: 'help.ranking.impact.seerNote' },
   { key: 'impact.ancien_extra_life', points: 10 },
   { key: 'impact.wolf_team_win', points: 15 },
+  { key: 'impact.daron_save', points: 10 },
 ]
 
 /** Nouveau contenu : le système de rang (0055_ranking_system.sql) n'était

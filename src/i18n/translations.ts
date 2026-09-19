@@ -452,6 +452,15 @@ export const translations = {
     fr: "Choisissez une seconde victime (facultatif) — différente de celle de la meute, jamais un autre Loup. Frappe garantie : la Sorcière ne peut pas la sauver.",
     en: "Choose a second victim (optional) — different from the pack's, never another Wolf. Guaranteed strike: the Witch cannot save them.",
   },
+  'role.daron.name': { fr: 'Daron', en: 'Guardian' },
+  'role.daron.description': {
+    fr: "Chaque nuit, vous choisissez un joueur vivant à protéger (vous y compris). S'il est visé par une attaque cette même nuit — celle des Loups-Garous ou le poison de la Sorcière — l'attaque échoue et il survit. Vous ne pouvez pas protéger la même personne deux nuits de suite, et vous ne savez jamais qui vous protégez vraiment : même un Loup-Garou peut être sauvé sans le vouloir.",
+    en: "Each night, you choose a living player to protect (yourself included). If they're targeted by an attack that same night — the Werewolves' or the Witch's poison — the attack fails and they survive. You can't protect the same person two nights in a row, and you never really know who you're protecting: even a Werewolf could be saved without meaning to.",
+  },
+  'role.daron.nightAction': {
+    fr: 'Choisissez un joueur à protéger cette nuit (vous pouvez vous protéger vous-même). Pas deux nuits de suite pour la même personne.',
+    en: "Choose a player to protect tonight (you may protect yourself). Not the same person two nights in a row.",
+  },
 
   // --- Salon d'attente (Lobby.tsx) --------------------------------------------
   'lobby.notFound': {
@@ -591,6 +600,10 @@ export const translations = {
   'lobby.griotToggleHint': {
     fr: 'À partir de la nuit 2, apprend une trace vague de l’action d’un joueur la nuit précédente — jamais son rôle.',
     en: "Starting night 2, learns a vague trace of a player's action from the previous night — never their role.",
+  },
+  'lobby.daronToggleHint': {
+    fr: 'Protège un joueur différent chaque nuit contre toute attaque (loups ou poison) — sans savoir qui il protège vraiment.',
+    en: "Protects a different player each night from any attack (wolves or poison) — without knowing who they're really protecting.",
   },
   'lobby.durationsPreset.fast': { fr: 'Rapide', en: 'Fast' },
   'lobby.durationsPreset.fastHint': { fr: 'parties courtes', en: 'short games' },
@@ -755,6 +768,7 @@ export const translations = {
   'impact.anancy_solo_win': { fr: '🕸️ Victoire solitaire d’Anancy', en: '🕸️ Anancy’s solo win' },
   'impact.gml_second_kill': { fr: '👹 Seconde victime dévorée', en: '👹 Second victim devoured' },
   'impact.wolf_team_win': { fr: '🐺 Victoire en tant que Loup-Garou', en: '🐺 Victory as a Werewolf' },
+  'impact.daron_save': { fr: '🛡️ Protection réussie', en: '🛡️ Successful protection' },
 
   'game.yourRole': { fr: 'Votre rôle', en: 'Your role' },
   'role.wolfPack.title': { fr: 'Votre meute', en: 'Your pack' },
@@ -767,6 +781,12 @@ export const translations = {
   'game.seerVisionTitle': { fr: 'Vision de cette nuit', en: "Tonight's vision" },
   'game.griotResultTitle': { fr: 'Ce que vous avez appris', en: 'What you learned' },
   'game.seerVisionResult': { fr: '{{target}} est {{role}}.', en: '{{target}} is {{role}}.' },
+  'game.daronResultTitle': { fr: 'Votre protection cette nuit', en: 'Your protection tonight' },
+  'game.daronProtectedNote': { fr: 'Vous avez protégé {{name}}.', en: 'You protected {{name}}.' },
+  'game.daronWorkedNote': {
+    fr: 'Votre protection a fonctionné : une attaque a échoué grâce à vous !',
+    en: 'Your protection worked: an attack failed thanks to you!',
+  },
   'game.logEmpty': { fr: 'Rien à signaler pour le moment.', en: 'Nothing to report yet.' },
   'game.callVoteHeading': { fr: 'Passage au vote', en: 'Move to vote' },
   'game.callVoteProgress': { fr: '{{agreed}}/{{total}} joueurs d’accord pour voter', en: '{{agreed}}/{{total}} players ready to vote' },
@@ -927,6 +947,7 @@ export const translations = {
     fr: "D'autres joueurs peuvent encore rejoindre en donnant ce code avant que l'hôte ne relance.",
     en: 'Other players can still join with this code before the host restarts.',
   },
+  'nightStep.daron': { fr: 'Le Daron veille sur le village...', en: 'The Guardian is watching over the village...' },
   'nightStep.voleur': { fr: 'Le Voleur vole une carte...', en: 'The Thief is stealing a card...' },
   'nightStep.cupidon': { fr: 'Cupidon décoche ses flèches...', en: 'Cupid is shooting their arrows...' },
   'nightStep.voyante': { fr: 'La Voyante consulte son destin...', en: 'The Seer is consulting fate...' },
@@ -977,6 +998,16 @@ export const translations = {
   'action.griot.pastReveals': { fr: 'Vos observations passées', en: 'Your past observations' },
   'action.griot.confirm': { fr: 'Observer ce joueur', en: 'Watch this player' },
   'action.griot.nightLabel': { fr: 'Nuit {{night}}', en: 'Night {{night}}' },
+  'action.daron.title': { fr: 'Choisissez qui protéger', en: 'Choose who to protect' },
+  'action.daron.subtitle': {
+    fr: 'Si cette personne est attaquée cette nuit, elle survivra.',
+    en: "If this person is attacked tonight, they'll survive.",
+  },
+  'action.daron.confirm': { fr: 'Protéger ce joueur', en: 'Protect this player' },
+  'action.daron.previousTargetNote': {
+    fr: '{{name}} est grisé(e) : protégé(e) la nuit dernière, impossible de le/la reprotéger cette nuit.',
+    en: '{{name}} is greyed out: protected last night, cannot be protected again tonight.',
+  },
   'action.anancy.title': { fr: 'Tissez le destin de deux joueurs', en: 'Weave the fate of two players' },
   'action.anancy.subtitle': {
     fr: 'Choisissez deux joueurs vivants pour échanger secrètement leurs rôles — ou ne rien faire cette nuit.',
@@ -2094,6 +2125,11 @@ export const translations = {
   'gameLog.witchChoseSecret': { fr: '🧪 La Sorcière a fait son choix en secret.', en: '🧪 The Witch has secretly made her choice.' },
   'gameLog.thiefChoseSecret': { fr: '🃏 Le Voleur a fait son choix en secret.', en: '🃏 The Thief has secretly made their choice.' },
   'gameLog.seerScried': { fr: '🔮 La Voyante a sondé un joueur en secret.', en: '🔮 The Seer has secretly scried a player.' },
+  'gameLog.daronChoseSecret': { fr: '🛡️ Le Daron a fait son choix en secret.', en: '🛡️ The Guardian has secretly made their choice.' },
+  'gameLog.daronSaved': {
+    fr: '🛡️ La protection du Daron a permis à un joueur de survivre cette nuit.',
+    en: "🛡️ The Guardian's protection allowed a player to survive tonight.",
+  },
   'gameLog.captainElectionCall': { fr: '🎖️ Élisez votre Capitaine avant que la nuit ne tombe !', en: '🎖️ Elect your Captain before night falls!' },
   'gameLog.hunterTimeout': { fr: '{{name}} (Chasseur) n’a pas tiré à temps.', en: '{{name}} (Hunter) didn’t shoot in time.' },
   'gameLog.captainRandomSuccessor': {

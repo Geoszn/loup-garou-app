@@ -1338,6 +1338,28 @@ function NightResultPanel({ view }: { view: MyGameView }) {
     )
   }
 
+  // Même besoin que le bloc Griot juste au-dessus : submit_daron avance la
+  // phase dès l'envoi, donc DaronPanel disparaît avant que le joueur ait pu
+  // relire son propre choix. Jamais de "ça a marché" ici — la protection
+  // n'est résolue qu'à la transition nuit → récap (voir daron_protection_worked,
+  // NightRecapModal.tsx), l'afficher pendant que le statut est encore
+  // 'night' dirait toujours "non" à tort.
+  if (view.my_role === 'daron') {
+    const target = view.players.find((p) => p.user_id === view.daron_protected_id)
+    if (!target) return null
+    return (
+      <Card className="animate-fade-in border-moon-400/30 bg-gradient-to-b from-night-700/40 to-night-900/40">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">🛡️</span>
+          <div>
+            <p className="font-display text-sm text-moon-200">{t('game.daronResultTitle')}</p>
+            <p className="text-sm text-moon-200/70">{t('game.daronProtectedNote', { name: target.display_name })}</p>
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
   return null
 }
 

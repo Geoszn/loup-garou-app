@@ -34,6 +34,8 @@ export function ActionPanel({ view, gameId, selfId }: { view: MyGameView; gameId
     <div ref={containerRef} className="scroll-mt-4">
       {(() => {
         switch (action) {
+          case 'daron':
+            return <DaronPanel view={view} gameId={gameId} selfId={selfId} />
           case 'voleur':
             return <VoleurPanel view={view} gameId={gameId} />
           case 'cupidon':
@@ -160,6 +162,54 @@ function CupidonPanel({ view, gameId }: { view: MyGameView; gameId: string }) {
       <ErrorText>{error}</ErrorText>
       <Button className="mt-4 w-full" disabled={!first || !second || loading} onClick={confirm}>
         {loading ? t('common.sending') : t('action.cupidon.confirm')}
+      </Button>
+    </PanelShell>
+  )
+}
+
+// Le Daron (voir migration 0158) : contrairement à la Voyante/au Griot, il
+// peut se protéger LUI-MÊME — `alive` n'exclut donc pas selfId, seule
+// exception parmi les rôles à cible unique de ce fichier. La cible protégée
+// la nuit dernière (daron_previous_target_id) est grisée via `disabledIds`
+// plutôt que simplement retirée de la liste : mieux vaut que le joueur
+// VOIE que ce choix est interdit (et pourquoi, via la note sous la grille)
+// plutôt qu'il se demande pourquoi quelqu'un a disparu de l'écran.
+function DaronPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
+  const { t } = useLanguage()
+  const [selected, setSelected] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const alive = view.players.filter((p) => p.is_alive)
+  const previousTargetId = view.daron_previous_target_id
+  const previousTarget = previousTargetId ? view.players.find((p) => p.user_id === previousTargetId) : null
+
+  async function confirm() {
+    if (!selected) return
+    setLoading(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('submit_daron', { p_game_id: gameId, p_target: selected })
+    setLoading(false)
+    if (rpcError) setError(rpcError.message)
+  }
+
+  return (
+    <PanelShell emoji="🛡️" title={t('action.daron.title')} subtitle={t('action.daron.subtitle')}>
+      <PlayerGrid
+        players={alive}
+        selectable
+        compact
+        selectedId={selected}
+        disabledIds={previousTargetId ? [previousTargetId] : []}
+        onSelect={setSelected}
+      />
+      {previousTarget && (
+        <p className="mt-3 text-xs text-moon-200/40">
+          {t('action.daron.previousTargetNote', { name: previousTarget.display_name })}
+        </p>
+      )}
+      <ErrorText>{error}</ErrorText>
+      <Button className="mt-4 w-full" disabled={!selected || loading} onClick={confirm}>
+        {loading ? t('common.sending') : t('action.daron.confirm')}
       </Button>
     </PanelShell>
   )
