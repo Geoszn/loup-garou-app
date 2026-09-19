@@ -714,8 +714,23 @@ export default function Lobby() {
 
       {/* Une seule instance, hors de la boucle ci-dessus : Modal est déjà
           un overlay plein écran (position fixed), pas besoin d'en monter
-          une par joueur. */}
-      {openFriendId && <PlayerProfileModal userId={openFriendId} onClose={() => setOpenFriendId(null)} />}
+          une par joueur. canTransferHost (migration 0160) : uniquement soi-
+          même hôte du salon en attente, jamais pour soi-même ni pour un bot
+          (même heuristique préfixe que partout ailleurs dans ce fichier) —
+          le serveur revalide de toute façon tout ça (transfer_host). */}
+      {openFriendId &&
+        (() => {
+          const openFriendPlayer = view.players.find((p) => p.user_id === openFriendId)
+          const canTransferHost = isHost && !!openFriendPlayer && !openFriendPlayer.display_name.startsWith('🤖 ')
+          return (
+            <PlayerProfileModal
+              userId={openFriendId}
+              gameId={gameId ?? undefined}
+              canTransferHost={canTransferHost}
+              onClose={() => setOpenFriendId(null)}
+            />
+          )
+        })()}
 
       <BottomActionBar>
         {isHost ? (

@@ -669,7 +669,7 @@ export const translations = {
   'moderation.ghostTag': { fr: '(fantôme)', en: '(ghost)' },
   'moderation.removeButton': { fr: 'Retirer', en: 'Remove' },
   'moderation.removing': { fr: 'Retrait...', en: 'Removing...' },
-  'moderation.transferHostTitle': { fr: '🎖️ Transférer l’hôte', en: '🎖️ Transfer host' },
+  'moderation.transferHostTitle': { fr: '👑 Transférer l’hôte', en: '👑 Transfer host' },
   'moderation.transferButton': { fr: 'Transférer', en: 'Transfer' },
   'moderation.transferring': { fr: 'Transfert...', en: 'Transferring...' },
   'moderation.transferConfirmTitle': { fr: 'Transférer l’hôte ?', en: 'Transfer host?' },

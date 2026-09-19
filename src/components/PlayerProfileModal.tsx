@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { notifyFriendRequest } from '../lib/pushSubscription'
 import { tierInfo, tierLabel } from '../lib/ranks'
 import { CONTINENTS } from '../lib/continents'
-import { Button, ErrorText, Modal } from './ui'
+import { Button, ConfirmDialog, ErrorText, Modal } from './ui'
 import { AvatarIcon } from './AvatarIcon'
 import { RankTierBadge } from './RankTierBadge'
 import { useLanguage } from '../i18n/LanguageContext'
@@ -33,13 +33,33 @@ interface PlayerProfile {
  * sur un autre joueur — remplace l'ancien FriendRequestPopover, trop
  * limité pour porter tout ça (toujours utilisé tel quel ailleurs, pendant
  * une partie en cours, où l'espace disponible est plus contraint).
+ *
+ * Transfert d'hôte (migration 0160) : retour utilisateur — le placer dans
+ * le panneau de modération obligeait à "aller dans les réglages" pour un
+ * geste qu'on veut faire d'un coup en tapant sur le joueur visé. Affiché ici
+ * uniquement quand l'appelant (Lobby.tsx) a déterminé que c'est possible
+ * (canTransferHost : soi-même hôte, salon en attente, cible pas un bot) —
+ * cette fiche n'a pas accès à ces informations de partie par elle-même,
+ * seulement au profil public du joueur ciblé.
  */
-export function PlayerProfileModal({ userId, onClose }: { userId: string; onClose: () => void }) {
+export function PlayerProfileModal({
+  userId,
+  gameId,
+  canTransferHost = false,
+  onClose,
+}: {
+  userId: string
+  gameId?: string
+  canTransferHost?: boolean
+  onClose: () => void
+}) {
   const { t, lang } = useLanguage()
   const [profile, setProfile] = useState<PlayerProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [acting, setActing] = useState(false)
+  const [transferConfirmOpen, setTransferConfirmOpen] = useState(false)
+  const [transferring, setTransferring] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -89,6 +109,20 @@ export function PlayerProfileModal({ userId, onClose }: { userId: string; onClos
       return
     }
     setProfile((p) => (p ? { ...p, friend_status: 'friends' } : p))
+  }
+
+  async function confirmTransferHost() {
+    if (!gameId) return
+    setTransferring(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('transfer_host', { p_game_id: gameId, p_new_host_id: userId })
+    setTransferring(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    setTransferConfirmOpen(false)
+    onClose()
   }
 
   const tier = profile ? tierInfo(profile.tier) : null
@@ -145,8 +179,24 @@ export function PlayerProfileModal({ userId, onClose }: { userId: string; onClos
           {profile.friend_status === 'friends' && (
             <p className="text-center text-xs text-emerald-400">{t('roster.becameFriends')}</p>
           )}
+
+          {canTransferHost && (
+            <Button variant="ghost" className="w-full" onClick={() => setTransferConfirmOpen(true)}>
+              {t('moderation.transferHostTitle')}
+            </Button>
+          )}
         </div>
       )}
+
+      <ConfirmDialog
+        open={transferConfirmOpen}
+        title={t('moderation.transferConfirmTitle')}
+        message={t('moderation.transferConfirmMessage', { name: profile?.username ?? '' })}
+        confirmLabel={transferring ? t('moderation.transferring') : t('moderation.transferButton')}
+        danger
+        onCancel={() => setTransferConfirmOpen(false)}
+        onConfirm={confirmTransferHost}
+      />
     </Modal>
   )
 }
