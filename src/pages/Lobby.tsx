@@ -47,6 +47,9 @@ const DEFAULT_COUNTS: RoleCounts = {
   // Le Daron (voir migration 0158) — même principe, désactivé par défaut ;
   // absent du mode automatique pour l'instant, uniquement activable ici.
   daron: false,
+  // Le Juge (voir migration 0162) — même principe, désactivé par défaut ;
+  // absent du mode automatique pour l'instant, uniquement activable ici.
+  juge: false,
 }
 
 // Durées des phases, modifiables par l'hôte au même titre que les rôles —
@@ -477,7 +480,8 @@ export default function Lobby() {
     Number(counts.anancy) +
     Number(counts.ange) +
     Number(counts.grand_mechant_loup) +
-    Number(counts.daron)
+    Number(counts.daron) +
+    Number(counts.juge)
   // Répartition Loups/Village affichée en barre (voir la refonte du panneau
   // ci-dessous) — équilibre lisible d'un coup d'œil plutôt qu'un calcul de
   // tête. Anancy (camp neutre) n'est compté ni comme loup ni comme village,
@@ -956,6 +960,7 @@ export default function Lobby() {
                     {!disabledRoles.has('anancy') && <RoleChip emoji="🕸️" label={t(ROLES.anancy.nameKey)} neutral checked={counts.anancy} onChange={(v) => { setCounts((c) => ({ ...c, anancy: v })); setCustomized(true) }} hintOpen={openHint?.key === 'anancy'} onToggleHint={() => toggleHint('maison', 'anancy', t('lobby.anancyToggleHint'))} />}
                     {!disabledRoles.has('ange') && <RoleChip emoji="👼" label={t(ROLES.ange.nameKey)} checked={counts.ange} onChange={(v) => { setCounts((c) => ({ ...c, ange: v })); setCustomized(true) }} hintOpen={openHint?.key === 'ange'} onToggleHint={() => toggleHint('maison', 'ange', t('lobby.angeToggleHint'))} />}
                     {!disabledRoles.has('daron') && <RoleChip emoji="🛡️" label={t(ROLES.daron.nameKey)} checked={counts.daron} onChange={(v) => { setCounts((c) => ({ ...c, daron: v })); setCustomized(true) }} hintOpen={openHint?.key === 'daron'} onToggleHint={() => toggleHint('maison', 'daron', t('lobby.daronToggleHint'))} />}
+                    {!disabledRoles.has('juge') && <RoleChip emoji="⚖️" label={t(ROLES.juge.nameKey)} neutral checked={counts.juge} onChange={(v) => { setCounts((c) => ({ ...c, juge: v })); setCustomized(true) }} hintOpen={openHint?.key === 'juge'} onToggleHint={() => toggleHint('maison', 'juge', t('lobby.jugeToggleHint'))} />}
                   </div>
                   {openHint?.group === 'maison' && <RoleHintBox text={openHint.text} />}
                 </div>

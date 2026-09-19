@@ -20,7 +20,11 @@ import { useLanguage } from '../i18n/LanguageContext'
 // panneau. 'ange' (voir migration 0121) est un rôle village comme les
 // autres de cette liste — inclus pour la même raison qu'eux (suivre s'il
 // est encore en vie), même si sa fenêtre de victoire personnelle ne dure
-// que le tout premier cycle.
+// que le tout premier cycle. 'juge' (voir migration 0162) : même cas que
+// 'anancy', camp neutre exclu de totalWolves/totalVillage — sauf qu'un
+// Juge qui abandonne devient un Villageois pour de bon (revealed_role passe
+// à 'villageois' à sa mort ensuite) : son entrée ici reste alors affichée
+// "vivant" indéfiniment, comportement accepté (mineur, purement cosmétique).
 const SPECIAL_ROLE_KEYS: RoleId[] = [
   'voyante',
   'sorciere',
@@ -34,6 +38,7 @@ const SPECIAL_ROLE_KEYS: RoleId[] = [
   'daron',
   'ange',
   'anancy',
+  'juge',
 ]
 
 /** Petit bouton "effectifs", ouvert/fermé à la demande, visible pendant
@@ -128,11 +133,17 @@ export function RosterSummary({
         p.revealed_role === 'grand_mechant_loup')
   ).length
   const remainingWolves = Math.max(totalWolves - deadWolves, 0)
-  // Anancy (voir migration 0119) : camp neutre, ni loup ni village — sans
-  // cette soustraction, il se retrouvait compté par défaut dans "Village"
-  // (tout ce qui n'est pas loup), ce qui faussait le total affiché.
-  const totalNeutral = roleCounts?.anancy ? 1 : 0
-  const deadNeutral = players.filter((p) => !p.is_alive && p.revealed_role === 'anancy').length
+  // Anancy (voir migration 0119) et Juge (voir migration 0162) : camp
+  // neutre, ni loup ni village — sans cette soustraction, ils se
+  // retrouvaient comptés par défaut dans "Village" (tout ce qui n'est pas
+  // loup), ce qui faussait le total affiché. Un Juge qui a abandonné
+  // (devenu Villageois en cours de partie) reste néanmoins compté ici tant
+  // qu'il est vivant — staleness mineure déjà documentée plus haut, comme
+  // totalWolves avant l'ajout de alpha_infection_occurred/etc.
+  const totalNeutral = (roleCounts?.anancy ? 1 : 0) + (roleCounts?.juge ? 1 : 0)
+  const deadNeutral = players.filter(
+    (p) => !p.is_alive && (p.revealed_role === 'anancy' || p.revealed_role === 'juge')
+  ).length
   const remainingNeutral = Math.max(totalNeutral - deadNeutral, 0)
   const remainingVillage = Math.max(alive.length - remainingWolves - remainingNeutral, 0)
   const totalVillage = Math.max(players.length - totalWolves - totalNeutral, 0)

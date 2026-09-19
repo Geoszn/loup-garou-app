@@ -436,6 +436,11 @@ export const translations = {
     fr: "Vous n'appartenez à aucun camp. Chaque nuit, vous pouvez échanger secrètement les rôles de deux joueurs vivants (sans jamais connaître ces rôles) — un joueur déjà touché devient définitivement intouchable. Vous gagnez seul si vous êtes encore vivant à l'aube du cinquième jour, peu importe le camp dominant.",
     en: 'You belong to no camp. Each night, you may secretly swap the roles of two living players (without ever learning those roles) — a player already touched becomes permanently untouchable. You win alone if you are still alive at dawn on the fifth day, no matter which camp dominates.',
   },
+  'role.juge.name': { fr: 'Le Juge', en: 'The Judge' },
+  'role.juge.description': {
+    fr: "Vous n'appartenez à aucun camp. À partir de la deuxième nuit, une cible vous est désignée en secret parmi les joueurs vivants — vous ne connaîtrez jamais son camp ni son rôle. Vous gagnez seul si elle est éliminée par le vote du village. Si elle meurt autrement, vous devrez abandonner ou recevoir une nouvelle cible (une seule fois par partie).",
+    en: "You belong to no camp. From the second night on, a secret target is assigned to you among the living players — you will never learn their team or role. You win alone if they are eliminated by the village vote. If they die another way, you must give up or receive a new target (only once per game).",
+  },
   'role.team.neutre': { fr: 'Neutre', en: 'Neutral' },
   'role.capitaine.name': { fr: 'Capitaine', en: 'Captain' },
   'role.ange.name': { fr: 'Ange', en: 'Angel' },
@@ -604,6 +609,10 @@ export const translations = {
   'lobby.daronToggleHint': {
     fr: 'Protège un joueur différent chaque nuit contre toute attaque (loups ou poison) — sans savoir qui il protège vraiment.',
     en: "Protects a different player each night from any attack (wolves or poison) — without knowing who they're really protecting.",
+  },
+  'lobby.jugeToggleHint': {
+    fr: "Camp neutre. Reçoit une cible secrète à partir de la deuxième nuit et gagne seul si elle est condamnée par le vote du village — sans jamais connaître son camp ni son rôle.",
+    en: 'Neutral camp. Receives a secret target from the second night on and wins alone if they are condemned by the village vote — without ever learning their team or role.',
   },
   'lobby.durationsPreset.fast': { fr: 'Rapide', en: 'Fast' },
   'lobby.durationsPreset.fastHint': { fr: 'parties courtes', en: 'short games' },
@@ -930,6 +939,11 @@ export const translations = {
     fr: '{{name}} est mort(e) dès le tout premier cycle, exactement comme espéré — sa victoire personnelle l’emporte, peu importe le camp dominant.',
     en: '{{name}} died during the very first cycle, exactly as hoped — their personal victory stands, no matter which camp dominates.',
   },
+  'game.endJugeWin': { fr: '⚖️ Le Juge l’emporte !', en: '⚖️ The Judge wins!' },
+  'game.endJugeExplain': {
+    fr: '{{name}} était Le Juge : sa cible a été condamnée par le vote du village — sa victoire personnelle l’emporte, peu importe le camp dominant.',
+    en: '{{name}} was The Judge: their target was condemned by the village vote — their personal victory stands, no matter which camp dominates.',
+  },
   // --- Section personnelle de l'écran de fin (EndScreen, migration 0073) -----
   // Détail du calcul de points pour CE joueur sur cette partie — lu depuis
   // my_game_result (game_results, permanent). "Résultat de la partie" =
@@ -1046,6 +1060,11 @@ export const translations = {
   'game.anancySwappedMe': {
     fr: 'Une force mystérieuse a modifié votre rôle cette nuit. Regardez votre carte...',
     en: 'A mysterious force altered your role tonight. Check your card...',
+  },
+  'game.jugeTargetTitle': { fr: '⚖️ Votre cible', en: '⚖️ Your target' },
+  'game.jugeTargetNote': {
+    fr: 'Vous devez faire condamner {{name}} par le vote du village pour gagner. Vous ne connaissez ni son camp, ni son rôle.',
+    en: 'You must get {{name}} condemned by the village vote to win. You do not know their team or role.',
   },
   'lobby.anancyToggleHint': {
     fr: 'Camp neutre. Chaque nuit, il peut échanger secrètement les rôles de deux joueurs (jamais deux fois le même). Il gagne seul s’il est vivant à l’aube du cinquième jour.',
@@ -1247,6 +1266,13 @@ export const translations = {
     en: "You're eliminated, but you're taking someone down with you.",
   },
   'action.hunter.noShot': { fr: 'Ne tirer sur personne', en: 'Shoot no one' },
+  'action.juge.title': { fr: 'Votre cible a échappé au bûcher', en: 'Your target escaped the stake' },
+  'action.juge.subtitle': {
+    fr: "Elle est morte, mais pas par le vote du village — votre mission a échoué. Abandonnez (vous devenez un simple Villageois) ou continuez avec une nouvelle cible (une seule fois par partie).",
+    en: 'They died, but not by the village vote — your mission has failed. Give up (you become an ordinary Villager) or continue with a new target (only once per game).',
+  },
+  'action.juge.abandon': { fr: 'Abandonner', en: 'Give up' },
+  'action.juge.continue': { fr: 'Continuer', en: 'Continue' },
 
   // --- Chat (ChatPanel.tsx) ---------------------------------------------------
   'chat.village.title': { fr: 'Chat du village', en: 'Village chat' },

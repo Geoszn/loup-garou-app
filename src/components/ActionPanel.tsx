@@ -64,6 +64,8 @@ export function ActionPanel({ view, gameId, selfId }: { view: MyGameView; gameId
             return <CaptainSuccessionPanel view={view} gameId={gameId} selfId={selfId} />
           case 'balance_ange':
             return <BalanceAngePanel view={view} gameId={gameId} selfId={selfId} />
+          case 'juge_choice':
+            return <JugeChoicePanel gameId={gameId} />
           default:
             return null
         }
@@ -1352,6 +1354,40 @@ function HunterPanel({ view, gameId, selfId }: { view: MyGameView; gameId: strin
       <Button variant="ghost" className="mt-3 w-full" disabled={loading} onClick={() => shoot(null)}>
         {t('action.hunter.noShot')}
       </Button>
+      <ErrorText>{error}</ErrorText>
+    </PanelShell>
+  )
+}
+
+// Le Juge (voir migration 0162) : sa cible vient de mourir autrement que par
+// le vote du village — il choisit d'abandonner (devient définitivement un
+// simple Villageois) ou de recevoir une nouvelle cible au hasard parmi les
+// joueurs encore en vie (une seule fois par partie, revalidé côté serveur).
+// Pas de sélection de joueur ici (contrairement à HunterPanel) : juste les
+// deux issues possibles, comme un choix binaire classique.
+function JugeChoicePanel({ gameId }: { gameId: string }) {
+  const { t } = useLanguage()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function choose(pContinue: boolean) {
+    setLoading(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('submit_juge_choice', { p_game_id: gameId, p_continue: pContinue })
+    setLoading(false)
+    if (rpcError) setError(rpcError.message)
+  }
+
+  return (
+    <PanelShell emoji="⚖️" title={t('action.juge.title')} subtitle={t('action.juge.subtitle')} urgent>
+      <div className="flex gap-2">
+        <Button variant="ghost" className="flex-1" disabled={loading} onClick={() => choose(false)}>
+          {t('action.juge.abandon')}
+        </Button>
+        <Button className="flex-1" disabled={loading} onClick={() => choose(true)}>
+          {t('action.juge.continue')}
+        </Button>
+      </div>
       <ErrorText>{error}</ErrorText>
     </PanelShell>
   )

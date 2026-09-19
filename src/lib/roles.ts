@@ -18,6 +18,7 @@ export type RoleId =
   | 'ange'
   | 'grand_mechant_loup'
   | 'daron'
+  | 'juge'
 
 // Les noms/descriptions ne sont plus stockés en dur ici : ce sont des clés du
 // dictionnaire i18n (voir src/i18n/translations.ts, namespace `role.*`), pour
@@ -211,6 +212,20 @@ export const ROLES: Record<RoleId, RoleInfo> = {
     descriptionKey: 'role.daron.description',
     nightActionKey: 'role.daron.nightAction',
   },
+  // Le Juge (voir migration 0162) : camp neutre comme Anancy, mais sans
+  // aucune action de nuit à proprement parler — sa cible lui est attribuée
+  // automatiquement par le serveur (voir begin_night), rien à choisir dans
+  // une étape de nuit dédiée. Pas de nightActionKey pour cette raison :
+  // uniquement une carte de rôle passive + un panneau d'info persistant
+  // (GameRoom.tsx) une fois sa cible connue.
+  juge: {
+    id: 'juge',
+    team: 'neutre',
+    emoji: '⚖️',
+    color: '#a3a8b8',
+    nameKey: 'role.juge.name',
+    descriptionKey: 'role.juge.description',
+  },
 }
 
 export const ROLE_ORDER: RoleId[] = [
@@ -230,6 +245,7 @@ export const ROLE_ORDER: RoleId[] = [
   'daron',
   'ange',
   'anancy',
+  'juge',
   'villageois',
 ]
 
