@@ -455,6 +455,7 @@ export default function GameRoom() {
             <WolfPackList view={view} myRole={view.my_role} />
             <RolePanel myRole={view.my_role} />
             <ChasseuseTargetPanel view={view} />
+            <DaronProtectionPanel view={view} />
           </div>
         )}
 
@@ -1445,6 +1446,27 @@ function ChasseuseTargetPanel({ view }: { view: MyGameView }) {
     <div className="animate-fade-in rounded-xl border border-moon-400/30 bg-moon-400/5 px-3 py-2.5">
       <p className="text-xs font-semibold uppercase tracking-wide text-moon-300">{t('game.chasseuseTargetTitle')}</p>
       <p className="mt-1 text-xs text-moon-200/70">{t('game.chasseuseTargetNote', { name: view.my_chasseuse_target_name })}</p>
+    </div>
+  )
+}
+
+/** Retour utilisateur (migration 0168) : la cible protégée par le Daron
+ * doit le savoir PENDANT la nuit, en direct, pas seulement dans le récap de
+ * fin de nuit (où ça s'affichait jusqu'ici, voir migration 0167 — retirée
+ * de NightRecapModal.tsx). my_protected_by_daron_this_round n'est vrai que
+ * pendant que game.status = 'night' (voir get_my_game_view) : ce panneau
+ * disparaît donc de lui-même dès que la nuit se termine, exactement comme
+ * ChasseuseTargetPanel ci-dessus disparaît quand my_role ne correspond
+ * plus. Jamais affiché au Daron lui-même (déjà exclu côté serveur), et ne
+ * nomme jamais le Daron — même discrétion que son ancienne version dans le
+ * récap. */
+function DaronProtectionPanel({ view }: { view: MyGameView }) {
+  const { t } = useLanguage()
+  if (!view.my_protected_by_daron_this_round) return null
+  return (
+    <div className="animate-fade-in rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2.5">
+      <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">{t('game.daronProtectedMeTitle')}</p>
+      <p className="mt-1 text-xs text-moon-200/70">{t('game.daronProtectedMe')}</p>
     </div>
   )
 }
