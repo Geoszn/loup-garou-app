@@ -19,6 +19,8 @@ export function ModerationPanel({ view, gameId, selfId }: { view: MyGameView; ga
   const [error, setError] = useState<string | null>(null)
   const [restartConfirmOpen, setRestartConfirmOpen] = useState(false)
   const [restarting, setRestarting] = useState(false)
+  const [closeConfirmOpen, setCloseConfirmOpen] = useState(false)
+  const [closing, setClosing] = useState(false)
 
   useEffect(() => {
     setWords(view.game.blocked_words ?? [])
@@ -75,8 +77,27 @@ export function ModerationPanel({ view, gameId, selfId }: { view: MyGameView; ga
     if (rpcError) setError(rpcError.message)
   }
 
+  // close_lobby (migration 0164) : retour utilisateur — "pas juste quitter,
+  // pouvoir entièrement fermer" le salon pour tout le monde d'un coup,
+  // distinct de la simple succession d'hôte qui a lieu quand l'hôte quitte
+  // normalement. Réservé au salon d'attente (canClose), symétrique à
+  // "Recommencer la partie" ci-dessous qui n'apparaît que hors du salon —
+  // au plus l'un des deux boutons est visible à la fois. Rien à faire après
+  // le succès de l'appel : status passe à 'ended', tout le monde (hôte
+  // compris) est redirigé vers l'écran de fin dédié (voir EndScreen,
+  // GameRoom.tsx, branche winner === 'closed').
+  async function confirmClose() {
+    setClosing(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('close_lobby', { p_game_id: gameId })
+    setClosing(false)
+    setCloseConfirmOpen(false)
+    if (rpcError) setError(rpcError.message)
+  }
+
   const isLobbyOrEnded = view.game.status === 'lobby' || view.game.status === 'ended'
   const canRestart = view.game.status !== 'lobby'
+  const canClose = view.game.status === 'lobby'
   const others = view.players.filter((p) => p.user_id !== selfId && !p.is_banned)
 
   return (
@@ -170,6 +191,19 @@ export function ModerationPanel({ view, gameId, selfId }: { view: MyGameView; ga
         </div>
       )}
 
+      {/* Fermer le salon (migration 0164) : symétrique au bloc ci-dessus,
+          uniquement dans le salon d'attente (canClose) — au plus un des
+          deux est visible. */}
+      {canClose && (
+        <div className="rounded-xl border border-blood-700/40 bg-blood-900/10 p-3">
+          <h3 className="mb-1 font-display text-sm text-blood-400">{t('moderation.closeLobbyTitle')}</h3>
+          <p className="mb-3 text-xs text-moon-200/50">{t('moderation.closeLobbyHint')}</p>
+          <Button variant="danger" className="w-full text-sm" onClick={() => setCloseConfirmOpen(true)}>
+            {t('moderation.closeLobbyButton')}
+          </Button>
+        </div>
+      )}
+
       <ConfirmDialog
         open={!!kickTarget}
         title={t('moderation.kickConfirmTitle')}
@@ -190,6 +224,16 @@ export function ModerationPanel({ view, gameId, selfId }: { view: MyGameView; ga
         danger
         onCancel={() => setRestartConfirmOpen(false)}
         onConfirm={confirmRestart}
+      />
+
+      <ConfirmDialog
+        open={closeConfirmOpen}
+        title={t('moderation.closeConfirmTitle')}
+        message={t('moderation.closeConfirmMessage')}
+        confirmLabel={closing ? t('moderation.closing') : t('moderation.closeLobbyButton')}
+        danger
+        onCancel={() => setCloseConfirmOpen(false)}
+        onConfirm={confirmClose}
       />
     </div>
   )

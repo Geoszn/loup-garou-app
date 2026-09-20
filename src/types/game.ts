@@ -68,14 +68,15 @@ export interface RoleCounts {
   // sans jamais savoir qui il protège vraiment. Disponible uniquement en
   // configuration manuelle pour l'instant (absent du mode auto).
   daron: boolean
-  // Le Juge (voir migration 0162) : camp neutre. À partir de la deuxième
+  // La Chasseuse (voir migration 0162, rebaptisée en 0163 — anciennement
+  // "Le Juge", mêmes mécaniques) : camp neutre. À partir de la deuxième
   // nuit, une cible vivante lui est désignée automatiquement (aucune action
-  // de nuit à jouer) — il gagne seul si CETTE cible est éliminée par le
-  // vote du village. Si elle meurt autrement, il choisit d'abandonner
-  // (devient un simple villageois) ou de recevoir une nouvelle cible (une
+  // de nuit à jouer) — elle gagne seule si CETTE cible est éliminée par le
+  // vote du village. Si elle meurt autrement, elle choisit d'abandonner
+  // (devient une simple villageoise) ou de recevoir une nouvelle cible (une
   // seule fois par partie). Disponible uniquement en configuration manuelle
   // pour l'instant (absent du mode auto), même choix que le Daron.
-  juge: boolean
+  chasseuse: boolean
 }
 
 export interface GameSettings {
@@ -378,17 +379,19 @@ export interface MyGameView {
   // griser ces joueurs dans sa propre grille de cibles. null pour tout le
   // monde d'autre.
   anancy_used_target_ids: string[] | null
-  // Réservé au Juge (voir migration 0162) : le nom de sa cible actuelle, ou
-  // null tant qu'aucune ne lui a encore été attribuée (avant la deuxième
-  // nuit) ou pour tout autre rôle. jamais le camp ni le rôle de cette cible
-  // — le Juge ne les connaît jamais, voir game_view_juge_fields.
-  my_juge_target_name: string | null
-  // Réservé au Juge : a-t-il déjà utilisé son unique changement de cible ?
-  // Toujours false tant qu'aucune décision "abandonner/continuer" n'a
-  // encore eu lieu — sert surtout à informer le panneau d'info persistant
-  // (JugeTargetPanel, GameRoom.tsx), la décision elle-même ne peut de toute
-  // façon apparaître qu'une fois (voir pending_action_required === 'juge_choice').
-  my_juge_used_reassignment: boolean | null
+  // Réservée à la Chasseuse (voir migration 0162/0163) : le nom de sa cible
+  // actuelle, ou null tant qu'aucune ne lui a encore été attribuée (avant
+  // la deuxième nuit) ou pour tout autre rôle. jamais le camp ni le rôle de
+  // cette cible — la Chasseuse ne les connaît jamais, voir
+  // game_view_chasseuse_fields.
+  my_chasseuse_target_name: string | null
+  // Réservé à la Chasseuse : a-t-elle déjà utilisé son unique changement de
+  // cible ? Toujours false tant qu'aucune décision "abandonner/continuer"
+  // n'a encore eu lieu — sert surtout à informer le panneau d'info
+  // persistant (ChasseuseTargetPanel, GameRoom.tsx), la décision elle-même
+  // ne peut de toute façon apparaître qu'une fois (voir
+  // pending_action_required === 'chasseuse_choice').
+  my_chasseuse_used_reassignment: boolean | null
   witch_heal_used: boolean
   witch_poison_used: boolean
   pending_action_required:
@@ -398,7 +401,7 @@ export interface MyGameView {
     | 'captain_vote'
     | 'captain_succession'
     | 'balance_ange'
-    | 'juge_choice'
+    | 'chasseuse_choice'
     | null
   wolf_target_visible_to_witch: string | null
   wolf_current_votes: { actor_id: string; target_id: string | null }[]

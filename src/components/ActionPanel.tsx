@@ -64,8 +64,8 @@ export function ActionPanel({ view, gameId, selfId }: { view: MyGameView; gameId
             return <CaptainSuccessionPanel view={view} gameId={gameId} selfId={selfId} />
           case 'balance_ange':
             return <BalanceAngePanel view={view} gameId={gameId} selfId={selfId} />
-          case 'juge_choice':
-            return <JugeChoicePanel gameId={gameId} />
+          case 'chasseuse_choice':
+            return <ChasseuseChoicePanel gameId={gameId} />
           default:
             return null
         }
@@ -1359,13 +1359,14 @@ function HunterPanel({ view, gameId, selfId }: { view: MyGameView; gameId: strin
   )
 }
 
-// Le Juge (voir migration 0162) : sa cible vient de mourir autrement que par
-// le vote du village — il choisit d'abandonner (devient définitivement un
-// simple Villageois) ou de recevoir une nouvelle cible au hasard parmi les
-// joueurs encore en vie (une seule fois par partie, revalidé côté serveur).
-// Pas de sélection de joueur ici (contrairement à HunterPanel) : juste les
-// deux issues possibles, comme un choix binaire classique.
-function JugeChoicePanel({ gameId }: { gameId: string }) {
+// La Chasseuse (voir migration 0162, rebaptisée en 0163 — anciennement "Le
+// Juge") : sa cible vient de mourir autrement que par le vote du village —
+// elle choisit d'abandonner (devient définitivement une simple Villageoise)
+// ou de recevoir une nouvelle cible au hasard parmi les joueurs encore en
+// vie (une seule fois par partie, revalidé côté serveur). Pas de sélection
+// de joueur ici (contrairement à HunterPanel) : juste les deux issues
+// possibles, comme un choix binaire classique.
+function ChasseuseChoicePanel({ gameId }: { gameId: string }) {
   const { t } = useLanguage()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -1373,19 +1374,19 @@ function JugeChoicePanel({ gameId }: { gameId: string }) {
   async function choose(pContinue: boolean) {
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_juge_choice', { p_game_id: gameId, p_continue: pContinue })
+    const { error: rpcError } = await supabase.rpc('submit_chasseuse_choice', { p_game_id: gameId, p_continue: pContinue })
     setLoading(false)
     if (rpcError) setError(rpcError.message)
   }
 
   return (
-    <PanelShell emoji="⚖️" title={t('action.juge.title')} subtitle={t('action.juge.subtitle')} urgent>
+    <PanelShell emoji="🎯" title={t('action.chasseuse.title')} subtitle={t('action.chasseuse.subtitle')} urgent>
       <div className="flex gap-2">
         <Button variant="ghost" className="flex-1" disabled={loading} onClick={() => choose(false)}>
-          {t('action.juge.abandon')}
+          {t('action.chasseuse.abandon')}
         </Button>
         <Button className="flex-1" disabled={loading} onClick={() => choose(true)}>
-          {t('action.juge.continue')}
+          {t('action.chasseuse.continue')}
         </Button>
       </div>
       <ErrorText>{error}</ErrorText>

@@ -359,17 +359,18 @@ export default function GameRoom() {
             affiché ici, hors de toute condition `alive`. Aucun risque de
             double affichage avec les blocs plus bas : `alive` y est de toute
             façon toujours faux à ce moment précis. */}
-        {/* 'juge_choice' (migration 0162) : contrairement à
-            captain_succession/hunter ci-dessus, le Juge lui-même reste
-            généralement VIVANT quand ce choix apparaît (seule sa cible est
-            morte) — affiché ici pour rester visible quelle que soit la
-            phase (la décision peut traîner plusieurs phases sans bloquer
-            personne d'autre). Le bloc "night" plus bas exclut explicitement
-            'juge_choice' de son propre déclenchement générique pour éviter
-            un double affichage du même panneau. */}
+        {/* 'chasseuse_choice' (migration 0162, rebaptisée en 0163) :
+            contrairement à captain_succession/hunter ci-dessus, la
+            Chasseuse elle-même reste généralement VIVANTE quand ce choix
+            apparaît (seule sa cible est morte) — affiché ici pour rester
+            visible quelle que soit la phase (la décision peut traîner
+            plusieurs phases sans bloquer personne d'autre). Le bloc "night"
+            plus bas exclut explicitement 'chasseuse_choice' de son propre
+            déclenchement générique pour éviter un double affichage du même
+            panneau. */}
         {(view.pending_action_required === 'captain_succession' ||
           view.pending_action_required === 'hunter' ||
-          view.pending_action_required === 'juge_choice') && (
+          view.pending_action_required === 'chasseuse_choice') && (
           <ActionPanel view={view} gameId={gameId!} selfId={user.id} />
         )}
 
@@ -423,11 +424,12 @@ export default function GameRoom() {
               <WolfPanel view={view} gameId={gameId!} selfId={user.id} />
             ) : view.pending_action_required &&
               view.pending_action_required !== 'vote' &&
-              view.pending_action_required !== 'juge_choice' ? (
-              // 'juge_choice' exclu : déjà affiché par le bloc inconditionnel
-              // en haut de page (voir plus haut) — le Juge reste vivant
-              // quand ce choix apparaît, contrairement à hunter/captain_succession,
-              // donc ce bloc "night && alive" serait sinon aussi atteint.
+              view.pending_action_required !== 'chasseuse_choice' ? (
+              // 'chasseuse_choice' exclu : déjà affiché par le bloc
+              // inconditionnel en haut de page (voir plus haut) — la
+              // Chasseuse reste vivante quand ce choix apparaît,
+              // contrairement à hunter/captain_succession, donc ce bloc
+              // "night && alive" serait sinon aussi atteint.
               <ActionPanel view={view} gameId={gameId!} selfId={user.id} />
             ) : (
               <WaitingCard alive={alive} myRole={view.my_role} nightStep={view.game.night_step} />
@@ -452,7 +454,7 @@ export default function GameRoom() {
             />
             <WolfPackList view={view} myRole={view.my_role} />
             <RolePanel myRole={view.my_role} />
-            <JugeTargetPanel view={view} />
+            <ChasseuseTargetPanel view={view} />
           </div>
         )}
 
@@ -543,7 +545,7 @@ export default function GameRoom() {
                 certain de son rôle ACTUEL. */}
             {alive && <RolePanel myRole={view.my_role} />}
             {alive && <AnancySwapNotice swapped={view.anancy_swapped_me} />}
-            {alive && <JugeTargetPanel view={view} />}
+            {alive && <ChasseuseTargetPanel view={view} />}
           </div>
         )}
 
@@ -599,7 +601,7 @@ export default function GameRoom() {
             )}
             {alive && <RolePanel myRole={view.my_role} />}
             {alive && <AnancySwapNotice swapped={view.anancy_swapped_me} />}
-            {alive && <JugeTargetPanel view={view} />}
+            {alive && <ChasseuseTargetPanel view={view} />}
           </div>
         )}
 
@@ -1431,17 +1433,18 @@ function AnancySwapNotice({ swapped }: { swapped: boolean }) {
   )
 }
 
-/** Le Juge (voir migration 0162) : rappel persistant de sa cible actuelle —
- * jamais son camp ni son rôle, juste son nom (voir my_juge_target_name,
- * calculé côté serveur). null tant qu'aucune cible n'est encore attribuée
- * (avant la deuxième nuit) : rien à afficher dans ce cas, pas d'encart vide. */
-function JugeTargetPanel({ view }: { view: MyGameView }) {
+/** La Chasseuse (voir migration 0162, rebaptisée en 0163) : rappel
+ * persistant de sa cible actuelle — jamais son camp ni son rôle, juste son
+ * nom (voir my_chasseuse_target_name, calculé côté serveur). null tant
+ * qu'aucune cible n'est encore attribuée (avant la deuxième nuit) : rien à
+ * afficher dans ce cas, pas d'encart vide. */
+function ChasseuseTargetPanel({ view }: { view: MyGameView }) {
   const { t } = useLanguage()
-  if (view.my_role !== 'juge' || !view.my_juge_target_name) return null
+  if (view.my_role !== 'chasseuse' || !view.my_chasseuse_target_name) return null
   return (
     <div className="animate-fade-in rounded-xl border border-moon-400/30 bg-moon-400/5 px-3 py-2.5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-moon-300">{t('game.jugeTargetTitle')}</p>
-      <p className="mt-1 text-xs text-moon-200/70">{t('game.jugeTargetNote', { name: view.my_juge_target_name })}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-moon-300">{t('game.chasseuseTargetTitle')}</p>
+      <p className="mt-1 text-xs text-moon-200/70">{t('game.chasseuseTargetNote', { name: view.my_chasseuse_target_name })}</p>
     </div>
   )
 }
@@ -1527,6 +1530,24 @@ function EndScreen({
 }) {
   const { t } = useLanguage()
   const winner = view.game.winner_team
+
+  // Salon fermé par l'hôte avant le lancement (voir close_lobby, migration
+  // 0164) : aucune partie n'a jamais eu lieu — pas de rôles à révéler, pas
+  // de résultat personnel (my_game_result), pas de coffre de fin. Écran à
+  // part, retour anticipé avant tous les calculs ci-dessous qui supposent
+  // une partie réellement jouée.
+  if (winner === 'closed') {
+    return (
+      <Card className="text-center">
+        <h2 className="mb-2 font-display text-2xl text-moon-200">{t('game.endClosedTitle')}</h2>
+        <p className="mx-auto mb-5 max-w-sm text-sm text-moon-200/60">{t('game.endClosedExplain')}</p>
+        <Button onClick={onLeave} className="w-full">
+          {t('game.leaveLobbyButton')}
+        </Button>
+      </Card>
+    )
+  }
+
   const title =
     winner === 'village'
       ? t('game.endVillageWins')
@@ -1536,8 +1557,8 @@ function EndScreen({
           ? t('game.endAnancyWin')
           : winner === 'ange'
             ? t('game.endAngeWin')
-            : winner === 'juge'
-              ? t('game.endJugeWin')
+            : winner === 'chasseuse'
+              ? t('game.endChasseuseWin')
               : t('game.endLoversWin')
 
   // Explication de la cause de la victoire : le serveur ne renvoie que
@@ -1570,14 +1591,15 @@ function EndScreen({
   const angeEntry = winner === 'ange' ? (view.final_reveal ?? []).find((r) => r.role === 'ange') : null
   const angeName = angeEntry ? (view.players.find((p) => p.user_id === angeEntry.user_id)?.display_name ?? '') : ''
 
-  // Nom du Juge pour l'explication (voir migration 0162) — cherché dans
-  // final_reveal comme Anancy ci-dessus : sa victoire exige d'être vivant.
-  // Jamais le nom de sa cible dans cette explication publique — seul le
-  // journal de partie (côté serveur, check_and_apply_juge_win) le mentionne
-  // implicitement via le message de victoire, sans jamais la nommer non
-  // plus (voir le commentaire de cette fonction).
-  const jugeEntry = winner === 'juge' ? (view.final_reveal ?? []).find((r) => r.role === 'juge') : null
-  const jugeName = jugeEntry ? (view.players.find((p) => p.user_id === jugeEntry.user_id)?.display_name ?? '') : ''
+  // Nom de la Chasseuse pour l'explication (voir migration 0162/0163) —
+  // cherché dans final_reveal comme Anancy ci-dessus : sa victoire exige
+  // d'être vivante. Jamais le nom de sa cible dans cette explication
+  // publique — seul le journal de partie (côté serveur,
+  // check_and_apply_chasseuse_win) le mentionne implicitement via le
+  // message de victoire, sans jamais la nommer non plus (voir le
+  // commentaire de cette fonction).
+  const chasseuseEntry = winner === 'chasseuse' ? (view.final_reveal ?? []).find((r) => r.role === 'chasseuse') : null
+  const chasseuseName = chasseuseEntry ? (view.players.find((p) => p.user_id === chasseuseEntry.user_id)?.display_name ?? '') : ''
 
   const explanation =
     winner === 'village'
@@ -1588,8 +1610,8 @@ function EndScreen({
           ? t('game.endAnancyExplain', { name: anancyName })
           : winner === 'ange'
             ? t('game.endAngeExplain', { name: angeName })
-            : winner === 'juge'
-              ? t('game.endJugeExplain', { name: jugeName })
+            : winner === 'chasseuse'
+              ? t('game.endChasseuseExplain', { name: chasseuseName })
               : t('game.endLoversExplain', {
                   lover1: alivePlayers[0]?.display_name ?? '',
                   lover2: alivePlayers[1]?.display_name ?? '',
@@ -1603,7 +1625,7 @@ function EndScreen({
     if (winner === 'amoureux') return alivePlayers.some((p) => p.user_id === userId)
     if (winner === 'anancy') return role === 'anancy'
     if (winner === 'ange') return role === 'ange'
-    if (winner === 'juge') return role === 'juge'
+    if (winner === 'chasseuse') return role === 'chasseuse'
     const team = ROLES[role as RoleId]?.team
     return winner === 'loups' ? team === 'loups' : team === 'village'
   }
