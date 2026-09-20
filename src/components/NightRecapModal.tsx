@@ -114,6 +114,12 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
     ? view.players.find((p) => p.user_id === view.daron_protected_id)
     : null
 
+  // Réservé à la cible protégée elle-même, jamais au Daron — voir migration
+  // 0167. daron_protected_id/daronProtectedTarget ci-dessus (réservé au
+  // Daron) reste false pour tout autre joueur, donc ce champ-ci ne peut de
+  // toute façon jamais s'afficher en double avec le sien.
+  const wasProtectedByDaron = view.my_protected_by_daron_this_round
+
   async function handleReady() {
     setSubmitting(true)
     await supabase.rpc('submit_day_reveal_ready', { p_game_id: gameId })
@@ -148,7 +154,8 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
             (wolfNightRecap && wolfNightRecap.length > 0) ||
             myGriotReveal ||
             anancySwappedMe ||
-            chasseuseTargetAssigned) && (
+            chasseuseTargetAssigned ||
+            wasProtectedByDaron) && (
             <div className="mb-3 flex flex-col gap-2">
               {loverName && (
                 <div className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2.5">
@@ -290,6 +297,18 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
                   {view.daron_protection_worked && (
                     <p className="mt-1 text-sm text-emerald-400">{t('game.daronWorkedNote')}</p>
                   )}
+                </div>
+              )}
+              {/* Réservé à la cible protégée elle-même, jamais au Daron (voir
+                  wasProtectedByDaron ci-dessus) — ne nomme jamais le Daron,
+                  même logique de discrétion que les autres encarts à
+                  identité secrète. */}
+              {wasProtectedByDaron && (
+                <div className="animate-fade-in rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">
+                    {t('game.daronProtectedMeTitle')}
+                  </p>
+                  <p className="mt-1 text-sm text-moon-200/90">{t('game.daronProtectedMe')}</p>
                 </div>
               )}
             </div>

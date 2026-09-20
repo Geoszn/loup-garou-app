@@ -266,6 +266,12 @@ export interface MyGameView {
   daron_previous_target_id: string | null
   daron_protected_id: string | null
   daron_protection_worked: boolean
+  // Réservé à la cible protégée elle-même, JAMAIS au Daron (voir migration
+  // 0167) : contrairement à daron_protection_worked ci-dessus, vrai dès
+  // qu'on est choisi(e) comme cible cette nuit-là, que la protection ait
+  // bloqué une attaque ou non — le Daron, lui, a déjà ses propres champs
+  // dédiés ci-dessus, pas besoin d'un doublon.
+  my_protected_by_daron_this_round: boolean
   lover_id: string | null
   // Mentor secrètement choisi par l'Enfant Sauvage (voir migration 0052) —
   // toujours la donnée propre à SA ligne game_roles_secret, même une fois

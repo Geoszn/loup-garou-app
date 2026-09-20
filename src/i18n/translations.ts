@@ -816,6 +816,11 @@ export const translations = {
     fr: 'Votre protection a fonctionné : une attaque a échoué grâce à vous !',
     en: 'Your protection worked: an attack failed thanks to you!',
   },
+  'game.daronProtectedMeTitle': { fr: '🛡️ Protégé(e) cette nuit', en: '🛡️ Protected tonight' },
+  'game.daronProtectedMe': {
+    fr: 'Le Daron veille sur vous cette nuit. Vous ne saurez jamais qui il est.',
+    en: 'The Guardian is watching over you tonight. You will never know who they are.',
+  },
   'game.logEmpty': { fr: 'Rien à signaler pour le moment.', en: 'Nothing to report yet.' },
   'game.callVoteHeading': { fr: 'Passage au vote', en: 'Move to vote' },
   'game.callVoteProgress': { fr: '{{agreed}}/{{total}} joueurs d’accord pour voter', en: '{{agreed}}/{{total}} players ready to vote' },
