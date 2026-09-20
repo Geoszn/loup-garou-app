@@ -1083,6 +1083,7 @@ export const translations = {
     fr: 'Vous devez faire condamner {{name}} par le vote du village pour gagner. Vous ne connaissez ni son camp, ni son rôle.',
     en: 'You must get {{name}} condemned by the village vote to win. You do not know their team or role.',
   },
+  'game.chasseuseTargetAssignedTitle': { fr: '🎯 Votre cible vous est révélée', en: '🎯 Your target is revealed' },
   'lobby.anancyToggleHint': {
     fr: 'Camp neutre. Chaque nuit, il peut échanger secrètement les rôles de deux joueurs (jamais deux fois le même). Il gagne seul s’il est vivant à l’aube du cinquième jour.',
     en: 'Neutral camp. Each night, they may secretly swap the roles of two players (never the same one twice). They win alone if alive at dawn on the fifth day.',

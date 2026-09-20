@@ -392,6 +392,14 @@ export interface MyGameView {
   // ne peut de toute façon apparaître qu'une fois (voir
   // pending_action_required === 'chasseuse_choice').
   my_chasseuse_used_reassignment: boolean | null
+  // Réservé à la Chasseuse (voir migration 0166) : vrai uniquement pendant
+  // le récap ('day_reveal') de la nuit où sa cible ACTUELLE vient d'être
+  // désignée — sert à déclencher une révélation ponctuelle dans
+  // NightRecapModal, une seule fois, même patron que witch_saved_me/
+  // alpha_infected_me ci-dessus. Toujours false pour une réattribution
+  // volontaire (submit_chasseuse_choice) : le joueur vient de le décider
+  // lui-même, son panneau permanent se met déjà à jour immédiatement.
+  my_chasseuse_target_assigned_this_round: boolean
   witch_heal_used: boolean
   witch_poison_used: boolean
   pending_action_required:

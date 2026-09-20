@@ -77,6 +77,13 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
   // regardant ma propre carte). Toujours false hors 'day_reveal'.
   const anancySwappedMe = view.anancy_swapped_me
 
+  // La Chasseuse (voir migration 0166) : révèle sa cible la toute première
+  // fois qu'elle lui est attribuée (nuit 2, désignation automatique — voir
+  // begin_night). Ne se redéclenche jamais pour une réattribution
+  // volontaire (submit_chasseuse_choice), déjà reflétée immédiatement dans
+  // son panneau permanent (ChasseuseTargetPanel, GameRoom.tsx).
+  const chasseuseTargetAssigned = view.my_chasseuse_target_assigned_this_round && view.my_chasseuse_target_name
+
   // Qui a voté pour qui cette nuit — réservé aux Loups eux-mêmes (voir
   // migration 0113, wolf_night_recap) : null pour tout le monde d'autre,
   // jamais [] ici (get_my_game_view renvoie null hors rôle loup), donc ce
@@ -140,7 +147,8 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
             alphaInfectedMe ||
             (wolfNightRecap && wolfNightRecap.length > 0) ||
             myGriotReveal ||
-            anancySwappedMe) && (
+            anancySwappedMe ||
+            chasseuseTargetAssigned) && (
             <div className="mb-3 flex flex-col gap-2">
               {loverName && (
                 <div className="animate-fade-in rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2.5">
@@ -209,6 +217,21 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
                 <div className="animate-fade-in rounded-xl border border-moon-400/30 bg-moon-400/5 px-3 py-2.5">
                   <p className="text-xs font-semibold uppercase tracking-wide text-moon-300">{t('game.anancySwappedMeTitle')}</p>
                   <p className="mt-1 text-sm text-moon-200/90">{t('game.anancySwappedMe')}</p>
+                </div>
+              )}
+              {/* Réservée à la Chasseuse elle-même (voir chasseuseTargetAssigned
+                  ci-dessus) — même contenu que son panneau permanent
+                  (ChasseuseTargetPanel, GameRoom.tsx), affiché ici en plus une
+                  seule fois pour que la désignation automatique ne passe pas
+                  inaperçue. */}
+              {chasseuseTargetAssigned && (
+                <div className="animate-fade-in rounded-xl border border-moon-400/30 bg-moon-400/5 px-3 py-2.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-moon-300">
+                    {t('game.chasseuseTargetAssignedTitle')}
+                  </p>
+                  <p className="mt-1 text-sm text-moon-200/90">
+                    {t('game.chasseuseTargetNote', { name: view.my_chasseuse_target_name ?? '' })}
+                  </p>
                 </div>
               )}
               {/* Réservé aux Loups (voir wolfNightRecap ci-dessus) — jamais
