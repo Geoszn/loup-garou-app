@@ -2912,6 +2912,7 @@ type ArtifactEffect =
   | 'balance_ange'
   | 'pierre_ancetres'
   | 'feu_sacre_ancetres'
+  | 'larme_renaissance'
 
 const ARTIFACT_EFFECT_LABELS: Record<ArtifactEffect, string> = {
   none: 'Aucun effet (cosmétique / collection)',
@@ -2924,6 +2925,7 @@ const ARTIFACT_EFFECT_LABELS: Record<ArtifactEffect, string> = {
   balance_ange: 'Vote décisif personnel en cas d’égalité au vote du village (Balance de l’Ange)',
   pierre_ancetres: 'Revient en jeu au jour suivant après une élimination (Pierre des Ancêtres)',
   feu_sacre_ancetres: 'Bloque une élimination par vote, une fois par partie (Feu Sacré des Ancêtres)',
+  larme_renaissance: 'Revient en jeu au jour suivant, mais en simple Villageois (Larme de Renaissance)',
 }
 
 interface StoreArtifact {
