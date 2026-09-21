@@ -2928,6 +2928,19 @@ const ARTIFACT_EFFECT_LABELS: Record<ArtifactEffect, string> = {
   larme_renaissance: 'Revient en jeu au jour suivant, mais en simple Villageois (Larme de Renaissance)',
 }
 
+// Délai de rachat en HEURES (voir migration 0173 — auparavant en jours,
+// toujours ≥ 1, jamais 0 : trop grossier pour configurer "rachats immédiats"
+// ou un rythme fin). Utilisé aussi bien dans le résumé de la carte que dans
+// le formulaire d'édition, pour toujours afficher la même formulation.
+function formatCooldownHours(hours: number): string {
+  if (hours <= 0) return 'rachat immédiat'
+  if (hours % 24 === 0) {
+    const days = hours / 24
+    return `rachat tous les ${days} ${days > 1 ? 'jours' : 'jour'}`
+  }
+  return `rachat toutes les ${hours} heure${hours > 1 ? 's' : ''}`
+}
+
 interface StoreArtifact {
   id: string
   key: string
@@ -2940,9 +2953,10 @@ interface StoreArtifact {
   description_en: string
   price_coins: number
   // Stock/cooldown : uniquement pour la catégorie "rares" (voir migration
-  // 0153) — null pour tout le reste, achat unique classique.
+  // 0153) — null pour tout le reste, achat unique classique. Délai en
+  // HEURES depuis la migration 0173.
   max_stock: number | null
-  repurchase_cooldown_days: number | null
+  repurchase_cooldown_hours: number | null
   active: boolean
   created_at: string
 }
@@ -2997,7 +3011,7 @@ function StoreArtifactsTab() {
       p_category: sa.category,
       p_effect_key: sa.effect_key,
       p_max_stock: sa.max_stock,
-      p_repurchase_cooldown_days: sa.repurchase_cooldown_days,
+      p_repurchase_cooldown_hours: sa.repurchase_cooldown_hours,
       p_active: !sa.active,
     })
     setBusyId(null)
@@ -3069,7 +3083,7 @@ function StoreArtifactsTab() {
                 </p>
                 {sa.max_stock !== null && (
                   <p className="mt-0.5 text-[11px] text-amber-300/80">
-                    Stock max {sa.max_stock} par joueur · rachat tous les {sa.repurchase_cooldown_days} jours
+                    Stock max {sa.max_stock} par joueur · {formatCooldownHours(sa.repurchase_cooldown_hours ?? 0)}
                   </p>
                 )}
                 <p className="mt-1 text-xs text-moon-200/40">🇫🇷 {sa.description_fr}</p>
@@ -3190,7 +3204,7 @@ interface StoreArtifactFormState {
   description_en: string
   price_coins: string
   max_stock: string
-  repurchase_cooldown_days: string
+  repurchase_cooldown_hours: string
   active: boolean
 }
 
@@ -3204,7 +3218,7 @@ const EMPTY_ARTIFACT_FORM: StoreArtifactFormState = {
   description_en: '',
   price_coins: '20',
   max_stock: '1',
-  repurchase_cooldown_days: '10',
+  repurchase_cooldown_hours: '24',
   active: true,
 }
 
@@ -3236,7 +3250,7 @@ function StoreArtifactFormDrawer({
         description_en: artifact.description_en,
         price_coins: String(artifact.price_coins),
         max_stock: String(artifact.max_stock ?? 1),
-        repurchase_cooldown_days: String(artifact.repurchase_cooldown_days ?? 10),
+        repurchase_cooldown_hours: String(artifact.repurchase_cooldown_hours ?? 24),
         active: artifact.active,
       })
     } else {
@@ -3266,12 +3280,15 @@ function StoreArtifactFormDrawer({
     }
     const isRare = form.category === 'rares'
     const maxStock = Number(form.max_stock)
-    const cooldownDays = Number(form.repurchase_cooldown_days)
+    const cooldownHours = Number(form.repurchase_cooldown_hours)
     if (isRare && (!Number.isFinite(maxStock) || maxStock <= 0)) {
       setError('Stock maximum invalide.')
       return
     }
-    if (isRare && (!Number.isFinite(cooldownDays) || cooldownDays <= 0)) {
+    // 0 est une valeur valide depuis la migration 0173 (rachat immédiat) —
+    // seule une valeur négative ou non numérique est refusée, contrairement
+    // au stock maximum ci-dessus qui doit rester strictement positif.
+    if (isRare && (!Number.isFinite(cooldownHours) || cooldownHours < 0)) {
       setError('Délai de rachat invalide.')
       return
     }
@@ -3288,7 +3305,7 @@ function StoreArtifactFormDrawer({
       p_category: form.category,
       p_effect_key: form.effect_key,
       p_max_stock: isRare ? maxStock : null,
-      p_repurchase_cooldown_days: isRare ? cooldownDays : null,
+      p_repurchase_cooldown_hours: isRare ? cooldownHours : null,
       p_active: form.active,
     })
     setBusy(false)
@@ -3325,7 +3342,7 @@ function StoreArtifactFormDrawer({
           <select
             value={form.category}
             onChange={(ev) => setForm((f) => ({ ...f, category: ev.target.value as ArtifactCategory }))}
-            className="w-full rounded-xl border border-night-500 bg-night-800/80 px-3 py-2.5 text-sm text-moon-200 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20"
+            className="w-full truncate rounded-xl border border-night-500 bg-night-800/80 px-3 py-2.5 text-sm text-moon-200 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20"
           >
             {(Object.keys(ARTIFACT_CATEGORY_LABELS) as ArtifactCategory[]).map((id) => (
               <option key={id} value={id}>
@@ -3347,17 +3364,28 @@ function StoreArtifactFormDrawer({
               />
             </div>
             <div>
-              <Label>Rachat tous les (jours)</Label>
+              <Label>Délai de rachat (heures)</Label>
               <Input
                 type="number"
-                min={1}
-                value={form.repurchase_cooldown_days}
-                onChange={(ev) => setForm((f) => ({ ...f, repurchase_cooldown_days: ev.target.value }))}
+                min={0}
+                value={form.repurchase_cooldown_hours}
+                onChange={(ev) => setForm((f) => ({ ...f, repurchase_cooldown_hours: ev.target.value }))}
               />
             </div>
+            {/* Aperçu en direct de la valeur saisie, en toutes lettres — le
+                champ ci-dessus ne dit que "heures", pas ce que ça veut dire
+                concrètement une fois converti en jours ou en "immédiat".
+                Retour utilisateur (migration 0173) : éviter de se perdre
+                dans la sémantique du champ. */}
+            <p className="col-span-2 -mt-1 text-[11px] font-semibold text-amber-300/90">
+              → {formatCooldownHours(Number(form.repurchase_cooldown_hours) || 0)}
+            </p>
             <p className="col-span-2 text-xs text-moon-200/40">
               Catégorie "rares" : cet artefact devient rechargeable au lieu d'un achat unique — un joueur peut en
-              racheter jusqu'à ce plafond, au rythme maximum d'un achat tous les N jours.
+              racheter jusqu'à ce plafond (stock max ci-dessus). Le délai est en HEURES depuis le dernier achat :{' '}
+              <strong className="text-moon-200/60">0</strong> = rachats immédiats à la suite jusqu'au stock max,{' '}
+              <strong className="text-moon-200/60">24</strong> = un achat par jour,{' '}
+              <strong className="text-moon-200/60">168</strong> = un achat par semaine, etc.
             </p>
           </div>
         )}
@@ -3367,7 +3395,7 @@ function StoreArtifactFormDrawer({
           <select
             value={form.effect_key}
             onChange={(ev) => setForm((f) => ({ ...f, effect_key: ev.target.value as ArtifactEffect }))}
-            className="w-full rounded-xl border border-night-500 bg-night-800/80 px-3 py-2.5 text-sm text-moon-200 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20"
+            className="w-full truncate rounded-xl border border-night-500 bg-night-800/80 px-3 py-2.5 text-sm text-moon-200 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20"
           >
             {(Object.keys(ARTIFACT_EFFECT_LABELS) as ArtifactEffect[]).map((id) => (
               <option key={id} value={id}>

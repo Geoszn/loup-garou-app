@@ -67,7 +67,8 @@ interface MyArtifact {
   image_path: string | null
   quantity: number
   max_stock: number | null
-  repurchase_cooldown_days: number | null
+  // En HEURES depuis la migration 0173 (auparavant en jours).
+  repurchase_cooldown_hours: number | null
   // Horodatage à partir duquel un rachat redevient possible — seulement pour
   // un artefact à stock (max_stock non nul), null sinon.
   next_purchase_at: string | null
@@ -493,9 +494,16 @@ function MyArtifactRow({ artifact }: { artifact: MyArtifact }) {
                 {canBuyNow
                   ? t('loupStore.myArtifacts.canBuyNow')
                   : t('loupStore.myArtifacts.nextPurchase', {
-                      date: new Date(artifact.next_purchase_at).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', {
+                      // Retour utilisateur (migration 0173) : le délai est
+                      // désormais en heures (plus seulement en jours entiers),
+                      // donc une date seule ("21 sept.") ne suffit plus à
+                      // situer "dans 2h" vs "dans 23h" — l'heure est
+                      // maintenant toujours affichée avec la date.
+                      date: new Date(artifact.next_purchase_at).toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-US', {
                         day: 'numeric',
                         month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
                       }),
                     })}
               </>
