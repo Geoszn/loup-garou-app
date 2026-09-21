@@ -265,6 +265,30 @@ export default function Lobby() {
   // qui l'a déjà via PlayerGrid).
   const { view, error: gameError, onlineUserIds } = useGame(gameId, user?.id)
 
+  // Retour utilisateur : après "Recommencer la partie" dans le même salon
+  // (restart_game, voir migration 0125 — ne touche jamais games.settings),
+  // la composition de rôles de la manche précédente était déjà conservée en
+  // base, mais cet écran repartait quand même de DEFAULT_COUNTS à chaque
+  // montage, forçant l'hôte à tout recocher. Relit simplement ce qui est
+  // déjà là au premier chargement — une seule fois (hydratedSettingsRef),
+  // pour ne jamais écraser une modification que l'hôte vient de faire
+  // lui-même si `view` se met à jour ensuite via Realtime. Ne marque jamais
+  // `customized` à true : la valeur relue est déjà celle présente côté
+  // serveur, donc start_game la retrouvera de toute façon telle quelle même
+  // si l'hôte ne touche à rien (update_game_settings resterait un aller-
+  // retour réseau inutile, voir handleStart).
+  const hydratedSettingsRef = useRef(false)
+  useEffect(() => {
+    if (hydratedSettingsRef.current || !view?.game.settings) return
+    hydratedSettingsRef.current = true
+    if (view.game.settings.role_counts) {
+      setCounts((c) => ({ ...c, ...view.game.settings.role_counts }))
+    }
+    if (view.game.settings.auto_role_counts) {
+      setAutoRoles(true)
+    }
+  }, [view])
+
   // Son + notification navigateur (si l'onglet n'est pas au premier plan)
   // juste avant de rediriger tout le monde vers la partie : sans ça, un
   // joueur qui a l'onglet en fond ne se rend compte que la partie a démarré
