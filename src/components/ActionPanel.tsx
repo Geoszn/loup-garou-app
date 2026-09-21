@@ -66,6 +66,8 @@ export function ActionPanel({ view, gameId, selfId }: { view: MyGameView; gameId
             return <BalanceAngePanel view={view} gameId={gameId} selfId={selfId} />
           case 'chasseuse_choice':
             return <ChasseuseChoicePanel gameId={gameId} />
+          case 'revival_choice':
+            return <RevivalChoicePanel view={view} gameId={gameId} />
           default:
             return null
         }
@@ -1354,6 +1356,44 @@ function HunterPanel({ view, gameId, selfId }: { view: MyGameView; gameId: strin
       <Button variant="ghost" className="mt-3 w-full" disabled={loading} onClick={() => shoot(null)}>
         {t('action.hunter.noShot')}
       </Button>
+      <ErrorText>{error}</ErrorText>
+    </PanelShell>
+  )
+}
+
+// Pierre des Ancêtres / Larme de Renaissance (migration 0172) : retour
+// utilisateur — jusqu'ici, posséder l'un de ces deux artefacts déclenchait
+// la résurrection automatiquement dès la mort, sans jamais demander au
+// joueur s'il la voulait. Posé par kill_player APRÈS avoir déjà marqué la
+// victime is_alive = false (games.revival_pending), exactement comme
+// hunter_pending/captain_pending — donc affiché par le même bloc
+// inconditionnel en haut de GameRoom.tsx, jamais dans les sections
+// conditionnées à `alive`. Un "non" ne consomme rien : l'artefact reste
+// disponible pour une prochaine partie.
+function RevivalChoicePanel({ view, gameId }: { view: MyGameView; gameId: string }) {
+  const { t, lang } = useLanguage()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const artifactName = (lang === 'fr' ? view.my_revival_artifact_name_fr : view.my_revival_artifact_name_en) ?? ''
+
+  async function choose(use: boolean) {
+    setLoading(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('submit_revival_choice', { p_game_id: gameId, p_use: use })
+    setLoading(false)
+    if (rpcError) setError(rpcError.message)
+  }
+
+  return (
+    <PanelShell emoji="💫" title={t('action.revival.title')} subtitle={t('action.revival.subtitle', { name: artifactName })} urgent>
+      <div className="flex gap-2">
+        <Button variant="ghost" className="flex-1" disabled={loading} onClick={() => choose(false)}>
+          {t('action.revival.decline')}
+        </Button>
+        <Button className="flex-1" disabled={loading} onClick={() => choose(true)}>
+          {t('action.revival.accept')}
+        </Button>
+      </div>
       <ErrorText>{error}</ErrorText>
     </PanelShell>
   )

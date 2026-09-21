@@ -368,9 +368,15 @@ export default function GameRoom() {
             plus bas exclut explicitement 'chasseuse_choice' de son propre
             déclenchement générique pour éviter un double affichage du même
             panneau. */}
+        {/* 'revival_choice' (Pierre des Ancêtres / Larme de Renaissance,
+            migration 0172) : même piège que captain_succession/hunter
+            ci-dessus — games.revival_pending n'est posé qu'APRÈS que
+            kill_player ait déjà marqué la victime is_alive = false, donc
+            affiché ici plutôt que dans un bloc conditionné à `alive`. */}
         {(view.pending_action_required === 'captain_succession' ||
           view.pending_action_required === 'hunter' ||
-          view.pending_action_required === 'chasseuse_choice') && (
+          view.pending_action_required === 'chasseuse_choice' ||
+          view.pending_action_required === 'revival_choice') && (
           <ActionPanel view={view} gameId={gameId!} selfId={user.id} />
         )}
 

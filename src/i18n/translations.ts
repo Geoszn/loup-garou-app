@@ -1296,6 +1296,13 @@ export const translations = {
   },
   'action.chasseuse.abandon': { fr: 'Abandonner', en: 'Give up' },
   'action.chasseuse.continue': { fr: 'Continuer', en: 'Continue' },
+  'action.revival.title': { fr: 'Une seconde chance', en: 'A second chance' },
+  'action.revival.subtitle': {
+    fr: 'Vous possédez {{name}}. Voulez-vous l’utiliser pour revenir en jeu ?',
+    en: 'You own {{name}}. Do you want to use it to come back to life?',
+  },
+  'action.revival.decline': { fr: 'Non merci', en: 'No thanks' },
+  'action.revival.accept': { fr: 'Revenir en jeu', en: 'Come back to life' },
 
   // --- Chat (ChatPanel.tsx) ---------------------------------------------------
   'chat.village.title': { fr: 'Chat du village', en: 'Village chat' },

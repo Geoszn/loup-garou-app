@@ -416,6 +416,7 @@ export interface MyGameView {
     | 'captain_succession'
     | 'balance_ange'
     | 'chasseuse_choice'
+    | 'revival_choice'
     | null
   wolf_target_visible_to_witch: string | null
   wolf_current_votes: { actor_id: string; target_id: string | null }[]
@@ -498,6 +499,12 @@ export interface MyGameView {
   // protection a joué (voir vote_recap.protected_by_feu_sacre pour
   // l'annonce publique anonyme, symétrique à witch_saved_me).
   feu_sacre_saved_me: boolean
+  // Pierre des Ancêtres / Larme de Renaissance (migration 0172) : nom de
+  // l'artefact dont l'usage est proposé, uniquement quand pending_action_required
+  // === 'revival_choice' (donc que c'est bien MOI qui dois répondre) —
+  // jamais montré à qui que ce soit d'autre.
+  my_revival_artifact_name_fr: string | null
+  my_revival_artifact_name_en: string | null
 }
 
 // Un geste de rôle mesurable ayant rapporté des points, quel que soit le
