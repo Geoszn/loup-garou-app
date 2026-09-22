@@ -542,12 +542,16 @@ export default function Lobby() {
       {/* Lune d'ambiance (public/moon.svg) : asset de marque déjà présent
           dans le dépôt mais jusqu'ici utilisé nulle part — très discrète,
           respire lentement en fond (retour utilisateur : rendre le salon
-          d'attente plus vivant, sans rien inventer visuellement). */}
+          d'attente plus vivant, sans rien inventer visuellement). Décalée
+          sous l'en-tête (top-28, pas -top-16) et rétrécie/assombrie
+          davantage : retour utilisateur — repoussait visuellement les
+          boutons Réglages/Quitter en haut à droite, qui partagent
+          exactement ce coin de l'écran. */}
       <img
         src="/moon.svg"
         alt=""
         aria-hidden="true"
-        className="animate-breathe pointer-events-none absolute -right-16 -top-16 h-72 w-72 opacity-[0.07]"
+        className="animate-breathe pointer-events-none absolute -right-20 top-28 h-56 w-56 opacity-[0.05]"
         style={{ animationDuration: '8s' }}
       />
       <div className="relative mx-auto flex max-w-3xl flex-col gap-4">
@@ -563,22 +567,36 @@ export default function Lobby() {
               <h1 className="font-display text-2xl text-moon-200">{t('lobby.gameTitle', { code: code ?? '' })}</h1>
             </div>
           </div>
-          {/* gap-4 (au lieu de gap-2) entre "Réglages" et "Quitter" : le
-              second est une action destructrice (quitte la partie), le
-              premier anodin — un écart plus large réduit le risque de
-              mistap sur un téléphone tenu à une main, surtout en haut
-              d'écran où le pouce vise le moins précisément. */}
+          {/* Icônes seules, sans libellé (retour utilisateur : le texte
+              prenait trop de place sur un écran de téléphone étroit,
+              forçant ce bloc à passer à la ligne sous le titre). Le texte
+              complet reste disponible via aria-label (même convention que
+              les boutons icône de ui.tsx, ex. Modal/SideDrawer) pour les
+              lecteurs d'écran. gap-4 (au lieu de gap-2) conservé : le
+              second bouton est une action destructrice (quitte la partie),
+              un écart plus large réduit le risque de mistap sur un
+              téléphone tenu à une main. */}
           <div className="flex items-center gap-4">
             {isHost && (
-              <Button variant="ghost" onClick={() => setSettingsOpen(true)} className="relative px-3.5 py-2 text-xs">
-                {t('lobby.settingsButton')}
+              <Button
+                variant="ghost"
+                onClick={() => setSettingsOpen(true)}
+                aria-label={t('lobby.settingsButton')}
+                className="relative px-3 py-2.5 text-base"
+              >
+                ⚙️
                 {customized && (
                   <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-blood-500" title={t('lobby.customSettingsTitle')} />
                 )}
               </Button>
             )}
-            <Button variant="danger" onClick={() => setConfirmLeaveOpen(true)} className="px-3.5 py-2 text-xs">
-              {t('lobby.leaveButton')}
+            <Button
+              variant="danger"
+              onClick={() => setConfirmLeaveOpen(true)}
+              aria-label={t('lobby.leaveButton')}
+              className="px-3 py-2.5 text-base"
+            >
+              🚪
             </Button>
           </div>
         </header>
