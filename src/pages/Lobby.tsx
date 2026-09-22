@@ -537,13 +537,31 @@ export default function Lobby() {
   const alphaConstraintViolated = counts.loup_alpha && playerCount < 10
 
   return (
-    <div className="relative min-h-screen px-4 py-6 pb-28 sm:py-10">
+    <div className="relative min-h-screen overflow-hidden px-4 py-6 pb-28 sm:py-10">
       <div className="texture-noise" />
+      {/* Lune d'ambiance (public/moon.svg) : asset de marque déjà présent
+          dans le dépôt mais jusqu'ici utilisé nulle part — très discrète,
+          respire lentement en fond (retour utilisateur : rendre le salon
+          d'attente plus vivant, sans rien inventer visuellement). */}
+      <img
+        src="/moon.svg"
+        alt=""
+        aria-hidden="true"
+        className="animate-breathe pointer-events-none absolute -right-16 -top-16 h-72 w-72 opacity-[0.07]"
+        style={{ animationDuration: '8s' }}
+      />
       <div className="relative mx-auto flex max-w-3xl flex-col gap-4">
         <header className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-widest text-moon-200/40">{t('lobby.waitingRoom')}</p>
-            <h1 className="font-display text-2xl text-moon-200">{t('lobby.gameTitle', { code: code ?? '' })}</h1>
+          <div className="flex items-center gap-3">
+            {/* Même logo, même respiration que Login/Landing/FullScreenLoader
+                (voir ces fichiers) — jusqu'ici absent du salon d'attente,
+                seul écran majeur du parcours sans cette signature de
+                marque. */}
+            <img src="/logo.png" alt="" className="animate-breathe h-10 w-10 shrink-0 rounded-full sm:h-11 sm:w-11" />
+            <div>
+              <p className="text-xs uppercase tracking-widest text-moon-200/40">{t('lobby.waitingRoom')}</p>
+              <h1 className="font-display text-2xl text-moon-200">{t('lobby.gameTitle', { code: code ?? '' })}</h1>
+            </div>
           </div>
           {/* gap-4 (au lieu de gap-2) entre "Réglages" et "Quitter" : le
               second est une action destructrice (quitte la partie), le
@@ -634,7 +652,14 @@ export default function Lobby() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs uppercase tracking-wider text-moon-200/50">{t('common.gameCodeLabel')}</p>
-              <p className="font-display text-3xl tracking-[0.3em] text-moon-300">{code}</p>
+              {/* Taille responsive (pas un simple text-5xl fixe) : ce code
+                  doit rester lisible sans jamais déborder sur un écran de
+                  téléphone étroit, où il partage la ligne avec le bouton de
+                  copie une fois qu'elle repasse en colonne (sm:flex-row
+                  ci-dessus). */}
+              <p className="font-display text-4xl tracking-[0.28em] text-moon-300 [text-shadow:0_0_26px_rgba(217,154,63,0.3)] sm:text-5xl">
+                {code}
+              </p>
             </div>
             <CopyButton value={inviteMessage} label={t('lobby.copyInviteLink')} />
           </div>
@@ -708,8 +733,21 @@ export default function Lobby() {
             </div>
           )}
 
+          {/* Barre de progression vers le minimum requis pour lancer (4
+              joueurs, voir handleStart/start_game côté serveur) — reflète
+              la VRAIE condition de blocage du bouton plus bas, pas une
+              jauge décorative inventée. Se remplit jusqu'à 4, puis reste
+              pleine même si le groupe continue de grandir : elle répond à
+              une seule question, "peut-on déjà lancer ?". */}
+          <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full bg-night-800">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-moon-300 to-moon-400 transition-all duration-500"
+              style={{ width: `${Math.min((playerCount / 4) * 100, 100)}%` }}
+            />
+          </div>
+
           <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {view.players.map((p) => {
+            {view.players.map((p, i) => {
               const isSelf = p.user_id === user?.id
               // Détection légère : les bots sont ajoutés avec ce préfixe
               // (voir admin_add_bot, migration 0127) — évite de faire
@@ -717,7 +755,14 @@ export default function Lobby() {
               // petit bouton admin.
               const isBot = p.display_name.startsWith('🤖 ')
               return (
-                <li key={p.id} className="relative">
+                <li
+                  key={p.id}
+                  className="relative animate-fade-in"
+                  // Entrée en cascade au premier affichage du salon (retour
+                  // utilisateur) — decoratif seulement, aucun impact sur le
+                  // reste du rendu : un simple délai croissant par position.
+                  style={{ animationDelay: `${i * 60}ms`, animationFillMode: 'backwards' }}
+                >
                   {profile?.is_admin && isHost && isBot && (
                     <button
                       type="button"
