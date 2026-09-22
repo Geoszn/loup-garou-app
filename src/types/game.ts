@@ -486,6 +486,12 @@ export interface MyGameView {
   // send_last_words, GhostPanel côté client) — used repart à false à
   // chaque nouvelle partie (propre à game_artifact_uses, par partie).
   my_owns_parchemin_griot: boolean
+  // Activation explicite du Parchemin du Griot (migration 0179) : la simple
+  // possession (my_owns_parchemin_griot) ne suffit plus à donner accès au
+  // chat des Loups — le joueur doit l'activer lui-même depuis le menu
+  // "Mes artefacts" (ArtifactsMenu.tsx). Repart à false à chaque nouvelle
+  // partie, comme my_dernier_souffle_used (propre à game_artifact_uses).
+  my_parchemin_griot_used: boolean
   my_owns_dernier_souffle: boolean
   my_dernier_souffle_used: boolean
   // Boussole du Village (artefact du Loup Store, effect_key =

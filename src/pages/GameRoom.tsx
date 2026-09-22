@@ -14,6 +14,7 @@ import { AvatarIcon } from '../components/AvatarIcon'
 import { PlayerGrid } from '../components/PlayerGrid'
 import { ReadyGrid } from '../components/ReadyGrid'
 import { ActionPanel, VotePanel, CaptainVotePanel, WolfPanel, GRIOT_REVEAL_KEYS } from '../components/ActionPanel'
+import { ArtifactsMenu, hasArtifactsToShow, hasUsableArtifact } from '../components/ArtifactsMenu'
 import { ChatPanel } from '../components/ChatPanel'
 import { VoteRecapModal } from '../components/VoteRecapModal'
 import { NightRecapModal } from '../components/NightRecapModal'
@@ -86,6 +87,7 @@ export default function GameRoom() {
   const [logOpen, setLogOpen] = useState(false)
   const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false)
   const [modOpen, setModOpen] = useState(false)
+  const [artifactsOpen, setArtifactsOpen] = useState(false)
   const [showDeathImpact, setShowDeathImpact] = useState(false)
   // Mode de test solo (voir migration 0127) — réservé à l'admin.
   const [botPlayLoading, setBotPlayLoading] = useState(false)
@@ -288,6 +290,8 @@ export default function GameRoom() {
         onLeave={view.game.status !== 'ended' ? requestLeave : undefined}
         isHost={isHost}
         onOpenModeration={() => setModOpen(true)}
+        onOpenArtifacts={!alive && hasArtifactsToShow(view) ? () => setArtifactsOpen(true) : undefined}
+        hasUsableArtifact={!alive && hasUsableArtifact(view)}
         onExtendTime={async () => {
           const { error } = await supabase.rpc('extend_phase_deadline', { p_game_id: gameId, p_seconds: 30 })
           return error?.message ?? null
@@ -401,7 +405,7 @@ export default function GameRoom() {
               gameStatus={view.game.status}
               players={view.players}
               myRole={view.my_role}
-              ownsParcheminGriot={view.my_owns_parchemin_griot}
+              parcheminGriotUsed={view.my_parchemin_griot_used}
               ownsDernierSouffle={view.my_owns_dernier_souffle}
               dernierSouffleUsed={view.my_dernier_souffle_used}
             />
@@ -627,6 +631,10 @@ export default function GameRoom() {
           </Modal>
         )}
 
+        <Modal open={artifactsOpen} onClose={() => setArtifactsOpen(false)} title={t('artifacts.menuTitle')}>
+          <ArtifactsMenu view={view} gameId={gameId!} />
+        </Modal>
+
         {showDeathImpact && (
           <DeathImpactModal
             myRole={view.my_role}
@@ -739,7 +747,7 @@ function GhostPanel({
   gameStatus,
   players,
   myRole,
-  ownsParcheminGriot,
+  parcheminGriotUsed,
   ownsDernierSouffle,
   dernierSouffleUsed,
 }: {
@@ -750,18 +758,19 @@ function GhostPanel({
   gameStatus: MyGameView['game']['status']
   players: PublicPlayer[]
   myRole: string | null
-  ownsParcheminGriot: boolean
+  parcheminGriotUsed: boolean
   ownsDernierSouffle: boolean
   dernierSouffleUsed: boolean
 }) {
-  const { t } = useLanguage()
   const villageVoiceAvailable = ['day_reveal', 'day_discussion', 'day_vote', 'captain_election'].includes(gameStatus)
-  // Parchemin du Griot (artefact du Loup Store, migration 0148) : un loup
-  // éliminé qui possède l'artefact garde un accès en LECTURE au chat de son
-  // ex-meute — déjà vérifié côté serveur (can_read_channel), cette condition
-  // n'est là que pour ne pas monter un onglet vide/inutile pour tous les
-  // autres fantômes (villageois, ou loup sans l'artefact).
-  const showWolvesGhostPanel = gameStatus === 'night' && isWolfTeam(myRole) && ownsParcheminGriot
+  // Parchemin du Griot (artefact du Loup Store, migration 0148, activation
+  // explicite depuis migration 0179) : un loup éliminé qui a ACTIVÉ
+  // l'artefact (voir ArtifactsMenu.tsx — la simple possession ne suffit
+  // plus) garde un accès en LECTURE au chat de son ex-meute — déjà vérifié
+  // côté serveur (can_read_channel), cette condition n'est là que pour ne
+  // pas monter un onglet vide/inutile pour tous les autres fantômes
+  // (villageois, ou loup n'ayant pas activé l'artefact).
+  const showWolvesGhostPanel = gameStatus === 'night' && isWolfTeam(myRole) && parcheminGriotUsed
 
   return (
     <div className="flex flex-col gap-2">
@@ -769,17 +778,54 @@ function GhostPanel({
         <VoiceChat gameId={gameId} code={code} channel="village" displayName={displayName} selfUserId={selfId} listenOnly players={players} />
       )}
       {ownsDernierSouffle && !dernierSouffleUsed && <LastWordsForm gameId={gameId} />}
-      <ChatPanel gameId={gameId} channel="village" selfId={selfId} compact readOnly />
+      <GhostVillageWolvesChat gameId={gameId} selfId={selfId} showWolves={showWolvesGhostPanel} />
       {/* Retour utilisateur : "agrandir la taille du chat du cimetière" —
           c'est là que les fantômes passent le plus clair de leur temps une
           fois éliminés, contrairement au village en lecture seule
           au-dessus. h-96 (24rem) plutôt que le h-64 (16rem) par défaut. */}
       <ChatPanel gameId={gameId} channel="graveyard" selfId={selfId} compact compactHeightClassName="h-96" />
-      {showWolvesGhostPanel && (
-        <div className="flex flex-col gap-1.5">
-          <p className="text-xs text-moon-200/40">{t('game.parcheminGriot.notice')}</p>
-          <ChatPanel gameId={gameId} channel="wolves" selfId={selfId} compact readOnly />
-        </div>
+    </div>
+  )
+}
+
+/** Village (lecture seule) + Loups (lecture seule, seulement si le Parchemin
+ * du Griot a été activé) regroupés en deux onglets collés, plutôt qu'empilés
+ * séparément comme avant migration 0179 — retour utilisateur : "au niveau du
+ * chat, il y aura les deux parties là qui seront à côté [...] juste séparé
+ * avec deux onglets collés". Même patron Segmented que NightPanel (village
+ * vivant), qui bascule déjà entre ces deux mêmes salons pour les loups en
+ * vie. Sans onglet Loups à proposer, revient au simple chat village d'avant
+ * (pas de pilule à un seul choix, inutile). */
+function GhostVillageWolvesChat({
+  gameId,
+  selfId,
+  showWolves,
+}: {
+  gameId: string
+  selfId: string
+  showWolves: boolean
+}) {
+  const { t } = useLanguage()
+  const [tab, setTab] = useState<'village' | 'wolves'>('village')
+
+  if (!showWolves) {
+    return <ChatPanel gameId={gameId} channel="village" selfId={selfId} compact readOnly />
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Segmented
+        tabs={[
+          { id: 'village', label: t('tabs.village') },
+          { id: 'wolves', label: t('tabs.wolves') },
+        ]}
+        active={tab}
+        onChange={setTab}
+      />
+      {tab === 'village' ? (
+        <ChatPanel gameId={gameId} channel="village" selfId={selfId} compact readOnly />
+      ) : (
+        <ChatPanel gameId={gameId} channel="wolves" selfId={selfId} compact readOnly note={t('game.parcheminGriot.notice')} />
       )}
     </div>
   )

@@ -743,6 +743,33 @@ export const translations = {
     fr: 'Parchemin du Griot : tu continues de suivre le chat de ton ex-meute cette nuit.',
     en: "Griot's Scroll: you keep following your former pack's chat tonight.",
   },
+  // --- Menu "Mes artefacts" (migration 0179) ---------------------------------
+  'artifacts.icon.title': { fr: 'Mes artefacts', en: 'My artifacts' },
+  'artifacts.menuTitle': { fr: '🎒 Mes artefacts', en: '🎒 My artifacts' },
+  'artifacts.parcheminGriot.name': { fr: 'Parchemin du Griot', en: "Griot's Scroll" },
+  'artifacts.parcheminGriot.description': {
+    fr: 'Lire le chat des Loups pendant que vous êtes fantôme — à activer quand vous le souhaitez.',
+    en: 'Read the Wolves chat while you are a ghost — activate it whenever you like.',
+  },
+  'artifacts.parcheminGriot.confirmNote': {
+    fr: "Une fois activé, l'onglet 🐺 Loups apparaîtra dans votre chat pendant les prochaines nuits.",
+    en: 'Once activated, the 🐺 Wolves tab will appear in your chat during the upcoming nights.',
+  },
+  'artifacts.dernierSouffle.name': { fr: 'Dernier Souffle', en: 'Last Breath' },
+  'artifacts.dernierSouffle.usedDescription': {
+    fr: 'Message final déjà envoyé au village.',
+    en: 'Final message already sent to the village.',
+  },
+  'artifacts.badge.available': { fr: 'Disponible', en: 'Available' },
+  'artifacts.badge.activated': { fr: 'Activé', en: 'Activated' },
+  'artifacts.badge.used': { fr: 'Utilisé', en: 'Used' },
+  'artifacts.use': { fr: 'Utiliser', en: 'Use' },
+  'artifacts.confirmUse': { fr: "Confirmer l'utilisation ?", en: 'Confirm use?' },
+  'artifacts.empty': { fr: "Vous n'avez aucun artefact à afficher ici pour le moment.", en: 'You have no artifact to show here yet.' },
+  'artifacts.footerNote': {
+    fr: "Certains artefacts (protection, résurrection…) s'activent automatiquement au bon moment — rien à faire pour eux ici.",
+    en: 'Some artifacts (protection, revival…) trigger automatically at the right moment — nothing to do for them here.',
+  },
   'game.lastWords.title': { fr: 'Dernier Souffle', en: 'Last Breath' },
   'game.lastWords.subtitle': {
     fr: 'Envoie un ultime message à tout le village, visible de tous (une seule fois).',

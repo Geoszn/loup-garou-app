@@ -86,6 +86,8 @@ export function PhaseBanner({
   onLeave,
   isHost = false,
   onOpenModeration,
+  onOpenArtifacts,
+  hasUsableArtifact = false,
   onExtendTime,
   selfId,
 }: {
@@ -115,6 +117,18 @@ export function PhaseBanner({
   onLeave?: () => void
   isHost?: boolean
   onOpenModeration?: () => void
+  // Menu "🎒 Mes artefacts" (voir ArtifactsMenu.tsx, migration 0179) —
+  // icône dédiée (pas rangée dans GameMenu ⋮ ci-dessous) : contrairement
+  // aux réglages qu'on ajuste une fois puis qu'on oublie, un artefact
+  // utilisable est une action qu'on peut vouloir déclencher à tout moment
+  // pendant la partie, donc toujours visible d'un coup d'œil. Non fourni
+  // (undefined) tant que le joueur n'a rien à y montrer (voir
+  // hasArtifactsToShow, ArtifactsMenu.tsx) — pas d'icône vide.
+  onOpenArtifacts?: () => void
+  // Petit point rouge sur l'icône : au moins un artefact peut être activé
+  // MAINTENANT (voir hasUsableArtifact, ArtifactsMenu.tsx), pas seulement
+  // consultable/déjà utilisé.
+  hasUsableArtifact?: boolean
   // Bouton discret "+30s" pendant le débat, réservé à l'hôte (voir
   // extend_phase_deadline, migration 0041). N'apparaît que si fourni ET que
   // status === 'day_discussion' — inutile ailleurs, le minuteur n'y a pas le
@@ -219,6 +233,19 @@ export function PhaseBanner({
               </div>
             )}
           </div>
+        )}
+        {onOpenArtifacts && (
+          <button
+            type="button"
+            onClick={onOpenArtifacts}
+            title={t('artifacts.icon.title')}
+            className="relative flex h-8 w-8 items-center justify-center rounded-full border border-night-600 bg-night-800/60 text-sm text-moon-200/70 transition-colors hover:border-moon-400/50 hover:text-moon-200"
+          >
+            🎒
+            {hasUsableArtifact && (
+              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border-2 border-night-900 bg-blood-500" />
+            )}
+          </button>
         )}
         <GameMenu
           narratorEnabled={narratorEnabled}
