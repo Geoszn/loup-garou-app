@@ -1191,8 +1191,10 @@ const AUTO_PREVIEW_ROLE_KEYS: (keyof RoleCounts)[] = [
   'voleur',
   'enfant_sauvage',
   'griot',
-  'anancy',
+  'daron',
   'ange',
+  'anancy',
+  'chasseuse',
 ]
 
 /** Aperçu en lecture seule de ce que le mode automatique choisirait pour
