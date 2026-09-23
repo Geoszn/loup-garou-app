@@ -1660,15 +1660,21 @@ function RoleImagesSection() {
         <p className="text-sm text-moon-200/50">Chargement...</p>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-          {ROLE_ORDER.filter((id) => id !== 'villageois').map((id) => {
+          {ROLE_ORDER.map((id) => {
             const role = ROLES[id]
             const overridden = overriddenIds.has(id)
             const currentUrl = overridden
               ? supabase.storage.from('role-cards').getPublicUrl(`${id}.jpg`).data.publicUrl
               : DEFAULT_ROLE_IMAGES[id]
-            // Loup-Garou n'a pas de case à cocher côté hôte (nombre de base
-            // toujours ≥1, voir role_config) — rien à basculer ici.
-            const canToggle = id !== 'loup_garou'
+            // Loup-Garou (nombre de base toujours ≥1) et Villageois (rôle de
+            // remplissage implicite, jamais un choix de l'hôte) n'ont pas de
+            // case à cocher côté hôte, ni de ligne dans role_config — rien à
+            // basculer ici. Leur image reste malgré tout gérable comme
+            // n'importe quel autre rôle : c'est ce qui manquait à Villageois
+            // jusqu'ici (retour utilisateur : "avoir la carte du villageois"),
+            // exclu sans raison de cette grille alors que sa carte s'affiche
+            // bel et bien en jeu (voir RoleCard.tsx).
+            const canToggle = id !== 'loup_garou' && id !== 'villageois'
             const disabled = canToggle && disabledIds.has(id)
             return (
               <Card key={id} className={`p-3 ${disabled ? 'opacity-60' : ''}`}>
