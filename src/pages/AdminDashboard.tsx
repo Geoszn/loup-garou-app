@@ -162,6 +162,21 @@ interface AdminGameDetail {
     // null tant que les rôles n'ont pas encore été distribués (partie
     // encore en salon d'attente).
     role: string | null
+    death_cause: string | null
+    died_at_night: number | null
+  }[]
+  // Journal complet, historique des votes et artefacts utilisés (migration
+  // 0181) — de quoi diagnostiquer un signalement ("j'ai été éliminé sans
+  // qu'on vote contre moi") sans repasser par une requête SQL à la main.
+  log: { id: string; message: string; night_number: number | null; kind: string | null; created_at: string }[]
+  votes: { round_number: number; voter_id: string; voter_name: string | null; target_id: string | null; target_name: string | null }[]
+  artifact_uses: {
+    user_id: string
+    user_name: string | null
+    effect_key: string
+    artifact_name: string
+    round_number: number | null
+    used_at: string
   }[]
 }
 
@@ -1043,16 +1058,25 @@ function GamesTab() {
   // uniquement, pour ne jamais garder une copie de AdminGame qui pourrait
   // devenir périmée pendant que la modale reste ouverte.
   const [detailId, setDetailId] = useState<string | null>(null)
+  // Inclut aussi les parties terminées (migration 0181) — jusqu'ici, une
+  // partie disparaissait purement et simplement de cette liste une fois
+  // finie, impossible de l'inspecter après coup pour diagnostiquer un
+  // signalement reçu après-coup. Off par défaut : la liste des parties EN
+  // COURS reste le cas d'usage principal (modération en direct).
+  const [includeEnded, setIncludeEnded] = useState(false)
 
   const load = useCallback(async () => {
-    const { data, error: rpcError } = await supabase.rpc('admin_list_active_games', { p_limit: 100 })
+    const { data, error: rpcError } = await supabase.rpc('admin_list_active_games', {
+      p_limit: 100,
+      p_include_ended: includeEnded,
+    })
     if (rpcError) {
       setError(rpcError.message)
       return
     }
     setError(null)
     setGames((data ?? []) as AdminGame[])
-  }, [])
+  }, [includeEnded])
 
   useEffect(() => {
     load()
@@ -1081,14 +1105,25 @@ function GamesTab() {
   return (
     <div className="flex flex-col gap-4">
       <ErrorText>{error}</ErrorText>
-      <Input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Rechercher par code ou par hôte..."
-        className="max-w-sm"
-      />
+      <div className="flex flex-wrap items-center gap-4">
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Rechercher par code ou par hôte..."
+          className="max-w-sm"
+        />
+        <label className="flex items-center gap-2 text-sm text-moon-200/80">
+          <input
+            type="checkbox"
+            checked={includeEnded}
+            onChange={(e) => setIncludeEnded(e.target.checked)}
+            className="h-4 w-4 rounded border-night-600/70 bg-night-900/50 accent-blood-600"
+          />
+          Inclure les parties terminées
+        </label>
+      </div>
       {games === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
-      {games !== null && games.length === 0 && <p className="text-sm text-moon-200/50">Aucune partie en cours.</p>}
+      {games !== null && games.length === 0 && <p className="text-sm text-moon-200/50">Aucune partie{includeEnded ? '' : ' en cours'}.</p>}
       {games !== null && games.length > 0 && filteredGames?.length === 0 && (
         <p className="text-sm text-moon-200/50">Aucune partie ne correspond à "{search}".</p>
       )}
@@ -1118,9 +1153,11 @@ function GamesTab() {
               <Button variant="ghost" className="px-3 py-1.5 text-xs" onClick={() => setDetailId(g.id)}>
                 Voir le détail
               </Button>
-              <Button variant="danger" className="px-3 py-1.5 text-xs" disabled={busyId === g.id} onClick={() => setEndTarget(g)}>
-                Arrêter
-              </Button>
+              {g.status !== 'ended' && (
+                <Button variant="danger" className="px-3 py-1.5 text-xs" disabled={busyId === g.id} onClick={() => setEndTarget(g)}>
+                  Arrêter
+                </Button>
+              )}
             </div>
           </Card>
         ))}
@@ -1169,8 +1206,18 @@ function GameDetailModal({ gameId, onClose }: { gameId: string; onClose: () => v
 
   const pendingCount = detail?.players.filter((p) => p.pending).length ?? 0
 
+  // Votes groupés par round pour l'affichage (migration 0181) — le serveur
+  // les renvoie déjà triés par round_number, il ne reste qu'à les regrouper
+  // ici plutôt que de refaire un aller-retour réseau par round.
+  const votesByRound = new Map<number, AdminGameDetail['votes']>()
+  for (const v of detail?.votes ?? []) {
+    const list = votesByRound.get(v.round_number) ?? []
+    list.push(v)
+    votesByRound.set(v.round_number, list)
+  }
+
   return (
-    <Modal open onClose={onClose} title={detail ? `Partie ${detail.game.code}` : 'Partie'}>
+    <Modal open onClose={onClose} title={detail ? `Partie ${detail.game.code}` : 'Partie'} size="lg">
       <ErrorText>{error}</ErrorText>
       {!detail && !error && <p className="text-sm text-moon-200/50">Chargement...</p>}
       {detail && (
@@ -1219,6 +1266,15 @@ function GameDetailModal({ gameId, onClose }: { gameId: string; onClose: () => v
                     {p.display_name}
                     {p.is_host && ' · 👑'}
                     {p.is_captain && ' · 🎖️'}
+                    {/* Cause/round de mort (migration 0181) — utile pour
+                        recouper avec le journal et l'historique des votes
+                        ci-dessous quand un joueur signale une élimination
+                        qu'il ne comprend pas. */}
+                    {!p.is_alive && p.death_cause && (
+                      <span className="ml-1.5 not-italic text-[11px] text-moon-200/30">
+                        ({p.death_cause}{p.died_at_night !== null ? ` · round ${p.died_at_night}` : ''})
+                      </span>
+                    )}
                   </span>
                   {/* Rôle de chaque joueur — demande utilisateur ("je verrais
                       les participants ainsi que le rôle de chacun") : absent
@@ -1229,6 +1285,73 @@ function GameDetailModal({ gameId, onClose }: { gameId: string; onClose: () => v
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Historique des votes de jour, tous rounds (migration 0181) —
+              pas de recalcul du "qui aurait dû gagner" ici : le vote du
+              Capitaine compte double au moment de la résolution, mais on ne
+              sait plus qui était Capitaine à un round passé une fois qu'il a
+              changé (seul le dernier est connu). Les votes bruts suffisent à
+              recouper un signalement ("je n'ai reçu aucun vote et pourtant
+              j'ai été éliminé"). */}
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-moon-200/50">
+              Votes de jour {detail.votes.length > 0 && <span>· {votesByRound.size} round(s)</span>}
+            </p>
+            {votesByRound.size === 0 ? (
+              <p className="text-xs text-moon-200/40">Aucun vote pour l’instant.</p>
+            ) : (
+              <div className="flex max-h-64 flex-col gap-3 overflow-y-auto scrollbar-thin rounded-lg border border-night-600/60 bg-night-800/40 p-3">
+                {[...votesByRound.entries()].map(([round, votes]) => (
+                  <div key={round}>
+                    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-moon-300">Round {round}</p>
+                    <ul className="flex flex-col gap-0.5">
+                      {votes.map((v) => (
+                        <li key={v.voter_id} className="text-xs text-moon-200/70">
+                          {v.voter_name ?? '?'} → {v.target_name ?? <span className="italic text-moon-200/40">abstention</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Artefacts utilisés (migration 0181). */}
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-moon-200/50">Artefacts utilisés</p>
+            {detail.artifact_uses.length === 0 ? (
+              <p className="text-xs text-moon-200/40">Aucun artefact utilisé.</p>
+            ) : (
+              <ul className="flex max-h-48 flex-col gap-1 overflow-y-auto scrollbar-thin rounded-lg border border-night-600/60 bg-night-800/40 p-3">
+                {detail.artifact_uses.map((a, i) => (
+                  <li key={i} className="text-xs text-moon-200/70">
+                    {a.user_name ?? '?'} — {a.artifact_name}
+                    {a.round_number !== null && <> · round {a.round_number}</>} · {fmtDate(a.used_at)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Journal complet de la partie (migration 0181) — jusqu'ici
+              absent de cette fiche, alors qu'il existe déjà côté joueur
+              (GameRoom.tsx). Déjà trié du plus récent au plus ancien côté
+              serveur. */}
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-moon-200/50">Journal</p>
+            {detail.log.length === 0 ? (
+              <p className="text-xs text-moon-200/40">Journal vide.</p>
+            ) : (
+              <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto scrollbar-thin rounded-lg border border-night-600/60 bg-night-800/40 p-3">
+                {detail.log.map((entry) => (
+                  <li key={entry.id} className="text-xs text-moon-200/70">
+                    <span className="text-moon-200/30">{fmtDate(entry.created_at)}</span> — {entry.message}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
       )}
