@@ -15,6 +15,7 @@ import JoinByLink from './pages/JoinByLink'
 import NotFound from './pages/NotFound'
 import { FullScreenLoader } from './components/FullScreenLoader'
 import { UpdateBanner } from './components/UpdateBanner'
+import { SeoManager } from './components/SeoManager'
 import { isAdminHost } from './lib/adminHost'
 
 // Dashboard admin : route volontairement chargée en lazy (jamais dans le
@@ -119,6 +120,7 @@ export default function App() {
     return (
       <>
         <UpdateBanner />
+        <SeoManager />
         <Routes>
           <Route path="/connexion" element={<Login />} />
           <Route path="/verifier-email" element={<VerifyEmail />} />
@@ -141,6 +143,7 @@ export default function App() {
     <>
       <UpdateBanner />
       <LanguageProfileSync />
+      <SeoManager />
       <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/inscription" element={<SignUp />} />

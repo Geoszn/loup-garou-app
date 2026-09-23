@@ -1,0 +1,17 @@
+# Pages publiques (accueil, règles, mentions légales...) : explorables.
+# Espaces réservés aux joueurs connectés : inutile de les explorer.
+# Le chemin du dashboard admin n'est volontairement PAS listé ici (ce
+# fichier est public) — il est exclu de l'index par la balise noindex posée
+# par SeoManager.tsx pour toute page absente de la liste blanche.
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /compte
+Disallow: /stats
+Disallow: /loup-store
+Disallow: /amis
+Disallow: /attente/
+Disallow: /partie/
+Disallow: /rejoindre/
+
+Sitemap: https://www.loupgarouafrique.com/sitemap.xml

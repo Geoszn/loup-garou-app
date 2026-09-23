@@ -16,24 +16,58 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="LG Afrique" />
-    <title>Loup Garou d'Afrique</title>
-    <meta name="description" content="Jouez au Loup Garou d'Afrique en ligne, l'application arbitre la partie pour vous." />
+    <title>Loup Garou d'Afrique – Jouez au Loup-Garou en ligne entre amis</title>
+    <meta name="description" content="Jouez au Loup Garou d'Afrique en ligne, entre amis, jusqu'à 25 joueurs. L'application arbitre la partie : rôles, votes, nuits et chat de groupe." />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <!-- Domaine principal : le domaine vercel.app et le domaine sans "www"
+         redirigent tous deux vers celui-ci. SeoManager.tsx met à jour
+         canonical/titre/description à chaque changement de page (SPA) ; ces
+         valeurs statiques servent de repli pour l'accueil et pour les
+         robots qui n'exécutent pas le JavaScript (aperçus de partage...). -->
+    <link rel="canonical" href="https://www.loupgarouafrique.com/" />
 
-    <!-- Aperçu de partage (WhatsApp, Discord, Twitter/X...). L'URL ci-dessous
-         est celle du déploiement Vercel actuel — à mettre à jour si un nom
-         de domaine dédié est branché par la suite. -->
+    <!-- Aperçu de partage (WhatsApp, Discord, Twitter/X...). -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Loup Garou d'Afrique" />
-    <meta property="og:title" content="Loup Garou d'Afrique" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta property="og:title" content="Loup Garou d'Afrique – Jouez au Loup-Garou en ligne entre amis" />
     <meta property="og:description" content="Jouez au Loup Garou d'Afrique en ligne, entre amis, jusqu'à 25 joueurs. L'application arbitre la partie pour vous." />
-    <meta property="og:url" content="https://loup-garou-app-six.vercel.app/" />
-    <meta property="og:image" content="https://loup-garou-app-six.vercel.app/icons/icon-512.png" />
+    <meta property="og:url" content="https://www.loupgarouafrique.com/" />
+    <meta property="og:image" content="https://www.loupgarouafrique.com/icons/icon-512.png" />
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="Loup Garou d'Afrique" />
+    <meta name="twitter:title" content="Loup Garou d'Afrique – Jouez au Loup-Garou en ligne entre amis" />
     <meta name="twitter:description" content="Jouez au Loup Garou d'Afrique en ligne, entre amis, jusqu'à 25 joueurs." />
+    <meta name="twitter:image" content="https://www.loupgarouafrique.com/icons/icon-512.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Loup Garou d'Afrique",
+        "url": "https://www.loupgarouafrique.com/",
+        "description": "Jeu du Loup-Garou en ligne, entre amis, jusqu'à 25 joueurs : l'application arbitre la partie (rôles, votes, nuits, chat).",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Web",
+        "inLanguage": ["fr", "en"],
+        "image": "https://www.loupgarouafrique.com/icons/icon-512.png"
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <!-- Contenu de repli pour les robots/visiteurs sans JavaScript : donne
+         un texte et des liens explorables vers les pages publiques. -->
+    <noscript>
+      <h1>Loup Garou d'Afrique</h1>
+      <p>Jouez au Loup-Garou en ligne, entre amis, jusqu'à 25 joueurs. L'application arbitre la partie pour vous : rôles, votes, nuits et chat de groupe.</p>
+      <nav>
+        <a href="/aide">Règles et rôles du jeu</a> ·
+        <a href="/cgu">Conditions d'utilisation</a> ·
+        <a href="/confidentialite">Confidentialité</a> ·
+        <a href="/mentions-legales">Mentions légales</a>
+      </nav>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

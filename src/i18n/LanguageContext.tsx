@@ -20,6 +20,11 @@ function detectInitialLang(): Lang {
   } catch {
     /* stockage indisponible (navigation privée...) : on retombe sur la langue du navigateur */
   }
+  // Les robots d'indexation (Googlebot, Bingbot...) exécutent la page avec un
+  // navigateur annonçant "en-US" : sans cette exception, un site francophone
+  // serait indexé en anglais (contenu différent de ses balises françaises).
+  // Même contenu que celui vu par un visiteur francophone, pas du cloaking.
+  if (/bot|crawl|spider/i.test(navigator.userAgent)) return 'fr'
   // Le français reste la langue par défaut de l'appli (public principal) —
   // on ne bascule sur l'anglais que si le navigateur ne préfère explicitement
   // aucune variante du français.
