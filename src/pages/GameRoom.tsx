@@ -530,6 +530,7 @@ export default function GameRoom() {
                   chat={
                     <ChatPanel
                       fill
+                      players={view.players}
                       gameId={gameId!}
                       channel="village"
                       selfId={user.id}
@@ -593,6 +594,7 @@ export default function GameRoom() {
                 }
                 chat={
                   <ChatPanel
+                    players={view.players}
                     gameId={gameId!}
                     channel="village"
                     selfId={user.id}
@@ -774,12 +776,12 @@ function GhostPanel({
         <VoiceChat gameId={gameId} code={code} channel="village" displayName={displayName} selfUserId={selfId} listenOnly players={players} />
       )}
       {ownsDernierSouffle && !dernierSouffleUsed && <LastWordsForm gameId={gameId} />}
-      <GhostVillageWolvesChat gameId={gameId} selfId={selfId} showWolves={showWolvesGhostPanel} />
+      <GhostVillageWolvesChat gameId={gameId} selfId={selfId} showWolves={showWolvesGhostPanel} players={players} />
       {/* Retour utilisateur : "agrandir la taille du chat du cimetière" —
           c'est là que les fantômes passent le plus clair de leur temps une
           fois éliminés, contrairement au village en lecture seule
           au-dessus. h-96 (24rem) plutôt que le h-64 (16rem) par défaut. */}
-      <ChatPanel gameId={gameId} channel="graveyard" selfId={selfId} compact compactHeightClassName="h-96" />
+      <ChatPanel players={players} gameId={gameId} channel="graveyard" selfId={selfId} compact compactHeightClassName="h-96" />
     </div>
   )
 }
@@ -796,16 +798,18 @@ function GhostVillageWolvesChat({
   gameId,
   selfId,
   showWolves,
+  players,
 }: {
   gameId: string
   selfId: string
   showWolves: boolean
+  players: PublicPlayer[]
 }) {
   const { t } = useLanguage()
   const [tab, setTab] = useState<'village' | 'wolves'>('village')
 
   if (!showWolves) {
-    return <ChatPanel gameId={gameId} channel="village" selfId={selfId} compact readOnly />
+    return <ChatPanel players={players} gameId={gameId} channel="village" selfId={selfId} compact readOnly />
   }
 
   return (
@@ -819,9 +823,9 @@ function GhostVillageWolvesChat({
         onChange={setTab}
       />
       {tab === 'village' ? (
-        <ChatPanel gameId={gameId} channel="village" selfId={selfId} compact readOnly />
+        <ChatPanel players={players} gameId={gameId} channel="village" selfId={selfId} compact readOnly />
       ) : (
-        <ChatPanel gameId={gameId} channel="wolves" selfId={selfId} compact readOnly note={t('game.parcheminGriot.notice')} />
+        <ChatPanel players={players} gameId={gameId} channel="wolves" selfId={selfId} compact readOnly note={t('game.parcheminGriot.notice')} />
       )}
     </div>
   )
@@ -1044,6 +1048,7 @@ function NightChat({
   if (!isWolf) {
     return (
       <ChatPanel
+        players={players}
         gameId={gameId}
         channel="village"
         selfId={selfId}
@@ -1066,6 +1071,7 @@ function NightChat({
       />
       {nightTab === 'village' ? (
         <ChatPanel
+          players={players}
           gameId={gameId}
           channel="village"
           selfId={selfId}
@@ -1073,7 +1079,7 @@ function NightChat({
           note={villageMuted ? t('game.villageMutedNote') : t('game.nightChatNote')}
         />
       ) : (
-        <ChatPanel gameId={gameId} channel="wolves" selfId={selfId} />
+        <ChatPanel players={players} gameId={gameId} channel="wolves" selfId={selfId} />
       )}
     </div>
   )

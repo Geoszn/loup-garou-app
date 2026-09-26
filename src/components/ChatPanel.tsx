@@ -2,7 +2,8 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, type FormEvent
 import { useChat, type RevealedIdentity } from '../hooks/useChat'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
-import { REACTION_EMOJIS, type ChatChannel, type ChatMessage, type ChatReaction, type ReactionEmoji } from '../types/game'
+import { REACTION_EMOJIS, type ChatChannel, type ChatMessage, type ChatReaction, type PublicPlayer, type ReactionEmoji } from '../types/game'
+import { Avatar } from './Avatar'
 
 const CHANNEL_LABEL: Record<ChatChannel, { titleKey: TranslationKey; emoji: string; placeholderKey: TranslationKey }> = {
   village: { titleKey: 'chat.village.title', emoji: '💬', placeholderKey: 'chat.village.placeholder' },
@@ -36,6 +37,7 @@ export const ChatPanel = memo(function ChatPanel({
   readOnly = false,
   note,
   fill = false,
+  players,
 }: {
   gameId: string
   channel: ChatChannel
@@ -60,6 +62,9 @@ export const ChatPanel = memo(function ChatPanel({
    * conteneur flex de hauteur définie) au lieu d'une hauteur fixe : le chat
    * reste calé à l'écran, seul l'historique défile, comme sur WhatsApp. */
   fill?: boolean
+  /** Joueurs de la partie : sert à afficher l'avatar de chaque auteur à côté
+   * de ses messages. Sans lui, les bulles restent sans avatar. */
+  players?: PublicPlayer[]
 }) {
   const { t } = useLanguage()
   const { messages, identities, reactions, send, sending, toggleReaction } = useChat(gameId, channel)
@@ -163,6 +168,8 @@ export const ChatPanel = memo(function ChatPanel({
   // Avant, la citation d'un message (repliedTo) était retrouvée via
   // `messages.find(...)` directement dans `messages.map(...)`, donc en
   // O(n²) à chaque rendu. Un Map ramène chaque lookup à O(1).
+  const playersById = useMemo(() => new Map((players ?? []).map((p) => [p.user_id, p])), [players])
+
   const messagesById = useMemo(() => {
     const map = new Map<string, ChatMessage>()
     for (const m of messages) map.set(m.id, m)
@@ -337,10 +344,17 @@ export const ChatPanel = memo(function ChatPanel({
         {messages.length === 0 && (
           <p className="text-center text-xs text-moon-200/30">{t('chat.empty')}</p>
         )}
-        {messages.map((m) => (
+        {messages.map((m, i) => {
+          const authorId = authorIdOf(m, identities)
+          const next = messages[i + 1]
+          const showAvatar = !!players && (!next || authorIdOf(next, identities) !== authorId)
+          return (
           <MessageRow
             key={m.id}
             message={m}
+            author={authorId ? playersById.get(authorId) : undefined}
+            showAvatar={showAvatar}
+            withAvatars={!!players}
             selfId={selfId}
             identities={identities}
             repliedTo={m.reply_to_message_id ? messagesById.get(m.reply_to_message_id) : undefined}
@@ -354,7 +368,8 @@ export const ChatPanel = memo(function ChatPanel({
             onToggleReaction={handleToggleReaction}
             onReply={handleReply}
           />
-        ))}
+          )
+        })}
       </div>
         {unreadBelow > 0 && (
           <button
@@ -402,6 +417,10 @@ export const ChatPanel = memo(function ChatPanel({
  * message, ou on est la Petite Fille vivante) — factorisée en dehors du
  * composant (pas de dépendance sur des hooks) pour être appelable aussi bien
  * depuis ChatPanel (aperçu de citation) que depuis MessageRow (bulle citée). */
+function authorIdOf(m: ChatMessage, identities: Record<string, RevealedIdentity>): string | null {
+  return m.is_anonymous ? identities[m.id]?.user_id ?? null : m.user_id
+}
+
 function labelFor(
   m: ChatMessage,
   identities: Record<string, RevealedIdentity>,
@@ -423,6 +442,9 @@ function labelFor(
  * chaque rendu de ChatPanel, quelle qu'en soit la cause. */
 const MessageRow = memo(function MessageRow({
   message: m,
+  author,
+  showAvatar,
+  withAvatars,
   selfId,
   identities,
   repliedTo,
@@ -437,6 +459,9 @@ const MessageRow = memo(function MessageRow({
   onReply,
 }: {
   message: ChatMessage
+  author: PublicPlayer | undefined
+  showAvatar: boolean
+  withAvatars: boolean
   selfId: string
   identities: Record<string, RevealedIdentity>
   repliedTo: ChatMessage | undefined
@@ -504,7 +529,26 @@ const MessageRow = memo(function MessageRow({
   }
 
   return (
-    <div className={`text-sm ${isMine ? 'text-right' : ''}`}>
+    <div className="flex items-end gap-2">
+      {withAvatars && !isMine && (
+        <span className="w-8 shrink-0">
+          {showAvatar &&
+            (m.is_anonymous && !identity ? (
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-night-800 text-sm" aria-hidden="true">
+                🕵️
+              </span>
+            ) : (
+              <Avatar
+                config={author?.avatar_config}
+                icon={author?.avatar_icon}
+                color={author?.avatar_color}
+                name={label ?? undefined}
+                className="h-8 w-8"
+              />
+            ))}
+        </span>
+      )}
+    <div className={`min-w-0 flex-1 text-sm ${isMine ? 'text-right' : ''}`}>
       {/* Réagir/répondre : appui long (tactile ou souris maintenue) sur la
           bulle elle-même plutôt que des boutons toujours visibles à côté —
           même logique que WhatsApp/Messenger. select-none + onContextMenu
@@ -654,6 +698,7 @@ const MessageRow = memo(function MessageRow({
           )}
         </div>
       )}
+    </div>
     </div>
   )
 })
