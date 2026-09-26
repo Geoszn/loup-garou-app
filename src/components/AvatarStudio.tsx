@@ -294,8 +294,11 @@ export function AvatarStudio({
   const iconButton = 'inline-flex h-9 w-9 items-center justify-center rounded-xl border border-night-500 bg-gradient-to-b from-night-700/70 to-night-800/50 text-sm text-moon-200 transition-colors hover:border-night-500/80 disabled:opacity-40'
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-night-950 text-moon-200" role="dialog" aria-modal="true" aria-label={t('avatar.title')}>
+    <div className="fixed inset-0 z-50 bg-night-950 text-moon-200" role="dialog" aria-modal="true" aria-label={t('avatar.title')}>
       <div className="texture-noise" />
+      {/* Colonne de largeur téléphone, centrée : sur ordinateur, l'éditeur
+          plein écran étirait les vignettes sur toute la largeur. */}
+      <div className="relative mx-auto flex h-full w-full max-w-lg flex-col sm:border-x sm:border-night-700/50 sm:shadow-card">
       <header className="relative flex items-center justify-between gap-2 border-b border-night-700/60 px-4 py-3" style={{ paddingTop: 'max(env(safe-area-inset-top), 0.75rem)' }}>
         <button
           type="button"
@@ -444,6 +447,7 @@ export function AvatarStudio({
         }}
         onCancel={() => setConfirmDiscard(false)}
       />
+      </div>
     </div>
   )
 }
