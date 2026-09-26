@@ -168,7 +168,8 @@ export function SkinsPanel({ balance, onPurchased }: { balance: number; onPurcha
 
   const load = useCallback(async () => {
     const { data, error: rpcError } = await supabase.rpc('list_store_skins')
-    if (!rpcError) setSkins(data as StoreSkin[])
+    // Liste vide plutôt que squelette sans fin si la fonction n'existe pas encore en base.
+    setSkins(rpcError ? [] : (data as StoreSkin[]))
   }, [])
   useEffect(() => {
     void load()
