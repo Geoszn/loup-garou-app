@@ -1519,6 +1519,13 @@ export const translations = {
   'friendsOnline.inGame': { fr: 'en partie', en: 'in a game' },
   'friendsOnline.idle': { fr: 'disponible', en: 'available' },
   'quest.title': { fr: 'Quêtes du jour', en: 'Daily quests' },
+  'questComp.title': { fr: 'Des récompenses perdues te sont rendues', en: 'Lost rewards are being returned to you' },
+  'questComp.body': {
+    fr: "À cause d'un bug, certaines de tes quêtes terminées n'ont jamais pu être récupérées. Nous nous en excusons : voici de quoi te dédommager.",
+    en: 'Because of a bug, some of your completed quests could never be claimed. We apologise: here is what you were owed.',
+  },
+  'questComp.claim': { fr: 'Récupérer', en: 'Claim' },
+  'questComp.dismiss': { fr: 'Ignorer', en: 'Dismiss' },
   'quest.claim': { fr: 'Réclamer (+{{coins}})', en: 'Claim (+{{coins}})' },
   'loupCoins.title': { fr: 'Loup Coins', en: 'Loup Coins' },
   'loupCoins.subtitle': {

@@ -7,6 +7,7 @@ import { Button, Card, ErrorText, Input, Label, Modal, SectionDivider } from '..
 import { AccountMenu } from '../components/AccountMenu'
 import { RankBadge } from '../components/RankBadge'
 import { DailyLoginBanner } from '../components/DailyLoginBanner'
+import { QuestCompensationModal } from '../components/QuestCompensationModal'
 import { FriendsOnlineWidget, type FriendPerson } from '../components/FriendsOnlineWidget'
 import { QuestsCard } from '../components/QuestsCard'
 import { DashboardLeaderboard } from '../components/DashboardLeaderboard'
@@ -364,6 +365,7 @@ export default function Dashboard() {
         )}
 
         <DailyLoginBanner hasActiveEvent={events.length > 0} />
+        <QuestCompensationModal />
 
         {notice && !noticeDismissed && (
           <div
