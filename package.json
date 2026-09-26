@@ -16,7 +16,8 @@
     "test:e2e:install": "playwright install --with-deps chromium",
     "cap:sync": "npm run build && npx cap sync",
     "android": "npm run cap:sync && npx cap open android",
-    "ios": "npm run cap:sync && npx cap open ios"
+    "ios": "npm run cap:sync && npx cap open ios",
+    "audit:db": "node scripts/audit-db.mjs"
   },
   "dependencies": {
     "@capacitor/core": "^8.4.2",

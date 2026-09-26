@@ -30,7 +30,10 @@ const client = new pg.Client({ connectionString, ssl: { rejectUnauthorized: fals
 try {
   await client.connect()
   const result = await client.query(sql)
-  console.log(JSON.stringify(result.rows, null, 2))
+  // Un fichier à plusieurs requêtes renvoie un tableau de résultats : on
+  // n'affiche que ceux qui ont des lignes (les begin/set/rollback n'en ont pas).
+  const rows = Array.isArray(result) ? result.filter((r) => r.rows?.length).flatMap((r) => r.rows) : result.rows
+  console.log(JSON.stringify(rows, null, 2))
 } catch (err) {
   console.error('❌ Échec :', err.message)
   process.exitCode = 1

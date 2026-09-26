@@ -65,17 +65,17 @@ export interface RoleCounts {
   // Le Daron (voir migration 0158) : protège un joueur différent chaque
   // nuit (auto-protection permise, jamais deux nuits de suite la même
   // personne) contre l'attaque des Loups ET le poison de la Sorcière —
-  // sans jamais savoir qui il protège vraiment. Disponible uniquement en
-  // configuration manuelle pour l'instant (absent du mode auto).
+  // sans jamais savoir qui il protège vraiment. Sélectionnable aussi par le
+  // mode automatique (migration 0178).
   daron: boolean
   // La Chasseuse (voir migration 0162, rebaptisée en 0163 — anciennement
-  // "Le Juge", mêmes mécaniques) : camp neutre. À partir de la deuxième
-  // nuit, une cible vivante lui est désignée automatiquement (aucune action
-  // de nuit à jouer) — elle gagne seule si CETTE cible est éliminée par le
-  // vote du village. Si elle meurt autrement, elle choisit d'abandonner
-  // (devient une simple villageoise) ou de recevoir une nouvelle cible (une
-  // seule fois par partie). Disponible uniquement en configuration manuelle
-  // pour l'instant (absent du mode auto), même choix que le Daron.
+  // "Le Juge", mêmes mécaniques) : camp neutre. Au tout début du premier
+  // jour (migration 0180), une cible vivante lui est désignée
+  // automatiquement (aucune action de nuit à jouer) — elle gagne seule si
+  // CETTE cible est éliminée par le vote du village. Si elle meurt
+  // autrement, elle choisit d'abandonner (devient une simple villageoise)
+  // ou de recevoir une nouvelle cible (une seule fois par partie).
+  // Sélectionnable aussi par le mode automatique (migration 0178).
   chasseuse: boolean
 }
 
@@ -208,7 +208,6 @@ export interface PublicPlayer {
   is_alive: boolean
   death_cause: string | null
   died_at_night: number | null
-  is_lover: boolean
   is_captain: boolean
   is_ready: boolean
   // Exclu par l'hôte (kick_player) : perd tout accès au chat, y compris le
@@ -478,8 +477,9 @@ export interface MyGameView {
   // personnelle de l'écran de fin.
   my_game_result: MyGameResult | null
   // Artefacts du Loup Store possédés par le joueur courant (migration 0148)
-  // — my_owns_parchemin_griot permet à un loup éliminé de continuer à lire
-  // le chat "wolves" de son ex-meute la nuit (voir can_read_channel côté
+  // — my_owns_parchemin_griot permet à un joueur éliminé (n'importe quel
+  // rôle, depuis migration 0182) de lire le chat "wolves" la nuit une fois
+  // l'artefact activé (voir can_read_channel côté
   // serveur, aucun changement d'écriture) ; my_owns_dernier_souffle/
   // my_dernier_souffle_used pilotent la proposition d'envoyer un dernier
   // message au village juste après sa propre élimination (voir
