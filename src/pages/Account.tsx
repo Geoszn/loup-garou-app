@@ -9,8 +9,9 @@ import { useLanguage } from '../i18n/LanguageContext'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 import { NotificationPreferences } from '../components/NotificationPreferences'
 import { Avatar } from '../components/Avatar'
-import { DEFAULT_AVATAR_CONFIG, type AvatarConfig } from '../lib/avatarParts'
-import { AvatarPartsPicker, useMyAvatarConfig } from '../components/AvatarEditor'
+import type { AvatarConfig } from '../lib/avatarParts'
+import { AvatarStudio } from '../components/AvatarStudio'
+import { useMyAvatarConfig } from '../components/AvatarEditor'
 import { sendTestPush } from '../lib/pushSubscription'
 
 // Délai entre l'affichage du message de succès dans une pop-up de réglage et
@@ -254,24 +255,23 @@ function ProfileModal({
 }) {
   const { t, lang } = useLanguage()
   const [username, setUsername] = useState(profile?.username ?? '')
-  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>(avatar ?? DEFAULT_AVATAR_CONFIG)
+  const [pendingConfig, setPendingConfig] = useState<AvatarConfig | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
 
-  // Resynchronise les champs sur les valeurs actuelles à chaque ouverture,
-  // pour ne jamais réafficher un brouillon d'une session d'édition
-  // précédente non sauvegardée.
+  // Resynchronise le pseudo sur la valeur actuelle à chaque ouverture, pour
+  // ne jamais réafficher un brouillon d'une session d'édition précédente.
   useEffect(() => {
     if (open) {
       setUsername(profile?.username ?? '')
-      setAvatarConfig(avatar ?? DEFAULT_AVATAR_CONFIG)
       setError(null)
       setSuccess(null)
       setConfirmOpen(false)
     }
-  }, [open, profile, avatar])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   // Purement informatif côté client (le serveur revalide tout, voir
   // migration 0051) : sert à désactiver le champ et afficher la date de
@@ -293,8 +293,7 @@ function ProfileModal({
 
   const usernameChanged = username.trim().length > 0 && username.trim().toLowerCase() !== (profile?.username ?? '').toLowerCase()
 
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault()
+  function handleSave(config: AvatarConfig) {
     setError(null)
     setSuccess(null)
 
@@ -308,20 +307,21 @@ function ProfileModal({
     // laisser la surprise arriver la prochaine fois que le joueur essaiera
     // de le modifier.
     if (usernameChanged && !usernameLocked) {
+      setPendingConfig(config)
       setConfirmOpen(true)
       return
     }
 
-    doSave()
+    doSave(config)
   }
 
-  async function doSave() {
+  async function doSave(config: AvatarConfig) {
     setConfirmOpen(false)
     setLoading(true)
     // L'ancienne icône n'est plus modifiable (remplacée par l'avatar) : on
     // la renvoie telle quelle, update_my_profile la revalide déjà.
     let rpcError: { message: string } | null = null
-    if (usernameChanged) {
+    if (usernameChanged && !usernameLocked) {
       const res = await supabase.rpc('update_my_profile', {
         p_username: username.trim(),
         p_avatar_icon: profile?.avatar_icon ?? '🐺',
@@ -329,7 +329,7 @@ function ProfileModal({
       rpcError = res.error
     }
     if (!rpcError) {
-      const res = await supabase.rpc('set_my_avatar', { p_config: avatarConfig })
+      const res = await supabase.rpc('set_my_avatar', { p_config: config })
       rpcError = res.error
     }
     setLoading(false)
@@ -344,45 +344,30 @@ function ProfileModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={t('account.profile.title')}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div>
-          <Label htmlFor="account-username">{t('account.profile.username')}</Label>
-          <Input
-            id="account-username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            maxLength={24}
-            disabled={usernameLocked}
-            required
-          />
-          {usernameLocked && nextAllowedLabel && (
-            <p className="mt-1.5 text-xs text-moon-200/50">
-              🔒 {t('account.profile.usernameLockedUntil', { date: nextAllowedLabel })}
-            </p>
-          )}
-        </div>
-
-        <AvatarPartsPicker config={avatarConfig} onChange={setAvatarConfig} />
-
-        <ErrorText>{error}</ErrorText>
-        <SuccessText>{success}</SuccessText>
-
-        <Button type="submit" disabled={loading || !!success} className="w-full">
-          {loading ? t('common.saving') : t('common.save')}
-        </Button>
-      </form>
-
+    <>
+      <AvatarStudio
+        open={open}
+        onClose={onClose}
+        initial={avatar}
+        username={username}
+        onUsernameChange={setUsername}
+        usernameLocked={usernameLocked}
+        usernameLockedNote={nextAllowedLabel ? t('account.profile.usernameLockedUntil', { date: nextAllowedLabel }) : null}
+        onSave={handleSave}
+        saving={loading}
+        error={error}
+        success={success}
+      />
       <ConfirmDialog
         open={confirmOpen}
         title={t('account.profile.confirmChangeTitle')}
         message={t('account.profile.confirmChangeMessage')}
         confirmLabel={t('common.confirm')}
         cancelLabel={t('common.cancel')}
-        onConfirm={doSave}
+        onConfirm={() => pendingConfig && doSave(pendingConfig)}
         onCancel={() => setConfirmOpen(false)}
       />
-    </Modal>
+    </>
   )
 }
 
