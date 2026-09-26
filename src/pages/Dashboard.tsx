@@ -317,22 +317,31 @@ export default function Dashboard() {
             identifié et évité ailleurs (voir le commentaire de Card). Ces
             deux boutons sont en revanche uniques sur cette page, sans
             empilement ni répétition : aucun risque de fluidité comparable. */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2.5">
           <button
             type="button"
             onClick={() => setCreateOpen(true)}
-            className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-moon-400/5 p-6 shadow-card backdrop-blur-xl transition-colors hover:border-moon-400/50 hover:bg-moon-400/10"
+            aria-label={t('dashboard.createGame')}
+            className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-moon-400/5 px-3 py-2.5 shadow-card backdrop-blur-xl transition-colors hover:border-moon-400/50 hover:bg-moon-400/10"
           >
-            <span className="text-3xl">🌕</span>
-            <span className="font-display text-sm text-moon-200 sm:text-base">{t('dashboard.createGame')}</span>
+            <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-moon-300" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 8v8M8 12h8" />
+            </svg>
+            <span className="font-display text-sm text-moon-200">{t('dashboard.createShort')}</span>
           </button>
           <button
             type="button"
             onClick={() => setJoinStep('choose')}
-            className="flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-moon-400/5 p-6 shadow-card backdrop-blur-xl transition-colors hover:border-moon-400/50 hover:bg-moon-400/10"
+            aria-label={t('dashboard.joinGame')}
+            className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-moon-400/5 px-3 py-2.5 shadow-card backdrop-blur-xl transition-colors hover:border-moon-400/50 hover:bg-moon-400/10"
           >
-            <span className="text-3xl">🔑</span>
-            <span className="font-display text-sm text-moon-200 sm:text-base">{t('dashboard.joinGame')}</span>
+            <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-moon-300" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
+              <path d="M10 17l5-5-5-5" />
+              <path d="M15 12H4" />
+            </svg>
+            <span className="font-display text-sm text-moon-200">{t('dashboard.joinShort')}</span>
           </button>
         </div>
 
@@ -427,9 +436,9 @@ export default function Dashboard() {
 
         <QuestsCard />
 
-        <FriendsOnlineWidget friends={friends} />
-
         <DashboardLeaderboard />
+
+        <FriendsOnlineWidget friends={friends} />
 
         <SectionDivider />
 

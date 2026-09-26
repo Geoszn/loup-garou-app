@@ -1643,6 +1643,13 @@ export const translations = {
   'notifPrefs.groupGamesHint': { fr: 'Un ami lance une partie, une partie publique se remplit.', en: 'A friend starts a game, a public game is filling up.' },
   'notifPrefs.groupProgress': { fr: 'Rang et nouvelles', en: 'Rank and news' },
   'notifPrefs.groupProgressHint': { fr: 'Un nouveau rang est proche, nouvelles après une absence.', en: 'A new rank is close, news after a break.' },
+  'pager.prev': { fr: 'Précédent', en: 'Previous' },
+  'pager.next': { fr: 'Suivant', en: 'Next' },
+  'pager.page': { fr: 'Page {{page}} sur {{total}}', en: 'Page {{page}} of {{total}}' },
+  'section.collapse': { fr: 'Replier', en: 'Collapse' },
+  'section.expand': { fr: 'Déplier', en: 'Expand' },
+  'dashboard.createShort': { fr: 'Créer', en: 'Create' },
+  'dashboard.joinShort': { fr: 'Rejoindre', en: 'Join' },
   'questComp.title': { fr: 'Des récompenses perdues te sont rendues', en: 'Lost rewards are being returned to you' },
   'questComp.body': {
     fr: "À cause d'un bug, certaines de tes quêtes terminées n'ont jamais pu être récupérées. Nous nous en excusons : voici de quoi te dédommager.",

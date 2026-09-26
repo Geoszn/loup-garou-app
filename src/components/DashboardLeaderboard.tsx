@@ -3,9 +3,8 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { tierForPoints } from '../lib/ranks'
-import { AvatarIcon } from './AvatarIcon'
 import { RankTierBadge } from './RankTierBadge'
-import { Card } from './ui'
+import { CollapsibleCard, PAGE_SIZE, Pager } from './CollapsibleCard'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from './Avatar'
 import { useMyAvatarConfig } from './AvatarEditor'
@@ -34,11 +33,12 @@ export function DashboardLeaderboard() {
   const { t } = useLanguage()
   const [entries, setEntries] = useState<Entry[] | null>(null)
   const [myPosition, setMyPosition] = useState<number | null>(null)
+  const [page, setPage] = useState(0)
 
   useEffect(() => {
     let cancelled = false
     supabase
-      .rpc('get_public_leaderboard', { p_scope: 'global', p_continent: null, p_limit: 8 })
+      .rpc('get_public_leaderboard', { p_scope: 'global', p_continent: null, p_limit: 50 })
       .then(({ data, error }) => {
         if (!cancelled && !error) setEntries(data as Entry[])
       })
@@ -57,17 +57,20 @@ export function DashboardLeaderboard() {
   // se contredisent l'un l'autre au premier coup d'œil.
   const showMyRow = hasEntries && profile && !iAmInTop
 
+  const pageCount = Math.max(1, Math.ceil((entries?.length ?? 0) / PAGE_SIZE))
+  const current = Math.min(page, pageCount - 1)
+  const visible = (entries ?? []).slice(current * PAGE_SIZE, (current + 1) * PAGE_SIZE)
+
   return (
-    <Card className="!p-0 overflow-hidden">
-      <div className="flex items-center justify-between gap-3 border-b border-night-700/60 px-5 py-3.5">
-        <h2 className="min-w-0 truncate font-display text-base text-moon-200 sm:text-lg">
-          🏆 {t('dashboard.leaderboard.title')}
-        </h2>
+    <CollapsibleCard
+      storageKey="lg-dash-leaderboard-open"
+      title={<>🏆 {t('dashboard.leaderboard.title')}</>}
+      action={
         <Link to="/stats" className="shrink-0 text-xs text-moon-200/50 underline underline-offset-4 transition-colors hover:text-moon-200">
           {t('dashboard.leaderboard.seeAll')}
         </Link>
-      </div>
-
+      }
+    >
       <div className="flex flex-col gap-1.5 p-3 sm:p-4">
         {entries === null ? (
           // Squelette de chargement : évite un flash de contenu vide puis
@@ -84,11 +87,13 @@ export function DashboardLeaderboard() {
           </div>
         ) : (
           <ol className="flex flex-col gap-1.5">
-            {entries.map((entry, i) => (
-              <LeaderboardRow key={entry.user_id} entry={entry} position={i + 1} mine={entry.user_id === user?.id} />
+            {visible.map((entry, i) => (
+              <LeaderboardRow key={entry.user_id} entry={entry} position={current * PAGE_SIZE + i + 1} mine={entry.user_id === user?.id} />
             ))}
           </ol>
         )}
+
+        <Pager page={current} pageCount={pageCount} onChange={setPage} />
 
         {showMyRow && (
           <>
@@ -112,7 +117,7 @@ export function DashboardLeaderboard() {
           </>
         )}
       </div>
-    </Card>
+    </CollapsibleCard>
   )
 }
 
