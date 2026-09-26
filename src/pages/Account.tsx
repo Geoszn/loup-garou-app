@@ -2,17 +2,15 @@ import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { AVATAR_ICONS, AVATAR_ICON_MIN_POINTS, type AvatarIcon as AvatarIconId } from '../lib/avatars'
-import { tierForPoints, tierLabel } from '../lib/ranks'
 import { Button, Card, ConfirmDialog, ErrorText, Input, Label, Modal, SuccessText } from '../components/ui'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { ContinentSelect } from '../components/ContinentSelect'
-import { AvatarIcon } from '../components/AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 import { NotificationPreferences } from '../components/NotificationPreferences'
 import { Avatar } from '../components/Avatar'
-import { AvatarEditorModal, useMyAvatarConfig } from '../components/AvatarEditor'
+import { DEFAULT_AVATAR_CONFIG, type AvatarConfig } from '../lib/avatarParts'
+import { AvatarPartsPicker, useMyAvatarConfig } from '../components/AvatarEditor'
 import { sendTestPush } from '../lib/pushSubscription'
 
 // Délai entre l'affichage du message de succès dans une pop-up de réglage et
@@ -36,7 +34,6 @@ export default function Account() {
   const { t } = useLanguage()
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [passwordModalOpen, setPasswordModalOpen] = useState(false)
-  const [avatarModalOpen, setAvatarModalOpen] = useState(false)
   const myAvatar = useMyAvatarConfig()
 
   return (
@@ -54,8 +51,9 @@ export default function Account() {
             label={t('account.profile.title')}
             description={
               profile ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <AvatarIcon icon={profile.avatar_icon} className="h-3.5 w-3.5" /> {profile.username}
+                <span className="inline-flex items-center gap-2">
+                  <Avatar config={myAvatar.config} icon={profile.avatar_icon} name={profile.username} className="h-6 w-6" />{' '}
+                  {profile.username}
                 </span>
               ) : undefined
             }
@@ -63,20 +61,6 @@ export default function Account() {
             <Button variant="ghost" onClick={() => setProfileModalOpen(true)} className="px-3.5 py-2 text-xs">
               {t('account.profile.editButton')}
             </Button>
-          </SettingsRow>
-
-          <SettingsRow label={t('avatar.title')}>
-            <div className="flex items-center gap-3">
-              <Avatar
-                config={myAvatar.config}
-                icon={profile?.avatar_icon}
-                name={profile?.username}
-                className="h-10 w-10"
-              />
-              <Button variant="ghost" onClick={() => setAvatarModalOpen(true)} className="px-3.5 py-2 text-xs">
-                {t('avatar.customize')}
-              </Button>
-            </div>
           </SettingsRow>
 
           <SettingsRow label={t('account.email.title')} description={session?.user.email}>
@@ -107,17 +91,12 @@ export default function Account() {
         open={profileModalOpen}
         onClose={() => setProfileModalOpen(false)}
         profile={profile}
+        avatar={myAvatar.config}
         onSaved={async () => {
+          myAvatar.reload()
           await refreshProfile()
           setTimeout(() => setProfileModalOpen(false), CLOSE_DELAY_MS)
         }}
-      />
-
-      <AvatarEditorModal
-        open={avatarModalOpen}
-        onClose={() => setAvatarModalOpen(false)}
-        initial={myAvatar.config}
-        onSaved={myAvatar.reload}
       />
 
       <PasswordModal
@@ -264,20 +243,18 @@ function ProfileModal({
   open,
   onClose,
   profile,
+  avatar,
   onSaved,
 }: {
   open: boolean
   onClose: () => void
   profile: { username: string; avatar_icon: string; username_changed_at: string | null; rank_points: number } | null
+  avatar: AvatarConfig | null
   onSaved: () => void
 }) {
   const { t, lang } = useLanguage()
   const [username, setUsername] = useState(profile?.username ?? '')
-  const [icon, setIcon] = useState(profile?.avatar_icon ?? AVATAR_ICONS[0])
-  // Points de rang actuels — détermine quelles icônes sont débloquées (voir
-  // AVATAR_ICON_MIN_POINTS, lib/avatars.ts). Purement informatif : le
-  // serveur revalide de toute façon dans update_my_profile (migration 0074).
-  const rankPoints = profile?.rank_points ?? 0
+  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>(avatar ?? DEFAULT_AVATAR_CONFIG)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -289,12 +266,12 @@ function ProfileModal({
   useEffect(() => {
     if (open) {
       setUsername(profile?.username ?? '')
-      setIcon(profile?.avatar_icon ?? AVATAR_ICONS[0])
+      setAvatarConfig(avatar ?? DEFAULT_AVATAR_CONFIG)
       setError(null)
       setSuccess(null)
       setConfirmOpen(false)
     }
-  }, [open, profile])
+  }, [open, profile, avatar])
 
   // Purement informatif côté client (le serveur revalide tout, voir
   // migration 0051) : sert à désactiver le champ et afficher la date de
@@ -341,10 +318,20 @@ function ProfileModal({
   async function doSave() {
     setConfirmOpen(false)
     setLoading(true)
-    const { error: rpcError } = await supabase.rpc('update_my_profile', {
-      p_username: username.trim(),
-      p_avatar_icon: icon,
-    })
+    // L'ancienne icône n'est plus modifiable (remplacée par l'avatar) : on
+    // la renvoie telle quelle, update_my_profile la revalide déjà.
+    let rpcError: { message: string } | null = null
+    if (usernameChanged) {
+      const res = await supabase.rpc('update_my_profile', {
+        p_username: username.trim(),
+        p_avatar_icon: profile?.avatar_icon ?? '🐺',
+      })
+      rpcError = res.error
+    }
+    if (!rpcError) {
+      const res = await supabase.rpc('set_my_avatar', { p_config: avatarConfig })
+      rpcError = res.error
+    }
     setLoading(false)
 
     if (rpcError) {
@@ -376,43 +363,7 @@ function ProfileModal({
           )}
         </div>
 
-        <div>
-          <Label>{t('account.profile.avatarIcon')}</Label>
-          <div className="grid grid-cols-5 gap-2">
-            {AVATAR_ICONS.map((emoji) => {
-              // Icônes premium débloquées par palier de rang (voir
-              // AVATAR_ICON_MIN_POINTS, lib/avatars.ts) : grisées avec un
-              // cadenas + le seuil requis plutôt que masquées, pour que
-              // l'objectif reste visible même avant de l'atteindre.
-              const minPoints = AVATAR_ICON_MIN_POINTS[emoji as AvatarIconId]
-              const locked = rankPoints < minPoints
-              return (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => !locked && setIcon(emoji)}
-                  disabled={locked}
-                  aria-label={locked ? t('account.profile.iconLocked', { points: minPoints, tier: tierLabel(tierForPoints(minPoints).id, t) }) : t('account.profile.chooseIcon', { icon: emoji })}
-                  title={locked ? t('account.profile.iconLocked', { points: minPoints, tier: tierLabel(tierForPoints(minPoints).id, t) }) : undefined}
-                  className={`relative flex aspect-square items-center justify-center rounded-xl border transition-all ${
-                    locked
-                      ? 'cursor-not-allowed border-night-700/50 bg-night-900/30 opacity-40 grayscale'
-                      : icon === emoji
-                        ? 'border-blood-500 bg-gradient-to-b from-blood-700/30 to-blood-700/10 shadow-blood-glow'
-                        : 'border-night-600/60 bg-night-900/50 hover:border-moon-400/50'
-                  }`}
-                >
-                  <AvatarIcon icon={emoji} className="h-6 w-6" />
-                  {locked && (
-                    <span className="absolute -bottom-1 -right-1 rounded-full bg-night-950 px-1 text-[8px] leading-tight text-moon-200/60">
-                      {t('account.profile.iconLockedShort', { points: minPoints })}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        </div>
+        <AvatarPartsPicker config={avatarConfig} onChange={setAvatarConfig} />
 
         <ErrorText>{error}</ErrorText>
         <SuccessText>{success}</SuccessText>

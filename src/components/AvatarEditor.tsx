@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
 import { Avatar } from './Avatar'
-import { Button, Modal } from './ui'
 import {
   ACCESSORIES,
   AVATAR_BGS,
@@ -68,43 +67,18 @@ const ACC_LABEL: Record<(typeof ACCESSORIES)[number], TranslationKey> = {
   scar: 'avatar.acc.scar',
 }
 
-export function AvatarEditorModal({
-  open,
-  onClose,
-  initial,
-  onSaved,
+/** Aperçu + choix des pièces de l'avatar. Contrôlé par le parent, qui gère
+ * l'enregistrement (voir ProfileModal dans pages/Account.tsx). */
+export function AvatarPartsPicker({
+  config,
+  onChange,
 }: {
-  open: boolean
-  onClose: () => void
-  initial: AvatarConfig | null
-  onSaved: () => void
+  config: AvatarConfig
+  onChange: (next: AvatarConfig) => void
 }) {
   const { profile } = useAuth()
   const { t } = useLanguage()
   const points = profile?.rank_points ?? 0
-  const [config, setConfig] = useState<AvatarConfig>(initial ?? DEFAULT_AVATAR_CONFIG)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (open) {
-      setConfig(initial ?? DEFAULT_AVATAR_CONFIG)
-      setError(null)
-    }
-  }, [open, initial])
-
-  async function save() {
-    setSaving(true)
-    setError(null)
-    const { error: rpcError } = await supabase.rpc('set_my_avatar', { p_config: config })
-    setSaving(false)
-    if (rpcError) {
-      setError(rpcError.message)
-      return
-    }
-    onSaved()
-    onClose()
-  }
 
   function chip<K extends 'hair' | 'outfit' | 'acc'>(kind: K, value: AvatarConfig[K], label: string, min: number) {
     const locked = points < min
@@ -115,7 +89,7 @@ export function AvatarEditorModal({
         type="button"
         disabled={locked}
         aria-pressed={active}
-        onClick={() => setConfig((c) => ({ ...c, [kind]: value }))}
+        onClick={() => onChange({ ...config, [kind]: value })}
         className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
           active
             ? 'border-moon-400 bg-moon-400/15 font-semibold text-moon-200'
@@ -135,7 +109,7 @@ export function AvatarEditorModal({
         type="button"
         aria-pressed={active}
         aria-label={`${t(kind === 'skin' ? 'avatar.skin' : 'avatar.bg')} ${index + 1}`}
-        onClick={() => setConfig((c) => ({ ...c, [kind]: index }))}
+        onClick={() => onChange({ ...config, [kind]: index })}
         className={`h-8 w-8 rounded-full border-2 transition-shadow ${
           active ? 'border-moon-400 shadow-[0_0_0_2px_rgba(224,168,74,0.5)]' : 'border-night-600'
         }`}
@@ -144,7 +118,7 @@ export function AvatarEditorModal({
     )
   }
 
-  const group = (label: string, children: React.ReactNode) => (
+  const group = (label: string, children: ReactNode) => (
     <div>
       <p className="mb-1.5 text-xs uppercase tracking-wider text-moon-200/50">{label}</p>
       <div className="flex flex-wrap gap-1.5">{children}</div>
@@ -152,25 +126,16 @@ export function AvatarEditorModal({
   )
 
   return (
-    <Modal open={open} onClose={onClose} title={t('avatar.title')}>
-      <div className="flex flex-col gap-4">
-        <div className="flex justify-center">
-          <Avatar
-            config={config}
-            className="h-28 w-28 ring-2 ring-moon-400/60 ring-offset-2 ring-offset-night-900"
-          />
-        </div>
-        {group(t('avatar.skin'), SKIN_TONES.map((c, i) => swatch('skin', i, c)))}
-        {group(t('avatar.hair'), HAIRS.map((h) => chip('hair', h, t(HAIR_LABEL[h]), PART_MIN_POINTS.hair[h])))}
-        {group(t('avatar.outfit'), OUTFITS.map((o) => chip('outfit', o, t(OUTFIT_LABEL[o]), PART_MIN_POINTS.outfit[o])))}
-        {group(t('avatar.acc'), ACCESSORIES.map((a) => chip('acc', a, t(ACC_LABEL[a]), PART_MIN_POINTS.acc[a])))}
-        {group(t('avatar.bg'), AVATAR_BGS.map((c, i) => swatch('bg', i, c)))}
-        <p className="text-xs text-moon-200/50">{t('avatar.hint')}</p>
-        {error && <p className="rounded-xl border border-blood-500/40 bg-blood-500/10 px-3 py-2 text-xs text-blood-400">{error}</p>}
-        <Button onClick={save} disabled={saving} className="w-full">
-          {saving ? t('common.loading') : t('avatar.save')}
-        </Button>
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-center">
+        <Avatar config={config} className="h-28 w-28 ring-2 ring-moon-400/60 ring-offset-2 ring-offset-night-900" />
       </div>
-    </Modal>
+      {group(t('avatar.skin'), SKIN_TONES.map((c, i) => swatch('skin', i, c)))}
+      {group(t('avatar.hair'), HAIRS.map((h) => chip('hair', h, t(HAIR_LABEL[h]), PART_MIN_POINTS.hair[h])))}
+      {group(t('avatar.outfit'), OUTFITS.map((o) => chip('outfit', o, t(OUTFIT_LABEL[o]), PART_MIN_POINTS.outfit[o])))}
+      {group(t('avatar.acc'), ACCESSORIES.map((a) => chip('acc', a, t(ACC_LABEL[a]), PART_MIN_POINTS.acc[a])))}
+      {group(t('avatar.bg'), AVATAR_BGS.map((c, i) => swatch('bg', i, c)))}
+      <p className="text-xs text-moon-200/50">{t('avatar.hint')}</p>
+    </div>
   )
 }
