@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { Button, Card, ErrorText, Input, Label, SuccessText } from '../components/ui'
 import { useLanguage } from '../i18n/LanguageContext'
 import { isAdminApp } from '../lib/adminApp'
+import { safeRedirect } from '../lib/safeRedirect'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -35,7 +36,7 @@ export default function Login() {
       return
     }
 
-    navigate(searchParams.get('redirect') || '/dashboard')
+    navigate(safeRedirect(searchParams.get('redirect')) || '/dashboard')
   }
 
   return (
@@ -113,8 +114,8 @@ export default function Login() {
             {t('login.noAccount')}{' '}
             <Link
               to={
-                searchParams.get('redirect')
-                  ? `/inscription?redirect=${encodeURIComponent(searchParams.get('redirect')!)}`
+                safeRedirect(searchParams.get('redirect'))
+                  ? `/inscription?redirect=${encodeURIComponent(safeRedirect(searchParams.get('redirect'))!)}`
                   : '/inscription'
               }
               className="text-moon-300 underline underline-offset-4"

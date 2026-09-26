@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Button, Card } from '../components/ui'
 import { useLanguage } from '../i18n/LanguageContext'
+import { safeRedirect } from '../lib/safeRedirect'
 
 export default function VerifyEmail() {
   const { session, loading } = useAuth()
@@ -15,7 +16,7 @@ export default function VerifyEmail() {
   // depuis l'URL (et non un state de navigation) car le lien de
   // confirmation reçu par email peut très bien s'ouvrir dans un tout autre
   // onglet/navigateur que celui qui a rempli le formulaire d'inscription.
-  const redirect = searchParams.get('redirect')
+  const redirect = safeRedirect(searchParams.get('redirect'))
   const { t } = useLanguage()
   const [resent, setResent] = useState(false)
   const [checking, setChecking] = useState(false)

@@ -5,6 +5,7 @@ import { Button, Card, ErrorText, Input, Label } from '../components/ui'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { CONTINENTS } from '../lib/continents'
 import { useLanguage } from '../i18n/LanguageContext'
+import { safeRedirect } from '../lib/safeRedirect'
 
 export default function SignUp() {
   const navigate = useNavigate()
@@ -14,7 +15,7 @@ export default function SignUp() {
   // pour ramener le joueur directement sur la partie qu'il voulait
   // rejoindre, au lieu de le laisser sur le tableau de bord général une
   // fois son compte confirmé.
-  const redirect = searchParams.get('redirect')
+  const redirect = safeRedirect(searchParams.get('redirect'))
   const { t, lang } = useLanguage()
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
