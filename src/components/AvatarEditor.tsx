@@ -9,6 +9,7 @@ import { parseAvatarConfig, type AvatarConfig } from '../lib/avatarParts'
 export function useMyAvatarConfig() {
   const { user } = useAuth()
   const [config, setConfig] = useState<AvatarConfig | null>(null)
+  const [loaded, setLoaded] = useState(false)
   const [version, setVersion] = useState(0)
 
   useEffect(() => {
@@ -20,7 +21,9 @@ export function useMyAvatarConfig() {
       .eq('id', user.id)
       .maybeSingle()
       .then(({ data, error }) => {
-        if (!active || error) return
+        if (!active) return
+        setLoaded(true)
+        if (error) return
         const value = (data as { avatar_config?: unknown } | null)?.avatar_config
         setConfig(parseAvatarConfig(value))
       })
@@ -29,5 +32,5 @@ export function useMyAvatarConfig() {
     }
   }, [user, version])
 
-  return { config, reload: () => setVersion((v) => v + 1) }
+  return { config, loaded, reload: () => setVersion((v) => v + 1) }
 }

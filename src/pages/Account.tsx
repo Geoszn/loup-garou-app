@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Button, Card, ConfirmDialog, ErrorText, Input, Label, Modal, SuccessText } from '../components/ui'
@@ -32,10 +32,19 @@ const USERNAME_COOLDOWN_DAYS = 7
 export default function Account() {
   const { profile, session, refreshProfile } = useAuth()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { t } = useLanguage()
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [passwordModalOpen, setPasswordModalOpen] = useState(false)
   const myAvatar = useMyAvatarConfig()
+
+  // Lien direct vers l'éditeur (annonce des avatars, notification) : /compte?avatar=1
+  useEffect(() => {
+    if (searchParams.get('avatar') === '1' && myAvatar.loaded) {
+      setProfileModalOpen(true)
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams, myAvatar.loaded])
 
   return (
     <div className="min-h-screen px-4 py-10">
