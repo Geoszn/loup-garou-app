@@ -216,6 +216,8 @@ export interface PublicPlayer {
   revealed_role: string | null
   avatar_color: string
   avatar_icon: string | null
+  // Avatar personnalisé (migration 0190) ; absent/null = ancienne icône.
+  avatar_config?: unknown
   joined_at: string
   // Palier de rang ACTUEL du joueur (voir get_my_game_view, migration 0074)
   // — calculé en direct depuis profiles.rank_points à chaque lecture, pas

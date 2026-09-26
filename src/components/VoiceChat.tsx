@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useVoiceChat, type VoiceChannel } from '../hooks/useVoiceChat'
 import { useLanguage } from '../i18n/LanguageContext'
-import { AvatarIcon } from './AvatarIcon'
+import { Avatar } from './Avatar'
 import type { PublicPlayer } from '../types/game'
 
 export function VoiceChat({
@@ -117,11 +117,15 @@ export function VoiceChat({
   // couleur commune), seul le glyphe change d'un joueur à l'autre — avant,
   // chaque bulle reprenait la couleur d'avatar choisie par le joueur
   // (avatar_color), ce qui faisait un patchwork de couleurs différentes.
-  function avatarBubble(icon: string | null | undefined, fallback: string, size: string) {
+  function avatarBubble(player: PublicPlayer | undefined, fallback: string, size: string) {
     return (
-      <span className={`flex ${size} shrink-0 items-center justify-center rounded-full bg-night-700 text-moon-200`}>
-        {icon ? <AvatarIcon icon={icon} className="h-4 w-4" /> : <span className="text-[10px] font-bold">{fallback.slice(0, 1).toUpperCase()}</span>}
-      </span>
+      <Avatar
+        config={player?.avatar_config}
+        icon={player?.avatar_icon}
+        color={player?.avatar_color}
+        name={fallback}
+        className={size}
+      />
     )
   }
 
@@ -217,7 +221,7 @@ export function VoiceChat({
               }`}
             >
               <span className="relative inline-flex">
-                {avatarBubble(me?.avatar_icon, displayName, 'h-8 w-8')}
+                {avatarBubble(me, displayName, 'h-10 w-10')}
                 <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border border-night-900 bg-night-800 text-[8px]">
                   {muted ? '🔇' : '🎤'}
                 </span>
@@ -253,7 +257,7 @@ export function VoiceChat({
                     </span>
                   ))}
                 <span className="relative inline-flex">
-                  {avatarBubble(info?.avatar_icon, p.name, 'h-8 w-8')}
+                  {avatarBubble(info, p.name, 'h-10 w-10')}
                   <span
                     className={`absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border border-night-900 bg-night-800 text-[8px] ${
                       speaking ? 'animate-pulse' : ''

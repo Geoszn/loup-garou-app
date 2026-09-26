@@ -3,7 +3,7 @@ import { roleLabel } from '../lib/roles'
 import { tierGroup } from '../lib/ranks'
 import type { PublicPlayer } from '../types/game'
 import { FriendRequestPopover } from './FriendRequestPopover'
-import { AvatarIcon } from './AvatarIcon'
+import { Avatar } from './Avatar'
 import { useLanguage } from '../i18n/LanguageContext'
 
 // Cadre visuel autour de l'avatar, qui monte en gamme avec le palier de rang
@@ -133,18 +133,15 @@ export function PlayerGrid({
                   donc un texte sombre garde une bonne lisibilité dans les deux
                   thèmes, contrairement à night-950 qui deviendrait blanc de jour. */}
               <span className="relative inline-flex">
-                <span
-                  className={`flex items-center justify-center rounded-full font-bold text-[#05070d] ring-offset-2 ${compact ? 'h-8 w-8 text-xs' : 'h-10 w-10 text-sm'} ${
+                <Avatar
+                  config={p.avatar_config}
+                  icon={p.avatar_icon}
+                  color={p.avatar_color}
+                  name={p.display_name}
+                  className={`ring-offset-2 ${compact ? 'h-10 w-10' : 'h-14 w-14'} ${
                     p.rank_tier ? `ring-offset-night-900 ${tierRingClass(p.rank_tier)}` : ''
                   } ${p.has_masque_griot ? MASQUE_GRIOT_CLASS : ''}`}
-                  style={{ backgroundColor: p.avatar_color }}
-                >
-                  {p.avatar_icon ? (
-                    <AvatarIcon icon={p.avatar_icon} className={compact ? 'h-4 w-4' : 'h-5 w-5'} />
-                  ) : (
-                    p.display_name.slice(0, 1).toUpperCase()
-                  )}
-                </span>
+                />
                 {onlineUserIds && (
                   <span
                     title={onlineUserIds.has(p.user_id) ? t('common.online') : t('common.offline')}

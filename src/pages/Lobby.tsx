@@ -12,6 +12,7 @@ import { ModerationPanel } from '../components/ModerationPanel'
 import { JoinRequestsPanel } from '../components/JoinRequestsPanel'
 import { VoiceChat } from '../components/VoiceChat'
 import { AvatarIcon } from '../components/AvatarIcon'
+import { Avatar } from '../components/Avatar'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
 import { ROLES } from '../lib/roles'
@@ -801,12 +802,12 @@ export default function Lobby() {
                     }`}
                   >
                     <span className="relative inline-flex shrink-0">
-                      <span
-                        className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-night-950"
-                        style={{ backgroundColor: p.avatar_color }}
-                      >
-                        {p.display_name.slice(0, 1).toUpperCase()}
-                      </span>
+                      <Avatar
+                        config={p.avatar_config}
+                        color={p.avatar_color}
+                        name={p.display_name}
+                        className="h-10 w-10"
+                      />
                       {/* Voyant en ligne/hors ligne (voir onlineUserIds
                           ci-dessus) : permet à l'hôte de repérer d'un coup
                           d'œil qui a vraiment l'appli ouverte avant de

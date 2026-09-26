@@ -11,6 +11,8 @@ import { AvatarIcon } from '../components/AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 import { NotificationPreferences } from '../components/NotificationPreferences'
+import { Avatar } from '../components/Avatar'
+import { AvatarEditorModal, useMyAvatarConfig } from '../components/AvatarEditor'
 import { sendTestPush } from '../lib/pushSubscription'
 
 // Délai entre l'affichage du message de succès dans une pop-up de réglage et
@@ -34,6 +36,8 @@ export default function Account() {
   const { t } = useLanguage()
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [passwordModalOpen, setPasswordModalOpen] = useState(false)
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false)
+  const myAvatar = useMyAvatarConfig()
 
   return (
     <div className="min-h-screen px-4 py-10">
@@ -59,6 +63,20 @@ export default function Account() {
             <Button variant="ghost" onClick={() => setProfileModalOpen(true)} className="px-3.5 py-2 text-xs">
               {t('account.profile.editButton')}
             </Button>
+          </SettingsRow>
+
+          <SettingsRow label={t('avatar.title')}>
+            <div className="flex items-center gap-3">
+              <Avatar
+                config={myAvatar.config}
+                icon={profile?.avatar_icon}
+                name={profile?.username}
+                className="h-10 w-10"
+              />
+              <Button variant="ghost" onClick={() => setAvatarModalOpen(true)} className="px-3.5 py-2 text-xs">
+                {t('avatar.customize')}
+              </Button>
+            </div>
           </SettingsRow>
 
           <SettingsRow label={t('account.email.title')} description={session?.user.email}>
@@ -93,6 +111,13 @@ export default function Account() {
           await refreshProfile()
           setTimeout(() => setProfileModalOpen(false), CLOSE_DELAY_MS)
         }}
+      />
+
+      <AvatarEditorModal
+        open={avatarModalOpen}
+        onClose={() => setAvatarModalOpen(false)}
+        initial={myAvatar.config}
+        onSaved={myAvatar.reload}
       />
 
       <PasswordModal
