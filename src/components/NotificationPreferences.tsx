@@ -12,17 +12,40 @@ interface Prefs {
   comeback: boolean
 }
 
-const TYPES: { key: Exclude<keyof Prefs, 'enabled'>; label: TranslationKey; hint: TranslationKey }[] = [
-  { key: 'quests', label: 'notifPrefs.quests', hint: 'notifPrefs.questsHint' },
-  { key: 'streak', label: 'notifPrefs.streak', hint: 'notifPrefs.streakHint' },
-  { key: 'games', label: 'notifPrefs.games', hint: 'notifPrefs.gamesHint' },
-  { key: 'progress', label: 'notifPrefs.progress', hint: 'notifPrefs.progressHint' },
-  { key: 'comeback', label: 'notifPrefs.comeback', hint: 'notifPrefs.comebackHint' },
+type Category = 'enabled' | 'streak' | 'quests' | 'games' | 'progress' | 'comeback'
+
+// Trois familles plutôt que cinq réglages : chacune pilote une ou deux
+// catégories côté serveur (voir pick_engagement_notifications, migration 0189).
+const GROUPS: { keys: Exclude<Category, 'enabled'>[]; label: TranslationKey; hint: TranslationKey }[] = [
+  { keys: ['quests', 'streak'], label: 'notifPrefs.groupQuests', hint: 'notifPrefs.groupQuestsHint' },
+  { keys: ['games'], label: 'notifPrefs.groupGames', hint: 'notifPrefs.groupGamesHint' },
+  { keys: ['progress', 'comeback'], label: 'notifPrefs.groupProgress', hint: 'notifPrefs.groupProgressHint' },
 ]
+
+function Switch({ checked, onChange, label }: { checked: boolean; onChange: (next: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-moon-400/60 ${
+        checked ? 'border-moon-400 bg-moon-400/80' : 'border-night-500 bg-night-800'
+      }`}
+    >
+      <span
+        className={`absolute top-0.5 rounded-full transition-all ${checked ? 'left-[1.375rem] bg-night-950' : 'left-0.5 bg-moon-200/60'}`}
+        style={{ height: '1.125rem', width: '1.125rem' }}
+      />
+    </button>
+  )
+}
 
 export function NotificationPreferences() {
   const { t } = useLanguage()
   const [prefs, setPrefs] = useState<Prefs | null>(null)
+  const [open, setOpen] = useState(false)
 
   useEffect(() => {
     supabase.rpc('get_my_notification_prefs').then(({ data }) => {
@@ -33,7 +56,8 @@ export function NotificationPreferences() {
   if (!prefs) return null
 
   async function update(patch: Partial<Prefs>) {
-    const next = { ...prefs!, ...patch }
+    const previous = prefs!
+    const next = { ...previous, ...patch }
     setPrefs(next)
     const { error } = await supabase.rpc('save_my_notification_prefs', {
       p_enabled: next.enabled,
@@ -43,36 +67,48 @@ export function NotificationPreferences() {
       p_progress: next.progress,
       p_comeback: next.comeback,
     })
-    if (error) setPrefs(prefs)
+    if (error) setPrefs(previous)
   }
 
   return (
-    <div className="flex flex-col gap-2 border-t border-night-600/50 pt-3">
-      <label className="flex items-center justify-between gap-3">
-        <span className="text-sm text-moon-200">{t('notifPrefs.all')}</span>
-        <input
-          type="checkbox"
-          checked={prefs.enabled}
-          onChange={(e) => update({ enabled: e.target.checked })}
-          className="h-4 w-4 accent-amber-400"
-        />
-      </label>
-      {prefs.enabled &&
-        TYPES.map((type) => (
-          <label key={type.key} className="flex items-start justify-between gap-3">
-            <span className="min-w-0">
-              <span className="block text-sm text-moon-200/90">{t(type.label)}</span>
-              <span className="block text-xs text-moon-200/50">{t(type.hint)}</span>
-            </span>
-            <input
-              type="checkbox"
-              checked={prefs[type.key]}
-              onChange={(e) => update({ [type.key]: e.target.checked })}
-              className="mt-1 h-4 w-4 shrink-0 accent-amber-400"
-            />
-          </label>
-        ))}
-      {prefs.enabled && <p className="text-xs text-moon-200/40">{t('notifPrefs.limits')}</p>}
+    <div className="flex flex-col gap-3 border-t border-night-600/50 pt-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm text-moon-200">{t('notifPrefs.all')}</p>
+          <p className="text-xs text-moon-200/50">{t('notifPrefs.limits')}</p>
+        </div>
+        <Switch checked={prefs.enabled} onChange={(v) => update({ enabled: v })} label={t('notifPrefs.all')} />
+      </div>
+
+      {prefs.enabled && (
+        <>
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            className="self-start text-xs font-semibold text-moon-300 underline underline-offset-4 transition-colors hover:text-moon-200"
+          >
+            {t('notifPrefs.customize')} {open ? '⌃' : '⌄'}
+          </button>
+          {open && (
+            <div className="flex flex-col gap-3 rounded-xl border border-night-600/60 bg-night-900/40 px-3 py-3">
+              {GROUPS.map((group) => (
+                <div key={group.label} className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm text-moon-200/90">{t(group.label)}</p>
+                    <p className="text-xs text-moon-200/50">{t(group.hint)}</p>
+                  </div>
+                  <Switch
+                    checked={group.keys.some((k) => prefs[k])}
+                    onChange={(v) => update(Object.fromEntries(group.keys.map((k) => [k, v])) as Partial<Prefs>)}
+                    label={t(group.label)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }
