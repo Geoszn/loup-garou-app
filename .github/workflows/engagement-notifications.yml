@@ -1,0 +1,24 @@
+name: Engagement notifications
+
+# Vercel Cron (offre gratuite) ne peut tourner qu'une fois par jour ; les
+# notifications personnalisées doivent partir à l'heure locale du joueur,
+# donc ce workflow appelle la route toutes les heures. Secrets à créer dans
+# GitHub (Settings > Secrets and variables > Actions) : APP_URL (ex.
+# https://www.loupgarouafrique.com) et CRON_SECRET (le même que sur Vercel).
+on:
+  schedule:
+    - cron: '7 * * * *'
+  workflow_dispatch:
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Appeler la route des notifications
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl --fail --silent --show-error --max-time 60 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$APP_URL/api/cron-engagement-notifications"

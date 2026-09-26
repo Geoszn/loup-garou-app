@@ -10,6 +10,7 @@ import { ContinentSelect } from '../components/ContinentSelect'
 import { AvatarIcon } from '../components/AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
 import { usePushNotifications } from '../hooks/usePushNotifications'
+import { NotificationPreferences } from '../components/NotificationPreferences'
 import { sendTestPush } from '../lib/pushSubscription'
 
 // Délai entre l'affichage du message de succès dans une pop-up de réglage et
@@ -229,6 +230,7 @@ function NotificationsRow() {
               : t('account.notifications.enable')}
         </Button>
       </div>
+      {push.subscribed && <NotificationPreferences />}
     </div>
   )
 }
