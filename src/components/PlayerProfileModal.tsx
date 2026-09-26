@@ -7,6 +7,7 @@ import { Button, ConfirmDialog, ErrorText, Modal } from './ui'
 import { AvatarIcon } from './AvatarIcon'
 import { RankTierBadge } from './RankTierBadge'
 import { useLanguage } from '../i18n/LanguageContext'
+import { Avatar } from './Avatar'
 
 type FriendStatus = 'self' | 'friends' | 'pending_sent' | 'pending_received' | 'none'
 
@@ -14,6 +15,7 @@ interface PlayerProfile {
   user_id: string
   username: string
   avatar_icon: string | null
+  avatar_config?: unknown
   continent: string | null
   rank_points: number
   tier: string
@@ -138,7 +140,7 @@ export function PlayerProfileModal({
       {profile && (
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-3">
-            <AvatarIcon icon={profile.avatar_icon} className="h-10 w-10" />
+            <Avatar config={profile.avatar_config} icon={profile.avatar_icon} name={profile.username} className="h-16 w-16" />
             {tier && (
               <div className="flex flex-col gap-0.5">
                 <span className="flex items-center gap-1.5 text-sm text-moon-200">

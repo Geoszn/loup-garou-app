@@ -6,11 +6,13 @@ import { Button, Card, ErrorText, Input, Label, SuccessText } from '../component
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { AvatarIcon } from '../components/AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
+import { Avatar } from '../components/Avatar'
 
 interface Person {
   user_id: string
   username: string
   avatar_icon: string
+  avatar_config?: unknown
 }
 
 interface FriendRequest extends Person {
@@ -152,7 +154,7 @@ export default function Friends() {
                   className="flex items-center justify-between rounded-xl border border-night-600/60 bg-night-900/40 px-4 py-2.5 text-sm"
                 >
                   <span className="flex items-center gap-1.5 text-moon-200/90">
-                    <AvatarIcon icon={r.avatar_icon} className="h-4 w-4" /> {r.username}
+                    <Avatar config={r.avatar_config} icon={r.avatar_icon} name={r.username} className="h-7 w-7" /> {r.username}
                   </span>
                   <div className="flex gap-2">
                     <Button variant="ghost" className="px-3 py-1.5 text-xs" onClick={() => respond(r.request_id, false)}>
@@ -178,7 +180,7 @@ export default function Friends() {
                   className="flex items-center justify-between rounded-xl border border-night-600/60 bg-night-900/40 px-4 py-2.5 text-sm"
                 >
                   <span className="flex items-center gap-1.5 text-moon-200/90">
-                    <AvatarIcon icon={r.avatar_icon} className="h-4 w-4" /> {r.username}
+                    <Avatar config={r.avatar_config} icon={r.avatar_icon} name={r.username} className="h-7 w-7" /> {r.username}
                   </span>
                   <span className="text-xs text-moon-200/40">{t('friends.outgoing.pending')}</span>
                 </li>
@@ -199,7 +201,7 @@ export default function Friends() {
                   className="flex items-center justify-between rounded-xl border border-night-600/60 bg-night-900/40 px-4 py-2.5 text-sm"
                 >
                   <span className="flex items-center gap-1.5 text-moon-200/90">
-                    <AvatarIcon icon={f.avatar_icon} className="h-4 w-4" /> {f.username}
+                    <Avatar config={f.avatar_config} icon={f.avatar_icon} name={f.username} className="h-7 w-7" /> {f.username}
                   </span>
                   <Button variant="ghost" className="px-3 py-1.5 text-xs" onClick={() => remove(f.user_id)}>
                     {t('friends.list.remove')}

@@ -2,11 +2,13 @@ import { usePresence } from '../context/PresenceContext'
 import { useLanguage } from '../i18n/LanguageContext'
 import { AvatarIcon } from './AvatarIcon'
 import { CopyButton } from './ui'
+import { Avatar } from './Avatar'
 
 export interface FriendPerson {
   user_id: string
   username: string
   avatar_icon: string
+  avatar_config?: unknown
 }
 
 /**
@@ -46,7 +48,7 @@ export function FriendsOnlineWidget({ friends }: { friends: FriendPerson[] }) {
                   className={`h-2 w-2 shrink-0 rounded-full ${inGame ? 'bg-moon-300' : 'bg-emerald-400'}`}
                   aria-hidden="true"
                 />
-                <AvatarIcon icon={f.avatar_icon} className="h-4 w-4 shrink-0" />
+                <Avatar config={f.avatar_config} icon={f.avatar_icon} name={f.username} className="h-6 w-6" />
                 <span className="truncate">{f.username}</span>
               </span>
               {inGame ? (

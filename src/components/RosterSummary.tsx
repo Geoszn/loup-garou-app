@@ -6,6 +6,7 @@ import { notifyFriendRequest } from '../lib/pushSubscription'
 import { AvatarIcon } from './AvatarIcon'
 import { Modal } from './ui'
 import { useLanguage } from '../i18n/LanguageContext'
+import { Avatar } from './Avatar'
 
 // Rôles spéciaux qu'on affiche en détail (statut vivant/éliminé).
 // Volontairement sans 'loup_garou', 'loup_alpha', 'sans_visage' ni
@@ -233,7 +234,7 @@ export function RosterSummary({
                           }`}
                         />
                       )}
-                      <AvatarIcon icon={p.avatar_icon} className="mr-1 inline-block h-3.5 w-3.5 -translate-y-px align-middle" />{' '}
+                      <Avatar config={p.avatar_config} icon={p.avatar_icon} color={p.avatar_color} name={p.display_name} className="mr-1.5 h-6 w-6 align-middle" />{' '}
                       {p.display_name}
                       {p.user_id === selfId ? ` (${t('common.you')})` : ''}
                       {!p.is_alive ? ' 💀' : ''}

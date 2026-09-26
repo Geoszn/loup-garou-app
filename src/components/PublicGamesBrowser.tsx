@@ -6,6 +6,7 @@ import { Button, ErrorText } from './ui'
 import { AvatarIcon } from './AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { PublicGameListing } from '../types/game'
+import { Avatar } from './Avatar'
 
 /** Liste des parties publiques encore en salon — contenu "nu" (pas de carte
  * repliable autour), pensé pour être déposé tel quel dans la pop-up "Pour
@@ -83,7 +84,7 @@ export function PublicGamesList({ displayName }: { displayName: string }) {
               className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-night-700/60 bg-night-800/40 px-3 py-2.5"
             >
               <p className="flex flex-wrap items-center gap-1 text-sm text-moon-200/90">
-                <AvatarIcon icon={g.host_avatar_icon} className="h-4 w-4" />
+                <Avatar config={g.host_avatar_config} icon={g.host_avatar_icon} name={g.host_name} className="h-7 w-7" />
                 <strong className="text-moon-200">{g.host_name}</strong>
                 <span className="ml-2 text-xs text-moon-200/40">{t('publicGames.playerCount', { count: g.player_count })}</span>
                 {g.status === 'lobby' ? (

@@ -7,11 +7,14 @@ import { AvatarIcon } from './AvatarIcon'
 import { RankTierBadge } from './RankTierBadge'
 import { Card } from './ui'
 import { useLanguage } from '../i18n/LanguageContext'
+import { Avatar } from './Avatar'
+import { useMyAvatarConfig } from './AvatarEditor'
 
 interface Entry {
   user_id: string
   username: string
   avatar_icon: string
+  avatar_config?: unknown
   rank_points: number
   current_streak: number
 }
@@ -27,6 +30,7 @@ interface Entry {
  * loin derrière — c'est ce qui donne envie de grimper. */
 export function DashboardLeaderboard() {
   const { user, profile } = useAuth()
+  const myAvatar = useMyAvatarConfig()
   const { t } = useLanguage()
   const [entries, setEntries] = useState<Entry[] | null>(null)
   const [myPosition, setMyPosition] = useState<number | null>(null)
@@ -98,6 +102,7 @@ export function DashboardLeaderboard() {
                 user_id: user?.id ?? '',
                 username: profile.username,
                 avatar_icon: profile.avatar_icon,
+                avatar_config: myAvatar.config,
                 rank_points: profile.rank_points,
                 current_streak: profile.current_streak,
               }}
@@ -122,7 +127,7 @@ function LeaderboardRow({ entry, position, mine }: { entry: Entry; position: num
     >
       <span className="w-6 shrink-0 text-center text-xs text-moon-200/40">{position ? `#${position}` : '—'}</span>
       <span className="flex flex-1 min-w-0 items-center gap-1.5 truncate text-moon-200/90">
-        <AvatarIcon icon={entry.avatar_icon} className="h-4 w-4 shrink-0" />
+        <Avatar config={entry.avatar_config} icon={entry.avatar_icon} name={entry.username} className="h-7 w-7" />
         <span className="truncate">{mine ? t('dashboard.leaderboard.youLabel', { username: entry.username }) : entry.username}</span>
       </span>
       {entry.current_streak >= 2 && <span className="shrink-0 text-xs text-blood-400">🔥{entry.current_streak}</span>}

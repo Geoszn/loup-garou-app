@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AvatarIcon } from './AvatarIcon'
+import { Avatar } from './Avatar'
+import { useMyAvatarConfig } from './AvatarEditor'
 import { LoupCoinIcon } from './LoupCoinIcon'
 import { useLanguage } from '../i18n/LanguageContext'
 
@@ -29,6 +30,7 @@ export function AccountMenu({
   loginStreak?: number
   onSignOut: () => void
 }) {
+  const myAvatar = useMyAvatarConfig()
   const { t } = useLanguage()
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -56,9 +58,7 @@ export function AccountMenu({
         onClick={() => setOpen((v) => !v)}
         className="relative flex items-center gap-1.5 rounded-full border border-night-600 bg-night-800/60 py-1 pl-1 pr-2 text-xs text-moon-200/80 transition-colors hover:border-moon-400/50 hover:text-moon-200 sm:gap-2 sm:py-1.5 sm:pl-1.5 sm:pr-3 sm:text-sm"
       >
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-night-700 text-sm sm:h-7 sm:w-7">
-          <AvatarIcon icon={avatarIcon} className="h-4 w-4" />
-        </span>
+        <Avatar config={myAvatar.config} icon={avatarIcon} name={username} className="h-7 w-7 sm:h-8 sm:w-8" />
         <span className="max-w-[64px] truncate sm:max-w-[110px]">{username}</span>
         <span className="text-[9px] text-moon-200/40">{open ? '▲' : '▼'}</span>
         {pendingFriendCount > 0 && (

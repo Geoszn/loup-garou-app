@@ -22,6 +22,7 @@ import { EventBanner } from '../components/EventBanner'
 import { useNarrator } from '../hooks/useNarrator'
 import { useActiveEvents } from '../hooks/useActiveEvents'
 import { useLanguage } from '../i18n/LanguageContext'
+import { Avatar } from '../components/Avatar'
 
 interface GameInvite {
   invite_id: string
@@ -29,6 +30,7 @@ interface GameInvite {
   code: string
   from_username: string
   from_avatar_icon: string
+  from_avatar_config?: unknown
 }
 
 interface ActiveGame {
@@ -402,7 +404,7 @@ export default function Dashboard() {
             {invites.map((invite) => (
               <Card key={invite.invite_id} className="flex flex-wrap items-center justify-between gap-3 py-4">
                 <p className="flex flex-wrap items-center gap-1 text-sm text-moon-200/90">
-                  <AvatarIcon icon={invite.from_avatar_icon} className="h-4 w-4" />
+                  <Avatar config={invite.from_avatar_config} icon={invite.from_avatar_icon} name={invite.from_username} className="h-7 w-7" />
                   <strong className="text-moon-200">{invite.from_username}</strong>
                   {t('dashboard.inviteFrom')} ({invite.code}).
                 </p>

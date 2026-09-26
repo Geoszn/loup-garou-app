@@ -174,6 +174,7 @@ export interface PublicGameListing {
   status: GameStatus
   host_name: string
   host_avatar_icon: string | null
+  host_avatar_config?: unknown
   player_count: number
   created_at: string
   already_requested: boolean

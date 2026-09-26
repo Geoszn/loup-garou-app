@@ -12,6 +12,7 @@ import { AvatarIcon } from '../components/AvatarIcon'
 import { RankTierBadge } from '../components/RankTierBadge'
 import { LoupCoinIcon } from '../components/LoupCoinIcon'
 import { useLanguage } from '../i18n/LanguageContext'
+import { Avatar } from '../components/Avatar'
 
 interface RoleStat {
   role: RoleId
@@ -50,6 +51,7 @@ interface LeaderboardEntry {
   user_id: string
   username: string
   avatar_icon: string
+  avatar_config?: unknown
   rank_points: number
   tier: string
   current_streak: number
@@ -339,7 +341,7 @@ export default function Stats() {
                   >
                     <span className="w-5 shrink-0 text-center text-moon-200/40">{i + 1}</span>
                     <span className="flex flex-1 min-w-0 items-center gap-1.5 truncate text-moon-200/90">
-                      <AvatarIcon icon={entry.avatar_icon} className="h-4 w-4 shrink-0" />
+                      <Avatar config={entry.avatar_config} icon={entry.avatar_icon} name={entry.username} className="h-7 w-7" />
                       {entry.username}
                     </span>
                     {entry.current_streak >= 2 && <span className="shrink-0 text-xs text-blood-400">🔥{entry.current_streak}</span>}

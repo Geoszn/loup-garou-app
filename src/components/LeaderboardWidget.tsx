@@ -8,6 +8,7 @@ interface Entry {
   user_id: string
   username: string
   avatar_icon: string
+  avatar_config?: unknown
   rank_points: number
   tier: string
   current_streak: number

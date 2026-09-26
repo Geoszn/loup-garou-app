@@ -195,6 +195,7 @@ export function PlayerGrid({
                 userId={p.user_id}
                 displayName={p.display_name}
                 avatarIcon={p.avatar_icon}
+                avatarConfig={p.avatar_config}
                 onClose={() => setOpenId(null)}
               />
             )}

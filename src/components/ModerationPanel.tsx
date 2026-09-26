@@ -4,6 +4,7 @@ import { Button, ConfirmDialog, ErrorText } from './ui'
 import { AvatarIcon } from './AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { MyGameView, PublicPlayer } from '../types/game'
+import { Avatar } from './Avatar'
 
 /** Outils de modération de l'hôte : retirer un joueur (salon ou partie en
  * cours) et gérer une liste de mots interdits dans le chat. Réutilisé tel
@@ -164,7 +165,7 @@ export function ModerationPanel({ view, gameId, selfId }: { view: MyGameView; ga
                 className="flex items-center justify-between rounded-xl border border-night-600/60 bg-night-900/40 px-3 py-2 text-sm"
               >
                 <span className="min-w-0 truncate text-moon-200/90">
-                  <AvatarIcon icon={p.avatar_icon} className="mr-1 inline-block h-3.5 w-3.5 -translate-y-px align-middle" />{' '}
+                  <Avatar config={p.avatar_config} icon={p.avatar_icon} color={p.avatar_color} name={p.display_name} className="mr-1.5 h-6 w-6 align-middle" />{' '}
                   {p.display_name}
                   {!p.is_alive && !isLobbyOrEnded && <span className="ml-1.5 text-xs text-moon-200/40">{t('moderation.ghostTag')}</span>}
                 </span>

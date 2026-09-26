@@ -31,6 +31,7 @@ import { translateGameLogMessage } from '../lib/gameLogTranslate'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { MyGameView, PublicPlayer } from '../types/game'
 import type { VoiceChannel } from '../hooks/useVoiceChat'
+import { Avatar } from '../components/Avatar'
 
 export default function GameRoom() {
   const { code } = useParams()
@@ -1604,7 +1605,7 @@ function WolfPackList({ view, myRole }: { view: MyGameView; myRole: string | nul
                 isAlpha ? 'border-blood-500/60 bg-blood-700/20 text-moon-100' : 'border-night-600/60 bg-night-900/50 text-moon-200/90'
               }`}
             >
-              <AvatarIcon icon={p.avatar_icon} className="h-3.5 w-3.5" />
+              <Avatar config={p.avatar_config} icon={p.avatar_icon} color={p.avatar_color} name={p.display_name} className="h-6 w-6" />
               {p.display_name}
               {isAlpha && <span className="font-semibold text-blood-400">· {roleLabel('loup_alpha', t)}</span>}
             </span>

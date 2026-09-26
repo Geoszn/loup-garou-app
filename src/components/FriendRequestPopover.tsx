@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { notifyFriendRequest } from '../lib/pushSubscription'
 import { AvatarIcon } from './AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
+import { Avatar } from './Avatar'
 
 /** Petite carte flottante ancrée sous un avatar cliqué, pour envoyer une
  * demande d'ami sans quitter l'écran de jeu (village, salon d'attente, fin
@@ -13,11 +14,13 @@ export function FriendRequestPopover({
   userId,
   displayName,
   avatarIcon,
+  avatarConfig,
   onClose,
 }: {
   userId: string
   displayName: string
   avatarIcon?: string | null
+  avatarConfig?: unknown
   onClose: () => void
 }) {
   const { t } = useLanguage()
@@ -46,7 +49,7 @@ export function FriendRequestPopover({
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-1 truncate text-xs font-semibold text-moon-200">
-          <AvatarIcon icon={avatarIcon} className="h-3.5 w-3.5 shrink-0" /> {displayName}
+          <Avatar config={avatarConfig} icon={avatarIcon} name={displayName} className="h-6 w-6" /> {displayName}
         </span>
         <button
           type="button"
