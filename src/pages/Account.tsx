@@ -11,7 +11,7 @@ import { NotificationPreferences } from '../components/NotificationPreferences'
 import { Avatar } from '../components/Avatar'
 import type { AvatarConfig } from '../lib/avatarParts'
 import { AvatarStudio } from '../components/AvatarStudio'
-import { useMyAvatarConfig } from '../components/AvatarEditor'
+import { notifyAvatarChanged, useMyAvatarConfig } from '../components/AvatarEditor'
 import { sendTestPush } from '../lib/pushSubscription'
 
 // Délai entre l'affichage du message de succès dans une pop-up de réglage et
@@ -103,7 +103,7 @@ export default function Account() {
         profile={profile}
         avatar={myAvatar.config}
         onSaved={async () => {
-          myAvatar.reload()
+          notifyAvatarChanged()
           await refreshProfile()
           setTimeout(() => setProfileModalOpen(false), CLOSE_DELAY_MS)
         }}

@@ -10,7 +10,7 @@ import { DailyLoginBanner } from '../components/DailyLoginBanner'
 import { AnnouncementsModal } from '../components/AnnouncementsModal'
 import { NotificationTimezoneSync } from '../components/NotificationTimezoneSync'
 import { FriendsOnlineWidget, type FriendPerson } from '../components/FriendsOnlineWidget'
-import { QuestsCard } from '../components/QuestsCard'
+import { RewardsHub } from '../components/RewardsHub'
 import { DashboardLeaderboard } from '../components/DashboardLeaderboard'
 import { FeedbackButton } from '../components/FeedbackButton'
 import { ContinentPrompt } from '../components/ContinentPrompt'
@@ -434,7 +434,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        <QuestsCard />
+        <RewardsHub />
 
         <DashboardLeaderboard />
 

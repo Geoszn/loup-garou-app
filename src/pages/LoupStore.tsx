@@ -24,20 +24,20 @@ interface LoupCoinsSummary {
 
 // Catégories fermées (voir migration 0149, même contrainte côté serveur) —
 // ordre d'affichage fixe, du plus "actionnable en partie" au plus "collection".
-const ARTIFACT_CATEGORIES = ['outils', 'rares', 'cosmetiques', 'fragments'] as const
-type ArtifactCategory = (typeof ARTIFACT_CATEGORIES)[number]
+export const ARTIFACT_CATEGORIES = ['outils', 'rares', 'cosmetiques', 'fragments'] as const
+export type ArtifactCategory = (typeof ARTIFACT_CATEGORIES)[number]
 
 // Libellés COURTS pour les chips de filtre (pas la phrase complète utilisée
 // côté admin, voir ARTIFACT_CATEGORY_LABELS) — plusieurs chips doivent
 // pouvoir tenir sur une ligne qui passe à la ligne suivante si besoin.
-const CATEGORY_FILTER_LABEL_KEYS: Record<ArtifactCategory, TranslationKey> = {
+export const CATEGORY_FILTER_LABEL_KEYS: Record<ArtifactCategory, TranslationKey> = {
   outils: 'loupStore.category.outils',
   rares: 'loupStore.category.rares',
   cosmetiques: 'loupStore.category.cosmetiques',
   fragments: 'loupStore.category.fragments',
 }
 
-interface StoreArtifact {
+export interface StoreArtifact {
   id: string
   category: ArtifactCategory
   image_path: string | null
@@ -77,7 +77,7 @@ interface MyArtifact {
 /** URL publique d'une icône d'artefact (bucket "artifact-icons", migration
  * 0149) — même principe que les bannières d'événement/cartes de rôle :
  * seul le CHEMIN est stocké en base, l'URL publique se reconstruit ici. */
-function artifactImageUrl(path: string | null): string | null {
+export function artifactImageUrl(path: string | null): string | null {
   if (!path) return null
   return supabase.storage.from('artifact-icons').getPublicUrl(path).data.publicUrl
 }
@@ -384,7 +384,7 @@ export default function LoupStore() {
 /** Icône réelle de l'artefact (bucket "artifact-icons") avec repli propre
  * (pas d'emoji — demande explicite) tant que l'admin n'en a pas encore
  * mis une : un simple monogramme (première lettre du nom) sur fond neutre. */
-function ArtifactIcon({ artifact, size }: { artifact: StoreArtifact; size: string }) {
+export function ArtifactIcon({ artifact, size }: { artifact: StoreArtifact; size: string }) {
   const { lang } = useLanguage()
   const name = lang === 'en' ? artifact.name_en : artifact.name_fr
   const url = artifactImageUrl(artifact.image_path)
@@ -442,7 +442,7 @@ function ArtifactCard({ artifact, onClick }: { artifact: StoreArtifact; onClick:
 /** Chip de filtre par catégorie — pilule qui passe à la ligne (flex-wrap sur
  * son conteneur), pas un Segmented à largeur égale : le nombre de catégories
  * varie selon ce qui est réellement en vente, pas de largeur fixe à prévoir. */
-function CategoryChip({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
+export function CategoryChip({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
   return (
     <button
       type="button"

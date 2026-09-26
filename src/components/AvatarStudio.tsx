@@ -5,6 +5,7 @@ import type { TranslationKey } from '../i18n/translations'
 import { tierForPoints, tierLabel } from '../lib/ranks'
 import { Avatar } from './Avatar'
 import { ConfirmDialog, ErrorText, Input } from './ui'
+import { useMyUnlockedParts } from './AvatarEditor'
 import {
   ACCESSORIES,
   AVATAR_BGS,
@@ -97,6 +98,9 @@ export function AvatarStudio({
   const { profile } = useAuth()
   const { t } = useLanguage()
   const points = profile?.rank_points ?? 0
+  const unlockedParts = useMyUnlockedParts(open)
+  const isUnlocked = (kind: PartKind, value: string) =>
+    points >= ((PART_MIN_POINTS[kind] as Record<string, number>)[value] ?? 0) || unlockedParts.has(`${kind}:${value}`)
   const start = initial ?? DEFAULT_AVATAR_CONFIG
 
   const [config, setConfig] = useState<AvatarConfig>(start)
@@ -159,7 +163,7 @@ export function AvatarStudio({
 
   function randomize() {
     const pickUnlocked = (kind: PartKind) => {
-      const ok = OPTIONS[kind].filter((v) => points >= (PART_MIN_POINTS[kind] as Record<string, number>)[v])
+      const ok = OPTIONS[kind].filter((v) => isUnlocked(kind, v))
       return ok[Math.floor(Math.random() * ok.length)]
     }
     apply({
@@ -175,7 +179,7 @@ export function AvatarStudio({
 
   function choosePart(kind: PartKind, value: string) {
     const min = (PART_MIN_POINTS[kind] as Record<string, number>)[value] ?? 0
-    if (points < min) {
+    if (!isUnlocked(kind, value)) {
       setLockedNote({ label: t(PART_LABEL[kind](value)), min })
       return
     }
@@ -221,9 +225,7 @@ export function AvatarStudio({
         type="button"
         onClick={() => {
           setLockedNote(null)
-          const blocked = (['hair', 'outfit', 'acc', 'head'] as const).some(
-            (k) => points < (PART_MIN_POINTS[k] as Record<string, number>)[look.config[k]],
-          )
+          const blocked = (['hair', 'outfit', 'acc', 'head'] as const).some((k) => !isUnlocked(k, look.config[k]))
           if (blocked) {
             const min = Math.max(
               ...(['hair', 'outfit', 'acc', 'head'] as const).map((k) => (PART_MIN_POINTS[k] as Record<string, number>)[look.config[k]]),
@@ -264,7 +266,7 @@ export function AvatarStudio({
     const kind = tab as PartKind
     grid = OPTIONS[kind].map((value) => {
       const min = (PART_MIN_POINTS[kind] as Record<string, number>)[value]
-      const locked = points < min
+      const locked = !isUnlocked(kind, value)
       const active = config[kind] === value
       return (
         <button
