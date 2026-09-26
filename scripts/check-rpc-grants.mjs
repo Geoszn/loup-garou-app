@@ -145,9 +145,12 @@ for (const file of files) {
     events.push({ index: m.index, type: 'drop', name: m[1], rawParams: m[2] })
   }
 
-  const revokeAllRe = /revoke\s+execute\s+on\s+all\s+functions\s+in\s+schema\s+public\s+from/gi
+  // Ne retire que les rôles réellement nommés après `from` : 0184 retire
+  // uniquement `anon` — sans lire cette liste, tout `revoke all` effaçait
+  // aussi les droits `authenticated` de toutes les fonctions du client.
+  const revokeAllRe = /revoke\s+execute\s+on\s+all\s+functions\s+in\s+schema\s+public\s+from\s+([a-z_, ]+);/gi
   while ((m = revokeAllRe.exec(sql))) {
-    events.push({ index: m.index, type: 'revoke-all' })
+    events.push({ index: m.index, type: 'revoke-all', roles: m[1].split(',').map((r) => r.trim()) })
   }
 
   const grantRe = /grant\s+execute\s+on\s+function\s+public\.(\w+)\s*\(([^)]*)\)\s+to\s+([a-z_, ]+);/gi
@@ -172,7 +175,7 @@ for (const file of files) {
       const types = paramsToTypes(ev.rawParams)
       functions.delete(signatureKey(ev.name, types))
     } else if (ev.type === 'revoke-all') {
-      for (const fn of functions.values()) fn.grantedTo.clear()
+      for (const fn of functions.values()) for (const r of ev.roles) fn.grantedTo.delete(r)
     } else if (ev.type === 'grant') {
       const types = paramsToTypes(ev.rawParams)
       const fn = functions.get(signatureKey(ev.name, types))
