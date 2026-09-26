@@ -404,7 +404,6 @@ export default function GameRoom() {
               displayName={me?.display_name ?? t('common.playerFallback')}
               gameStatus={view.game.status}
               players={view.players}
-              myRole={view.my_role}
               parcheminGriotUsed={view.my_parchemin_griot_used}
               ownsDernierSouffle={view.my_owns_dernier_souffle}
               dernierSouffleUsed={view.my_dernier_souffle_used}
@@ -746,7 +745,6 @@ function GhostPanel({
   displayName,
   gameStatus,
   players,
-  myRole,
   parcheminGriotUsed,
   ownsDernierSouffle,
   dernierSouffleUsed,
@@ -757,20 +755,19 @@ function GhostPanel({
   displayName: string
   gameStatus: MyGameView['game']['status']
   players: PublicPlayer[]
-  myRole: string | null
   parcheminGriotUsed: boolean
   ownsDernierSouffle: boolean
   dernierSouffleUsed: boolean
 }) {
   const villageVoiceAvailable = ['day_reveal', 'day_discussion', 'day_vote', 'captain_election'].includes(gameStatus)
   // Parchemin du Griot (artefact du Loup Store, migration 0148, activation
-  // explicite depuis migration 0179) : un loup éliminé qui a ACTIVÉ
-  // l'artefact (voir ArtifactsMenu.tsx — la simple possession ne suffit
-  // plus) garde un accès en LECTURE au chat de son ex-meute — déjà vérifié
-  // côté serveur (can_read_channel), cette condition n'est là que pour ne
-  // pas monter un onglet vide/inutile pour tous les autres fantômes
-  // (villageois, ou loup n'ayant pas activé l'artefact).
-  const showWolvesGhostPanel = gameStatus === 'night' && isWolfTeam(myRole) && parcheminGriotUsed
+  // explicite depuis migration 0179, ouvert à TOUS les fantômes depuis
+  // migration 0182 — plus réservé aux ex-loups) : un joueur éliminé, quel
+  // que soit son rôle, qui a ACTIVÉ l'artefact (voir ArtifactsMenu.tsx — la
+  // simple possession ne suffit pas) peut lire le chat des Loups la nuit.
+  // Déjà vérifié côté serveur (can_read_channel), cette condition n'est là
+  // que pour ne pas monter un onglet vide/inutile pour les autres fantômes.
+  const showWolvesGhostPanel = gameStatus === 'night' && parcheminGriotUsed
 
   return (
     <div className="flex flex-col gap-2">

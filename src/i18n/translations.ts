@@ -740,8 +740,8 @@ export const translations = {
   },
   // --- Artefacts du Loup Store (migration 0148) ------------------------------
   'game.parcheminGriot.notice': {
-    fr: 'Parchemin du Griot : tu continues de suivre le chat de ton ex-meute cette nuit.',
-    en: "Griot's Scroll: you keep following your former pack's chat tonight.",
+    fr: 'Parchemin du Griot : tu suis le chat des Loups cette nuit.',
+    en: "Griot's Scroll: you are following the Wolves' chat tonight.",
   },
   // --- Menu "Mes artefacts" (migration 0179) ---------------------------------
   'artifacts.icon.title': { fr: 'Mes artefacts', en: 'My artifacts' },
