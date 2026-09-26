@@ -1,7 +1,6 @@
 // Fonction serverless Vercel — ne s'exécute JAMAIS dans le navigateur.
-// Appelée toutes les heures par le workflow GitHub Actions
-// .github/workflows/engagement-notifications.yml (Vercel Cron gratuit ne
-// permet qu'un passage par jour). Le choix des messages se fait en base
+// Appelée toutes les heures par une tâche cron-job.org (Vercel Cron gratuit
+// ne permet qu'un passage par jour). Le choix des messages se fait en base
 // (pick_engagement_notifications, migration 0189) ; cette route ne fait
 // qu'envoyer. Même authentification que api/cron-send-campaigns.ts :
 // `Authorization: Bearer $CRON_SECRET`, refus sans secret configuré.
