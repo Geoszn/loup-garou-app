@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useLanguage } from '../i18n/LanguageContext'
-import { isAdminHost } from '../lib/adminHost'
 
 // Domaine principal : le domaine vercel.app et le domaine sans "www"
 // redirigent tous deux ici. À garder synchronisé avec index.html,
@@ -108,7 +107,7 @@ export function SeoManager() {
   useEffect(() => {
     // "/AIDE/" et "/aide" désignent la même page : une seule URL canonique.
     const key = (pathname.replace(/\/+$/, '') || '/').toLowerCase()
-    const page = isAdminHost ? undefined : INDEXABLE_PAGES[key]
+    const page = INDEXABLE_PAGES[key]
 
     document.title = page ? page.title[lang] : SITE_NAME
     setMeta('name', 'description', (page ?? INDEXABLE_PAGES['/']).description[lang])

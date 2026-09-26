@@ -14,20 +14,9 @@ import PendingApproval from './pages/PendingApproval'
 import JoinByLink from './pages/JoinByLink'
 import NotFound from './pages/NotFound'
 import { FullScreenLoader } from './components/FullScreenLoader'
+import { ProtectedRoute } from './components/ProtectedRoute'
 import { UpdateBanner } from './components/UpdateBanner'
 import { SeoManager } from './components/SeoManager'
-import { isAdminHost } from './lib/adminHost'
-
-// Dashboard admin : route volontairement chargée en lazy (jamais dans le
-// bundle principal) et jamais liée nulle part dans l'app — seule une
-// personne connaissant cette URL exacte (voir ADMIN_ROUTE_PATH) peut même
-// espérer y accéder. Le vrai contrôle d'accès reste côté serveur
-// (admin_check_access(), voir AdminDashboard.tsx) : cette URL cachée n'est
-// qu'une couche d'obscurité en plus, pas la sécurité elle-même.
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
-// Garder ce chemin exact en tête (ou dans un gestionnaire de mots de passe) :
-// il n'apparaît nulle part ailleurs dans l'app.
-export const ADMIN_ROUTE_PATH = '/panel-beff77e1dae48f88d6b98231f160f0b8'
 
 // Pages légales : gros blocs de texte juridique/RGPD (en deux langues),
 // rarement consultés — chargées à la demande plutôt qu'incluses dans le
@@ -59,21 +48,6 @@ const SpectateGame = lazy(() => import('./pages/SpectateGame'))
 // exécuter dès l'ouverture de l'appli.
 const GameRoom = lazy(() => import('./pages/GameRoom'))
 
-function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { session, loading } = useAuth()
-  const location = useLocation()
-  if (loading) return <FullScreenLoader />
-  if (!session) {
-    // On mémorise la page d'origine (ex: le panel admin) dans ?redirect=...
-    // pour que Login.tsx y renvoie l'utilisateur une fois connecté, au lieu
-    // de toujours retomber sur /dashboard par défaut.
-    const redirect = encodeURIComponent(location.pathname + location.search)
-    return <Navigate to={`/connexion?redirect=${redirect}`} replace />
-  }
-  if (!session.user.email_confirmed_at) return <Navigate to="/verifier-email" replace />
-  return <>{children}</>
-}
-
 /** Applique la langue par défaut du compte (profiles.lang) dès qu'un profil
  * vient de se charger après une connexion — une seule fois par connexion,
  * pour ne jamais écraser un changement fait ensuite manuellement (bouton
@@ -98,46 +72,8 @@ function LanguageProfileSync() {
   return null
 }
 
-// Accès simplifié au dashboard admin : ce domaine dédié (voir le projet
-// Vercel — domaine à ajouter séparément, DNS géré chez le registrar du nom
-// de domaine principal) pointe directement vers AdminDashboard quel que
-// soit le chemin visité, plutôt que d'avoir à retenir l'URL secrète
-// ADMIN_ROUTE_PATH (qui continue de fonctionner normalement par ailleurs,
-// notamment pour tout lien déjà enregistré dans un gestionnaire de mots de
-// passe). Ce n'est qu'un raccourci pratique : le vrai contrôle d'accès
-// reste entièrement côté serveur (admin_check_access(), voir
-// AdminDashboard.tsx) — quiconque tape ce nom de domaine sans être admin
-// tombe simplement sur l'écran "Accès refusé".
-
 export default function App() {
   useUiClickSound()
-
-  if (isAdminHost) {
-    // Mini-routeur dédié : /connexion et /verifier-email restent nécessaires
-    // ici pour que ProtectedRoute puisse réellement rediriger un compte non
-    // connecté (sinon "?redirect=" pointerait vers un chemin sans route sur
-    // ce domaine) — tout le reste ("*") mène directement au dashboard.
-    return (
-      <>
-        <UpdateBanner />
-        <SeoManager />
-        <Routes>
-          <Route path="/connexion" element={<Login />} />
-          <Route path="/verifier-email" element={<VerifyEmail />} />
-          <Route
-            path="*"
-            element={
-              <ProtectedRoute>
-                <Suspense fallback={<FullScreenLoader />}>
-                  <AdminDashboard />
-                </Suspense>
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </>
-    )
-  }
 
   return (
     <>
@@ -269,16 +205,6 @@ export default function App() {
           <ProtectedRoute>
             <Suspense fallback={<FullScreenLoader />}>
               <GameRoom />
-            </Suspense>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path={ADMIN_ROUTE_PATH}
-        element={
-          <ProtectedRoute>
-            <Suspense fallback={<FullScreenLoader />}>
-              <AdminDashboard />
             </Suspense>
           </ProtectedRoute>
         }

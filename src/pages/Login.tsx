@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { supabase } from '../lib/supabase'
 import { Button, Card, ErrorText, Input, Label, SuccessText } from '../components/ui'
 import { useLanguage } from '../i18n/LanguageContext'
-import { isAdminHost } from '../lib/adminHost'
+import { isAdminApp } from '../lib/adminApp'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -47,7 +47,7 @@ export default function Login() {
             logique Supabase Auth), mais personne ne doit pouvoir confondre
             cet écran avec la connexion classique — d'où ce gros titre rouge
             au-dessus, bien distinct du thème lune/nuit habituel. */}
-        {isAdminHost && (
+        {isAdminApp && (
           <div className="mb-4 rounded-2xl border-2 border-blood-600/70 bg-gradient-to-b from-blood-700/30 to-blood-900/20 px-5 py-4 text-center shadow-[0_0_30px_-8px_rgba(185,28,28,0.6)]">
             <p className="text-3xl">🛡️</p>
             <h1 className="mt-1 font-display text-2xl font-bold uppercase tracking-wide text-blood-400">
@@ -59,7 +59,7 @@ export default function Login() {
           </div>
         )}
 
-        <Card className={`w-full ${isAdminHost ? 'border-blood-700/40' : ''}`}>
+        <Card className={`w-full ${isAdminApp ? 'border-blood-700/40' : ''}`}>
           <div className="mb-6 text-center">
             <img src="/logo.png" alt="" className="mx-auto mb-2 h-14 w-14 rounded-full" />
             <h1 className="font-display text-2xl text-moon-200">{t('login.title')}</h1>

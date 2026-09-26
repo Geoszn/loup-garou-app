@@ -11,7 +11,7 @@ import { translations, type TranslationKey } from '../i18n/translations'
 import type { EventBannerColor, EventBonusType, GameEvent } from '../types/events'
 import { continentEmoji, continentName } from '../lib/continents'
 import { compressImageForUpload } from '../lib/imageCompress'
-import { sendNotificationCampaignNow } from '../lib/pushSubscription'
+import { sendNotificationCampaignNow } from '../lib/adminCampaigns'
 
 // ============================================================================
 // Dashboard administrateur. Volontairement en français uniquement, pas
