@@ -13,7 +13,7 @@ export const ACCESSORIES = ['none', 'ring', 'glasses', 'scar'] as const
 export type Hair = (typeof HAIRS)[number]
 export type Outfit = (typeof OUTFITS)[number]
 export type Accessory = (typeof ACCESSORIES)[number]
-export type AvatarMood = 'smile' | 'calm' | 'grin' | 'angry' | 'shock'
+export type AvatarMood = 'smile' | 'calm' | 'grin' | 'angry' | 'shock' | 'talk' | 'sleep' | 'dead'
 
 export interface AvatarConfig {
   skin: number

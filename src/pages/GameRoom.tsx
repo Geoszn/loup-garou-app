@@ -539,7 +539,7 @@ export default function GameRoom() {
                       note={view.village_muted ? t('game.villageMutedNote') : undefined}
                     />
                   }
-                  grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />}
+                  grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} moodContext={{ status: view.game.status, nightNumber: view.game.night_number }} />}
                 />
                 <CallVotePanel compact view={view} gameId={gameId!} selfId={user.id} me={me} isHost={isHost} />
               </div>
@@ -604,7 +604,7 @@ export default function GameRoom() {
                     note={view.village_muted ? t('game.villageMutedNote') : undefined}
                   />
                 }
-                grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />}
+                grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} moodContext={{ status: view.game.status, nightNumber: view.game.night_number }} />}
               />
             )}
             {alive && <RolePanel myRole={view.my_role} />}

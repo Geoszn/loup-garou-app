@@ -117,9 +117,10 @@ export function VoiceChat({
   // couleur commune), seul le glyphe change d'un joueur à l'autre — avant,
   // chaque bulle reprenait la couleur d'avatar choisie par le joueur
   // (avatar_color), ce qui faisait un patchwork de couleurs différentes.
-  function avatarBubble(player: PublicPlayer | undefined, fallback: string, size: string) {
+  function avatarBubble(player: PublicPlayer | undefined, fallback: string, size: string, speaking = false) {
     return (
       <Avatar
+        mood={player && !player.is_alive ? 'dead' : speaking ? 'talk' : 'smile'}
         config={player?.avatar_config}
         icon={player?.avatar_icon}
         color={player?.avatar_color}
@@ -221,7 +222,7 @@ export function VoiceChat({
               }`}
             >
               <span className="relative inline-flex">
-                {avatarBubble(me, displayName, 'h-10 w-10')}
+                {avatarBubble(me, displayName, 'h-10 w-10', selfSpeaking)}
                 <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border border-night-900 bg-night-800 text-[8px]">
                   {muted ? '🔇' : '🎤'}
                 </span>
@@ -257,7 +258,7 @@ export function VoiceChat({
                     </span>
                   ))}
                 <span className="relative inline-flex">
-                  {avatarBubble(info, p.name, 'h-10 w-10')}
+                  {avatarBubble(info, p.name, 'h-10 w-10', speaking)}
                   <span
                     className={`absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border border-night-900 bg-night-800 text-[8px] ${
                       speaking ? 'animate-pulse' : ''

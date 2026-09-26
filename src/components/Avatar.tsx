@@ -138,8 +138,33 @@ function AvatarArt({ config, mood }: { config: AvatarConfig; mood: AvatarMood })
     ) : (
       <path d="M39 40c2-2 5-2 7-1M54 39c2-1 5-1 7 1" fill="none" stroke={hair} strokeWidth="1.8" strokeLinecap="round" />
     )
+  const eyes =
+    mood === 'dead' ? (
+      <g stroke="#1b120c" strokeWidth="1.9" strokeLinecap="round">
+        <path d="M40.5 43.5l5 5M45.5 43.5l-5 5M54.5 43.5l5 5M59.5 43.5l-5 5" />
+      </g>
+    ) : mood === 'sleep' ? (
+      <g fill="none" stroke="#1b120c" strokeWidth="1.9" strokeLinecap="round">
+        <path d="M39.5 46c1.6 2.4 5.4 2.4 7 0M53.5 46c1.6 2.4 5.4 2.4 7 0" />
+      </g>
+    ) : (
+      <>
+        <ellipse cx="43" cy="46" rx="3.7" ry="3.1" fill="#f3ece0" />
+        <ellipse cx="57" cy="46" rx="3.7" ry="3.1" fill="#f3ece0" />
+        <circle cx="43.4" cy="46" r="2.1" fill="#1b120c" />
+        <circle cx="57.4" cy="46" r="2.1" fill="#1b120c" />
+        <circle cx="44" cy="45.2" r=".7" fill="#fff" />
+        <circle cx="58" cy="45.2" r=".7" fill="#fff" />
+      </>
+    )
   const mouth =
-    mood === 'angry' ? (
+    mood === 'dead' ? (
+      <path d="M44 57.5h12" fill="none" stroke="#1b120c" strokeWidth="1.8" strokeLinecap="round" />
+    ) : mood === 'talk' ? (
+      <ellipse cx="50" cy="57" rx="3.2" ry="2.8" fill="#3b1a12" />
+    ) : mood === 'sleep' ? (
+      <path d="M45 56.5c3 1.4 7 1.4 10 0" fill="none" stroke="#1b120c" strokeWidth="1.8" strokeLinecap="round" />
+    ) : mood === 'angry' ? (
       <path d="M43 58c4-3 10-3 14 0" fill="none" stroke="#1b120c" strokeWidth="1.9" strokeLinecap="round" />
     ) : mood === 'shock' ? (
       <ellipse cx="50" cy="57" rx="3.2" ry="4" fill="#3b1a12" />
@@ -162,12 +187,7 @@ function AvatarArt({ config, mood }: { config: AvatarConfig; mood: AvatarMood })
       <ellipse cx="67.5" cy="47" rx="3.2" ry="5" fill={skin} />
       <ellipse cx="50" cy="45" rx="17" ry="20" fill={skin} />
       {front}
-      <ellipse cx="43" cy="46" rx="3.7" ry="3.1" fill="#f3ece0" />
-      <ellipse cx="57" cy="46" rx="3.7" ry="3.1" fill="#f3ece0" />
-      <circle cx="43.4" cy="46" r="2.1" fill="#1b120c" />
-      <circle cx="57.4" cy="46" r="2.1" fill="#1b120c" />
-      <circle cx="44" cy="45.2" r=".7" fill="#fff" />
-      <circle cx="58" cy="45.2" r=".7" fill="#fff" />
+      {eyes}
       {brows}
       <path d="M50 47c-1 3-1 5 1 6" fill="none" stroke={dark} strokeWidth="1.4" strokeLinecap="round" />
       {mouth}

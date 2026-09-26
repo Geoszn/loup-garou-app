@@ -20,6 +20,7 @@ export function ReadyGrid({ players, readyIds }: { players: PublicPlayer[]; read
           <div key={p.id} className="flex flex-col items-center gap-1.5">
             <div className="relative">
               <Avatar
+                mood={ready ? 'grin' : 'calm'}
                 config={p.avatar_config}
                 icon={p.avatar_icon}
                 color={p.avatar_color}

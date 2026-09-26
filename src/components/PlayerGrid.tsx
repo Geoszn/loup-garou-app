@@ -4,6 +4,8 @@ import { tierGroup } from '../lib/ranks'
 import type { PublicPlayer } from '../types/game'
 import { FriendRequestPopover } from './FriendRequestPopover'
 import { Avatar } from './Avatar'
+import { hadDeathsThisNight, playerMood } from '../lib/avatarMood'
+import type { GameStatus } from '../types/game'
 import { useLanguage } from '../i18n/LanguageContext'
 
 // Cadre visuel autour de l'avatar, qui monte en gamme avec le palier de rang
@@ -61,6 +63,8 @@ interface Props {
    * Voyante, Sorcière, Chasseur...) ; le roster en lecture seule garde la
    * taille normale, plus confortable à parcourir sans urgence de clic. */
   compact?: boolean
+  /** Contexte de partie pour l'expression des avatars (voir avatarMood.ts). Sans lui, un avatar ne peut être que souriant ou mort. */
+  moodContext?: { status: GameStatus; nightNumber: number }
 }
 
 export function PlayerGrid({
@@ -74,6 +78,7 @@ export function PlayerGrid({
   showDeathReveal = true,
   onlineUserIds,
   compact = false,
+  moodContext,
 }: Props) {
   // Popover "Ajouter en ami" : uniquement en dehors d'un mode vote/action
   // (selectable), pour ne jamais gêner le choix d'une cible pendant un vote.
@@ -134,6 +139,7 @@ export function PlayerGrid({
                   thèmes, contrairement à night-950 qui deviendrait blanc de jour. */}
               <span className="relative inline-flex">
                 <Avatar
+                  mood={playerMood(p, { status: moodContext?.status ?? 'day_discussion', deathsThisNight: moodContext ? hadDeathsThisNight(players, moodContext.nightNumber) : false })}
                   config={p.avatar_config}
                   icon={p.avatar_icon}
                   color={p.avatar_color}

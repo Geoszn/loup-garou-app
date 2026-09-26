@@ -539,6 +539,7 @@ const MessageRow = memo(function MessageRow({
               </span>
             ) : (
               <Avatar
+                mood={author && !author.is_alive ? 'dead' : 'smile'}
                 config={author?.avatar_config}
                 icon={author?.avatar_icon}
                 color={author?.avatar_color}
