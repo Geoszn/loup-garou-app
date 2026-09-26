@@ -506,53 +506,48 @@ export default function GameRoom() {
 
         {view.game.status === 'day_discussion' && (
           <div className="flex animate-fade-in flex-col gap-4">
-            <p className="text-center text-sm text-moon-200/50">{t('game.discussionHint')}</p>
             {alive ? (
-              <DayTabs
-                dayTab={dayTab}
-                setDayTab={setDayTab}
-                voice={
-                  <VoiceChat
-                    gameId={gameId!}
-                    code={code!}
-                    channel={voiceChannel}
-                    displayName={me?.display_name ?? t('common.playerFallback')}
-                    selfUserId={user.id}
-                    listenOnly={view.village_muted}
-                    players={view.players}
-                  />
-                }
-                chat={
-                  <ChatPanel
-                    gameId={gameId!}
-                    channel="village"
-                    selfId={user.id}
-                    readOnly={view.village_muted}
-                    note={view.village_muted ? t('game.villageMutedNote') : undefined}
-                  />
-                }
-                grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />}
-              />
+              // Écran calé à la hauteur de la fenêtre, comme une messagerie :
+              // bandeau, vocal replié, chat (qui prend tout le reste) et une
+              // ligne de vote. Le champ de saisie reste toujours visible ;
+              // le rappel de rôle et le reste se trouvent plus bas sur la page.
+              <div className="flex h-[calc(100dvh-6rem)] min-h-[26rem] flex-col gap-2">
+                <DayTabs
+                  fill
+                  dayTab={dayTab}
+                  setDayTab={setDayTab}
+                  voice={
+                    <VoiceChat
+                      gameId={gameId!}
+                      code={code!}
+                      channel={voiceChannel}
+                      displayName={me?.display_name ?? t('common.playerFallback')}
+                      selfUserId={user.id}
+                      listenOnly={view.village_muted}
+                      players={view.players}
+                    />
+                  }
+                  chat={
+                    <ChatPanel
+                      fill
+                      gameId={gameId!}
+                      channel="village"
+                      selfId={user.id}
+                      readOnly={view.village_muted}
+                      note={view.village_muted ? t('game.villageMutedNote') : undefined}
+                    />
+                  }
+                  grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />}
+                />
+                <CallVotePanel compact view={view} gameId={gameId!} selfId={user.id} me={me} isHost={isHost} />
+              </div>
             ) : (
-              <CollapsiblePlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
+              <>
+                <CollapsiblePlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
+                {isHost && <CallVotePanel view={view} gameId={gameId!} selfId={user.id} me={me} isHost={isHost} />}
+              </>
             )}
-            {/* Sous le chat/vocal/grille plutôt qu'au-dessus (retour
-                utilisateur) : on discute d'abord, on décide de voter ensuite
-                — une vraie carte plutôt qu'une ligne fine, pour bien la
-                distinguer comme un appel à l'action une fois la discussion
-                déjà sous les yeux. `alive || isHost` (et non plus seulement
-                `alive`, voir migration 0085) : sans Capitaine, l'hôte garde
-                ce contrôle même mort, comme le reste de ses outils de
-                modération — CallVotePanel se masque lui-même dans tous les
-                autres cas où il n'a rien à afficher. */}
-            {(alive || isHost) && <CallVotePanel view={view} gameId={gameId!} selfId={user.id} me={me} isHost={isHost} />}
-            {/* Retour utilisateur : le rappel de rôle n'existait que la nuit
-                (RolePanel, déjà plus bas) — en journée, rien ne permettait de
-                revérifier son rôle sans revenir sur la carte de révélation
-                initiale. Utile en toute circonstance, mais d'autant plus
-                depuis Anancy (échange de rôles en cours de partie, voir
-                migration 0119) : un joueur peut légitimement ne plus être
-                certain de son rôle ACTUEL. */}
+            <p className="text-center text-xs text-moon-200/50">{t('game.discussionHint')}</p>
             {alive && <RolePanel myRole={view.my_role} />}
             {alive && <AnancySwapNotice swapped={view.anancy_swapped_me} />}
             {alive && <ChasseuseTargetPanel view={view} />}
@@ -708,16 +703,20 @@ function DayTabs({
   voice,
   chat,
   grid,
+  fill = false,
 }: {
   dayTab: 'discuss' | 'village'
   setDayTab: (t: 'discuss' | 'village') => void
   voice: ReactNode
   chat: ReactNode
   grid: ReactNode
+  /** Le parent fixe une hauteur : le chat occupe tout l'espace restant et
+   * seul son historique défile (voir ChatPanel `fill`). */
+  fill?: boolean
 }) {
   const { t } = useLanguage()
   return (
-    <div className="flex flex-col gap-3">
+    <div className={fill ? 'flex min-h-0 flex-1 flex-col gap-2' : 'flex flex-col gap-3'}>
       <Segmented
         tabs={[
           { id: 'discuss', label: t('tabs.discuss') },
@@ -727,7 +726,7 @@ function DayTabs({
         onChange={setDayTab}
       />
       <div className={dayTab === 'discuss' ? 'contents' : 'hidden'}>{voice}</div>
-      {dayTab === 'discuss' ? chat : grid}
+      {dayTab === 'discuss' ? chat : fill ? <div className="min-h-0 flex-1 overflow-y-auto">{grid}</div> : grid}
     </div>
   )
 }
@@ -1135,12 +1134,14 @@ function CallVotePanel({
   selfId,
   me,
   isHost,
+  compact = false,
 }: {
   view: MyGameView
   gameId: string
   selfId: string
   me: PublicPlayer | undefined
   isHost: boolean
+  compact?: boolean
 }) {
   const { t } = useLanguage()
   const [loading, setLoading] = useState(false)
@@ -1203,6 +1204,52 @@ function CallVotePanel({
   // l'affichage. relevantAgreedCount (déjà calculé ci-dessus pour la
   // majorité) est la valeur correcte dans tous les cas.
   const progress = others.length > 0 ? relevantAgreedCount / others.length : 0
+
+  const actionLabel = isActor
+    ? majorityAgreed
+      ? t(hasCaptainRole ? 'game.callVoteButton' : 'game.hostCallVoteButton')
+      : t(hasCaptainRole ? 'game.callVoteButtonWaiting' : 'game.hostCallVoteButtonWaiting')
+    : agreed
+      ? t('game.cancelAgreement')
+      : t('game.agree')
+
+  // Version d'une seule ligne, pour laisser le maximum de place au chat.
+  if (compact) {
+    return (
+      <div className="flex flex-col gap-1">
+        <div
+          className={`flex animate-fade-in items-center gap-2.5 rounded-xl border px-3 py-2 transition-colors ${
+            majorityAgreed ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-night-600/60 bg-night-900/40'
+          }`}
+        >
+          <span className="shrink-0 text-base">🗳️</span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-semibold text-moon-200">
+              {t('game.callVoteHeading')}{' '}
+              <span className="font-normal tabular-nums text-moon-200/60">
+                {relevantAgreedCount}/{others.length}
+              </span>
+            </p>
+            <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-night-700/50">
+              <div
+                className="h-full rounded-full bg-moon-400/70 transition-all duration-300"
+                style={{ width: `${Math.round(progress * 100)}%` }}
+              />
+            </div>
+          </div>
+          <Button
+            variant={!isActor && agreed ? 'ghost' : 'primary'}
+            className="shrink-0 !px-3 !py-1.5 !text-xs"
+            disabled={loading || (isActor && !majorityAgreed)}
+            onClick={isActor ? callVote : toggleAgree}
+          >
+            {actionLabel}
+          </Button>
+        </div>
+        <ErrorText>{error}</ErrorText>
+      </div>
+    )
+  }
 
   return (
     <div

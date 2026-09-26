@@ -59,6 +59,29 @@ export function VoiceChat({
   // plus d'espace") — un bouton "Détails" la déplie/replie à la demande, au
   // lieu de l'afficher en permanence dès la connexion.
   const [detailsOpen, setDetailsOpen] = useState(false)
+  // Replié par défaut en partie (le chat écrit a besoin de la place), déplié
+  // dans le salon d'attente ; le choix du joueur est mémorisé.
+  const collapseKey = `lg-voice-collapsed-${channel === 'lobby' ? 'lobby' : 'game'}`
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem(collapseKey)
+      if (saved !== null) return saved === '1'
+    } catch {
+      // stockage indisponible : on retombe sur la valeur par défaut
+    }
+    return channel !== 'lobby'
+  })
+  function toggleCollapsed() {
+    setCollapsed((v) => {
+      const next = !v
+      try {
+        localStorage.setItem(collapseKey, next ? '1' : '0')
+      } catch {
+        // sans conséquence : le réglage ne sera juste pas mémorisé
+      }
+      return next
+    })
+  }
 
   if (!channel) return null
 
@@ -80,6 +103,9 @@ export function VoiceChat({
   // seules — beaucoup moins de hauteur à l'écran, surtout à 8-10 joueurs.
   const statusParts = [connecting ? t('voiceChat.connecting') : connected ? t('voiceChat.connected') : t('voiceChat.unavailable')]
   if (connected && listenOnly) statusParts.push(t('voiceChat.listenOnly'))
+  const speakerNames = participants
+    .filter((p) => p.sessionIds.some((id) => speakingIds.has(id)))
+    .map((p) => p.name)
   if (connected) {
     statusParts.push(
       participants.length > 0 ? t('voiceChat.othersOnline', { count: participants.length, s: participants.length > 1 ? 's' : '' }) : t('voiceChat.alone')
@@ -101,10 +127,12 @@ export function VoiceChat({
   }
 
   return (
-    <div className="flex flex-col gap-1.5 rounded-2xl border border-night-600/60 bg-night-900/50 px-3 py-2">
+    <div className={`flex flex-col gap-1.5 rounded-2xl border border-night-600/60 bg-night-900/50 px-3 ${collapsed ? 'py-1' : 'py-2'}`}>
       <div className="flex items-center gap-2">
         <span className="shrink-0 text-base">🎙️</span>
-        <p className="min-w-0 flex-1 truncate text-xs text-moon-200/80">{statusParts.join(' · ')}</p>
+        <p className="min-w-0 flex-1 truncate text-xs text-moon-200/80">
+          {collapsed && speakerNames.length > 0 ? `🗣️ ${speakerNames.join(', ')}` : statusParts.join(' · ')}
+        </p>
 
         {!connected && !connecting && error && (
           <button
@@ -115,7 +143,7 @@ export function VoiceChat({
             {t('voiceChat.retry')}
           </button>
         )}
-        {connected && (participants.length > 0 || !listenOnly) && (
+        {!collapsed && connected && (participants.length > 0 || !listenOnly) && (
           <button
             type="button"
             onClick={() => setDetailsOpen((v) => !v)}
@@ -126,7 +154,7 @@ export function VoiceChat({
         )}
         {/* Badge modérateur réduit à un point (plus de texte en toutes
             lettres) : le titre au survol/appui long reste explicite. */}
-        {connected && canModerate && (
+        {!collapsed && connected && canModerate && (
           <span
             title={t('voiceChat.moderatorHint')}
             className="shrink-0 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-400"
@@ -156,6 +184,16 @@ export function VoiceChat({
             {muted ? '🔇' : '🎤'}
           </button>
         )}
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? t('voiceChat.expand') : t('voiceChat.collapse')}
+          title={collapsed ? t('voiceChat.expand') : t('voiceChat.collapse')}
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-night-700/70 text-[11px] text-moon-200 transition-colors hover:bg-night-600/70"
+        >
+          {collapsed ? '⌄' : '⌃'}
+        </button>
       </div>
 
       {/* Avertissement ponctuel (voir forcedMuteNotice, useVoiceChat.ts) :
@@ -169,7 +207,7 @@ export function VoiceChat({
         </p>
       )}
 
-      {connected && detailsOpen && (participants.length > 0 || !listenOnly) && (
+      {!collapsed && connected && detailsOpen && (participants.length > 0 || !listenOnly) && (
         // Grille (pas des pastilles en flex-wrap, largeur variable selon la
         // longueur du nom) : demande utilisateur — chaque case doit avoir
         // EXACTEMENT la même taille. Colonnes égales (grid-cols-N) : toutes

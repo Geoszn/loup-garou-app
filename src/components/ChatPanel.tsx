@@ -35,6 +35,7 @@ export const ChatPanel = memo(function ChatPanel({
   compactHeightClassName = 'h-64',
   readOnly = false,
   note,
+  fill = false,
 }: {
   gameId: string
   channel: ChatChannel
@@ -55,6 +56,10 @@ export const ChatPanel = memo(function ChatPanel({
   /** Petite note affichée sous l'en-tête (ex : rappel que le salon est
    * anonyme la nuit). */
   note?: string
+  /** Remplit toute la hauteur laissée par le parent (qui doit être un
+   * conteneur flex de hauteur définie) au lieu d'une hauteur fixe : le chat
+   * reste calé à l'écran, seul l'historique défile, comme sur WhatsApp. */
+  fill?: boolean
 }) {
   const { t } = useLanguage()
   const { messages, identities, reactions, send, sending, toggleReaction } = useChat(gameId, channel)
@@ -82,7 +87,9 @@ export const ChatPanel = memo(function ChatPanel({
   // "réponse à..." doit pouvoir être annulée depuis la liste des messages
   // ET depuis l'aperçu au-dessus du champ.
   const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+  const atBottomRef = useRef(true)
+  const [unreadBelow, setUnreadBelow] = useState(0)
   const info = CHANNEL_LABEL[channel]
 
   // Quand le clavier virtuel est ouvert ET qu'on écrit dans CE salon, le
@@ -179,9 +186,40 @@ export const ChatPanel = memo(function ChatPanel({
     return map
   }, [reactions])
 
+  // Défilement contenu dans la liste (pas scrollIntoView, qui faisait aussi
+  // remonter/descendre toute la page) : on ne recolle au bas que si le
+  // joueur y était déjà ou si le dernier message est le sien — s'il relit
+  // plus haut, on ne le déplace pas et on affiche un bouton "nouveaux
+  // messages", pour ne jamais lui faire perdre le fil.
+  const lastMessage = messages[messages.length - 1]
+  const prevCountRef = useRef(0)
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: 'end' })
-  }, [messages.length])
+    const el = listRef.current
+    if (!el) return
+    const added = messages.length - prevCountRef.current
+    prevCountRef.current = messages.length
+    if (added <= 0) return
+    if (atBottomRef.current || lastMessage?.user_id === selfId) {
+      el.scrollTop = el.scrollHeight
+      setUnreadBelow(0)
+    } else {
+      setUnreadBelow((n) => n + added)
+    }
+  }, [messages.length, lastMessage?.user_id, selfId])
+
+  function handleListScroll() {
+    const el = listRef.current
+    if (!el) return
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    atBottomRef.current = atBottom
+    if (atBottom) setUnreadBelow(0)
+  }
+
+  function jumpToBottom() {
+    const el = listRef.current
+    if (!el) return
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+  }
 
   // Tous les handlers passés à MessageRow sont mémoïsés (useCallback, deps
   // vides ou stables) : une ligne ne se re-rend que si SES propres props
@@ -266,7 +304,7 @@ export const ChatPanel = memo(function ChatPanel({
       className={`flex flex-col border border-night-600/60 ${
         expanded
           ? 'rounded-none bg-night-900/95'
-          : `rounded-2xl bg-night-900/50 ${compact ? compactHeightClassName : 'h-[65vh] max-h-[30rem]'}`
+          : `rounded-2xl bg-night-900/50 ${fill ? 'min-h-0 flex-1' : compact ? compactHeightClassName : 'h-[65vh] max-h-[30rem]'}`
       }`}
     >
       <div className="flex items-center gap-2 border-b border-night-600/50 px-4 py-2.5">
@@ -287,8 +325,11 @@ export const ChatPanel = memo(function ChatPanel({
       {/* Tapoter le fond vide de la liste (pas un message ni un bouton —
           voir la condition e.target === e.currentTarget) referme le clavier
           en plein écran, comme dans la plupart des apps de chat. */}
+      <div className="relative min-h-0 flex-1">
       <div
-        className="flex-1 space-y-2 overflow-y-auto scrollbar-thin px-4 py-3"
+        ref={listRef}
+        onScroll={handleListScroll}
+        className="h-full space-y-2 overflow-y-auto overscroll-contain scrollbar-thin px-4 py-3"
         onClick={(e) => {
           if (expanded && e.target === e.currentTarget) (document.activeElement as HTMLElement | null)?.blur()
         }}
@@ -314,7 +355,16 @@ export const ChatPanel = memo(function ChatPanel({
             onReply={handleReply}
           />
         ))}
-        <div ref={bottomRef} />
+      </div>
+        {unreadBelow > 0 && (
+          <button
+            type="button"
+            onClick={jumpToBottom}
+            className="absolute bottom-2 right-3 flex animate-fade-in items-center gap-1.5 rounded-full border border-moon-400/40 bg-night-800/95 px-3 py-1.5 text-xs font-semibold text-moon-200 shadow-card"
+          >
+            ↓ {t('chat.newMessages')}
+          </button>
+        )}
       </div>
 
       {!readOnly && replyTarget && (
