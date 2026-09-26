@@ -58,7 +58,6 @@ export function VoiceChat({
   // la maquette comparative validée : "le bloc vocal doit économiser encore
   // plus d'espace") — un bouton "Détails" la déplie/replie à la demande, au
   // lieu de l'afficher en permanence dès la connexion.
-  const [detailsOpen, setDetailsOpen] = useState(false)
   // Replié par défaut en partie (le chat écrit a besoin de la place), déplié
   // dans le salon d'attente ; le choix du joueur est mémorisé.
   const collapseKey = `lg-voice-collapsed-${channel === 'lobby' ? 'lobby' : 'game'}`
@@ -143,15 +142,6 @@ export function VoiceChat({
             {t('voiceChat.retry')}
           </button>
         )}
-        {!collapsed && connected && (participants.length > 0 || !listenOnly) && (
-          <button
-            type="button"
-            onClick={() => setDetailsOpen((v) => !v)}
-            className="shrink-0 rounded-xl bg-night-700/70 px-2.5 py-1 text-[10px] font-semibold text-moon-200 transition-colors hover:bg-night-600/70"
-          >
-            {t('voiceChat.details')} {detailsOpen ? '⌃' : '⌄'}
-          </button>
-        )}
         {/* Badge modérateur réduit à un point (plus de texte en toutes
             lettres) : le titre au survol/appui long reste explicite. */}
         {!collapsed && connected && canModerate && (
@@ -207,7 +197,7 @@ export function VoiceChat({
         </p>
       )}
 
-      {!collapsed && connected && detailsOpen && (participants.length > 0 || !listenOnly) && (
+      {!collapsed && connected && (participants.length > 0 || !listenOnly) && (
         // Grille (pas des pastilles en flex-wrap, largeur variable selon la
         // longueur du nom) : demande utilisateur — chaque case doit avoir
         // EXACTEMENT la même taille. Colonnes égales (grid-cols-N) : toutes
@@ -215,9 +205,9 @@ export function VoiceChat({
         // et le contenu identique (avatar + 1 ligne de nom) leur donne aussi
         // la même hauteur.
         //
-        // Repliée par défaut (detailsOpen) : demande utilisateur suite à la
-        // maquette comparative — économise encore plus de place tant qu'on
-        // n'a pas besoin de voir qui est connecté.
+        // Masquée quand le vocal est replié (bouton ⌃/⌄ de l'en-tête) :
+        // économise de la place tant qu'on n'a pas besoin de voir qui est
+        // connecté.
         <div className="grid grid-cols-4 gap-1.5 border-t border-night-700/60 pt-2 sm:grid-cols-5">
           {!listenOnly && (
             <div
