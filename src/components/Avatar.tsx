@@ -18,6 +18,21 @@ function shade(hex: string, amt: number): string {
   return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => f(v).toString(16).padStart(2, '0')).join('')
 }
 
+function headShape(face: AvatarConfig['face'], skin: string): ReactNode {
+  switch (face) {
+    case 'round':
+      return <ellipse cx="50" cy="46" rx="18.6" ry="18.6" fill={skin} />
+    case 'long':
+      return <ellipse cx="50" cy="45.5" rx="15.6" ry="22" fill={skin} />
+    case 'square':
+      return <path d="M33 32c0-5.5 4.5-7 17-7s17 1.5 17 7v20c0 7-3 13-10 13H43c-7 0-10-6-10-13z" fill={skin} />
+    case 'heart':
+      return <path d="M33 37c0-9 7-12 17-12s17 3 17 12c0 12-8 28-17 28S33 49 33 37z" fill={skin} />
+    default:
+      return <ellipse cx="50" cy="45" rx="17" ry="20" fill={skin} />
+  }
+}
+
 const SHOULDERS = 'M14 100c0-22 16-30 36-30s36 8 36 30z'
 const CAP_FADE = 'M32 40c0-13 8-19 18-19s18 6 18 19c-3-6-9-9-18-9s-15 3-18 9z'
 const CAP_FULL = 'M32 42c0-12 8-18 18-18s18 6 18 18c-4-6-10-9-18-9s-14 3-18 9z'
@@ -474,7 +489,7 @@ function AvatarArt({ config, mood }: { config: AvatarConfig; mood: AvatarMood })
       <rect x="43" y="58" width="14" height="16" rx="5" fill={dark} />
       <ellipse cx="32.5" cy="47" rx="3.2" ry="5" fill={skin} />
       <ellipse cx="67.5" cy="47" rx="3.2" ry="5" fill={skin} />
-      <ellipse cx="50" cy="45" rx="17" ry="20" fill={skin} />
+      {headShape(config.face, skin)}
       {hairFront(config.hair, hair)}
       {headwearArt(config.head)}
       {eyes}

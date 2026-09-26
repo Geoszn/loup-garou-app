@@ -19,11 +19,13 @@ export const ACCESSORIES = [
   'none', 'ring', 'freckles', 'glasses', 'sunglasses', 'hoops', 'scar', 'beads', 'facepaint', 'eyepatch',
 ] as const
 export const HEADWEAR = ['none', 'headband', 'cap', 'hat', 'feather', 'crown'] as const
+export const FACES = ['oval', 'round', 'square', 'long', 'heart'] as const
 
 export type Hair = (typeof HAIRS)[number]
 export type Outfit = (typeof OUTFITS)[number]
 export type Accessory = (typeof ACCESSORIES)[number]
 export type Headwear = (typeof HEADWEAR)[number]
+export type FaceShape = (typeof FACES)[number]
 export type AvatarMood = 'smile' | 'calm' | 'grin' | 'angry' | 'shock' | 'talk' | 'sleep' | 'dead'
 
 export interface AvatarConfig {
@@ -32,16 +34,18 @@ export interface AvatarConfig {
   outfit: Outfit
   acc: Accessory
   head: Headwear
+  face: FaceShape
   bg: number
 }
 
-export const DEFAULT_AVATAR_CONFIG: AvatarConfig = { skin: 3, hair: 'braids', outfit: 'tunic', acc: 'none', head: 'none', bg: 0 }
+export const DEFAULT_AVATAR_CONFIG: AvatarConfig = { skin: 3, hair: 'braids', outfit: 'tunic', acc: 'none', head: 'none', face: 'oval', bg: 0 }
 
 export const PART_MIN_POINTS: {
   hair: Record<Hair, number>
   outfit: Record<Outfit, number>
   acc: Record<Accessory, number>
   head: Record<Headwear, number>
+  face: Record<FaceShape, number>
 } = {
   hair: {
     none: 0, fade: 0, afro: 0, braids: 0, puffs: 0, curly: 100, bun: 100, flat: 250, cornrows: 350, locs: 250,
@@ -53,6 +57,7 @@ export const PART_MIN_POINTS: {
   },
   acc: { none: 0, ring: 0, freckles: 0, glasses: 100, sunglasses: 150, hoops: 200, scar: 250, beads: 350, facepaint: 550, eyepatch: 800 },
   head: { none: 0, headband: 100, cap: 250, hat: 550, feather: 800, crown: 2000 },
+  face: { oval: 0, round: 0, square: 0, long: 0, heart: 0 },
 }
 
 /** Lit une configuration reçue du serveur. Les avatars enregistrés avant
@@ -62,15 +67,17 @@ export function parseAvatarConfig(value: unknown): AvatarConfig | null {
   if (!value || typeof value !== 'object') return null
   const v = value as Record<string, unknown>
   const head = v.head === undefined || v.head === null ? 'none' : v.head
+  const face = v.face === undefined || v.face === null ? 'oval' : v.face
   if (
     Number.isInteger(v.skin) && (v.skin as number) >= 0 && (v.skin as number) < SKIN_TONES.length &&
     Number.isInteger(v.bg) && (v.bg as number) >= 0 && (v.bg as number) < AVATAR_BGS.length &&
     (HAIRS as readonly unknown[]).includes(v.hair) &&
     (OUTFITS as readonly unknown[]).includes(v.outfit) &&
     (ACCESSORIES as readonly unknown[]).includes(v.acc) &&
-    (HEADWEAR as readonly unknown[]).includes(head)
+    (HEADWEAR as readonly unknown[]).includes(head) &&
+    (FACES as readonly unknown[]).includes(face)
   ) {
-    return { skin: v.skin as number, bg: v.bg as number, hair: v.hair as Hair, outfit: v.outfit as Outfit, acc: v.acc as Accessory, head: head as Headwear }
+    return { skin: v.skin as number, bg: v.bg as number, hair: v.hair as Hair, outfit: v.outfit as Outfit, acc: v.acc as Accessory, head: head as Headwear, face: face as FaceShape }
   }
   return null
 }

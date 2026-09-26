@@ -9,6 +9,7 @@ import {
   ACCESSORIES,
   AVATAR_BGS,
   DEFAULT_AVATAR_CONFIG,
+  FACES,
   HAIRS,
   HEADWEAR,
   OUTFITS,
@@ -18,12 +19,13 @@ import {
   type AvatarMood,
 } from '../lib/avatarParts'
 
-type Tab = 'looks' | 'skin' | 'hair' | 'outfit' | 'head' | 'acc' | 'bg'
-type PartKind = 'hair' | 'outfit' | 'head' | 'acc'
+type Tab = 'looks' | 'skin' | 'face' | 'hair' | 'outfit' | 'head' | 'acc' | 'bg'
+type PartKind = 'face' | 'hair' | 'outfit' | 'head' | 'acc'
 
 const TABS: { id: Tab; icon: string; label: TranslationKey }[] = [
   { id: 'looks', icon: '✨', label: 'avatar.tab.looks' },
   { id: 'skin', icon: '🎨', label: 'avatar.tab.skin' },
+  { id: 'face', icon: '🙂', label: 'avatar.tab.face' },
   { id: 'hair', icon: '💇', label: 'avatar.tab.hair' },
   { id: 'outfit', icon: '👕', label: 'avatar.tab.outfit' },
   { id: 'head', icon: '🎩', label: 'avatar.tab.head' },
@@ -31,9 +33,10 @@ const TABS: { id: Tab; icon: string; label: TranslationKey }[] = [
   { id: 'bg', icon: '🖼️', label: 'avatar.tab.bg' },
 ]
 
-const OPTIONS: Record<PartKind, readonly string[]> = { hair: HAIRS, outfit: OUTFITS, head: HEADWEAR, acc: ACCESSORIES }
+const OPTIONS: Record<PartKind, readonly string[]> = { face: FACES, hair: HAIRS, outfit: OUTFITS, head: HEADWEAR, acc: ACCESSORIES }
 
 const PART_LABEL: Record<PartKind, (value: string) => TranslationKey> = {
+  face: (v) => `avatar.face.${v}` as TranslationKey,
   hair: (v) => `avatar.hair.${v}` as TranslationKey,
   outfit: (v) => `avatar.outfit.${v}` as TranslationKey,
   head: (v) => `avatar.head.${v}` as TranslationKey,
@@ -49,12 +52,12 @@ const MOODS: { id: AvatarMood; label: TranslationKey }[] = [
 ]
 
 const LOOKS: { label: TranslationKey; config: AvatarConfig }[] = [
-  { label: 'avatar.look.sage', config: { skin: 4, hair: 'afro', outfit: 'cloak', acc: 'glasses', head: 'none', bg: 3 } },
-  { label: 'avatar.look.queen', config: { skin: 3, hair: 'braids', outfit: 'royal', acc: 'ring', head: 'crown', bg: 4 } },
-  { label: 'avatar.look.hunter', config: { skin: 2, hair: 'fade', outfit: 'hunter', acc: 'none', head: 'hat', bg: 1 } },
-  { label: 'avatar.look.griot', config: { skin: 5, hair: 'gele', outfit: 'boubou', acc: 'hoops', head: 'none', bg: 2 } },
-  { label: 'avatar.look.warrior', config: { skin: 3, hair: 'mohawk', outfit: 'armor', acc: 'facepaint', head: 'none', bg: 0 } },
-  { label: 'avatar.look.wolf', config: { skin: 4, hair: 'locs', outfit: 'furcape', acc: 'scar', head: 'none', bg: 5 } },
+  { label: 'avatar.look.sage', config: { skin: 4, hair: 'afro', outfit: 'cloak', acc: 'glasses', head: 'none', face: 'round', bg: 3 } },
+  { label: 'avatar.look.queen', config: { skin: 3, hair: 'braids', outfit: 'royal', acc: 'ring', head: 'crown', face: 'oval', bg: 4 } },
+  { label: 'avatar.look.hunter', config: { skin: 2, hair: 'fade', outfit: 'hunter', acc: 'none', head: 'hat', face: 'square', bg: 1 } },
+  { label: 'avatar.look.griot', config: { skin: 5, hair: 'gele', outfit: 'boubou', acc: 'hoops', head: 'none', face: 'heart', bg: 2 } },
+  { label: 'avatar.look.warrior', config: { skin: 3, hair: 'mohawk', outfit: 'armor', acc: 'facepaint', head: 'none', face: 'square', bg: 0 } },
+  { label: 'avatar.look.wolf', config: { skin: 4, hair: 'locs', outfit: 'furcape', acc: 'scar', head: 'none', face: 'oval', bg: 5 } },
 ]
 
 const sameConfig = (a: AvatarConfig, b: AvatarConfig) => JSON.stringify(a) === JSON.stringify(b)
@@ -166,6 +169,7 @@ export function AvatarStudio({
       outfit: pickUnlocked('outfit') as AvatarConfig['outfit'],
       acc: pickUnlocked('acc') as AvatarConfig['acc'],
       head: pickUnlocked('head') as AvatarConfig['head'],
+      face: FACES[Math.floor(Math.random() * FACES.length)],
     })
   }
 
@@ -195,7 +199,7 @@ export function AvatarStudio({
 
   if (!open) return null
 
-  const zoom = tab === 'hair' || tab === 'head' || tab === 'acc' || tab === 'skin' ? 1.9 : 1
+  const zoom = tab === 'face' || tab === 'hair' || tab === 'head' || tab === 'acc' || tab === 'skin' ? 1.9 : 1
 
   const thumb = (cfg: AvatarConfig, active: boolean, scale: number) => (
     <span
