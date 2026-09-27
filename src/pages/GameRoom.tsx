@@ -268,6 +268,18 @@ export default function GameRoom() {
       {/* Grain léger en surcouche plein écran : casse l'effet d'aplat sans
           coût de rendu supplémentaire par carte. */}
       <div className="texture-noise" />
+      {/* Connexion instable (voir useGame.ts : le sondage de secours toutes
+          les 2,5s a échoué même après la tentative de récupération
+          automatique dans supabase.ts) — un joueur qui voit l'écran figé
+          sans le moindre signal ne sait pas s'il doit attendre ou recharger.
+          Disparaît tout seul dès que le prochain sondage réussit. */}
+      {gameError && (
+        <div className="fixed inset-x-0 top-0 z-50 flex justify-center px-3 pt-[max(env(safe-area-inset-top),0.5rem)]">
+          <p className="rounded-full border border-amber-400/40 bg-night-950/95 px-3.5 py-1.5 text-[11px] font-semibold text-amber-300 shadow-lg backdrop-blur">
+            ⚠️ {t('game.connectionUnstable')}
+          </p>
+        </div>
+      )}
       <PhaseBanner
         status={view.game.status}
         nightNumber={view.game.night_number}

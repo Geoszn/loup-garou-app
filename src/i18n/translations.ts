@@ -728,6 +728,7 @@ export const translations = {
 
   // --- Déroulement de partie (GameRoom.tsx) -----------------------------------
   'game.notFound': { fr: "Cette partie n'existe pas ou vous n'y avez pas accès.", en: "This game doesn't exist or you don't have access to it." },
+  'game.connectionUnstable': { fr: 'Connexion instable, reconnexion en cours…', en: 'Unstable connection, reconnecting…' },
   'game.kickedNotice': { fr: "Vous avez été retiré(e) de cette partie par l'hôte.", en: "You've been removed from this game by the host." },
   'game.excludedMessage': { fr: "Vous avez été exclu(e) de cette partie par l'hôte.", en: "You've been excluded from this game by the host." },
   'game.eliminatedNoticeWithRole': {
