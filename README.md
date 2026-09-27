@@ -277,9 +277,17 @@ Idéalement sur un **projet de staging séparé** d'abord (voir plus bas), avant
 
 Ne se déclenche que si ce dossier est poussé sur GitHub (`git remote add origin ...` puis `git push`) — un dépôt git local a été initialisé dans ce projet, mais aucun remote n'est configuré pour l'instant.
 
-### Environnement de staging (recommandé, pas encore en place)
+### Environnement de staging
 
-Le point le plus structurant qui manque encore : un second projet Supabase + un déploiement Vercel preview, pour tester une migration ou une fonctionnalité avant qu'elle touche de vrais joueurs. Concrètement :
-1. Un deuxième projet sur [supabase.com](https://supabase.com), avec les mêmes migrations.
-2. Un projet Vercel (ou juste les déploiements "Preview" automatiques d'une pull request) pointant vers ce projet Supabase de staging via ses propres variables d'environnement.
-3. Tester dessus avant de pousser en production — les deux régressions mentionnées plus haut auraient été visibles ici avant d'atteindre un vrai joueur.
+Un second projet Supabase + un déploiement Vercel preview, pour tester une migration ou une fonctionnalité sur un lien bien distinct avant qu'elle touche de vrais joueurs.
+
+1. **Projet Supabase de staging** — créer un nouveau projet sur [supabase.com](https://supabase.com/dashboard) (nom libre, ex. `loup-garou-staging`), puis appliquer toutes les migrations d'un coup avec sa connection string (Project Settings → Database → Connection string) :
+   ```bash
+   export SUPABASE_DB_URL='postgres://postgres.xxxx:MOT_DE_PASSE@aws-0-xxxx.pooler.supabase.com:5432/postgres'
+   npm run db:bootstrap
+   ```
+   Le script (`scripts/run-all-migrations.mjs`) rejoue les ~200 migrations dans l'ordre et refuse de tourner contre le projet de production par sécurité. Les buckets de stockage créés par migration (rôles, artefacts, bannières...) sont recréés automatiquement, mais restent vides — les images existantes ne sont pas copiées, à réuploader si besoin sur staging. Penser aussi à configurer manuellement Authentication → URL Configuration (Site URL / Redirect URLs) sur le nouveau projet, ce qui n'est pas couvert par les migrations SQL.
+
+2. **Branche + déploiement `staging`** — la branche `staging` de ce dépôt a son propre déploiement Vercel "Preview" à une URL stable (Project Settings → Git → Branch Deployments côté Vercel, ou simplement le lien `https://<projet>-git-staging-<compte>.vercel.app` généré automatiquement à chaque push sur cette branche). Sur le dashboard Vercel, ajouter dans Project Settings → Environment Variables les mêmes clés que `.env.example` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, ...) mais avec les valeurs du projet Supabase de **staging**, scopées à "Preview" et restreintes à la branche `staging` (pas "Production").
+
+3. Développer/tester sur `staging`, pousser dessus pour voir le résultat sur son lien dédié, puis fusionner dans `main` (qui reste le déploiement de production) une fois validé.
