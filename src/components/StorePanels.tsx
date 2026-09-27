@@ -25,6 +25,43 @@ const SKIN_CATEGORY_LABEL: Record<SkinCategory, TranslationKey> = {
   packs: 'hub.skins.cat.packs',
 }
 
+/** Décompte avant la fin de vente d'un article limité dans le temps (voir
+ * migration 0199/0200) — jours+heures au-delà d'un jour, sinon HH:MM pour
+ * rester précis dans les dernières heures, quand l'urgence compte le plus.
+ * `urgent` (moins de 48h) déclenche le style rouge partagé avec le
+ * décompte des quêtes du jour (voir CountdownClock, Rewards.tsx). */
+function timeLeftLabel(endsAt: string, lang: 'fr' | 'en'): { label: string; urgent: boolean } {
+  const ms = new Date(endsAt).getTime() - Date.now()
+  const urgent = ms <= 48 * 3600 * 1000
+  if (ms <= 0) return { label: lang === 'en' ? 'Ending' : 'Se termine', urgent: true }
+  const totalHours = Math.floor(ms / 3600000)
+  const days = Math.floor(totalHours / 24)
+  if (days >= 1) {
+    const hours = totalHours % 24
+    return { label: lang === 'en' ? `${days}d ${hours}h left` : `${days} j ${hours} h`, urgent }
+  }
+  const minutes = Math.floor((ms % 3600000) / 60000)
+  return { label: `${String(totalHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`, urgent }
+}
+
+/** Petit badge compact posé sur une vignette de la grille — ticke chaque
+ * minute (suffisant : la granularité affichée ne descend jamais sous la
+ * minute, contrairement au compte à rebours des quêtes du jour). */
+function CountdownChip({ endsAt }: { endsAt: string }) {
+  const { lang } = useLanguage()
+  const [, force] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => force((n) => n + 1), 60000)
+    return () => clearInterval(id)
+  }, [])
+  const { label, urgent } = timeLeftLabel(endsAt, lang)
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[9.5px] font-bold tabular-nums ${urgent ? 'text-blood-400' : 'text-sky-300'}`}>
+      ⏳ {label}
+    </span>
+  )
+}
+
 /** Artefacts du Loup Store, en grille compacte (mobile d'abord). Mêmes
  * fonctions serveur et mêmes règles que la page Loup Store (get_store_artifacts,
  * purchase_artifact) : rien de nouveau côté achat. */
@@ -100,6 +137,7 @@ export function ArtifactsPanel({ balance, onPurchased }: { balance: number; onPu
               <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-300">
                 <LoupCoinIcon className="h-2.5 w-2.5" /> {a.price_coins}
               </span>
+              {a.ends_at && <CountdownChip endsAt={a.ends_at} />}
             </button>
           ))}
       </div>
@@ -112,6 +150,11 @@ export function ArtifactsPanel({ balance, onPurchased }: { balance: number; onPu
             <span className="flex items-center gap-1.5 font-display text-xl font-semibold text-amber-300">
               <LoupCoinIcon className="h-5 w-5" /> {detail.price_coins}
             </span>
+            {detail.ends_at && (
+              <p className={`-mt-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${timeLeftLabel(detail.ends_at, lang).urgent ? 'border-blood-500/50 bg-blood-600/10 text-blood-400' : 'border-sky-400/40 bg-sky-400/10 text-sky-300'}`}>
+                ⏳ {lang === 'en' ? 'Ends in' : 'Se termine dans'} {timeLeftLabel(detail.ends_at, lang).label}
+              </p>
+            )}
             {detail.max_stock !== null && (
               <p className="text-xs text-moon-200/50">{t('loupStore.boutique.stock', { quantity: detail.quantity, max: detail.max_stock })}</p>
             )}
@@ -253,6 +296,7 @@ export function SkinsPanel({ balance, onPurchased }: { balance: number; onPurcha
                     <LoupCoinIcon className="h-2.5 w-2.5" /> {s.price_coins}
                   </span>
                 )}
+                {!s.owned && s.ends_at && <CountdownChip endsAt={s.ends_at} />}
               </button>
             )
           })}
@@ -272,6 +316,11 @@ export function SkinsPanel({ balance, onPurchased }: { balance: number; onPurcha
               <span className="flex items-center gap-1.5 font-display text-xl font-semibold text-amber-300">
                 <LoupCoinIcon className="h-5 w-5" /> {detail.price_coins}
               </span>
+            )}
+            {!detail.owned && detail.ends_at && (
+              <p className={`-mt-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${timeLeftLabel(detail.ends_at, lang).urgent ? 'border-blood-500/50 bg-blood-600/10 text-blood-400' : 'border-sky-400/40 bg-sky-400/10 text-sky-300'}`}>
+                ⏳ {lang === 'en' ? 'Ends in' : 'Se termine dans'} {timeLeftLabel(detail.ends_at, lang).label}
+              </p>
             )}
             <div className="mt-1 flex w-full gap-3">
               <Button variant="ghost" className="flex-1" onClick={() => setDetail(null)}>

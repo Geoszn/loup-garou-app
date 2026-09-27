@@ -3878,7 +3878,7 @@ function StoreArtifactFormDrawer({
   }
 
   return (
-    <SideDrawer open={open} onClose={onClose} title={artifact ? 'Modifier l’artefact' : 'Nouvel artefact'}>
+    <Modal size="lg" open={open} onClose={onClose} title={artifact ? 'Modifier l’artefact' : 'Nouvel artefact'}>
       <form className="flex flex-col gap-4" onSubmit={save}>
         {artifact && (
           <div className="flex items-center gap-3 rounded-xl border border-night-600/60 bg-night-950/30 p-3">
@@ -3986,37 +3986,41 @@ function StoreArtifactFormDrawer({
           </p>
         </div>
 
-        <div>
-          <Label>Nom — Français</Label>
-          <Input
-            value={form.name_fr}
-            onChange={(ev) => setForm((f) => ({ ...f, name_fr: ev.target.value }))}
-            placeholder="Ex. Parchemin du Griot"
-          />
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Nom — Français</Label>
+            <Input
+              value={form.name_fr}
+              onChange={(ev) => setForm((f) => ({ ...f, name_fr: ev.target.value }))}
+              placeholder="Ex. Parchemin du Griot"
+            />
+          </div>
+          <div>
+            <Label>Nom — English</Label>
+            <Input
+              value={form.name_en}
+              onChange={(ev) => setForm((f) => ({ ...f, name_en: ev.target.value }))}
+              placeholder="Ex. Griot's Scroll"
+            />
+          </div>
         </div>
-        <div>
-          <Label>Nom — English</Label>
-          <Input
-            value={form.name_en}
-            onChange={(ev) => setForm((f) => ({ ...f, name_en: ev.target.value }))}
-            placeholder="Ex. Griot's Scroll"
-          />
-        </div>
-        <div>
-          <Label>Description — Français</Label>
-          <Input
-            value={form.description_fr}
-            onChange={(ev) => setForm((f) => ({ ...f, description_fr: ev.target.value }))}
-            placeholder="Décrit l'effet de l'artefact pour le joueur"
-          />
-        </div>
-        <div>
-          <Label>Description — English</Label>
-          <Input
-            value={form.description_en}
-            onChange={(ev) => setForm((f) => ({ ...f, description_en: ev.target.value }))}
-            placeholder="Describes the artifact's effect for the player"
-          />
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Description — Français</Label>
+            <Input
+              value={form.description_fr}
+              onChange={(ev) => setForm((f) => ({ ...f, description_fr: ev.target.value }))}
+              placeholder="Décrit l'effet de l'artefact pour le joueur"
+            />
+          </div>
+          <div>
+            <Label>Description — English</Label>
+            <Input
+              value={form.description_en}
+              onChange={(ev) => setForm((f) => ({ ...f, description_en: ev.target.value }))}
+              placeholder="Describes the artifact's effect for the player"
+            />
+          </div>
         </div>
 
         <div>
@@ -4059,7 +4063,7 @@ function StoreArtifactFormDrawer({
           </Button>
         </div>
       </form>
-    </SideDrawer>
+    </Modal>
   )
 }
 
@@ -4472,7 +4476,7 @@ function StoreSkinFormDrawer({
   const previewConfig = { ...DEFAULT_AVATAR_CONFIG, ...form.config }
 
   return (
-    <SideDrawer open={open} onClose={onClose} title={skin ? 'Modifier le skin' : 'Nouveau skin'}>
+    <Modal size="lg" open={open} onClose={onClose} title={skin ? 'Modifier le skin' : 'Nouveau skin'}>
       <form className="flex flex-col gap-4" onSubmit={save}>
         <div className="flex items-center gap-3 rounded-xl border border-night-600/60 bg-night-950/30 p-3">
           <Avatar config={previewConfig} className="h-14 w-14 shrink-0" />
@@ -4525,21 +4529,25 @@ function StoreSkinFormDrawer({
           </div>
         </div>
 
-        <div>
-          <Label>Nom — Français</Label>
-          <Input value={form.name_fr} onChange={(ev) => setForm((f) => ({ ...f, name_fr: ev.target.value }))} placeholder="Ex. Couronne dorée" />
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Nom — Français</Label>
+            <Input value={form.name_fr} onChange={(ev) => setForm((f) => ({ ...f, name_fr: ev.target.value }))} placeholder="Ex. Couronne dorée" />
+          </div>
+          <div>
+            <Label>Nom — English</Label>
+            <Input value={form.name_en} onChange={(ev) => setForm((f) => ({ ...f, name_en: ev.target.value }))} placeholder="Ex. Golden crown" />
+          </div>
         </div>
-        <div>
-          <Label>Nom — English</Label>
-          <Input value={form.name_en} onChange={(ev) => setForm((f) => ({ ...f, name_en: ev.target.value }))} placeholder="Ex. Golden crown" />
-        </div>
-        <div>
-          <Label>Description — Français</Label>
-          <Input value={form.description_fr} onChange={(ev) => setForm((f) => ({ ...f, description_fr: ev.target.value }))} />
-        </div>
-        <div>
-          <Label>Description — English</Label>
-          <Input value={form.description_en} onChange={(ev) => setForm((f) => ({ ...f, description_en: ev.target.value }))} />
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Description — Français</Label>
+            <Input value={form.description_fr} onChange={(ev) => setForm((f) => ({ ...f, description_fr: ev.target.value }))} />
+          </div>
+          <div>
+            <Label>Description — English</Label>
+            <Input value={form.description_en} onChange={(ev) => setForm((f) => ({ ...f, description_en: ev.target.value }))} />
+          </div>
         </div>
 
         <div className="rounded-xl border border-night-600/60 bg-night-950/30 p-3">
@@ -4606,7 +4614,7 @@ function StoreSkinFormDrawer({
           </Button>
         </div>
       </form>
-    </SideDrawer>
+    </Modal>
   )
 }
 

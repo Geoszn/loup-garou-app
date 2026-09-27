@@ -16,6 +16,10 @@ export interface StoreSkin {
   price_coins: number
   config: Partial<AvatarConfig>
   owned: boolean
+  // Fin de disponibilité (migration 0199/0200) — null = illimitée. Un skin
+  // déjà possédé reste renvoyé même après cette date (voir list_store_skins) ;
+  // ce champ ne sert alors plus qu'à l'affichage, jamais à masquer "mes skins".
+  ends_at: string | null
 }
 
 export const RARITY_STYLE: Record<SkinRarity, { border: string; text: string; dot: string }> = {

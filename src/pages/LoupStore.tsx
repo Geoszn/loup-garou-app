@@ -55,6 +55,9 @@ export interface StoreArtifact {
   quantity: number
   owned: boolean
   can_purchase: boolean
+  // Fin de disponibilité (migration 0199/0200) — null = disponible sans
+  // limite de temps. Sert au décompte affiché sur la carte/la fiche.
+  ends_at: string | null
 }
 
 export interface MyArtifact {
