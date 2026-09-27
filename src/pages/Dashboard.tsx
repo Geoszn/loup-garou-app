@@ -16,9 +16,10 @@ import { DashboardLeaderboard } from '../components/DashboardLeaderboard'
 import { ContinentPrompt } from '../components/ContinentPrompt'
 import { NotificationOptInPrompt } from '../components/NotificationOptInPrompt'
 import { QuoteCarousel } from '../components/QuoteCarousel'
-import { EventBannerCarousel } from '../components/EventBanner'
+import { PromoCarousel } from '../components/PromoCarousel'
 import { useNarrator } from '../hooks/useNarrator'
 import { useActiveEvents } from '../hooks/useActiveEvents'
+import { useActiveBanners } from '../hooks/useActiveBanners'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from '../components/Avatar'
 
@@ -91,6 +92,11 @@ export default function Dashboard() {
   // (demandé explicitement : les joueurs déjà connectés ne passent pas
   // forcément par la page d'accueil publique).
   const { events, refresh: refreshEvents } = useActiveEvents()
+  // Pas de callback onExpire ici : contrairement à un événement (compte à
+  // rebours client via EventBanner), une bannière n'a pas de minuteur local
+  // qui détecterait sa propre fin — le polling de 30s de useActiveBanners
+  // suffit à la faire disparaître.
+  const { banners } = useActiveBanners()
 
   function resumeActiveGame() {
     if (!activeGame) return
@@ -257,11 +263,12 @@ export default function Dashboard() {
           <RankProgress points={profile?.rank_points ?? 0} />
         </div>
 
-        {/* Espace bannière (événements du tableau de bord admin) : juste sous
-            la carte du joueur, avant les quêtes. Plusieurs événements actifs
-            à la fois défilent automatiquement (voir EventBannerCarousel)
-            plutôt que de s'empiler à la suite. */}
-        <EventBannerCarousel events={events} onExpire={refreshEvents} />
+        {/* Espace bannière (événements ET bannières du tableau de bord admin,
+            voir migration 0202) : juste sous la carte du joueur, avant les
+            quêtes. Tous les éléments actifs à la fois défilent
+            automatiquement (voir PromoCarousel) plutôt que de s'empiler à la
+            suite. */}
+        <PromoCarousel events={events} banners={banners} onExpire={refreshEvents} />
 
         {activeGame && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-moon-400/40 bg-moon-400/5 px-4 py-3">

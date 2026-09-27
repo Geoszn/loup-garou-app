@@ -2,6 +2,7 @@
 // une bannière sur la page d'accueil pendant leur période, avec un bonus de
 // points optionnel appliqué dans apply_rank_result.
 export type EventBonusType = 'none' | 'flat' | 'multiplier'
+export type EventBonusCurrency = 'points' | 'coins'
 export type EventBannerColor = 'gold' | 'blood' | 'emerald' | 'violet'
 
 export interface GameEvent {
@@ -19,6 +20,13 @@ export interface GameEvent {
   preview_starts_at: string | null
   bonus_type: EventBonusType
   bonus_value: number
+  // Monnaie créditée par le bonus (voir migration 0202) — 'points' (défaut,
+  // comportement d'origine) ou 'coins' (Loup Coins, toujours en bonus_type
+  // 'flat' : pas de "gain de coins par victoire" de base à multiplier).
+  bonus_currency: EventBonusCurrency
+  // Durée d'affichage de cette bannière dans le carrousel du tableau de bord
+  // (secondes), réglable par événement — voir PromoCarousel.
+  display_seconds: number
   banner_text_fr: string
   banner_text_en: string
   banner_color: EventBannerColor

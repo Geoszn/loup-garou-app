@@ -8,7 +8,8 @@ import { DEFAULT_ROLE_IMAGES } from '../components/RoleCard'
 import { ROLES, ROLE_ORDER, type RoleId } from '../lib/roles'
 import { LoupCoinIcon } from '../components/LoupCoinIcon'
 import { translations, type TranslationKey } from '../i18n/translations'
-import type { EventBannerColor, EventBonusType, GameEvent } from '../types/events'
+import type { EventBannerColor, EventBonusCurrency, EventBonusType, GameEvent } from '../types/events'
+import type { Banner as BannerData } from '../types/banners'
 import { continentEmoji, continentName } from '../lib/continents'
 import { compressImageForUpload } from '../lib/imageCompress'
 import { sendNotificationCampaignNow } from '../lib/adminCampaigns'
@@ -40,7 +41,12 @@ const TAB_ITEMS: { id: Tab; label: string; icon: string; description: string }[]
   { id: 'users', label: 'Utilisateurs', icon: '👤', description: 'Rechercher, modérer et gérer les comptes joueurs.' },
   { id: 'games', label: 'Salons', icon: '🎲', description: 'Salons en cours, historique et modération des parties.' },
   { id: 'content', label: 'Contenu du jeu', icon: '📝', description: 'Textes, images et réglages du contenu affiché en jeu.' },
-  { id: 'events', label: 'Événements', icon: '🎉', description: 'Bannières et bonus temporaires affichés aux joueurs.' },
+  {
+    id: 'events',
+    label: 'Événements & Bannières',
+    icon: '🎉',
+    description: 'Événements avec bonus (points ou Loup Coins) et bannières cliquables défilant sur le tableau de bord.',
+  },
   // Catalogue des quêtes quotidiennes (voir QuestsCard.tsx côté joueur,
   // migration 0112) : texte/objectif/récompense/activation, sans passer par
   // un déploiement de code — même principe que l'onglet Événements ci-dessus.
@@ -520,7 +526,7 @@ export default function AdminDashboard() {
             {tab === 'users' && <UsersTab currentUserId={user?.id ?? null} seed={usersSeed} />}
             {tab === 'games' && <GamesTab />}
             {tab === 'content' && <ContentTab />}
-            {tab === 'events' && <EventsTab />}
+            {tab === 'events' && <EventsAndBannersTab />}
             {tab === 'quests' && <QuestTemplatesTab />}
             {tab === 'artifacts' && <StoreArtifactsTab />}
             {tab === 'skins' && <StoreSkinsTab />}
@@ -2030,7 +2036,7 @@ function eventStatus(e: GameEvent): { label: string; className: string } {
 }
 
 function bonusSummary(e: GameEvent): string | null {
-  if (e.bonus_type === 'flat') return `+${e.bonus_value} pts par victoire`
+  if (e.bonus_type === 'flat') return `+${e.bonus_value} ${e.bonus_currency === 'coins' ? '🪙 Loup Coins' : 'pts'} par victoire`
   if (e.bonus_type === 'multiplier') return `×${e.bonus_value} points par victoire`
   return null
 }
@@ -2044,6 +2050,9 @@ interface EventFormState {
   preview_starts_at: string
   bonus_type: EventBonusType
   bonus_value: string
+  bonus_currency: EventBonusCurrency
+  // Durée d'affichage de cette bannière dans le carrousel (secondes).
+  display_seconds: string
   banner_text_fr: string
   banner_text_en: string
   banner_color: EventBannerColor
@@ -2056,11 +2065,35 @@ const EMPTY_EVENT_FORM: EventFormState = {
   ends_at: '',
   preview_starts_at: '',
   bonus_type: 'none',
+  bonus_currency: 'points',
+  display_seconds: '6',
   bonus_value: '0',
   banner_text_fr: '',
   banner_text_en: '',
   banner_color: 'gold',
   is_enabled: true,
+}
+
+/** Onglet "Événements & Bannières" : deux sous-onglets — Événements (bonus
+ * de points ou de Loup Coins, contenu existant depuis la migration 0067) et
+ * Bannières (nouveau, migration 0202 : image cliquable simple, sans bonus).
+ * Les deux partagent le même emplacement de défilement côté joueur (voir
+ * PromoCarousel, Dashboard.tsx). */
+function EventsAndBannersTab() {
+  const [sub, setSub] = useState<'events' | 'banners'>('events')
+  return (
+    <div className="flex flex-col gap-4">
+      <Segmented
+        tabs={[
+          { id: 'events' as const, label: '🎉 Événements' },
+          { id: 'banners' as const, label: '🖼️ Bannières' },
+        ]}
+        active={sub}
+        onChange={setSub}
+      />
+      {sub === 'events' ? <EventsTab /> : <BannersTab />}
+    </div>
+  )
 }
 
 function EventsTab() {
@@ -2109,10 +2142,12 @@ function EventsTab() {
       p_banner_color: e.banner_color,
       p_is_enabled: !e.is_enabled,
       // admin_upsert_event réécrit toutes les colonnes à chaque appel (pas
-      // une mise à jour partielle) — omettre ce champ le remettrait
-      // silencieusement à null (sa valeur par défaut) à chaque bascule
-      // Activer/Désactiver, effaçant un aperçu déjà configuré.
+      // une mise à jour partielle) — omettre ces champs les remettrait
+      // silencieusement à leur valeur par défaut à chaque bascule
+      // Activer/Désactiver, effaçant un aperçu ou un réglage déjà configuré.
       p_preview_starts_at: e.preview_starts_at,
+      p_bonus_currency: e.bonus_currency,
+      p_display_seconds: e.display_seconds,
     })
     setBusyId(null)
     if (rpcError) {
@@ -2245,6 +2280,8 @@ function EventFormDrawer({
         preview_starts_at: event.preview_starts_at ? toDatetimeLocal(event.preview_starts_at) : '',
         bonus_type: event.bonus_type,
         bonus_value: String(event.bonus_value),
+        bonus_currency: event.bonus_currency,
+        display_seconds: String(event.display_seconds),
         banner_text_fr: event.banner_text_fr,
         banner_text_en: event.banner_text_en,
         banner_color: event.banner_color,
@@ -2278,6 +2315,8 @@ function EventFormDrawer({
       p_preview_starts_at: form.preview_starts_at ? new Date(form.preview_starts_at).toISOString() : null,
       p_bonus_type: form.bonus_type,
       p_bonus_value: Number(form.bonus_value) || 0,
+      p_bonus_currency: form.bonus_currency,
+      p_display_seconds: Number(form.display_seconds) || 6,
       p_banner_text_fr: form.banner_text_fr,
       p_banner_text_en: form.banner_text_en,
       p_banner_color: form.banner_color,
@@ -2464,16 +2503,45 @@ function EventFormDrawer({
         </div>
 
         <div>
+          <Label>Monnaie du bonus</Label>
+          <Segmented
+            tabs={[
+              { id: 'points' as const, label: '⚔️ Points de rang' },
+              { id: 'coins' as const, label: '🪙 Loup Coins' },
+            ]}
+            active={form.bonus_currency}
+            onChange={(id) =>
+              setForm((f) => ({
+                ...f,
+                bonus_currency: id,
+                // Un bonus en Loup Coins ne peut être que fixe (voir migration
+                // 0202) : pas de "gain de coins par victoire" de base à
+                // multiplier, contrairement aux points.
+                bonus_type: id === 'coins' && f.bonus_type === 'multiplier' ? 'flat' : f.bonus_type,
+              }))
+            }
+          />
+        </div>
+        <div>
           <Label>Bonus</Label>
           <Segmented
-            tabs={(['none', 'flat', 'multiplier'] as EventBonusType[]).map((id) => ({ id, label: BONUS_TYPE_LABELS[id] }))}
+            tabs={(form.bonus_currency === 'coins' ? (['none', 'flat'] as const) : (['none', 'flat', 'multiplier'] as const)).map((id) => ({
+              id,
+              label: BONUS_TYPE_LABELS[id],
+            }))}
             active={form.bonus_type}
             onChange={(id) => setForm((f) => ({ ...f, bonus_type: id }))}
           />
         </div>
         {form.bonus_type !== 'none' && (
           <div>
-            <Label>{form.bonus_type === 'flat' ? 'Points bonus par victoire' : 'Multiplicateur (ex. 2 = points doublés)'}</Label>
+            <Label>
+              {form.bonus_currency === 'coins'
+                ? 'Loup Coins bonus par victoire'
+                : form.bonus_type === 'flat'
+                  ? 'Points bonus par victoire'
+                  : 'Multiplicateur (ex. 2 = points doublés)'}
+            </Label>
             <Input
               type="number"
               step={form.bonus_type === 'flat' ? 1 : 0.1}
@@ -2483,6 +2551,21 @@ function EventFormDrawer({
             />
           </div>
         )}
+
+        <div>
+          <Label>Durée d’affichage dans le carrousel (secondes)</Label>
+          <Input
+            type="number"
+            min={2}
+            max={60}
+            value={form.display_seconds}
+            onChange={(ev) => setForm((f) => ({ ...f, display_seconds: ev.target.value }))}
+          />
+          <p className="mt-1 text-[11px] text-moon-200/40">
+            Combien de temps cette bannière reste affichée avant de laisser place à la suivante (2 à 60 s) — sans effet
+            si c’est le seul élément actif.
+          </p>
+        </div>
 
         <div>
           <Label>Couleur de la bannière</Label>
@@ -2621,6 +2704,447 @@ function EventBannerImageUpload({
       return
     }
     const { error: rpcError } = await supabase.rpc('admin_set_event_banner_image', { p_id: event.id, p_path: path, p_lang: lang })
+    setBusy(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    onUploaded()
+  }
+
+  return (
+    <div className="flex flex-1 flex-col gap-1.5">
+      <p className="text-[10px] uppercase tracking-wide text-moon-200/40">{label}</p>
+      <div className="flex items-center gap-3">
+        {currentUrl ? (
+          <img src={currentUrl} alt="" className="h-12 w-24 rounded-lg border border-night-600/60 object-cover" />
+        ) : (
+          <span className="flex h-12 w-24 items-center justify-center rounded-lg border border-dashed border-night-600/60 text-[10px] text-moon-200/30">
+            Aucune image
+          </span>
+        )}
+        <label className="cursor-pointer rounded-lg border border-night-600/70 bg-night-800/50 px-3 py-1.5 text-[11px] font-semibold text-moon-200/80 transition-colors hover:border-moon-400/40">
+          {busy ? '...' : currentUrl ? '📤 Changer' : '📤 Ajouter'}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            disabled={busy}
+            onChange={(ev) => {
+              const file = ev.target.files?.[0]
+              if (file) handleUpload(file)
+              ev.target.value = ''
+            }}
+          />
+        </label>
+      </div>
+      <ErrorText>{error}</ErrorText>
+    </div>
+  )
+}
+
+// ----------------------------------------------------------------------------
+// Bannières (voir migration 0202) : image cliquable simple, sans bonus de
+// jeu ni texte superposé, contrairement à un Événement ci-dessus. Même
+// patron d'ensemble (liste + tiroir de formulaire + upload d'image séparé),
+// volontairement plus court puisqu'il n'y a ni bonus ni couleur à régler.
+// ----------------------------------------------------------------------------
+function bannerStatus(b: BannerData & { starts_at: string | null; ends_at: string | null; is_enabled?: boolean }): { label: string; className: string } {
+  if (!b.is_enabled) return { label: 'Désactivé', className: 'bg-night-600 text-moon-200/60' }
+  const now = Date.now()
+  if (b.starts_at && now < new Date(b.starts_at).getTime()) return { label: 'Programmé', className: 'bg-night-600 text-moon-200/70' }
+  if (b.ends_at && now > new Date(b.ends_at).getTime()) return { label: 'Terminé', className: 'bg-night-600 text-moon-200/50' }
+  return { label: 'En cours', className: 'bg-emerald-700/30 text-emerald-400' }
+}
+
+interface AdminBanner extends BannerData {
+  name: string
+  starts_at: string | null
+  ends_at: string | null
+  is_enabled: boolean
+  sort_order: number
+  created_at: string
+}
+
+interface BannerFormState {
+  name: string
+  link_url: string
+  starts_at: string
+  ends_at: string
+  display_seconds: string
+  sort_order: string
+  is_enabled: boolean
+}
+
+const EMPTY_BANNER_FORM: BannerFormState = {
+  name: '',
+  link_url: '',
+  starts_at: '',
+  ends_at: '',
+  display_seconds: '6',
+  sort_order: '0',
+  is_enabled: true,
+}
+
+function BannersTab() {
+  const [banners, setBanners] = useState<AdminBanner[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<AdminBanner | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<AdminBanner | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    const { data, error: rpcError } = await supabase.rpc('admin_list_banners')
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    setError(null)
+    setBanners((data ?? []) as AdminBanner[])
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  function openCreate() {
+    setEditing(null)
+    setFormOpen(true)
+  }
+
+  function openEdit(b: AdminBanner) {
+    setEditing(b)
+    setFormOpen(true)
+  }
+
+  async function toggleEnabled(b: AdminBanner) {
+    setBusyId(b.id)
+    const { error: rpcError } = await supabase.rpc('admin_upsert_banner', {
+      p_id: b.id,
+      p_name: b.name,
+      p_link_url: b.link_url,
+      p_starts_at: b.starts_at,
+      p_ends_at: b.ends_at,
+      p_display_seconds: b.display_seconds,
+      p_sort_order: b.sort_order,
+      p_is_enabled: !b.is_enabled,
+    })
+    setBusyId(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    load()
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    setBusyId(deleteTarget.id)
+    const { error: rpcError } = await supabase.rpc('admin_delete_banner', { p_id: deleteTarget.id })
+    setBusyId(null)
+    setDeleteTarget(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    load()
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-moon-200/60">{banners?.length ?? 0} bannière(s)</p>
+        <Button className="px-3.5 py-2 text-xs" onClick={openCreate}>
+          + Nouvelle bannière
+        </Button>
+      </div>
+
+      <ErrorText>{error}</ErrorText>
+
+      {banners === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
+      {banners !== null && banners.length === 0 && <p className="text-sm text-moon-200/50">Aucune bannière créée.</p>}
+
+      <div className="flex flex-col gap-2">
+        {banners?.map((b) => {
+          const status = bannerStatus(b)
+          return (
+            <Card key={b.id} className="flex flex-col gap-3 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="flex items-center gap-2 text-sm font-semibold text-moon-200">
+                    {b.name}
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase ${status.className}`}>{status.label}</span>
+                  </p>
+                  <p className="mt-1 text-xs text-moon-200/50">
+                    {b.starts_at || b.ends_at ? (
+                      <>
+                        {b.starts_at ? `Du ${fmtDate(b.starts_at)} ` : 'Sans date de début '}
+                        {b.ends_at ? `au ${fmtDate(b.ends_at)}` : '(sans fin)'}
+                      </>
+                    ) : (
+                      'Sans limite de date'
+                    )}
+                    <span className="text-moon-300"> · {b.display_seconds}s d’affichage</span>
+                  </p>
+                  <p className="mt-1 text-xs text-moon-200/40">{b.link_url ? `🔗 ${b.link_url}` : 'Pas de lien — image seule'}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="ghost" className="px-3 py-1.5 text-xs" disabled={busyId === b.id} onClick={() => openEdit(b)}>
+                    Modifier
+                  </Button>
+                  <Button variant="ghost" className="px-3 py-1.5 text-xs" disabled={busyId === b.id} onClick={() => toggleEnabled(b)}>
+                    {b.is_enabled ? 'Désactiver' : 'Activer'}
+                  </Button>
+                  <Button variant="danger" className="px-3 py-1.5 text-xs" disabled={busyId === b.id} onClick={() => setDeleteTarget(b)}>
+                    Supprimer
+                  </Button>
+                </div>
+              </div>
+              <BannerImages banner={b} onUploaded={load} />
+            </Card>
+          )
+        })}
+      </div>
+
+      <BannerFormDrawer
+        open={formOpen}
+        banner={editing}
+        onClose={() => setFormOpen(false)}
+        onSaved={() => {
+          setFormOpen(false)
+          load()
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={`Supprimer « ${deleteTarget?.name ?? ''} » ?`}
+        message="La bannière disparaîtra immédiatement du carrousel si elle est en cours. Action irréversible."
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        danger
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
+    </div>
+  )
+}
+
+function BannerFormDrawer({
+  open,
+  banner,
+  onClose,
+  onSaved,
+}: {
+  open: boolean
+  banner: AdminBanner | null
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [form, setForm] = useState<BannerFormState>(EMPTY_BANNER_FORM)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    if (banner) {
+      setForm({
+        name: banner.name,
+        link_url: banner.link_url ?? '',
+        starts_at: banner.starts_at ? toDatetimeLocal(banner.starts_at) : '',
+        ends_at: banner.ends_at ? toDatetimeLocal(banner.ends_at) : '',
+        display_seconds: String(banner.display_seconds),
+        sort_order: String(banner.sort_order),
+        is_enabled: banner.is_enabled,
+      })
+    } else {
+      setForm(EMPTY_BANNER_FORM)
+    }
+    setError(null)
+  }, [open, banner])
+
+  async function save(e: FormEvent) {
+    e.preventDefault()
+    if (!form.name.trim()) {
+      setError('Nom requis.')
+      return
+    }
+    if (form.link_url.trim() && !/^https?:\/\//.test(form.link_url.trim()) && !form.link_url.trim().startsWith('/')) {
+      setError('Le lien doit commencer par http://, https:// ou / (page interne).')
+      return
+    }
+    if (form.starts_at && form.ends_at && form.ends_at <= form.starts_at) {
+      setError('La date de fin doit être après la date de début.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('admin_upsert_banner', {
+      p_id: banner?.id ?? null,
+      p_name: form.name,
+      p_link_url: form.link_url.trim() || null,
+      p_starts_at: form.starts_at ? new Date(form.starts_at).toISOString() : null,
+      p_ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : null,
+      p_display_seconds: Number(form.display_seconds) || 6,
+      p_sort_order: Number(form.sort_order) || 0,
+      p_is_enabled: form.is_enabled,
+    })
+    setBusy(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    onSaved()
+  }
+
+  return (
+    <SideDrawer open={open} onClose={onClose} title={banner ? 'Modifier la bannière' : 'Nouvelle bannière'}>
+      <form className="flex flex-col gap-4" onSubmit={save}>
+        <div>
+          <Label>Nom (interne, pas affiché aux joueurs)</Label>
+          <Input value={form.name} onChange={(ev) => setForm((f) => ({ ...f, name: ev.target.value }))} placeholder="Ex. Partenariat Orange" />
+        </div>
+
+        <div>
+          <Label>Lien au clic (optionnel)</Label>
+          <Input
+            value={form.link_url}
+            onChange={(ev) => setForm((f) => ({ ...f, link_url: ev.target.value }))}
+            placeholder="https://exemple.com ou /recompenses"
+          />
+          <p className="mt-1 text-[11px] text-moon-200/40">
+            Vide = image seule, non cliquable. Un lien commençant par « / » ouvre une page du site ; sinon, ouvre le
+            site externe dans un nouvel onglet.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <Label>Début (optionnel)</Label>
+            <Input
+              type="date"
+              value={splitDatetimeLocal(form.starts_at).date}
+              onChange={(ev) => {
+                const { hour, minute } = splitDatetimeLocal(form.starts_at)
+                setForm((f) => ({ ...f, starts_at: ev.target.value ? combineDatetimeLocal(ev.target.value, hour, minute) : '' }))
+              }}
+            />
+          </div>
+          <div>
+            <Label>Fin (optionnel)</Label>
+            <Input
+              type="date"
+              value={splitDatetimeLocal(form.ends_at).date}
+              onChange={(ev) => {
+                const { hour, minute } = splitDatetimeLocal(form.ends_at)
+                setForm((f) => ({ ...f, ends_at: ev.target.value ? combineDatetimeLocal(ev.target.value, hour, minute) : '' }))
+              }}
+            />
+          </div>
+        </div>
+        <p className="-mt-2 text-[11px] text-moon-200/40">
+          Laissez vide pour une bannière permanente (uniquement pilotée par Activer/Désactiver ci-dessous).
+        </p>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Durée d’affichage (secondes)</Label>
+            <Input
+              type="number"
+              min={2}
+              max={60}
+              value={form.display_seconds}
+              onChange={(ev) => setForm((f) => ({ ...f, display_seconds: ev.target.value }))}
+            />
+          </div>
+          <div>
+            <Label>Ordre d’affichage</Label>
+            <Input type="number" value={form.sort_order} onChange={(ev) => setForm((f) => ({ ...f, sort_order: ev.target.value }))} />
+          </div>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-moon-200/80">
+          <input
+            type="checkbox"
+            checked={form.is_enabled}
+            onChange={(ev) => setForm((f) => ({ ...f, is_enabled: ev.target.checked }))}
+            className="h-4 w-4 rounded border-night-600/70 bg-night-900/50 accent-blood-600"
+          />
+          Activée
+        </label>
+
+        <ErrorText>{error}</ErrorText>
+
+        <div className="mt-2 flex gap-3">
+          <Button type="button" variant="ghost" className="flex-1" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button type="submit" className="flex-1" disabled={busy}>
+            {banner ? 'Enregistrer' : 'Créer'}
+          </Button>
+        </div>
+      </form>
+    </SideDrawer>
+  )
+}
+
+/** Les deux images (FR et EN), même patron qu'EventBannerImages — sauf que
+ * ça n'a de sens qu'une fois la bannière créée (a besoin de son id pour le
+ * nom du fichier), donc absent du formulaire principal. */
+function BannerImages({ banner, onUploaded }: { banner: AdminBanner; onUploaded: () => void }) {
+  return (
+    <div className="flex flex-col gap-2 border-t border-night-600/50 pt-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+        <BannerImageUpload banner={banner} lang="fr" label="Image FR" onUploaded={onUploaded} />
+        <BannerImageUpload banner={banner} lang="en" label="Image EN (optionnel, sinon reprend l’image FR)" onUploaded={onUploaded} />
+      </div>
+      <p className="text-[10px] leading-snug text-moon-200/40">
+        Format recommandé : ratio 3:1 (ex. 1500 × 500 px), JPG ou PNG. Tant qu'aucune image FR n'est importée, la
+        bannière n'apparaît jamais côté joueur (voir get_active_banners).
+      </p>
+    </div>
+  )
+}
+
+function BannerImageUpload({
+  banner,
+  lang,
+  label,
+  onUploaded,
+}: {
+  banner: AdminBanner
+  lang: 'fr' | 'en'
+  label: string
+  onUploaded: () => void
+}) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const path = lang === 'fr' ? banner.image_path : banner.image_path_en
+  const currentUrl = path ? supabase.storage.from('event-banners').getPublicUrl(path).data.publicUrl : null
+
+  async function handleUpload(file: File) {
+    setBusy(true)
+    setError(null)
+    let toUpload: Blob = file
+    try {
+      toUpload = await compressImageForUpload(file, { maxWidth: 1600, maxHeight: 533 })
+    } catch {
+      // ignore, on envoie l'original
+    }
+    const path = `banner-${banner.id}-${lang}.jpg`
+    const { error: uploadError } = await supabase.storage.from('event-banners').upload(path, toUpload, {
+      upsert: true,
+      contentType: 'image/jpeg',
+      cacheControl: '300',
+    })
+    if (uploadError) {
+      setBusy(false)
+      setError(uploadError.message)
+      return
+    }
+    const { error: rpcError } = await supabase.rpc('admin_set_banner_image', { p_id: banner.id, p_path: path, p_lang: lang })
     setBusy(false)
     if (rpcError) {
       setError(rpcError.message)

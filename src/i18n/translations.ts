@@ -1437,8 +1437,8 @@ export const translations = {
   'help.ranking.impact.seerNote': { fr: '(jusqu’à 2 fois par partie)', en: '(up to 2 times per game)' },
   'help.ranking.loupCoins.title': { fr: 'Les Loup Coins', en: 'Loup Coins' },
   'help.ranking.loupCoins.text': {
-    fr: 'Une monnaie à part, séparée des points de rang : les Loup Coins se gagnent uniquement en réclamant tes quêtes quotidiennes (voir le tableau de bord). Ils n’influencent ni ton palier ni ta position au classement — ton total accumulé est visible dans tes statistiques.',
-    en: 'A separate currency from rank points: Loup Coins are earned only by claiming your daily quests (see your dashboard). They don’t affect your tier or leaderboard position — your accumulated total is shown in your stats.',
+    fr: 'Une monnaie à part, séparée des points de rang : les Loup Coins se gagnent en réclamant tes quêtes quotidiennes, via ta série de connexion, et parfois pendant certains événements. Ils n’influencent ni ton palier ni ta position au classement — ton total accumulé est visible dans tes statistiques.',
+    en: 'A separate currency from rank points: Loup Coins are earned by claiming your daily quests, through your login streak, and sometimes during special events. They don’t affect your tier or leaderboard position — your accumulated total is shown in your stats.',
   },
   'help.ranking.tiers.title': { fr: '🎖️ Les paliers', en: '🎖️ Tiers' },
   'help.ranking.tiers.text': {
