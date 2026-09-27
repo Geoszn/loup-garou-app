@@ -28,11 +28,40 @@ function msUntilNextQuestDay(now = Date.now()): number {
   return next - now
 }
 
-function formatDelay(ms: number): string {
-  const totalMinutes = Math.max(Math.ceil(ms / 60000), 1)
-  const h = Math.floor(totalMinutes / 60)
-  const m = totalMinutes % 60
-  return h > 0 ? `${h} h ${String(m).padStart(2, '0')} min` : `${m} min`
+/** HH:MM:SS, secondes visibles — volontairement précis à la seconde (voir
+ * CountdownClock ci-dessous) pour que le compte à rebours se voie défiler et
+ * crée un vrai sentiment d'urgence, plutôt que le simple "3 h 24 min" d'avant
+ * qui ne changeait qu'une fois par minute. */
+function formatCountdown(ms: number): string {
+  const total = Math.max(Math.floor(ms / 1000), 0)
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const s = total % 60
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(h)}:${pad(m)}:${pad(s)}`
+}
+
+/** Compte à rebours mis en avant : gros chiffres tabulaires (les secondes
+ * défilent visiblement), fond rouge/ambre pulsant quand il reste moins d'une
+ * heure — pour créer l'urgence de revenir avant la remise à zéro des quêtes
+ * du jour, plutôt qu'une petite mention discrète dans l'en-tête. */
+function CountdownClock({ ms }: { ms: number }) {
+  const { t } = useLanguage()
+  const urgent = ms < 60 * 60 * 1000
+  return (
+    <div
+      className={`flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 ${
+        urgent ? 'border-blood-500/50 bg-blood-600/15 animate-pulse' : 'border-amber-400/40 bg-amber-400/10'
+      }`}
+    >
+      <span className={`text-xs font-semibold ${urgent ? 'text-blood-300' : 'text-amber-300'}`}>
+        ⏰ {t('rewards.streak.timerLabel')}
+      </span>
+      <span className={`font-display text-xl font-bold tabular-nums tracking-wide ${urgent ? 'text-blood-300' : 'text-amber-300'}`}>
+        {formatCountdown(ms)}
+      </span>
+    </div>
+  )
 }
 
 function SoonBadge() {
@@ -66,6 +95,8 @@ export default function Rewards() {
   const [myArtifacts, setMyArtifacts] = useState<MyArtifact[] | null>(null)
   const [ownedSkins, setOwnedSkins] = useState<StoreSkin[] | null>(null)
   const [resetIn, setResetIn] = useState(() => msUntilNextQuestDay())
+  // Tick à la seconde (au lieu de 30s) : c'est tout le sens de CountdownClock,
+  // voir son commentaire — sans ça les secondes affichées ne bougeraient pas.
   const [error, setError] = useState<string | null>(null)
   const [questScope, setQuestScope] = useState<'day' | 'season'>('day')
   const [historyPage, setHistoryPage] = useState(0)
@@ -91,7 +122,7 @@ export default function Rewards() {
   }, [loadAll])
 
   useEffect(() => {
-    const id = setInterval(() => setResetIn(msUntilNextQuestDay()), 30000)
+    const id = setInterval(() => setResetIn(msUntilNextQuestDay()), 1000)
     return () => clearInterval(id)
   }, [])
 
@@ -268,7 +299,8 @@ export default function Rewards() {
               </>
             ) : null}
 
-            <Section title={questScope === 'season' && hasSeasonQuests ? t('hub.quests.seasonTitle') : t('hub.quests.daily')} right={<span className="text-xs font-normal text-moon-200/50">⏳ {formatDelay(resetIn)}</span>}>
+            <Section title={questScope === 'season' && hasSeasonQuests ? t('hub.quests.seasonTitle') : t('hub.quests.daily')}>
+              {questScope !== 'season' && <CountdownClock ms={resetIn} />}
               {shownQuests === null ? (
                 <div className="h-24 animate-pulse rounded-xl bg-night-900/40" />
               ) : (

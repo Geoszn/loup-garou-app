@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useGoBack } from '../hooks/useGoBack'
 import { supabase } from '../lib/supabase'
 import { notifyFriendRequest } from '../lib/pushSubscription'
@@ -15,6 +15,17 @@ interface Person {
   username: string
   avatar_icon: string
   avatar_config?: unknown
+}
+
+/** Débounce simple (300ms) : la recherche se lance après une pause de frappe
+ * plutôt qu'à chaque touche, pour ne pas spammer search_people. */
+function useDebounced<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay)
+    return () => clearTimeout(id)
+  }, [value, delay])
+  return debounced
 }
 
 interface FriendRequest extends Person {
@@ -40,6 +51,11 @@ export default function Friends() {
   const [sending, setSending] = useState(false)
   const [friendPage, setFriendPage] = useState(0)
   const [openFriendId, setOpenFriendId] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [searchResults, setSearchResults] = useState<Person[] | null>(null)
+  const [searching, setSearching] = useState(false)
+  const debouncedSearch = useDebounced(search.trim(), 350)
+  const searchSeq = useRef(0)
 
   async function load() {
     const { data, error: rpcError } = await supabase.rpc('get_my_social')
@@ -54,6 +70,21 @@ export default function Friends() {
   useEffect(() => {
     load()
   }, [])
+
+  useEffect(() => {
+    if (debouncedSearch.length < 2) {
+      setSearchResults(null)
+      setSearching(false)
+      return
+    }
+    const seq = ++searchSeq.current
+    setSearching(true)
+    supabase.rpc('search_people', { p_query: debouncedSearch }).then(({ data, error: rpcError }) => {
+      if (seq !== searchSeq.current) return
+      setSearching(false)
+      setSearchResults(rpcError || !Array.isArray(data) ? [] : (data as Person[]))
+    })
+  }, [debouncedSearch])
 
   async function copyCode() {
     if (social) await navigator.clipboard.writeText(social.friend_code)
@@ -102,6 +133,40 @@ export default function Friends() {
           </Button>
           <h1 className="font-display text-2xl text-moon-200">{t('friends.title')}</h1>
         </header>
+
+        <Card>
+          <h2 className="mb-1 font-display text-lg text-moon-200">{t('friends.search.title')}</h2>
+          <p className="mb-3 text-sm text-moon-200/50">{t('friends.search.subtitle')}</p>
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('friends.search.placeholder')}
+          />
+          {debouncedSearch.length >= 2 && (
+            <div className="mt-3">
+              {searching ? (
+                <p className="text-sm text-moon-200/40">{t('common.loading')}</p>
+              ) : !searchResults || searchResults.length === 0 ? (
+                <p className="text-sm text-moon-200/50">{t('friends.search.empty')}</p>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {searchResults.map((p) => (
+                    <li key={p.user_id}>
+                      <button
+                        type="button"
+                        onClick={() => setOpenFriendId(p.user_id)}
+                        className="flex w-full items-center gap-2 rounded-xl border border-night-600/60 bg-night-900/40 px-4 py-2.5 text-left text-sm transition-colors hover:border-moon-400/40"
+                      >
+                        <Avatar config={p.avatar_config} icon={p.avatar_icon} name={p.username} className="h-7 w-7 shrink-0" />
+                        <span className="truncate text-moon-200/90">{p.username}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </Card>
 
         <Card>
           <h2 className="mb-1 font-display text-lg text-moon-200">{t('friends.code.title')}</h2>

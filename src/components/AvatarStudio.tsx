@@ -58,9 +58,9 @@ const MOODS: { id: AvatarMood; label: TranslationKey }[] = [
 const LOOKS: { label: TranslationKey; config: AvatarConfig }[] = [
   { label: 'avatar.look.sage', config: { skin: 4, hair: 'afro', outfit: 'cloak', acc: 'glasses', head: 'none', face: 'round', bg: 3 } },
   { label: 'avatar.look.queen', config: { skin: 3, hair: 'braids', outfit: 'royal', acc: 'ring', head: 'crown', face: 'oval', bg: 4 } },
-  { label: 'avatar.look.hunter', config: { skin: 2, hair: 'fade', outfit: 'hunter', acc: 'none', head: 'hat', face: 'square', bg: 1 } },
-  { label: 'avatar.look.griot', config: { skin: 5, hair: 'gele', outfit: 'boubou', acc: 'hoops', head: 'none', face: 'heart', bg: 2 } },
-  { label: 'avatar.look.warrior', config: { skin: 3, hair: 'mohawk', outfit: 'armor', acc: 'facepaint', head: 'none', face: 'square', bg: 0 } },
+  // Chasseur, Griot et Guerrier sont retirés d'ici : ce sont maintenant des
+  // skins payants du Loup Store (migration 0197), visibles juste au-dessus
+  // dans la liste des skins possédés une fois achetés.
   { label: 'avatar.look.wolf', config: { skin: 4, hair: 'locs', outfit: 'furcape', acc: 'scar', head: 'none', face: 'oval', bg: 5 } },
 ]
 

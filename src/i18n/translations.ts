@@ -1720,6 +1720,7 @@ export const translations = {
   'rewards.tab.history': { fr: 'Historique', en: 'History' },
   'rewards.streak.title': { fr: 'Série de connexion', en: 'Login streak' },
   'rewards.streak.next': { fr: 'Encore {{days}} jour(s) pour gagner +{{coins}} Loup Coins', en: '{{days}} more day(s) to earn +{{coins}} Loup Coins' },
+  'rewards.streak.timerLabel': { fr: 'Nouvelles quêtes dans', en: 'New quests in' },
   'rewards.streak.rule': { fr: 'Tous les 7 jours de connexion d’affilée : +{{coins}} Loup Coins.', en: 'Every 7 days in a row: +{{coins}} Loup Coins.' },
   'rewards.streak.today': { fr: 'Auj.', en: 'Today' },
   'rewards.quests.day': { fr: 'Du jour', en: 'Daily' },
@@ -1903,6 +1904,10 @@ export const translations = {
     en: 'No friends yet — share your code above to get started.',
   },
   'friends.list.remove': { fr: 'Retirer', en: 'Remove' },
+  'friends.search.title': { fr: 'Rechercher quelqu’un', en: 'Search for someone' },
+  'friends.search.subtitle': { fr: 'Par pseudo, ou par email exact.', en: 'By username, or by exact email.' },
+  'friends.search.placeholder': { fr: 'Pseudo ou email…', en: 'Username or email…' },
+  'friends.search.empty': { fr: 'Aucun résultat.', en: 'No results.' },
   'friends.removeConfirmTitle': { fr: 'Retirer cet ami ?', en: 'Remove this friend?' },
   'friends.removeConfirmMessage': { fr: '{{name}} sera retiré de ta liste d’amis.', en: '{{name}} will be removed from your friends.' },
 
