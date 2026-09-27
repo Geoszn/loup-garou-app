@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useGoBack } from '../hooks/useGoBack'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../i18n/LanguageContext'
@@ -8,14 +9,17 @@ import { RANK_TIERS } from '../lib/ranks'
 import { Button, Card } from '../components/ui'
 import { RankTierBadge } from '../components/RankTierBadge'
 import { LoupCoinIcon } from '../components/LoupCoinIcon'
+import { FeedbackButton } from '../components/FeedbackButton'
+import { TutorialFlow } from '../components/TutorialFlow'
 
-/** Page d'aide dédiée, publique (accessible sans compte) : regroupe ce qui
- * vivait avant en un seul bloc "Règles du jeu" toujours déplié au milieu de
- * Landing.tsx et Dashboard.tsx (voir RulesPanel.tsx, retiré). Deux
- * catégories repliées par défaut (sauf les règles, dépliées d'entrée — c'est
- * la raison n°1 pour laquelle on vient sur cette page) plutôt qu'un mur de
- * texte unique, pour que le classement — jusqu'ici jamais expliqué nulle
- * part — ait enfin sa place sans alourdir encore la page d'accueil.
+type Screen = 'landing' | 'rules'
+
+/** Page d'aide dédiée, publique (accessible sans compte). Écran d'accueil à
+ * deux entrées (Tutoriel interactif / Règles du jeu) plutôt qu'un mur
+ * d'accordéons ouvert d'entrée — retour utilisateur : "peu explicative,
+ * beaucoup n'aiment pas lire". Les règles complètes (RulesContent +
+ * RankingContent, inchangées) vivent derrière le second bouton, toujours
+ * accessibles pour qui veut vraiment tout lire en détail.
  *
  * Accessible via le menu compte (AccountMenu.tsx, joueurs connectés) et via
  * un lien dans l'en-tête de Landing.tsx (visiteurs non connectés) — d'où le
@@ -23,7 +27,19 @@ import { LoupCoinIcon } from '../components/LoupCoinIcon'
 export default function Help() {
   const { t } = useLanguage()
   const { session } = useAuth()
+  const navigate = useNavigate()
   const goBack = useGoBack(session ? '/profil' : '/')
+  const [screen, setScreen] = useState<Screen>('landing')
+  // Quelle catégorie s'ouvre en arrivant sur l'écran Règles — le lien rapide
+  // "Classement & Loup Coins" de l'accueil y renvoie directement déplié,
+  // plutôt que de forcer un second clic une fois sur place.
+  const [rulesFocus, setRulesFocus] = useState<'rules' | 'ranking'>('rules')
+  const [tutorialOpen, setTutorialOpen] = useState(false)
+
+  function openRules(focus: 'rules' | 'ranking') {
+    setRulesFocus(focus)
+    setScreen('rules')
+  }
 
   return (
     <div className="relative min-h-screen overflow-hidden px-4 py-10 sm:px-8">
@@ -32,7 +48,7 @@ export default function Help() {
         <header className="flex items-center gap-3">
           <Button
             variant="ghost"
-            onClick={goBack}
+            onClick={screen === 'rules' ? () => setScreen('landing') : goBack}
             className="px-3.5 py-2 text-xs"
           >
             {t('common.back')}
@@ -40,25 +56,82 @@ export default function Help() {
           <h1 className="font-display text-2xl text-moon-200">{t('help.pageTitle')}</h1>
         </header>
 
-        <p className="text-sm text-moon-200/60">{t('help.subtitle')}</p>
+        {screen === 'landing' ? (
+          <>
+            <p className="text-sm text-moon-200/60">{t('help.landing.subtitle')}</p>
 
-        <HelpCategory
-          emoji="📖"
-          title={t('rules.title')}
-          subtitle={t('help.category.rules.subtitle')}
-          defaultOpen
-        >
-          <RulesContent />
-        </HelpCategory>
+            <button
+              type="button"
+              onClick={() => setTutorialOpen(true)}
+              className="relative overflow-hidden rounded-2xl border border-moon-400/40 bg-gradient-to-br from-night-700/70 to-night-900/85 p-5 text-left shadow-card transition-colors hover:border-moon-400/60"
+            >
+              <span className="pointer-events-none absolute -right-6 -top-10 h-40 w-40 rounded-full bg-moon-400/25 blur-3xl" aria-hidden="true" />
+              <span className="absolute right-4 top-4 rounded-full border border-moon-400/30 bg-moon-400/15 px-2.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-moon-300">
+                {t('help.landing.tuto.badge')}
+              </span>
+              <span className="relative mb-2.5 block text-3xl">🎬</span>
+              <p className="relative font-display text-lg text-moon-200">{t('help.landing.tuto.title')}</p>
+              <p className="relative mb-3 mt-1 max-w-[88%] text-xs text-moon-200/60">{t('help.landing.tuto.desc')}</p>
+              <span className="relative text-xs font-extrabold uppercase tracking-wide text-moon-300">{t('help.landing.tuto.cta')}</span>
+            </button>
 
-        <HelpCategory
-          emoji="🏆"
-          title={t('help.category.ranking.title')}
-          subtitle={t('help.category.ranking.subtitle')}
-        >
-          <RankingContent />
-        </HelpCategory>
+            <button
+              type="button"
+              onClick={() => openRules('rules')}
+              className="relative overflow-hidden rounded-2xl border border-night-600/70 bg-gradient-to-br from-night-700/70 to-night-900/85 p-5 text-left shadow-card transition-colors hover:border-sky-400/40"
+            >
+              <span className="pointer-events-none absolute -right-6 -top-10 h-40 w-40 rounded-full bg-sky-400/15 blur-3xl" aria-hidden="true" />
+              <span className="relative mb-2.5 block text-3xl">📖</span>
+              <p className="relative font-display text-lg text-moon-200">{t('help.landing.rules.title')}</p>
+              <p className="relative mb-3 mt-1 max-w-[88%] text-xs text-moon-200/60">{t('help.landing.rules.desc')}</p>
+              <span className="relative text-xs font-extrabold uppercase tracking-wide text-sky-300">{t('help.landing.rules.cta')}</span>
+            </button>
+
+            <div className="mt-1 flex flex-col divide-y divide-night-700/60 border-t border-night-700/60">
+              <button
+                type="button"
+                onClick={() => openRules('ranking')}
+                className="flex items-center justify-between gap-3 py-3.5 text-left text-sm text-moon-200/75 transition-colors hover:text-moon-200"
+              >
+                <span className="flex items-center gap-2">🏆 {t('help.landing.rankingLink')}</span>
+                <span className="text-moon-200/30">›</span>
+              </button>
+              <div className="flex items-center justify-between gap-3 py-3.5 text-sm text-moon-200/75">
+                <span className="flex items-center gap-2">
+                  💬 <FeedbackButton />
+                </span>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <HelpCategory
+              emoji="📖"
+              title={t('rules.title')}
+              subtitle={t('help.category.rules.subtitle')}
+              defaultOpen={rulesFocus === 'rules'}
+            >
+              <RulesContent />
+            </HelpCategory>
+
+            <HelpCategory
+              emoji="🏆"
+              title={t('help.category.ranking.title')}
+              subtitle={t('help.category.ranking.subtitle')}
+              defaultOpen={rulesFocus === 'ranking'}
+            >
+              <RankingContent />
+            </HelpCategory>
+          </>
+        )}
       </div>
+
+      {tutorialOpen && (
+        <TutorialFlow
+          onClose={() => setTutorialOpen(false)}
+          onPlay={() => navigate(session ? '/jouer' : '/inscription')}
+        />
+      )}
     </div>
   )
 }

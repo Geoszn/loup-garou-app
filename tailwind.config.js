@@ -103,6 +103,27 @@ export default {
           '0%': { opacity: '0', transform: 'scale(0.85) translateY(8px)' },
           '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
         },
+        // Trio pour le tutoriel interactif (TutorialFlow.tsx) : `tuto-shake`
+        // repousse doucement une tentative d'avancer sur une étape pas
+        // encore "déverrouillée" (glissement ou bouton Suivant) plutôt que
+        // de ne rien faire, `tuto-pop` marque l'ouverture du coffre de Loup
+        // Coins (étape 7) et `tuto-howl` le hurlement de fin (étape 8) —
+        // même patron que check-in ci-dessus (dépassement léger) pour
+        // rester cohérent avec le reste de l'appli.
+        'tuto-shake': {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '25%': { transform: 'translateX(-10px)' },
+          '75%': { transform: 'translateX(10px)' },
+        },
+        'tuto-pop': {
+          '0%': { transform: 'scale(1) rotate(0deg)' },
+          '40%': { transform: 'scale(1.25) rotate(-4deg)' },
+          '100%': { transform: 'scale(1) rotate(0deg)' },
+        },
+        'tuto-howl': {
+          '0%': { boxShadow: '0 0 0 0 rgba(224,168,74,0.5)' },
+          '100%': { boxShadow: '0 0 0 26px rgba(224,168,74,0)' },
+        },
       },
       animation: {
         breathe: 'breathe 4s ease-in-out infinite',
@@ -111,6 +132,9 @@ export default {
         'overlay-in': 'overlay-in 0.2s ease-out',
         'modal-in': 'modal-in 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
         'drawer-in': 'drawer-in 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+        'tuto-shake': 'tuto-shake 0.35s ease',
+        'tuto-pop': 'tuto-pop 0.4s ease',
+        'tuto-howl': 'tuto-howl 0.6s ease',
         'check-in': 'check-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)',
         'bubble-in': 'bubble-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1)',
       },
