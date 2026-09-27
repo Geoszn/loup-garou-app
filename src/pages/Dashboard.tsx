@@ -13,11 +13,10 @@ import { RankProgress } from '../components/RankProgress'
 import { useMyAvatarConfig } from '../components/AvatarEditor'
 import { useMyQuests } from '../hooks/useMyQuests'
 import { DashboardLeaderboard } from '../components/DashboardLeaderboard'
-import { FeedbackButton } from '../components/FeedbackButton'
 import { ContinentPrompt } from '../components/ContinentPrompt'
 import { NotificationOptInPrompt } from '../components/NotificationOptInPrompt'
 import { QuoteCarousel } from '../components/QuoteCarousel'
-import { EventBanner } from '../components/EventBanner'
+import { EventBannerCarousel } from '../components/EventBanner'
 import { useNarrator } from '../hooks/useNarrator'
 import { useActiveEvents } from '../hooks/useActiveEvents'
 import { useLanguage } from '../i18n/LanguageContext'
@@ -259,14 +258,10 @@ export default function Dashboard() {
         </div>
 
         {/* Espace bannière (événements du tableau de bord admin) : juste sous
-            la carte du joueur, avant les quêtes. */}
-        {events.length > 0 && (
-          <div>
-            {events.map((e) => (
-              <EventBanner key={e.id} event={e} onExpire={refreshEvents} />
-            ))}
-          </div>
-        )}
+            la carte du joueur, avant les quêtes. Plusieurs événements actifs
+            à la fois défilent automatiquement (voir EventBannerCarousel)
+            plutôt que de s'empiler à la suite. */}
+        <EventBannerCarousel events={events} onExpire={refreshEvents} />
 
         {activeGame && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-moon-400/40 bg-moon-400/5 px-4 py-3">
@@ -380,10 +375,6 @@ export default function Dashboard() {
               </button>
             </span>
           )}
-          <span className="flex items-center gap-1.5">
-            <span>💬</span>
-            <FeedbackButton />
-          </span>
         </div>
 
         <QuoteCarousel />

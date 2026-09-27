@@ -150,3 +150,84 @@ export function EventBanner({ event, onExpire }: { event: GameEvent; onExpire?: 
     </div>
   )
 }
+
+// Combien de temps chaque bannière reste affichée avant de passer à la
+// suivante (voir EventBannerCarousel) — plus court que QuoteCarousel (15s) :
+// une bannière tient sur une ligne, se lit d'un coup d'œil, et plusieurs
+// événements actifs en même temps méritent de tourner à un rythme qui ne
+// donne pas l'impression d'attendre.
+const CAROUSEL_HOLD_MS = 6000
+const CAROUSEL_FADE_MS = 400
+
+/** Plusieurs événements actifs en même temps (voir migration 0067,
+ * admin_upsert_event) : jusqu'ici Dashboard.tsx les empilait tous à la
+ * suite, un dessous de l'autre — correct avec un seul, mais deux ou trois
+ * bannières "verre dépoli" à la suite mangeaient tout l'écran sur mobile.
+ * Un seul événement à la fois, qui défile automatiquement (même principe
+ * de fondu enchaîné que QuoteCarousel), avec des points cliquables pour
+ * naviguer directement — jamais nécessaire de faire défiler manuellement
+ * pour lire l'info importante, mais possible d'y revenir. Aucun défilement
+ * avec un seul événement actif (cas le plus courant) : pas de points, pas
+ * de minuterie, juste la bannière. */
+export function EventBannerCarousel({ events, onExpire }: { events: GameEvent[]; onExpire?: () => void }) {
+  const [index, setIndex] = useState(0)
+  const [visible, setVisible] = useState(true)
+
+  // Remet l'index à zéro si la liste change de taille (un événement qui
+  // vient d'expirer et disparaît de la liste, par ex.) pour ne jamais
+  // pointer au-delà du dernier élément disponible.
+  useEffect(() => {
+    setIndex(0)
+  }, [events.length])
+
+  useEffect(() => {
+    if (events.length < 2) return
+    let fadeTimeout: ReturnType<typeof setTimeout>
+    const interval = setInterval(() => {
+      setVisible(false)
+      fadeTimeout = setTimeout(() => {
+        setIndex((i) => (i + 1) % events.length)
+        setVisible(true)
+      }, CAROUSEL_FADE_MS)
+    }, CAROUSEL_HOLD_MS)
+    return () => {
+      clearInterval(interval)
+      clearTimeout(fadeTimeout)
+    }
+  }, [events.length])
+
+  if (events.length === 0) return null
+  const current = events[Math.min(index, events.length - 1)]
+
+  return (
+    <div className="mb-4">
+      <div className="transition-opacity" style={{ opacity: visible ? 1 : 0, transitionDuration: `${CAROUSEL_FADE_MS}ms` }}>
+        {/* EventBanner porte déjà mb-4 pour son usage empilé d'origine — annulé
+            ici (le wrapper ci-dessus le porte à sa place) pour ne pas doubler
+            l'espace sous les points de pagination. */}
+        <div className="[&>div]:mb-0">
+          <EventBanner event={current} onExpire={onExpire} />
+        </div>
+      </div>
+      {events.length > 1 && (
+        <div className="mt-2 flex justify-center gap-1.5">
+          {events.map((e, i) => (
+            <button
+              key={e.id}
+              type="button"
+              aria-label={`Événement ${i + 1}`}
+              onClick={() => {
+                setVisible(false)
+                setTimeout(() => {
+                  setIndex(i)
+                  setVisible(true)
+                }, CAROUSEL_FADE_MS)
+              }}
+              className={`h-1.5 rounded-full transition-all ${i === index ? 'w-5 bg-moon-400' : 'w-1.5 bg-moon-200/25'}`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

@@ -8,6 +8,7 @@ import { CollapsibleCard, PAGE_SIZE, Pager } from './CollapsibleCard'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from './Avatar'
 import { useMyAvatarConfig } from './AvatarEditor'
+import { PlayerProfileModal } from './PlayerProfileModal'
 
 interface Entry {
   user_id: string
@@ -34,6 +35,7 @@ export function DashboardLeaderboard() {
   const [entries, setEntries] = useState<Entry[] | null>(null)
   const [myPosition, setMyPosition] = useState<number | null>(null)
   const [page, setPage] = useState(0)
+  const [openUserId, setOpenUserId] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -88,7 +90,13 @@ export function DashboardLeaderboard() {
         ) : (
           <ol className="flex flex-col gap-1.5">
             {visible.map((entry, i) => (
-              <LeaderboardRow key={entry.user_id} entry={entry} position={current * PAGE_SIZE + i + 1} mine={entry.user_id === user?.id} />
+              <LeaderboardRow
+                key={entry.user_id}
+                entry={entry}
+                position={current * PAGE_SIZE + i + 1}
+                mine={entry.user_id === user?.id}
+                onOpen={() => setOpenUserId(entry.user_id)}
+              />
             ))}
           </ol>
         )}
@@ -117,27 +125,46 @@ export function DashboardLeaderboard() {
           </>
         )}
       </div>
+
+      {openUserId && <PlayerProfileModal userId={openUserId} onClose={() => setOpenUserId(null)} onFriendRemoved={() => setOpenUserId(null)} />}
     </CollapsibleCard>
   )
 }
 
-function LeaderboardRow({ entry, position, mine }: { entry: Entry; position: number | null; mine: boolean }) {
+function LeaderboardRow({
+  entry,
+  position,
+  mine,
+  onOpen,
+}: {
+  entry: Entry
+  position: number | null
+  mine: boolean
+  onOpen?: () => void
+}) {
   const { t } = useLanguage()
   const tier = tierForPoints(entry.rank_points)
   return (
-    <li
-      className={`flex items-center gap-3 rounded-xl border px-3.5 py-2 text-sm ${
-        mine ? 'border-blood-500 bg-gradient-to-b from-blood-700/20 to-blood-700/5' : 'border-night-600/60 bg-night-900/40'
-      }`}
-    >
-      <span className="w-6 shrink-0 text-center text-xs text-moon-200/40">{position ? `#${position}` : '—'}</span>
-      <span className="flex flex-1 min-w-0 items-center gap-1.5 truncate text-moon-200/90">
-        <Avatar config={entry.avatar_config} icon={entry.avatar_icon} name={entry.username} className="h-7 w-7" />
-        <span className="truncate">{mine ? t('dashboard.leaderboard.youLabel', { username: entry.username }) : entry.username}</span>
-      </span>
-      {entry.current_streak >= 2 && <span className="shrink-0 text-xs text-blood-400">🔥{entry.current_streak}</span>}
-      <RankTierBadge tier={tier.id} size={20} />
-      <span className="w-10 shrink-0 text-right font-semibold text-moon-200">{entry.rank_points}</span>
+    <li>
+      <button
+        type="button"
+        disabled={mine}
+        onClick={onOpen}
+        className={`flex w-full items-center gap-3 rounded-xl border px-3.5 py-2 text-left text-sm transition-colors ${
+          mine
+            ? 'border-blood-500 bg-gradient-to-b from-blood-700/20 to-blood-700/5'
+            : 'border-night-600/60 bg-night-900/40 hover:border-moon-400/40'
+        }`}
+      >
+        <span className="w-6 shrink-0 text-center text-xs text-moon-200/40">{position ? `#${position}` : '—'}</span>
+        <span className="flex flex-1 min-w-0 items-center gap-1.5 truncate text-moon-200/90">
+          <Avatar config={entry.avatar_config} icon={entry.avatar_icon} name={entry.username} className="h-7 w-7" />
+          <span className="truncate">{mine ? t('dashboard.leaderboard.youLabel', { username: entry.username }) : entry.username}</span>
+        </span>
+        {entry.current_streak >= 2 && <span className="shrink-0 text-xs text-blood-400">🔥{entry.current_streak}</span>}
+        <RankTierBadge tier={tier.id} size={20} />
+        <span className="w-10 shrink-0 text-right font-semibold text-moon-200">{entry.rank_points}</span>
+      </button>
     </li>
   )
 }
