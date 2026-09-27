@@ -12,6 +12,9 @@ import type { EventBannerColor, EventBonusType, GameEvent } from '../types/event
 import { continentEmoji, continentName } from '../lib/continents'
 import { compressImageForUpload } from '../lib/imageCompress'
 import { sendNotificationCampaignNow } from '../lib/adminCampaigns'
+import { Avatar } from '../components/Avatar'
+import { ACCESSORIES, DEFAULT_AVATAR_CONFIG, FACES, HAIRS, HEADWEAR, OUTFITS, type AvatarConfig } from '../lib/avatarParts'
+import { RARITY_STYLE, SKIN_CATEGORIES, type SkinCategory, type SkinRarity } from '../lib/skins'
 
 // ============================================================================
 // Dashboard administrateur. Volontairement en français uniquement, pas
@@ -30,7 +33,7 @@ import { sendNotificationCampaignNow } from '../lib/adminCampaigns'
 // l'écran "Accès refusé".
 // ============================================================================
 
-type Tab = 'stats' | 'users' | 'games' | 'content' | 'events' | 'quests' | 'artifacts' | 'messages' | 'notifications' | 'security' | 'settings'
+type Tab = 'stats' | 'users' | 'games' | 'content' | 'events' | 'quests' | 'artifacts' | 'skins' | 'messages' | 'notifications' | 'security' | 'settings'
 
 const TAB_ITEMS: { id: Tab; label: string; icon: string; description: string }[] = [
   { id: 'stats', label: 'Vue d’ensemble', icon: '📊', description: 'Chiffres clés et raccourcis vers les autres sections.' },
@@ -56,7 +59,17 @@ const TAB_ITEMS: { id: Tab; label: string; icon: string; description: string }[]
     id: 'artifacts',
     label: 'Artefacts',
     icon: '🏺',
-    description: 'Catalogue des artefacts spéciaux vendus dans le Loup Store.',
+    description: 'Catalogue des artefacts spéciaux vendus dans le Loup Store — chacun peut être limité à une période de vente.',
+  },
+  // Skins de l'éditeur d'avatar vendus dans le même Store (voir
+  // AvatarStudio.tsx côté joueur, migration 0195) : jusqu'ici uniquement
+  // créés par migration SQL, aucune interface admin — même patron que
+  // l'onglet Artefacts ci-dessus (voir StoreSkinsTab, migration 0199).
+  {
+    id: 'skins',
+    label: 'Skins',
+    icon: '🎨',
+    description: 'Skins d’avatar vendus dans le Loup Store — même principe que les artefacts, avec période de vente.',
   },
   // Messages reçus des joueurs (bouton "feedback" en jeu, voir
   // FeedbackButton.tsx) : jusqu'ici uniquement envoyés par email via Resend
@@ -79,12 +92,34 @@ function isTab(value: string | null): value is Tab {
   return TAB_ITEMS.some((item) => item.id === value)
 }
 
+// Regroupement thématique du menu latéral — remplace la longue liste plate
+// d'origine (11 icônes à la suite, difficile à situer d'un coup d'œil sur un
+// écran de bureau). Retour utilisateur : "ça ressemble plus à une page avec
+// des cases qu'à un dashboard pour un administrateur". Chaque groupe garde
+// ses libellés/icônes/descriptions dans TAB_ITEMS (une seule source de
+// vérité) ; cette structure ne fait que dire dans quel ordre/sous quel
+// titre les afficher.
+const NAV_GROUPS: { title: string; items: Tab[] }[] = [
+  { title: 'Aperçu', items: ['stats'] },
+  { title: 'Communauté', items: ['users', 'security'] },
+  { title: 'Jeu', items: ['games', 'content', 'events'] },
+  { title: 'Économie', items: ['quests', 'artifacts', 'skins'] },
+  { title: 'Communication', items: ['messages', 'notifications'] },
+  { title: 'Système', items: ['settings'] },
+]
+
 interface Stats {
   total_users: number
   new_users_today: number
   total_games: number
   active_games: number
   games_today: number
+  // Comparaison "hier" : juste assez pour une tendance ▲/▼ sur les deux
+  // chiffres les plus suivis (voir TrendChip) — pas la peine d'historiser
+  // chaque métrique du dashboard pour ça.
+  new_users_yesterday: number
+  games_yesterday: number
+  games_last_7_days: { date: string; count: number }[]
   messages_today: number
   banned_users: number
   admin_users: number
@@ -92,6 +127,13 @@ interface Stats {
   pending_join_requests: number
   unread_feedback: number
   new_games_enabled: boolean
+  // Boutique (artefacts + skins confondus, voir migration 0199) : de quoi
+  // afficher un résumé sur la Vue d'ensemble sans recharger tout le
+  // catalogue juste pour ça.
+  store_active_count: number
+  store_scheduled_count: number
+  store_expiring_soon_count: number
+  store_expired_count: number
 }
 
 interface FeedbackMsg {
@@ -316,6 +358,37 @@ function timeSince(iso: string) {
   return `il y a ${Math.floor(h / 24)} j`
 }
 
+/** Rendu du menu latéral (desktop et tiroir mobile) à partir de NAV_GROUPS —
+ * un titre de section par groupe, puis les entrées comme avant. `large`
+ * agrandit le bouton pour le tiroir mobile (plus facile à taper au doigt). */
+function NavGroups({ tab, onSelect, large = false }: { tab: Tab; onSelect: (id: Tab) => void; large?: boolean }) {
+  return (
+    <>
+      {NAV_GROUPS.map((group) => (
+        <div key={group.title} className="flex flex-col gap-1">
+          <p className="px-4 text-[10px] font-bold uppercase tracking-[0.14em] text-moon-200/35">{group.title}</p>
+          {group.items.map((id) => {
+            const item = TAB_ITEMS.find((t) => t.id === id)!
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onSelect(item.id)}
+                className={`flex items-center gap-3 rounded-xl px-4 text-left text-sm font-semibold transition-colors ${
+                  large ? 'py-3' : 'py-2.5'
+                } ${tab === item.id ? 'bg-blood-600 text-[#fdf6e3]' : 'text-moon-200/70 hover:bg-night-700/60 hover:text-moon-200'}`}
+              >
+                <span className="text-lg leading-none">{item.icon}</span>
+                {item.label}
+              </button>
+            )
+          })}
+        </div>
+      ))}
+    </>
+  )
+}
+
 export default function AdminDashboard() {
   const { user, signOut } = useAuth()
   const [checking, setChecking] = useState(true)
@@ -391,20 +464,8 @@ export default function AdminDashboard() {
         <div className="px-5 py-6">
           <p className="font-display text-lg text-moon-200">🐺 Administration</p>
         </div>
-        <nav className="flex flex-1 flex-col gap-1 px-3">
-          {TAB_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setTab(item.id)}
-              className={`flex items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-semibold transition-colors ${
-                tab === item.id ? 'bg-blood-600 text-[#fdf6e3]' : 'text-moon-200/70 hover:bg-night-700/60 hover:text-moon-200'
-              }`}
-            >
-              <span className="text-lg leading-none">{item.icon}</span>
-              {item.label}
-            </button>
-          ))}
+        <nav className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 py-1">
+          <NavGroups tab={tab} onSelect={setTab} />
         </nav>
         <div className="border-t border-night-700/60 px-5 py-4">
           <p className="truncate text-xs text-moon-200/50">{user?.email}</p>
@@ -462,6 +523,7 @@ export default function AdminDashboard() {
             {tab === 'events' && <EventsTab />}
             {tab === 'quests' && <QuestTemplatesTab />}
             {tab === 'artifacts' && <StoreArtifactsTab />}
+            {tab === 'skins' && <StoreSkinsTab />}
             {tab === 'messages' && <MessagesTab />}
             {tab === 'notifications' && <NotificationsTab />}
             {tab === 'security' && <SecurityTab />}
@@ -471,23 +533,15 @@ export default function AdminDashboard() {
       </div>
 
       <SideDrawer open={menuOpen} onClose={() => setMenuOpen(false)} title="Administration">
-        <div className="flex flex-col gap-1.5">
-          {TAB_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => {
-                setTab(item.id)
-                setMenuOpen(false)
-              }}
-              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold transition-colors ${
-                tab === item.id ? 'bg-blood-600 text-[#fdf6e3]' : 'text-moon-200/70 hover:bg-night-700/60 hover:text-moon-200'
-              }`}
-            >
-              <span className="text-lg leading-none">{item.icon}</span>
-              {item.label}
-            </button>
-          ))}
+        <div className="flex flex-col gap-4">
+          <NavGroups
+            tab={tab}
+            onSelect={(id) => {
+              setTab(id)
+              setMenuOpen(false)
+            }}
+            large
+          />
         </div>
       </SideDrawer>
     </div>
@@ -525,6 +579,105 @@ function Field({ label, value }: { label: string; value: ReactNode }) {
   )
 }
 
+/** Puce de tendance (▲/▼ vs hier) à côté d'un chiffre clé — voir retour
+ * utilisateur sur la refonte : une grille de chiffres bruts ne dit rien de
+ * si la situation s'améliore ou se dégrade. `invert` renverse le code
+ * couleur pour une métrique où une baisse est une bonne nouvelle (aucune
+ * pour l'instant, gardé pour la prochaine fois que ça arrive). */
+function TrendChip({ today, yesterday, invert = false }: { today: number; yesterday: number; invert?: boolean }) {
+  const delta = today - yesterday
+  const dir = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat'
+  const good = dir === 'flat' ? null : invert ? dir === 'down' : dir === 'up'
+  const cls =
+    dir === 'flat'
+      ? 'text-moon-200/45 bg-night-700/40'
+      : good
+        ? 'text-emerald-400 bg-emerald-400/10'
+        : 'text-blood-400 bg-blood-400/10'
+  const arrow = dir === 'up' ? '▲' : dir === 'down' ? '▼' : '='
+  return (
+    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${cls}`}>
+      {arrow} {Math.abs(delta)}
+    </span>
+  )
+}
+
+/** Métrique en vedette (gros chiffre + tendance) — remplace StatCard pour
+ * la nouvelle Vue d'ensemble, dont les 4 chiffres du haut méritent plus de
+ * place qu'une grille dense de 11 cartes identiques. */
+function MetricCard({
+  label,
+  value,
+  sub,
+  trend,
+  onClick,
+}: {
+  label: string
+  value: string | number
+  sub?: string
+  trend?: ReactNode
+  onClick?: () => void
+}) {
+  return (
+    <Card className={`p-4 ${onClick ? 'cursor-pointer transition-colors hover:border-moon-400/40' : ''}`} onClick={onClick}>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs text-moon-200/50">{label}</p>
+        {trend}
+      </div>
+      <p className="mt-0.5 font-display text-[28px] leading-none text-moon-200">{value}</p>
+      {sub && <p className="mt-1.5 text-xs text-moon-200/40">{sub}</p>}
+    </Card>
+  )
+}
+
+/** Mini histogramme des parties créées sur 7 jours — un seul coup d'œil
+ * pour situer aujourd'hui dans la tendance récente, plutôt qu'un chiffre
+ * isolé ("143 aujourd'hui") sans rien pour le comparer. */
+function ActivityChart({ days }: { days: { date: string; count: number }[] }) {
+  const max = Math.max(1, ...days.map((d) => d.count))
+  return (
+    <div className="flex h-36 items-end gap-2.5 pt-5">
+      {days.map((d) => {
+        const date = new Date(d.date)
+        const isToday = date.toDateString() === new Date().toDateString()
+        return (
+          <div key={d.date} className="flex flex-1 flex-col items-center gap-1.5">
+            <div className="flex h-28 w-full items-end">
+              <div
+                className={`relative w-full rounded-t-md rounded-b-sm ${isToday ? 'bg-gradient-to-t from-blood-700 to-moon-400' : 'bg-gradient-to-t from-night-600 to-night-500'}`}
+                style={{ height: `${Math.max(6, (d.count / max) * 100)}%` }}
+              >
+                <span className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] text-moon-200/55">
+                  {d.count}
+                </span>
+              </div>
+            </div>
+            <span className={`text-[10px] ${isToday ? 'font-bold text-moon-300' : 'text-moon-200/40'}`}>
+              {date.toLocaleDateString('fr-FR', { weekday: 'short' })}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/** Une ligne cliquable du bloc « À traiter » — voir StatsTab. */
+function TodoRow({ icon, label, count, onClick }: { icon: string; label: string; count: number; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center justify-between gap-3 rounded-xl border border-night-700/60 bg-night-950/30 px-3.5 py-2.5 text-left text-sm transition-colors hover:border-moon-400/40"
+    >
+      <span className="flex items-center gap-2 text-moon-200/85">
+        <span aria-hidden="true">{icon}</span> {label}
+      </span>
+      <span className="rounded-full bg-blood-600 px-2 py-0.5 text-[11px] font-bold text-[#fdf6e3]">{count}</span>
+    </button>
+  )
+}
+
 function StatsTab({ onGoToTab }: { onGoToTab: (target: Tab, usersFilter?: Omit<UsersSeed, 'nonce'>) => void }) {
   const [stats, setStats] = useState<Stats | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -550,68 +703,102 @@ function StatsTab({ onGoToTab }: { onGoToTab: (target: Tab, usersFilter?: Omit<U
   if (error) return <ErrorText>{error}</ErrorText>
   if (!stats) return <p className="text-sm text-moon-200/50">Chargement...</p>
 
+  const todoItems = [
+    // Voir commentaire d'origine : les demandes d'accès à une partie déjà en
+    // cours sont gérées par l'HÔTE de cette partie, pas ici — ce compteur
+    // renvoie vers l'onglet Salons, qui indique laquelle est concernée
+    // (migration 0072).
+    { key: 'join', icon: '🙋', label: 'Demandes d’accès en attente', count: stats.pending_join_requests, go: () => onGoToTab('games') },
+    { key: 'feedback', icon: '💬', label: 'Retours joueurs non lus', count: stats.unread_feedback, go: () => onGoToTab('messages') },
+    { key: 'deletion', icon: '🗑️', label: 'Suppressions de compte en attente', count: stats.pending_deletions, go: () => onGoToTab('security') },
+    { key: 'expiring', icon: '⏳', label: 'Produits boutique qui expirent sous 48h', count: stats.store_expiring_soon_count, go: () => onGoToTab('artifacts') },
+  ].filter((it) => it.count > 0)
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {!stats.new_games_enabled && (
         <ErrorText>Les nouvelles parties sont actuellement désactivées (voir onglet Réglages).</ErrorText>
       )}
 
-      <StatSection title="👤 Utilisateurs">
-        <StatCard label="Utilisateurs" value={stats.total_users} onClick={() => onGoToTab('users')} />
-        <StatCard
-          label="Nouveaux aujourd’hui"
-          value={stats.new_users_today}
-          onClick={() => onGoToTab('users', { createdFrom: new Date().toISOString().slice(0, 10) })}
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <MetricCard
+          label="Utilisateurs"
+          value={stats.total_users}
+          sub={`+${stats.new_users_today} aujourd’hui`}
+          trend={<TrendChip today={stats.new_users_today} yesterday={stats.new_users_yesterday} />}
+          onClick={() => onGoToTab('users')}
         />
-        <StatCard label="Comptes suspendus" value={stats.banned_users} onClick={() => onGoToTab('users', { banned: true })} />
-        <StatCard label="Admins" value={stats.admin_users} onClick={() => onGoToTab('users', { admin: true })} />
-      </StatSection>
+        <MetricCard
+          label="Parties actives"
+          value={stats.active_games}
+          sub={`${stats.games_today} créées aujourd’hui`}
+          trend={<TrendChip today={stats.games_today} yesterday={stats.games_yesterday} />}
+          onClick={() => onGoToTab('games')}
+        />
+        <MetricCard label="Comptes suspendus" value={stats.banned_users} onClick={() => onGoToTab('users', { banned: true })} />
+        <MetricCard label="Admins" value={stats.admin_users} onClick={() => onGoToTab('users', { admin: true })} />
+      </div>
 
-      <StatSection title="🎲 Parties">
-        <StatCard label="Parties (total)" value={stats.total_games} />
-        <StatCard label="Parties en cours" value={stats.active_games} onClick={() => onGoToTab('games')} />
-        <StatCard label="Parties créées aujourd’hui" value={stats.games_today} />
-        {/* Joueurs qui essaient de rejoindre une partie déjà en cours (ou
-            privée rejointe par code pendant qu'elle tourne, voir migration
-            0038) : la demande reste en attente jusqu'à ce que l'HÔTE de
-            cette partie précise y réponde, une fois revenu en salon — pas
-            une file d'attente globale que l'admin traite lui-même. Ce
-            compteur n'avait jusqu'ici aucune action associée (pas de clic) ;
-            il renvoie maintenant vers l'onglet Parties, qui affiche
-            désormais laquelle a des demandes en attente (migration 0072).
-            (Question fréquente, réponse : c'est géré par l'hôte, pas ici.) */}
-        <StatCard label="Demandes d’accès en attente" value={stats.pending_join_requests} onClick={() => onGoToTab('games')} />
-      </StatSection>
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.4fr_1fr]">
+        <Card className="p-4">
+          <h2 className="mb-1 font-display text-[15px] text-moon-200">
+            Parties créées <span className="text-xs font-normal text-moon-200/40">7 derniers jours</span>
+          </h2>
+          <ActivityChart days={stats.games_last_7_days} />
+        </Card>
 
-      {/* Deux compteurs qui portent tous les deux le mot "message" mais qui
-          n'ont rien à voir : l'un compte les messages du chat EN PARTIE
-          (village/loups/cimetière) envoyés aujourd'hui — une simple mesure
-          d'activité, sans action à faire dessus. L'autre compte les retours
-          joueurs (bouton feedback) pas encore lus, cliquable vers l'onglet
-          Messages (voir migration 0071). Regroupés dans la même section mais
-          avec des libellés qui ne peuvent plus se confondre. */}
-      <StatSection title="💬 Activité & messages">
-        <StatCard label="Messages de chat (aujourd’hui)" value={stats.messages_today} />
-        <StatCard label="Retours joueurs non lus" value={stats.unread_feedback} onClick={() => onGoToTab('messages')} />
-      </StatSection>
+        <Card className="p-4">
+          <h2 className="mb-3 font-display text-[15px] text-moon-200">À traiter</h2>
+          {todoItems.length === 0 ? (
+            <p className="text-sm text-moon-200/40">Rien en attente — tout est à jour. ✅</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {todoItems.map((it) => (
+                <TodoRow key={it.key} icon={it.icon} label={it.label} count={it.count} onClick={it.go} />
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
 
-      <StatSection title="🔒 Compte & sécurité">
-        <StatCard label="Suppressions en attente" value={stats.pending_deletions} onClick={() => onGoToTab('security')} />
-      </StatSection>
+      <Card className="p-4">
+        <h2 className="mb-3 font-display text-[15px] text-moon-200">
+          🛒 Boutique <span className="text-xs font-normal text-moon-200/40">aperçu rapide</span>
+        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap gap-6">
+            <div className="text-center">
+              <p className="font-display text-xl text-moon-300">{stats.store_active_count}</p>
+              <p className="text-[11px] text-moon-200/45">actifs</p>
+            </div>
+            <div className="text-center">
+              <p className="font-display text-xl text-moon-300">{stats.store_scheduled_count}</p>
+              <p className="text-[11px] text-moon-200/45">programmés</p>
+            </div>
+            <div className="text-center">
+              <p className={`font-display text-xl ${stats.store_expiring_soon_count > 0 ? 'text-blood-400' : 'text-moon-300'}`}>
+                {stats.store_expiring_soon_count}
+              </p>
+              <p className="text-[11px] text-moon-200/45">expirent sous 48h</p>
+            </div>
+            <div className="text-center">
+              <p className="font-display text-xl text-moon-200/50">{stats.store_expired_count}</p>
+              <p className="text-[11px] text-moon-200/45">expirés</p>
+            </div>
+          </div>
+          <Button variant="ghost" className="px-3.5 py-2 text-xs" onClick={() => onGoToTab('artifacts')}>
+            Gérer la boutique →
+          </Button>
+        </div>
+      </Card>
+
+      <Card className="p-4">
+        <h2 className="mb-2 font-display text-[15px] text-moon-200">💬 Activité</h2>
+        <p className="text-sm text-moon-200/70">
+          <strong className="text-moon-200">{stats.messages_today}</strong> messages de chat envoyés en partie aujourd’hui.
+        </p>
+      </Card>
     </div>
-  )
-}
-
-/** Petit regroupement titré de StatCard — juste un titre + une grille,
- * réutilisé par chaque catégorie de StatsTab (voir retour utilisateur :
- * la grille unique de 11 cartes était difficile à parcourir d'un coup
- * d'œil, en particulier pour distinguer les deux compteurs "message..."). */
-function StatSection({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section>
-      <h2 className="mb-2 font-display text-sm uppercase tracking-wide text-moon-200/50">{title}</h2>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{children}</div>
-    </section>
   )
 }
 
@@ -3070,6 +3257,167 @@ function formatCooldownHours(hours: number): string {
   return `rachat toutes les ${hours} heure${hours > 1 ? 's' : ''}`
 }
 
+// ----------------------------------------------------------------------------
+// Disponibilité limitée dans le temps (voir migration 0199) : partagé entre
+// artefacts et skins, mêmes statuts, même rendu de tableau — pour ne pas
+// dupliquer cette logique dans les deux onglets.
+// ----------------------------------------------------------------------------
+type AvailStatus = 'active' | 'scheduled' | 'expiring' | 'expired' | 'off'
+
+/** `active`/`is_active` prime toujours : un produit désactivé reste "off"
+ * même dans sa fenêtre de vente. "expiring" (badge orange, même couleur que
+ * "active") signale une fin sous 48h sans changer la disponibilité réelle. */
+function availabilityStatus(active: boolean, startsAt: string | null, endsAt: string | null): AvailStatus {
+  if (!active) return 'off'
+  const now = Date.now()
+  if (startsAt && new Date(startsAt).getTime() > now) return 'scheduled'
+  if (endsAt) {
+    const end = new Date(endsAt).getTime()
+    if (end <= now) return 'expired'
+    if (end - now <= 48 * 3600 * 1000) return 'expiring'
+  }
+  return 'active'
+}
+
+const AVAIL_STATUS_STYLE: Record<AvailStatus, { label: string; cls: string }> = {
+  active: { label: '✓ Actif', cls: 'text-emerald-400 bg-emerald-400/10' },
+  expiring: { label: '⚠ Expire bientôt', cls: 'text-emerald-400 bg-emerald-400/10' },
+  scheduled: { label: '⏱ Programmé', cls: 'text-sky-400 bg-sky-400/10' },
+  expired: { label: 'Expiré', cls: 'text-moon-200/50 bg-night-700/40' },
+  off: { label: 'Désactivé', cls: 'text-blood-400 bg-blood-400/10' },
+}
+
+function AvailStatusPill({ status }: { status: AvailStatus }) {
+  const s = AVAIL_STATUS_STYLE[status]
+  return (
+    <span className={`inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wide ${s.cls}`}>
+      {s.label}
+    </span>
+  )
+}
+
+function fmtDateShort(iso: string): string {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + ' à ' + new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+}
+
+/** Colonne "Disponibilité" du tableau : illimitée / jusqu'au [date] (+ jours
+ * restants) / débute le [date] / terminé le [date] — voir aperçu validé. */
+function AvailabilityCell({ status, startsAt, endsAt }: { status: AvailStatus; startsAt: string | null; endsAt: string | null }) {
+  if (status === 'scheduled' && startsAt) {
+    return (
+      <div>
+        <p className="text-moon-200/85">Débute le {fmtDateShort(startsAt)}</p>
+        {endsAt && <p className="text-[11px] text-moon-200/40">jusqu’au {fmtDateShort(endsAt)}</p>}
+      </div>
+    )
+  }
+  if (endsAt) {
+    const days = Math.ceil((new Date(endsAt).getTime() - Date.now()) / 86400000)
+    if (days < 0 || status === 'expired') return <p className="text-moon-200/50">Terminé le {fmtDateShort(endsAt)}</p>
+    return (
+      <div>
+        <p className="text-moon-200/85">Jusqu’au {fmtDateShort(endsAt)}</p>
+        <p className={`text-[11px] ${days <= 2 ? 'text-blood-400' : 'text-moon-200/40'}`}>il reste {days} j</p>
+      </div>
+    )
+  }
+  return <p className="text-moon-200/85">Illimitée</p>
+}
+
+type AvailMode = 'unlimited' | 'period'
+
+/** Bloc de formulaire "🗓️ Disponibilité", partagé entre les deux tiroirs
+ * (artefact/skin) : Illimitée ou Période définie, avec date de début/fin et
+ * des raccourcis de durée qui calculent la fin depuis la date de début —
+ * voir aperçu cliquable validé avant codage. */
+function AvailabilityFields({
+  mode,
+  onModeChange,
+  startsAt,
+  endsAt,
+  onStartsAtChange,
+  onEndsAtChange,
+}: {
+  mode: AvailMode
+  onModeChange: (m: AvailMode) => void
+  startsAt: string
+  endsAt: string
+  onStartsAtChange: (v: string) => void
+  onEndsAtChange: (v: string) => void
+}) {
+  const urgent = mode === 'period' && endsAt && new Date(endsAt).getTime() - Date.now() <= 48 * 3600 * 1000
+  function applyDuration(hours: number) {
+    const start = startsAt ? new Date(startsAt) : new Date()
+    if (!startsAt) onStartsAtChange(toDatetimeLocal(start.toISOString()))
+    onEndsAtChange(toDatetimeLocal(new Date(start.getTime() + hours * 3600000).toISOString()))
+  }
+  return (
+    <div className={`rounded-xl border p-3 ${urgent ? 'border-blood-500/40 bg-blood-600/[0.04]' : 'border-night-600/60 bg-night-950/30'}`}>
+      <Label>🗓️ Disponibilité</Label>
+      <div className="mb-3 flex gap-4">
+        <label className="flex items-center gap-1.5 text-sm font-semibold text-moon-200">
+          <input type="radio" checked={mode === 'unlimited'} onChange={() => onModeChange('unlimited')} className="accent-blood-600" />
+          Illimitée
+        </label>
+        <label className="flex items-center gap-1.5 text-sm font-semibold text-moon-200">
+          <input type="radio" checked={mode === 'period'} onChange={() => onModeChange('period')} className="accent-blood-600" />
+          Période définie
+        </label>
+      </div>
+      {mode === 'period' && (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Début</Label>
+              <input
+                type="datetime-local"
+                value={startsAt}
+                onChange={(ev) => onStartsAtChange(ev.target.value)}
+                className="w-full rounded-xl border border-night-500 bg-night-800/80 px-3 py-2 text-sm text-moon-200 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20"
+              />
+            </div>
+            <div>
+              <Label>Fin</Label>
+              <input
+                type="datetime-local"
+                value={endsAt}
+                onChange={(ev) => onEndsAtChange(ev.target.value)}
+                className="w-full rounded-xl border border-night-500 bg-night-800/80 px-3 py-2 text-sm text-moon-200 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20"
+              />
+            </div>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {[
+              ['+48h', 48],
+              ['+7 jours', 168],
+              ['+14 jours', 336],
+              ['+30 jours', 720],
+            ].map(([label, hours]) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => applyDuration(hours as number)}
+                className="rounded-lg border border-night-600/70 bg-night-800/60 px-2.5 py-1 text-[11px] font-semibold text-moon-200/70 transition-colors hover:border-moon-400/50 hover:text-moon-300"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-[11px] text-moon-200/40">
+            Une fois la fin passée, le produit disparaît automatiquement de la boutique — les joueurs qui le possèdent déjà le gardent.
+          </p>
+          {startsAt && endsAt && (
+            <p className="mt-2 rounded-lg border border-moon-400/25 bg-moon-400/[0.06] px-2.5 py-1.5 text-[11px] font-semibold text-moon-300">
+              Actif du {fmtDateShort(new Date(startsAt).toISOString())} au {fmtDateShort(new Date(endsAt).toISOString())} (
+              {Math.max(1, Math.round((new Date(endsAt).getTime() - new Date(startsAt).getTime()) / 86400000))} j)
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 interface StoreArtifact {
   id: string
   key: string
@@ -3086,6 +3434,8 @@ interface StoreArtifact {
   // HEURES depuis la migration 0173.
   max_stock: number | null
   repurchase_cooldown_hours: number | null
+  starts_at: string | null
+  ends_at: string | null
   active: boolean
   created_at: string
 }
@@ -3095,6 +3445,14 @@ function artifactImageUrl(path: string | null): string | null {
   return supabase.storage.from('artifact-icons').getPublicUrl(path).data.publicUrl
 }
 
+const ARTIFACT_FILTERS: { id: AvailStatus | 'all'; label: string }[] = [
+  { id: 'all', label: 'Tous' },
+  { id: 'active', label: 'Actifs' },
+  { id: 'scheduled', label: 'Programmés' },
+  { id: 'expired', label: 'Expirés' },
+  { id: 'off', label: 'Désactivés' },
+]
+
 function StoreArtifactsTab() {
   const [artifacts, setArtifacts] = useState<StoreArtifact[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -3102,6 +3460,8 @@ function StoreArtifactsTab() {
   const [editing, setEditing] = useState<StoreArtifact | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<StoreArtifact | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState<AvailStatus | 'all'>('all')
 
   const load = useCallback(async () => {
     const { data, error: rpcError } = await supabase.rpc('admin_list_store_artifacts')
@@ -3141,6 +3501,8 @@ function StoreArtifactsTab() {
       p_effect_key: sa.effect_key,
       p_max_stock: sa.max_stock,
       p_repurchase_cooldown_hours: sa.repurchase_cooldown_hours,
+      p_starts_at: sa.starts_at,
+      p_ends_at: sa.ends_at,
       p_active: !sa.active,
     })
     setBusyId(null)
@@ -3164,10 +3526,39 @@ function StoreArtifactsTab() {
     load()
   }
 
+  const withStatus = (artifacts ?? []).map((sa) => ({ sa, status: availabilityStatus(sa.active, sa.starts_at, sa.ends_at) }))
+  const counts = { all: withStatus.length } as Record<AvailStatus | 'all', number>
+  for (const f of ARTIFACT_FILTERS) if (f.id !== 'all') counts[f.id] = withStatus.filter((w) => w.status === f.id || (f.id === 'active' && w.status === 'expiring')).length
+  const q = search.trim().toLowerCase()
+  const filtered = withStatus.filter(
+    ({ sa, status }) =>
+      (filter === 'all' || status === filter || (filter === 'active' && status === 'expiring')) &&
+      (!q || sa.name_fr.toLowerCase().includes(q) || sa.key.toLowerCase().includes(q)),
+  )
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-moon-200/60">{artifacts?.length ?? 0} artefact(s) au catalogue.</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={search}
+            onChange={(ev) => setSearch(ev.target.value)}
+            placeholder="Rechercher un artefact…"
+            className="w-52 rounded-xl border border-night-500 bg-night-800/80 px-3 py-2 text-xs text-moon-200 outline-none transition focus:border-moon-400/60"
+          />
+          {ARTIFACT_FILTERS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setFilter(f.id)}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                filter === f.id ? 'border-moon-400 bg-moon-400 text-night-950' : 'border-night-600/60 text-moon-200/60 hover:text-moon-200'
+              }`}
+            >
+              {f.label} · {counts[f.id] ?? 0}
+            </button>
+          ))}
+        </div>
         <Button className="px-3.5 py-2 text-xs" onClick={openCreate}>
           + Nouvel artefact
         </Button>
@@ -3176,66 +3567,92 @@ function StoreArtifactsTab() {
       <ErrorText>{error}</ErrorText>
 
       {artifacts === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
-      {artifacts !== null && artifacts.length === 0 && <p className="text-sm text-moon-200/50">Aucun artefact au catalogue.</p>}
+      {artifacts !== null && filtered.length === 0 && <p className="text-sm text-moon-200/50">Aucun artefact ne correspond.</p>}
 
-      <div className="flex flex-col gap-2">
-        {artifacts?.map((sa) => (
-          <Card key={sa.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
-            <div className="flex min-w-0 gap-3">
-              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-night-600/60 bg-night-800/60">
-                {artifactImageUrl(sa.image_path) ? (
-                  <img src={artifactImageUrl(sa.image_path)!} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center font-display text-sm text-moon-200/30">
-                    {sa.name_fr.charAt(0).toUpperCase()}
-                  </div>
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-moon-200">
-                  {sa.name_fr}
-                  {!sa.active && (
-                    <span className="rounded-full bg-night-700/60 px-2 py-0.5 text-[10px] uppercase text-moon-200/50">
-                      Désactivé
-                    </span>
-                  )}
-                </p>
-                <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-moon-200/50">
-                  <code className="rounded bg-night-800/70 px-1.5 py-0.5 text-[10px] text-moon-200/60">{sa.key}</code>
-                  <span>· {ARTIFACT_CATEGORY_LABELS[sa.category]}</span>
-                  <span className="inline-flex items-center gap-1">
-                    · <LoupCoinIcon className="h-3 w-3" /> {sa.price_coins}
-                  </span>
-                </p>
-                <p className="mt-1 text-[11px] text-moon-200/40">
-                  Effet : {ARTIFACT_EFFECT_LABELS[sa.effect_key]}
-                </p>
-                {sa.max_stock !== null && (
-                  <p className="mt-0.5 text-[11px] text-amber-300/80">
-                    Stock max {sa.max_stock} par joueur · {formatCooldownHours(sa.repurchase_cooldown_hours ?? 0)}
-                  </p>
-                )}
-                <p className="mt-1 text-xs text-moon-200/40">🇫🇷 {sa.description_fr}</p>
-                <p className="text-xs text-moon-200/40">🇬🇧 {sa.description_en}</p>
-                <div className="mt-2">
-                  <ArtifactIconUpload artifact={sa} onUploaded={load} />
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="ghost" className="px-3 py-1.5 text-xs" disabled={busyId === sa.id} onClick={() => openEdit(sa)}>
-                Modifier
-              </Button>
-              <Button variant="ghost" className="px-3 py-1.5 text-xs" disabled={busyId === sa.id} onClick={() => toggleActive(sa)}>
-                {sa.active ? 'Désactiver' : 'Activer'}
-              </Button>
-              <Button variant="danger" className="px-3 py-1.5 text-xs" disabled={busyId === sa.id} onClick={() => setDeleteTarget(sa)}>
-                Supprimer
-              </Button>
-            </div>
-          </Card>
-        ))}
-      </div>
+      {filtered.length > 0 && (
+        <Card className="overflow-hidden !p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-night-700/60 text-left text-[10.5px] uppercase tracking-wide text-moon-200/40">
+                  <th className="px-4 py-2.5 font-semibold">Objet</th>
+                  <th className="px-3 py-2.5 font-semibold">Catégorie</th>
+                  <th className="px-3 py-2.5 font-semibold">Prix</th>
+                  <th className="px-3 py-2.5 font-semibold">Disponibilité</th>
+                  <th className="px-3 py-2.5 font-semibold">Statut</th>
+                  <th className="px-3 py-2.5" />
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(({ sa, status }) => (
+                  <tr key={sa.id} className={`border-b border-night-800/60 last:border-0 hover:bg-night-800/25 ${status === 'expired' ? 'opacity-50' : ''}`}>
+                    <td className="max-w-[260px] px-4 py-2.5">
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <div className="h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-night-600/60 bg-night-800/60">
+                          {artifactImageUrl(sa.image_path) ? (
+                            <img src={artifactImageUrl(sa.image_path)!} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center font-display text-xs text-moon-200/30">
+                              {sa.name_fr.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-moon-200">{sa.name_fr}</p>
+                          <code className="text-[10px] text-moon-200/40">{sa.key}</code>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5 text-xs text-moon-200/70">{ARTIFACT_CATEGORY_LABELS[sa.category]}</td>
+                    <td className="px-3 py-2.5">
+                      <span className="inline-flex items-center gap-1 font-semibold text-amber-300">
+                        <LoupCoinIcon className="h-3 w-3" /> {sa.price_coins}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-xs">
+                      <AvailabilityCell status={status} startsAt={sa.starts_at} endsAt={sa.ends_at} />
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <AvailStatusPill status={status} />
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex justify-end gap-1.5">
+                        <button
+                          type="button"
+                          title="Modifier"
+                          disabled={busyId === sa.id}
+                          onClick={() => openEdit(sa)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-night-600/70 bg-night-900/40 text-moon-200/70 transition-colors hover:border-moon-400/40 hover:text-moon-200"
+                        >
+                          ✎
+                        </button>
+                        <button
+                          type="button"
+                          title={sa.active ? 'Désactiver' : 'Activer'}
+                          disabled={busyId === sa.id}
+                          onClick={() => toggleActive(sa)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-night-600/70 bg-night-900/40 text-moon-200/70 transition-colors hover:border-moon-400/40 hover:text-moon-200"
+                        >
+                          {sa.active ? '⏸' : '▶'}
+                        </button>
+                        <button
+                          type="button"
+                          title="Supprimer"
+                          disabled={busyId === sa.id}
+                          onClick={() => setDeleteTarget(sa)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-blood-700/50 bg-blood-700/10 text-blood-400 transition-colors hover:bg-blood-700/20"
+                        >
+                          🗑
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
       <StoreArtifactFormDrawer
         open={formOpen}
@@ -3334,6 +3751,9 @@ interface StoreArtifactFormState {
   price_coins: string
   max_stock: string
   repurchase_cooldown_hours: string
+  availMode: AvailMode
+  starts_at: string
+  ends_at: string
   active: boolean
 }
 
@@ -3348,6 +3768,9 @@ const EMPTY_ARTIFACT_FORM: StoreArtifactFormState = {
   price_coins: '20',
   max_stock: '1',
   repurchase_cooldown_hours: '24',
+  availMode: 'unlimited',
+  starts_at: '',
+  ends_at: '',
   active: true,
 }
 
@@ -3380,6 +3803,9 @@ function StoreArtifactFormDrawer({
         price_coins: String(artifact.price_coins),
         max_stock: String(artifact.max_stock ?? 1),
         repurchase_cooldown_hours: String(artifact.repurchase_cooldown_hours ?? 24),
+        availMode: artifact.starts_at || artifact.ends_at ? 'period' : 'unlimited',
+        starts_at: artifact.starts_at ? toDatetimeLocal(artifact.starts_at) : '',
+        ends_at: artifact.ends_at ? toDatetimeLocal(artifact.ends_at) : '',
         active: artifact.active,
       })
     } else {
@@ -3421,6 +3847,10 @@ function StoreArtifactFormDrawer({
       setError('Délai de rachat invalide.')
       return
     }
+    if (form.availMode === 'period' && !form.starts_at && !form.ends_at) {
+      setError('Choisis au moins une date de début ou de fin, ou repasse en « Illimitée ».')
+      return
+    }
     setBusy(true)
     setError(null)
     const { error: rpcError } = await supabase.rpc('admin_upsert_store_artifact', {
@@ -3435,6 +3865,8 @@ function StoreArtifactFormDrawer({
       p_effect_key: form.effect_key,
       p_max_stock: isRare ? maxStock : null,
       p_repurchase_cooldown_hours: isRare ? cooldownHours : null,
+      p_starts_at: form.availMode === 'period' && form.starts_at ? new Date(form.starts_at).toISOString() : null,
+      p_ends_at: form.availMode === 'period' && form.ends_at ? new Date(form.ends_at).toISOString() : null,
       p_active: form.active,
     })
     setBusy(false)
@@ -3448,6 +3880,21 @@ function StoreArtifactFormDrawer({
   return (
     <SideDrawer open={open} onClose={onClose} title={artifact ? 'Modifier l’artefact' : 'Nouvel artefact'}>
       <form className="flex flex-col gap-4" onSubmit={save}>
+        {artifact && (
+          <div className="flex items-center gap-3 rounded-xl border border-night-600/60 bg-night-950/30 p-3">
+            <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-night-600/60 bg-night-800/60">
+              {artifactImageUrl(artifact.image_path) ? (
+                <img src={artifactImageUrl(artifact.image_path)!} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center font-display text-sm text-moon-200/30">
+                  {artifact.name_fr.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+            <ArtifactIconUpload artifact={artifact} onUploaded={() => {}} />
+          </div>
+        )}
+
         <div>
           <Label>Identifiant technique</Label>
           <Input
@@ -3582,6 +4029,15 @@ function StoreArtifactFormDrawer({
           />
         </div>
 
+        <AvailabilityFields
+          mode={form.availMode}
+          onModeChange={(m) => setForm((f) => ({ ...f, availMode: m }))}
+          startsAt={form.starts_at}
+          endsAt={form.ends_at}
+          onStartsAtChange={(v) => setForm((f) => ({ ...f, starts_at: v }))}
+          onEndsAtChange={(v) => setForm((f) => ({ ...f, ends_at: v }))}
+        />
+
         <label className="flex items-center gap-2 text-sm text-moon-200/80">
           <input
             type="checkbox"
@@ -3600,6 +4056,553 @@ function StoreArtifactFormDrawer({
           </Button>
           <Button type="submit" className="flex-1" disabled={busy}>
             {artifact ? 'Enregistrer' : 'Créer'}
+          </Button>
+        </div>
+      </form>
+    </SideDrawer>
+  )
+}
+
+// ----------------------------------------------------------------------------
+// Skins de l'éditeur d'avatar vendus dans le Loup Store (voir migration
+// 0195) : jusqu'ici uniquement créés par migration SQL (0195/0197), aucune
+// interface admin. Même patron que StoreArtifactsTab ci-dessus, avec un
+// constructeur de `config` par menus déroulants (une pièce par slot,
+// "— inchangé —" pour ne pas toucher au reste de l'avatar du joueur à
+// l'équipement — voir purchase_skin/set_my_avatar) plutôt qu'un champ JSON
+// brut, et un vrai aperçu rendu par le composant Avatar au lieu d'une icône.
+// ----------------------------------------------------------------------------
+interface StoreSkin {
+  id: string
+  slug: string
+  category: SkinCategory
+  rarity: SkinRarity
+  name_fr: string
+  name_en: string
+  description_fr: string
+  description_en: string
+  price_coins: number
+  config: Partial<AvatarConfig>
+  sort_order: number
+  starts_at: string | null
+  ends_at: string | null
+  is_active: boolean
+  created_at: string
+}
+
+const SKIN_CATEGORY_LABELS_FR: Record<SkinCategory, string> = {
+  tenues: 'Tenues',
+  coiffures: 'Coiffures',
+  chapeaux: 'Chapeaux',
+  packs: 'Packs',
+}
+
+const SKIN_RARITY_LABELS_FR: Record<SkinRarity, string> = {
+  commun: 'Commun',
+  rare: 'Rare',
+  epique: 'Épique',
+  legendaire: 'Légendaire',
+}
+
+function StoreSkinsTab() {
+  const [skins, setSkins] = useState<StoreSkin[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<StoreSkin | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<StoreSkin | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState<AvailStatus | 'all'>('all')
+
+  const load = useCallback(async () => {
+    const { data, error: rpcError } = await supabase.rpc('admin_list_store_skins')
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    setError(null)
+    setSkins((data ?? []) as StoreSkin[])
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  async function toggleActive(s: StoreSkin) {
+    setBusyId(s.id)
+    const { error: rpcError } = await supabase.rpc('admin_upsert_store_skin', {
+      p_id: s.id,
+      p_slug: s.slug,
+      p_category: s.category,
+      p_rarity: s.rarity,
+      p_name_fr: s.name_fr,
+      p_name_en: s.name_en,
+      p_description_fr: s.description_fr,
+      p_description_en: s.description_en,
+      p_price_coins: s.price_coins,
+      p_config: s.config,
+      p_sort_order: s.sort_order,
+      p_starts_at: s.starts_at,
+      p_ends_at: s.ends_at,
+      p_active: !s.is_active,
+    })
+    setBusyId(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    load()
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    setBusyId(deleteTarget.id)
+    const { error: rpcError } = await supabase.rpc('admin_delete_store_skin', { p_id: deleteTarget.id })
+    setBusyId(null)
+    setDeleteTarget(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    load()
+  }
+
+  const withStatus = (skins ?? []).map((s) => ({ s, status: availabilityStatus(s.is_active, s.starts_at, s.ends_at) }))
+  const counts = { all: withStatus.length } as Record<AvailStatus | 'all', number>
+  for (const f of ARTIFACT_FILTERS) if (f.id !== 'all') counts[f.id] = withStatus.filter((w) => w.status === f.id || (f.id === 'active' && w.status === 'expiring')).length
+  const q = search.trim().toLowerCase()
+  const filtered = withStatus.filter(
+    ({ s, status }) => (filter === 'all' || status === filter || (filter === 'active' && status === 'expiring')) && (!q || s.name_fr.toLowerCase().includes(q)),
+  )
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={search}
+            onChange={(ev) => setSearch(ev.target.value)}
+            placeholder="Rechercher un skin…"
+            className="w-52 rounded-xl border border-night-500 bg-night-800/80 px-3 py-2 text-xs text-moon-200 outline-none transition focus:border-moon-400/60"
+          />
+          {ARTIFACT_FILTERS.filter((f) => f.id !== 'off').map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setFilter(f.id)}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                filter === f.id ? 'border-moon-400 bg-moon-400 text-night-950' : 'border-night-600/60 text-moon-200/60 hover:text-moon-200'
+              }`}
+            >
+              {f.label} · {counts[f.id] ?? 0}
+            </button>
+          ))}
+        </div>
+        <Button
+          className="px-3.5 py-2 text-xs"
+          onClick={() => {
+            setEditing(null)
+            setFormOpen(true)
+          }}
+        >
+          + Nouveau skin
+        </Button>
+      </div>
+
+      <ErrorText>{error}</ErrorText>
+
+      {skins === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
+      {skins !== null && filtered.length === 0 && <p className="text-sm text-moon-200/50">Aucun skin ne correspond.</p>}
+
+      {filtered.length > 0 && (
+        <Card className="overflow-hidden !p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-night-700/60 text-left text-[10.5px] uppercase tracking-wide text-moon-200/40">
+                  <th className="px-4 py-2.5 font-semibold">Skin</th>
+                  <th className="px-3 py-2.5 font-semibold">Rareté</th>
+                  <th className="px-3 py-2.5 font-semibold">Prix</th>
+                  <th className="px-3 py-2.5 font-semibold">Disponibilité</th>
+                  <th className="px-3 py-2.5 font-semibold">Statut</th>
+                  <th className="px-3 py-2.5" />
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(({ s, status }) => (
+                  <tr key={s.id} className={`border-b border-night-800/60 last:border-0 hover:bg-night-800/25 ${status === 'expired' ? 'opacity-50' : ''}`}>
+                    <td className="max-w-[240px] px-4 py-2.5">
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <Avatar config={{ ...DEFAULT_AVATAR_CONFIG, ...s.config }} className="h-9 w-9 shrink-0" />
+                        <p className="truncate font-semibold text-moon-200">{s.name_fr}</p>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${RARITY_STYLE[s.rarity].text}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${RARITY_STYLE[s.rarity].dot}`} />
+                        {SKIN_RARITY_LABELS_FR[s.rarity]}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <span className="inline-flex items-center gap-1 font-semibold text-amber-300">
+                        <LoupCoinIcon className="h-3 w-3" /> {s.price_coins}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-xs">
+                      <AvailabilityCell status={status} startsAt={s.starts_at} endsAt={s.ends_at} />
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <AvailStatusPill status={status} />
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex justify-end gap-1.5">
+                        <button
+                          type="button"
+                          title="Modifier"
+                          disabled={busyId === s.id}
+                          onClick={() => {
+                            setEditing(s)
+                            setFormOpen(true)
+                          }}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-night-600/70 bg-night-900/40 text-moon-200/70 transition-colors hover:border-moon-400/40 hover:text-moon-200"
+                        >
+                          ✎
+                        </button>
+                        <button
+                          type="button"
+                          title={s.is_active ? 'Désactiver' : 'Activer'}
+                          disabled={busyId === s.id}
+                          onClick={() => toggleActive(s)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-night-600/70 bg-night-900/40 text-moon-200/70 transition-colors hover:border-moon-400/40 hover:text-moon-200"
+                        >
+                          {s.is_active ? '⏸' : '▶'}
+                        </button>
+                        <button
+                          type="button"
+                          title="Supprimer"
+                          disabled={busyId === s.id}
+                          onClick={() => setDeleteTarget(s)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-blood-700/50 bg-blood-700/10 text-blood-400 transition-colors hover:bg-blood-700/20"
+                        >
+                          🗑
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      <StoreSkinFormDrawer
+        open={formOpen}
+        skin={editing}
+        onClose={() => setFormOpen(false)}
+        onSaved={() => {
+          setFormOpen(false)
+          load()
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={`Supprimer « ${deleteTarget?.name_fr ?? ''} » ?`}
+        message="Retiré du catalogue immédiatement — plus achetable. Les joueurs qui le possèdent déjà le gardent (leurs pièces d'avatar débloquées ne sont pas reprises)."
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        danger
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+      />
+    </div>
+  )
+}
+
+interface StoreSkinFormState {
+  slug: string
+  category: SkinCategory
+  rarity: SkinRarity
+  name_fr: string
+  name_en: string
+  description_fr: string
+  description_en: string
+  price_coins: string
+  sort_order: string
+  config: Partial<AvatarConfig>
+  availMode: AvailMode
+  starts_at: string
+  ends_at: string
+  active: boolean
+}
+
+const EMPTY_SKIN_FORM: StoreSkinFormState = {
+  slug: '',
+  category: 'tenues',
+  rarity: 'commun',
+  name_fr: '',
+  name_en: '',
+  description_fr: '',
+  description_en: '',
+  price_coins: '150',
+  sort_order: '0',
+  config: {},
+  availMode: 'unlimited',
+  starts_at: '',
+  ends_at: '',
+  active: true,
+}
+
+// Un menu déroulant par pièce d'avatar concernée par un skin — même
+// vocabulaire que l'éditeur joueur (AvatarStudio.tsx). "— inchangé —" ne
+// stocke rien dans `config` pour ce slot, plutôt qu'une valeur par défaut :
+// équiper le skin ne touche alors pas la pièce actuelle du joueur, comme le
+// fait déjà purchase_skin/set_my_avatar côté serveur.
+const SKIN_PART_OPTIONS: { key: keyof AvatarConfig; label: string; values: readonly string[] }[] = [
+  { key: 'hair', label: 'Coiffure', values: HAIRS },
+  { key: 'outfit', label: 'Tenue', values: OUTFITS },
+  { key: 'acc', label: 'Accessoire', values: ACCESSORIES },
+  { key: 'head', label: 'Chapeau', values: HEADWEAR },
+  { key: 'face', label: 'Visage', values: FACES },
+]
+
+function StoreSkinFormDrawer({
+  open,
+  skin,
+  onClose,
+  onSaved,
+}: {
+  open: boolean
+  skin: StoreSkin | null
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [form, setForm] = useState<StoreSkinFormState>(EMPTY_SKIN_FORM)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    if (skin) {
+      setForm({
+        slug: skin.slug,
+        category: skin.category,
+        rarity: skin.rarity,
+        name_fr: skin.name_fr,
+        name_en: skin.name_en,
+        description_fr: skin.description_fr,
+        description_en: skin.description_en,
+        price_coins: String(skin.price_coins),
+        sort_order: String(skin.sort_order),
+        config: skin.config,
+        availMode: skin.starts_at || skin.ends_at ? 'period' : 'unlimited',
+        starts_at: skin.starts_at ? toDatetimeLocal(skin.starts_at) : '',
+        ends_at: skin.ends_at ? toDatetimeLocal(skin.ends_at) : '',
+        active: skin.is_active,
+      })
+    } else {
+      setForm(EMPTY_SKIN_FORM)
+    }
+    setError(null)
+  }, [open, skin])
+
+  function setPart(key: keyof AvatarConfig, value: string) {
+    setForm((f) => {
+      const config = { ...f.config }
+      if (value === '') delete config[key]
+      else (config as Record<string, string | number>)[key] = key === 'skin' || key === 'bg' ? Number(value) : value
+      return { ...f, config }
+    })
+  }
+
+  async function save(e: FormEvent) {
+    e.preventDefault()
+    if (!skin && !/^[a-z0-9-]+$/.test(form.slug)) {
+      setError('Identifiant technique invalide (minuscules, chiffres, tirets uniquement).')
+      return
+    }
+    if (!form.name_fr.trim() || !form.name_en.trim()) {
+      setError('Nom requis (FR et EN).')
+      return
+    }
+    if (!form.description_fr.trim() || !form.description_en.trim()) {
+      setError('Description requise (FR et EN).')
+      return
+    }
+    const price = Number(form.price_coins)
+    if (!Number.isFinite(price) || price <= 0) {
+      setError('Prix invalide.')
+      return
+    }
+    if (Object.keys(form.config).length === 0) {
+      setError('Choisis au moins une pièce d’avatar que ce skin modifie.')
+      return
+    }
+    if (form.availMode === 'period' && !form.starts_at && !form.ends_at) {
+      setError('Choisis au moins une date de début ou de fin, ou repasse en « Illimitée ».')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('admin_upsert_store_skin', {
+      p_id: skin?.id ?? null,
+      p_slug: form.slug,
+      p_category: form.category,
+      p_rarity: form.rarity,
+      p_name_fr: form.name_fr,
+      p_name_en: form.name_en,
+      p_description_fr: form.description_fr,
+      p_description_en: form.description_en,
+      p_price_coins: price,
+      p_config: form.config,
+      p_sort_order: Number(form.sort_order) || 0,
+      p_starts_at: form.availMode === 'period' && form.starts_at ? new Date(form.starts_at).toISOString() : null,
+      p_ends_at: form.availMode === 'period' && form.ends_at ? new Date(form.ends_at).toISOString() : null,
+      p_active: form.active,
+    })
+    setBusy(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    onSaved()
+  }
+
+  const previewConfig = { ...DEFAULT_AVATAR_CONFIG, ...form.config }
+
+  return (
+    <SideDrawer open={open} onClose={onClose} title={skin ? 'Modifier le skin' : 'Nouveau skin'}>
+      <form className="flex flex-col gap-4" onSubmit={save}>
+        <div className="flex items-center gap-3 rounded-xl border border-night-600/60 bg-night-950/30 p-3">
+          <Avatar config={previewConfig} className="h-14 w-14 shrink-0" />
+          <p className="text-xs text-moon-200/50">
+            Aperçu — seules les pièces choisies ci-dessous sont modifiées par le skin, le reste montré ici est un avatar de démonstration.
+          </p>
+        </div>
+
+        <div>
+          <Label>Identifiant technique</Label>
+          <Input
+            value={form.slug}
+            disabled={!!skin}
+            onChange={(ev) => setForm((f) => ({ ...f, slug: ev.target.value.trim().toLowerCase() }))}
+            placeholder="ex. couronne-doree"
+          />
+          <p className="mt-1 text-xs text-moon-200/40">
+            {skin ? 'Non modifiable après création.' : 'Minuscules, chiffres, tirets uniquement.'}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Catégorie</Label>
+            <select
+              value={form.category}
+              onChange={(ev) => setForm((f) => ({ ...f, category: ev.target.value as SkinCategory }))}
+              className="w-full truncate rounded-xl border border-night-500 bg-night-800/80 px-3 py-2.5 text-sm text-moon-200 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20"
+            >
+              {SKIN_CATEGORIES.map((id) => (
+                <option key={id} value={id}>
+                  {SKIN_CATEGORY_LABELS_FR[id]}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label>Rareté</Label>
+            <select
+              value={form.rarity}
+              onChange={(ev) => setForm((f) => ({ ...f, rarity: ev.target.value as SkinRarity }))}
+              className="w-full truncate rounded-xl border border-night-500 bg-night-800/80 px-3 py-2.5 text-sm text-moon-200 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20"
+            >
+              {(Object.keys(SKIN_RARITY_LABELS_FR) as SkinRarity[]).map((id) => (
+                <option key={id} value={id}>
+                  {SKIN_RARITY_LABELS_FR[id]}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <Label>Nom — Français</Label>
+          <Input value={form.name_fr} onChange={(ev) => setForm((f) => ({ ...f, name_fr: ev.target.value }))} placeholder="Ex. Couronne dorée" />
+        </div>
+        <div>
+          <Label>Nom — English</Label>
+          <Input value={form.name_en} onChange={(ev) => setForm((f) => ({ ...f, name_en: ev.target.value }))} placeholder="Ex. Golden crown" />
+        </div>
+        <div>
+          <Label>Description — Français</Label>
+          <Input value={form.description_fr} onChange={(ev) => setForm((f) => ({ ...f, description_fr: ev.target.value }))} />
+        </div>
+        <div>
+          <Label>Description — English</Label>
+          <Input value={form.description_en} onChange={(ev) => setForm((f) => ({ ...f, description_en: ev.target.value }))} />
+        </div>
+
+        <div className="rounded-xl border border-night-600/60 bg-night-950/30 p-3">
+          <Label>Pièces modifiées par ce skin</Label>
+          <div className="grid grid-cols-2 gap-3">
+            {SKIN_PART_OPTIONS.map((opt) => (
+              <div key={opt.key}>
+                <p className="mb-1 text-[11px] font-semibold text-moon-200/50">{opt.label}</p>
+                <select
+                  value={(form.config[opt.key] as string) ?? ''}
+                  onChange={(ev) => setPart(opt.key, ev.target.value)}
+                  className="w-full truncate rounded-xl border border-night-500 bg-night-800/80 px-2.5 py-2 text-xs text-moon-200 outline-none transition focus:border-moon-400/60"
+                >
+                  <option value="">— inchangé —</option>
+                  {opt.values.map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Prix (🪙 Loup Coins)</Label>
+            <Input type="number" min={1} value={form.price_coins} onChange={(ev) => setForm((f) => ({ ...f, price_coins: ev.target.value }))} />
+          </div>
+          <div>
+            <Label>Ordre d’affichage</Label>
+            <Input type="number" value={form.sort_order} onChange={(ev) => setForm((f) => ({ ...f, sort_order: ev.target.value }))} />
+          </div>
+        </div>
+
+        <AvailabilityFields
+          mode={form.availMode}
+          onModeChange={(m) => setForm((f) => ({ ...f, availMode: m }))}
+          startsAt={form.starts_at}
+          endsAt={form.ends_at}
+          onStartsAtChange={(v) => setForm((f) => ({ ...f, starts_at: v }))}
+          onEndsAtChange={(v) => setForm((f) => ({ ...f, ends_at: v }))}
+        />
+
+        <label className="flex items-center gap-2 text-sm text-moon-200/80">
+          <input
+            type="checkbox"
+            checked={form.active}
+            onChange={(ev) => setForm((f) => ({ ...f, active: ev.target.checked }))}
+            className="h-4 w-4 rounded border-night-600/70 bg-night-900/50 accent-blood-600"
+          />
+          Actif (achetable dans le Loup Store)
+        </label>
+
+        <ErrorText>{error}</ErrorText>
+
+        <div className="mt-2 flex gap-3">
+          <Button type="button" variant="ghost" className="flex-1" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button type="submit" className="flex-1" disabled={busy}>
+            {skin ? 'Enregistrer' : 'Créer'}
           </Button>
         </div>
       </form>
