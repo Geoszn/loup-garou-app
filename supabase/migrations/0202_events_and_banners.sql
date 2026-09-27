@@ -301,15 +301,24 @@ stable
 security definer
 set search_path = public
 as $$
-  select coalesce(jsonb_agg(row_to_json(b) order by b.sort_order, b.created_at), '[]'::jsonb)
-  from (
-    select id, image_path, image_path_en, link_url, display_seconds
-    from public.banners
-    where is_enabled
-      and (starts_at is null or now() >= starts_at)
-      and (ends_at is null or now() < ends_at)
-      and image_path is not null
-  ) b;
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'id', b.id,
+        'image_path', b.image_path,
+        'image_path_en', b.image_path_en,
+        'link_url', b.link_url,
+        'display_seconds', b.display_seconds
+      )
+      order by b.sort_order, b.created_at
+    ),
+    '[]'::jsonb
+  )
+  from public.banners b
+  where b.is_enabled
+    and (b.starts_at is null or now() >= b.starts_at)
+    and (b.ends_at is null or now() < b.ends_at)
+    and b.image_path is not null;
 $$;
 
 revoke execute on function public.get_active_banners() from public, anon;
