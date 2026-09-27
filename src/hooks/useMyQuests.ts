@@ -10,6 +10,8 @@ export interface Quest {
   target: number
   reward_coins: number
   claimed_at: string | null
+  /** 'season' pour les quêtes saisonnières (à venir) ; absent = quête du jour. */
+  scope?: 'day' | 'season'
 }
 
 /** Quêtes du jour du joueur (get_my_quests) et récupération d'une récompense. */

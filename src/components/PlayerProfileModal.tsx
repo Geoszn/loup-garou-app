@@ -49,11 +49,13 @@ export function PlayerProfileModal({
   gameId,
   canTransferHost = false,
   onClose,
+  onFriendRemoved,
 }: {
   userId: string
   gameId?: string
   canTransferHost?: boolean
   onClose: () => void
+  onFriendRemoved?: () => void
 }) {
   const { t, lang } = useLanguage()
   const [profile, setProfile] = useState<PlayerProfile | null>(null)
@@ -62,6 +64,8 @@ export function PlayerProfileModal({
   const [acting, setActing] = useState(false)
   const [transferConfirmOpen, setTransferConfirmOpen] = useState(false)
   const [transferring, setTransferring] = useState(false)
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false)
+  const [removing, setRemoving] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -113,6 +117,20 @@ export function PlayerProfileModal({
     setProfile((p) => (p ? { ...p, friend_status: 'friends' } : p))
   }
 
+  async function confirmRemoveFriend() {
+    setRemoving(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('remove_friend', { p_friend_id: userId })
+    setRemoving(false)
+    setRemoveConfirmOpen(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    setProfile((p) => (p ? { ...p, friend_status: 'none' } : p))
+    onFriendRemoved?.()
+  }
+
   async function confirmTransferHost() {
     if (!gameId) return
     setTransferring(true)
@@ -157,6 +175,7 @@ export function PlayerProfileModal({
             <Stat label={t('stats.gamesWon')} value={profile.rank_wins} />
             {winRate !== null && <Stat label={t('stats.winRate')} value={`${winRate}%`} />}
             {profile.current_streak >= 2 && <Stat label="🔥" value={profile.current_streak} />}
+            {profile.best_streak >= 2 && <Stat label="🔥 max" value={profile.best_streak} />}
           </div>
 
           {continent && (
@@ -179,7 +198,14 @@ export function PlayerProfileModal({
             </Button>
           )}
           {profile.friend_status === 'friends' && (
-            <p className="text-center text-xs text-emerald-400">{t('roster.becameFriends')}</p>
+            <div className="flex flex-col gap-2">
+              <p className="text-center text-xs text-emerald-400">{t('roster.becameFriends')}</p>
+              {onFriendRemoved && (
+                <Button variant="ghost" className="w-full" onClick={() => setRemoveConfirmOpen(true)}>
+                  {t('friends.list.remove')}
+                </Button>
+              )}
+            </div>
           )}
 
           {canTransferHost && (
@@ -198,6 +224,15 @@ export function PlayerProfileModal({
         danger
         onCancel={() => setTransferConfirmOpen(false)}
         onConfirm={confirmTransferHost}
+      />
+      <ConfirmDialog
+        open={removeConfirmOpen}
+        title={t('friends.removeConfirmTitle')}
+        message={t('friends.removeConfirmMessage', { name: profile?.username ?? '' })}
+        confirmLabel={removing ? t('common.loading') : t('friends.list.remove')}
+        danger
+        onCancel={() => setRemoveConfirmOpen(false)}
+        onConfirm={confirmRemoveFriend}
       />
     </Modal>
   )

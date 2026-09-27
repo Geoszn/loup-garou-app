@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useGoBack } from '../hooks/useGoBack'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
@@ -23,7 +23,7 @@ import { LoupCoinIcon } from '../components/LoupCoinIcon'
 export default function Help() {
   const { t } = useLanguage()
   const { session } = useAuth()
-  const navigate = useNavigate()
+  const goBack = useGoBack(session ? '/profil' : '/')
 
   return (
     <div className="relative min-h-screen overflow-hidden px-4 py-10 sm:px-8">
@@ -32,7 +32,7 @@ export default function Help() {
         <header className="flex items-center gap-3">
           <Button
             variant="ghost"
-            onClick={() => navigate(session ? '/dashboard' : '/')}
+            onClick={goBack}
             className="px-3.5 py-2 text-xs"
           >
             {t('common.back')}

@@ -7,6 +7,7 @@ interface StreakResult {
   streak: number
   best: number
   is_new_day: boolean
+  reward_coins?: number
 }
 
 // 12s plutôt que les 7s d'origine : retour utilisateur (première
@@ -68,7 +69,7 @@ export function DailyLoginBanner({ hasActiveEvent = false }: { hasActiveEvent?: 
     return () => clearTimeout(timer)
   }, [result])
 
-  if (!result || hasActiveEvent) return null
+  if (!result || (hasActiveEvent && !result.reward_coins)) return null
 
   // Un palier = record personnel (au moins 3 jours, sinon "record" à 1 ou 2
   // jours n'a pas de sens) : accent rouge (comme les records de victoires)
@@ -81,7 +82,9 @@ export function DailyLoginBanner({ hasActiveEvent = false }: { hasActiveEvent?: 
     : isFirstDay
       ? t('dailyStreak.newHeadline')
       : t('dailyStreak.headline')
-  const sub = isMilestone
+  const sub = result.reward_coins
+    ? t('dailyStreak.reward', { coins: result.reward_coins })
+    : isMilestone
     ? t('dailyStreak.milestoneSub')
     : isFirstDay
       ? t('dailyStreak.newSub')

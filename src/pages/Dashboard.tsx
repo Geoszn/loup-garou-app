@@ -258,6 +258,16 @@ export default function Dashboard() {
           <RankProgress points={profile?.rank_points ?? 0} />
         </div>
 
+        {/* Espace bannière (événements du tableau de bord admin) : juste sous
+            la carte du joueur, avant les quêtes. */}
+        {events.length > 0 && (
+          <div>
+            {events.map((e) => (
+              <EventBanner key={e.id} event={e} onExpire={refreshEvents} />
+            ))}
+          </div>
+        )}
+
         {activeGame && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-moon-400/40 bg-moon-400/5 px-4 py-3">
             <p className="text-sm text-moon-200/90">
@@ -266,14 +276,6 @@ export default function Dashboard() {
             <Button className="px-3.5 py-1.5 text-xs" onClick={resumeActiveGame}>
               {t('dashboard.resume')}
             </Button>
-          </div>
-        )}
-
-        {events.length > 0 && (
-          <div>
-            {events.map((e) => (
-              <EventBanner key={e.id} event={e} onExpire={refreshEvents} />
-            ))}
           </div>
         )}
 

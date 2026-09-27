@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useGoBack } from '../hooks/useGoBack'
 import { supabase } from '../lib/supabase'
 import { notifyFriendRequest } from '../lib/pushSubscription'
 import { Button, Card, ErrorText, Input, Label, SuccessText } from '../components/ui'
@@ -7,6 +7,8 @@ import { FullScreenLoader } from '../components/FullScreenLoader'
 import { AvatarIcon } from '../components/AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from '../components/Avatar'
+import { PlayerProfileModal } from '../components/PlayerProfileModal'
+import { PAGE_SIZE, Pager } from '../components/CollapsibleCard'
 
 interface Person {
   user_id: string
@@ -28,7 +30,7 @@ interface Social {
 }
 
 export default function Friends() {
-  const navigate = useNavigate()
+  const goBack = useGoBack('/dashboard')
   const { t } = useLanguage()
   const [social, setSocial] = useState<Social | null>(null)
   const [loading, setLoading] = useState(true)
@@ -36,6 +38,8 @@ export default function Friends() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
+  const [friendPage, setFriendPage] = useState(0)
+  const [openFriendId, setOpenFriendId] = useState<string | null>(null)
 
   async function load() {
     const { data, error: rpcError } = await supabase.rpc('get_my_social')
@@ -87,20 +91,13 @@ export default function Friends() {
     await load()
   }
 
-  async function remove(friendId: string) {
-    setError(null)
-    const { error: rpcError } = await supabase.rpc('remove_friend', { p_friend_id: friendId })
-    if (rpcError) setError(rpcError.message)
-    await load()
-  }
-
   if (loading || !social) return <FullScreenLoader />
 
   return (
     <div className="min-h-screen px-4 py-10">
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
         <header className="flex items-center gap-3">
-          <Button variant="ghost" onClick={() => navigate('/dashboard')} className="px-3.5 py-2 text-xs">
+          <Button variant="ghost" onClick={goBack} className="px-3.5 py-2 text-xs">
             {t('common.back')}
           </Button>
           <h1 className="font-display text-2xl text-moon-200">{t('friends.title')}</h1>
@@ -194,24 +191,42 @@ export default function Friends() {
           {social.friends.length === 0 ? (
             <p className="text-sm text-moon-200/50">{t('friends.list.empty')}</p>
           ) : (
-            <ul className="flex flex-col gap-2">
-              {social.friends.map((f) => (
-                <li
-                  key={f.user_id}
-                  className="flex items-center justify-between rounded-xl border border-night-600/60 bg-night-900/40 px-4 py-2.5 text-sm"
-                >
-                  <span className="flex items-center gap-1.5 text-moon-200/90">
-                    <Avatar config={f.avatar_config} icon={f.avatar_icon} name={f.username} className="h-7 w-7" /> {f.username}
-                  </span>
-                  <Button variant="ghost" className="px-3 py-1.5 text-xs" onClick={() => remove(f.user_id)}>
-                    {t('friends.list.remove')}
-                  </Button>
-                </li>
-              ))}
-            </ul>
+            <>
+              <ul className="flex flex-col gap-2">
+                {social.friends.slice(friendPage * PAGE_SIZE, (friendPage + 1) * PAGE_SIZE).map((f) => (
+                  <li key={f.user_id}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenFriendId(f.user_id)}
+                      className="flex w-full items-center justify-between gap-2 rounded-xl border border-night-600/60 bg-night-900/40 px-4 py-2.5 text-left text-sm transition-colors hover:border-moon-400/40"
+                    >
+                      <span className="flex min-w-0 items-center gap-2 text-moon-200/90">
+                        <Avatar config={f.avatar_config} icon={f.avatar_icon} name={f.username} className="h-7 w-7 shrink-0" />
+                        <span className="truncate">{f.username}</span>
+                      </span>
+                      <span className="shrink-0 text-moon-200/40" aria-hidden="true">›</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3">
+                <Pager page={friendPage} pageCount={Math.ceil(social.friends.length / PAGE_SIZE)} onChange={setFriendPage} />
+              </div>
+            </>
           )}
         </Card>
       </div>
+      {openFriendId && (
+        <PlayerProfileModal
+          userId={openFriendId}
+          onClose={() => setOpenFriendId(null)}
+          onFriendRemoved={() => {
+            setOpenFriendId(null)
+            setFriendPage(0)
+            void load()
+          }}
+        />
+      )}
     </div>
   )
 }

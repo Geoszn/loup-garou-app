@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
+import { useGoBack } from '../hooks/useGoBack'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Button, Card, ConfirmDialog, ErrorText, Input, Label, Modal, SuccessText } from '../components/ui'
@@ -29,7 +30,7 @@ const CLOSE_DELAY_MS = 700
 
 export default function Account() {
   const { profile, session, refreshProfile } = useAuth()
-  const navigate = useNavigate()
+  const goBack = useGoBack('/profil')
   const [searchParams, setSearchParams] = useSearchParams()
   const { t } = useLanguage()
   const [profileModalOpen, setProfileModalOpen] = useState(false)
@@ -48,7 +49,7 @@ export default function Account() {
     <div className="min-h-screen px-4 py-10">
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
         <header className="flex items-center gap-3">
-          <Button variant="ghost" onClick={() => navigate('/dashboard')} className="px-3.5 py-2 text-xs">
+          <Button variant="ghost" onClick={goBack} className="px-3.5 py-2 text-xs">
             {t('common.back')}
           </Button>
           <h1 className="font-display text-2xl text-moon-200">{t('account.title')}</h1>

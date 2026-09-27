@@ -1,16 +1,19 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from '../components/Avatar'
 import { Button, ErrorText } from '../components/ui'
 import { LoupCoinIcon } from '../components/LoupCoinIcon'
+import { PAGE_SIZE, Pager } from '../components/CollapsibleCard'
 import { ArtifactsPanel, SkinsPanel } from '../components/StorePanels'
 import { MyArtifactRow, REASON_LABELS, type LoupCoinsSummary, type MyArtifact } from './LoupStore'
 import { useMyQuests } from '../hooks/useMyQuests'
 import { DEFAULT_AVATAR_CONFIG } from '../lib/avatarParts'
 import { useMyAvatarConfig, notifyAvatarChanged } from '../components/AvatarEditor'
 import type { StoreSkin } from '../lib/skins'
+
+const STREAK_REWARD_COINS = 50 // à garder identique à claim_daily_login (migration 0196)
 
 type Tab = 'quests' | 'store' | 'season' | 'mine' | 'history'
 
@@ -64,6 +67,10 @@ export default function Rewards() {
   const [ownedSkins, setOwnedSkins] = useState<StoreSkin[] | null>(null)
   const [resetIn, setResetIn] = useState(() => msUntilNextQuestDay())
   const [error, setError] = useState<string | null>(null)
+  const [questScope, setQuestScope] = useState<'day' | 'season'>('day')
+  const [historyPage, setHistoryPage] = useState(0)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+  const navRef = useRef<HTMLElement>(null)
   const [storeTab, setStoreTab] = useState<'artifacts' | 'skins'>('artifacts')
   const { quests, claiming, claim } = useMyQuests()
   const myAvatar = useMyAvatarConfig()
@@ -113,7 +120,39 @@ export default function Rewards() {
   ]
 
   const streak = profile?.login_streak ?? 0
-  const filled = streak >= 7 ? 7 : streak
+  // Trois derniers jours (aujourd'hui compris) puis les trois suivants : un
+  // rappel de revenir demain. Les jours passés sont déduits de la série (jours
+  // consécutifs se terminant aujourd'hui) ; 🎁 = jour où la série atteint un
+  // multiple de 7.
+  const streakDays = [-2, -1, 0, 1, 2, 3].map((d) => {
+    const date = new Date(Date.now() + d * 86400000)
+    return {
+      d,
+      label: d === 0 ? t('rewards.streak.today') : date.toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR', { weekday: 'short' }),
+      done: d <= 0 && -d < streak,
+      gift: d > 0 && (streak + d) % 7 === 0,
+    }
+  })
+  const daysToReward = 7 - (streak % 7)
+
+  const allQuests = quests ?? []
+  const dayQuests = quests === null ? null : allQuests.filter((q) => q.scope !== 'season')
+  const seasonQuests = allQuests.filter((q) => q.scope === 'season')
+  const hasSeasonQuests = seasonQuests.length > 0
+  const shownQuests = questScope === 'season' && hasSeasonQuests ? seasonQuests : dayQuests
+
+  const updateScrollHint = useCallback(() => {
+    const el = navRef.current
+    if (el) setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 6)
+  }, [])
+  useEffect(() => {
+    updateScrollHint()
+    window.addEventListener('resize', updateScrollHint)
+    return () => window.removeEventListener('resize', updateScrollHint)
+  }, [updateScrollHint])
+
+  const txs = summary?.transactions ?? []
+  const historyPageCount = Math.max(1, Math.ceil(txs.length / PAGE_SIZE))
 
   return (
     <div className="min-h-screen px-4 pt-8">
@@ -142,7 +181,8 @@ export default function Rewards() {
           )}
         </div>
 
-        <nav className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+        <div className="relative">
+        <nav ref={navRef} onScroll={updateScrollHint} className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 pr-10 [scrollbar-width:none]">
           {tabs.map((item) => (
             <button
               key={item.id}
@@ -160,33 +200,80 @@ export default function Rewards() {
             </button>
           ))}
         </nav>
+          {canScrollRight && (
+            <button
+              type="button"
+              aria-label={t('rewards.tabs.more')}
+              onClick={() => navRef.current?.scrollBy({ left: 160, behavior: 'smooth' })}
+              className="absolute -right-4 top-0 flex h-[calc(100%-4px)] w-12 items-center justify-end bg-gradient-to-l from-night-950 via-night-950/85 to-transparent pr-3 text-moon-300"
+            >
+              <span className="animate-pulse text-lg leading-none" aria-hidden="true">›</span>
+            </button>
+          )}
+        </div>
 
         <ErrorText>{error}</ErrorText>
 
         {tab === 'quests' && (
           <>
-            <Section title={t('rewards.streak.title')} right={<span className="text-xs font-normal text-moon-300">{streak} {t('dailyStreak.days')} 🔥</span>}>
-              <div className="grid grid-cols-7 gap-1.5">
-                {Array.from({ length: 7 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`flex flex-col items-center gap-1 rounded-lg border py-2 text-[10px] ${
-                      i < filled ? 'border-amber-400/40 bg-amber-400/10 text-amber-300' : 'border-night-600/60 bg-night-900/40 text-moon-200/40'
-                    }`}
+            {hasSeasonQuests && (
+              <div className="flex gap-1 rounded-xl border border-night-600/60 bg-night-900/40 p-1">
+                {(['day', 'season'] as const).map((sc) => (
+                  <button
+                    key={sc}
+                    type="button"
+                    onClick={() => setQuestScope(sc)}
+                    className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-colors ${questScope === sc ? 'bg-blood-600 text-[#fdf6e3]' : 'text-moon-200/60'}`}
                   >
-                    {i + 1}
-                    <span className="text-sm">{i < filled ? '✓' : '·'}</span>
+                    {sc === 'day' ? t('rewards.quests.day') : t('rewards.quests.season')}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {!hasSeasonQuests && (
+              <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-moon-400/30 bg-moon-400/[0.04] p-4 text-center">
+              <p className="font-display text-base text-moon-200">{t('hub.quests.seasonTitle')}</p>
+              <p className="text-xs text-moon-200/60">{t('hub.quests.seasonBody')}</p>
+              <SoonBadge />
+            </div>
+            )}
+
+            {questScope === 'day' || !hasSeasonQuests ? (
+              <>
+            <Section title={t('rewards.streak.title')} right={<span className="text-xs font-normal text-moon-300">{streak} {t('dailyStreak.days')} 🔥</span>}>
+              <div className="grid grid-cols-6 gap-1.5">
+                {streakDays.map((day) => (
+                  <div
+                    key={day.d}
+                    className={`flex flex-col items-center gap-1 rounded-lg border py-2 text-[10px] capitalize ${
+                      day.done
+                        ? 'border-amber-400/40 bg-amber-400/10 text-amber-300'
+                        : day.gift
+                          ? 'border-moon-400/40 bg-moon-400/[0.06] text-moon-300'
+                          : 'border-night-600/60 bg-night-900/40 text-moon-200/40'
+                    } ${day.d === 0 ? 'ring-1 ring-moon-400/60' : ''}`}
+                  >
+                    {day.label}
+                    <span className="text-sm">{day.done ? '✓' : day.gift ? '🎁' : '·'}</span>
                   </div>
                 ))}
               </div>
+              <p className="text-center text-xs text-moon-200/60">
+                {t('rewards.streak.next', { days: daysToReward, coins: STREAK_REWARD_COINS })}
+              </p>
+              <p className="text-center text-[11px] text-moon-200/40">{t('rewards.streak.rule', { coins: STREAK_REWARD_COINS })}</p>
             </Section>
 
-            <Section title={t('hub.quests.daily')} right={<span className="text-xs font-normal text-moon-200/50">⏳ {formatDelay(resetIn)}</span>}>
-              {quests === null ? (
+              </>
+            ) : null}
+
+            <Section title={questScope === 'season' && hasSeasonQuests ? t('hub.quests.seasonTitle') : t('hub.quests.daily')} right={<span className="text-xs font-normal text-moon-200/50">⏳ {formatDelay(resetIn)}</span>}>
+              {shownQuests === null ? (
                 <div className="h-24 animate-pulse rounded-xl bg-night-900/40" />
               ) : (
                 <ul className="flex flex-col gap-3">
-                  {quests.map((q) => {
+                  {shownQuests.map((q) => {
                     const done = q.progress >= q.target
                     const claimed = !!q.claimed_at
                     const segments = q.target > 0 && q.target <= 12 ? q.target : null
@@ -234,11 +321,6 @@ export default function Rewards() {
               )}
             </Section>
 
-            <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-moon-400/30 bg-moon-400/[0.04] p-4 text-center">
-              <p className="font-display text-base text-moon-200">{t('hub.quests.seasonTitle')}</p>
-              <p className="text-xs text-moon-200/60">{t('hub.quests.seasonBody')}</p>
-              <SoonBadge />
-            </div>
           </>
         )}
 
@@ -324,11 +406,12 @@ export default function Rewards() {
 
         {tab === 'history' && (
           <Section title={t('loupStore.history.title')}>
-            {!summary || summary.transactions.length === 0 ? (
+            {txs.length === 0 ? (
               <p className="text-sm text-moon-200/50">{t('loupStore.history.empty')}</p>
             ) : (
+              <>
               <ul className="flex flex-col gap-2">
-                {summary.transactions.map((tx) => (
+                {txs.slice(historyPage * PAGE_SIZE, (historyPage + 1) * PAGE_SIZE).map((tx) => (
                   <li key={tx.id} className="flex items-center justify-between gap-3 rounded-xl border border-night-600/60 bg-night-900/40 px-4 py-2.5 text-sm">
                     <div className="flex min-w-0 flex-col">
                       <span className="truncate text-moon-200/90">{tx.label || t(REASON_LABELS[tx.reason] ?? 'loupStore.transaction.fallbackLabel')}</span>
@@ -343,6 +426,8 @@ export default function Rewards() {
                   </li>
                 ))}
               </ul>
+              <Pager page={historyPage} pageCount={historyPageCount} onChange={setHistoryPage} />
+              </>
             )}
           </Section>
         )}

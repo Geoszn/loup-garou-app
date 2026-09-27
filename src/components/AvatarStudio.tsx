@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
+import type { StoreSkin } from '../lib/skins'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
@@ -102,6 +105,21 @@ export function AvatarStudio({
   const isUnlocked = (kind: PartKind, value: string) =>
     points >= ((PART_MIN_POINTS[kind] as Record<string, number>)[value] ?? 0) || unlockedParts.has(`${kind}:${value}`)
   const start = initial ?? DEFAULT_AVATAR_CONFIG
+  const { lang } = useLanguage()
+  // Skins achetés au Loup Store, rechargés à chaque ouverture pour qu'un achat
+  // tout juste fait apparaisse tout de suite.
+  const [ownedSkins, setOwnedSkins] = useState<StoreSkin[] | null>(null)
+  useEffect(() => {
+    if (!open) return
+    let active = true
+    supabase.rpc('list_store_skins').then(({ data, error }) => {
+      if (!active) return
+      setOwnedSkins(error || !Array.isArray(data) ? [] : (data as StoreSkin[]).filter((s) => s.owned))
+    })
+    return () => {
+      active = false
+    }
+  }, [open])
 
   const [config, setConfig] = useState<AvatarConfig>(start)
   const [past, setPast] = useState<AvatarConfig[]>([])
@@ -219,7 +237,36 @@ export function AvatarStudio({
 
   let grid: ReactNode
   if (tab === 'looks') {
-    grid = LOOKS.map((look) => (
+    const heading = (text: string) => (
+      <p className="col-span-full pt-1 text-[11px] font-semibold uppercase tracking-wider text-moon-200/50">{text}</p>
+    )
+    const skinTiles =
+      ownedSkins === null ? (
+        <div className="col-span-full h-16 animate-pulse rounded-xl bg-night-900/40" />
+      ) : ownedSkins.length === 0 ? (
+        <p className="col-span-full text-xs text-moon-200/50">{t('avatar.skins.none')}</p>
+      ) : (
+        ownedSkins.map((s) => {
+          const preview = { ...config, ...s.config } as AvatarConfig
+          return (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => {
+                setLockedNote(null)
+                apply(preview)
+              }}
+              className={`col-span-2 flex items-center gap-3 rounded-xl border p-2 text-left text-sm transition-colors ${
+                sameConfig(preview, config) ? 'border-moon-400 bg-moon-400/10' : 'border-night-600/60 bg-night-900/50 hover:border-moon-400/50'
+              }`}
+            >
+              <Avatar config={preview} className="h-14 w-14" />
+              <span className="min-w-0 truncate text-moon-200">{lang === 'en' ? s.name_en : s.name_fr}</span>
+            </button>
+          )
+        })
+      )
+    const basic = LOOKS.map((look) => (
       <button
         key={look.label}
         type="button"
@@ -243,6 +290,17 @@ export function AvatarStudio({
         <span className="text-moon-200">{t(look.label)}</span>
       </button>
     ))
+    grid = (
+      <>
+        {heading(t('avatar.skins.owned'))}
+        {skinTiles}
+        <Link to="/recompenses" className="col-span-full text-xs font-semibold text-moon-300 underline underline-offset-2">
+          {t('avatar.skins.store')} →
+        </Link>
+        {heading(t('avatar.skins.basic'))}
+        {basic}
+      </>
+    )
   } else if (tab === 'skin' || tab === 'bg') {
     const colors = tab === 'skin' ? SKIN_TONES : AVATAR_BGS
     const key = tab === 'skin' ? 'skin' : 'bg'
