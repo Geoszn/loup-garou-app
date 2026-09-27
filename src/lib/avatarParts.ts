@@ -10,16 +10,25 @@ export const AVATAR_BGS = ['#3b2a1c', '#2c3a2e', '#3a2530', '#26324a', '#4a3212'
 
 export const HAIRS = [
   'none', 'fade', 'afro', 'braids', 'puffs', 'curly', 'bun', 'flat', 'cornrows', 'locs',
-  'long', 'knots', 'mohawk', 'topknot', 'gele',
+  'long', 'knots', 'mohawk', 'topknot', 'gele', 'malibu_wave',
 ] as const
 export const OUTFITS = [
   'tunic', 'tee', 'cloak', 'wrap', 'kente', 'dashiki', 'boubou', 'hunter', 'suit', 'hood', 'armor', 'royal', 'furcape',
+  'dream_rose', 'cape_solidaire', 'louve_malibu',
 ] as const
 export const ACCESSORIES = [
-  'none', 'ring', 'freckles', 'glasses', 'sunglasses', 'hoops', 'scar', 'beads', 'facepaint', 'eyepatch',
+  'none', 'ring', 'freckles', 'glasses', 'sunglasses', 'hoops', 'scar', 'beads', 'facepaint', 'eyepatch', 'coeur_lunettes',
 ] as const
-export const HEADWEAR = ['none', 'headband', 'cap', 'hat', 'feather', 'crown'] as const
+export const HEADWEAR = ['none', 'headband', 'cap', 'hat', 'feather', 'crown', 'ribbon_pink'] as const
 export const FACES = ['oval', 'round', 'square', 'long', 'heart'] as const
+
+// Seuil-sentinelle utilisé pour les pièces exclusives à une saison (voir
+// migration 0203) : jamais atteignable par les points de rang, la SEULE
+// façon de débloquer ces pièces est de posséder le skin de saison
+// correspondant (déjà géré par le contournement existant de set_my_avatar).
+// Sert aussi côté UI (AvatarStudio) pour afficher "Exclusif de saison" au
+// lieu d'un nombre de points absurde sur les pièces verrouillées.
+export const SEASON_EXCLUSIVE_MIN_POINTS = 999999
 
 export type Hair = (typeof HAIRS)[number]
 export type Outfit = (typeof OUTFITS)[number]
@@ -49,14 +58,18 @@ export const PART_MIN_POINTS: {
 } = {
   hair: {
     none: 0, fade: 0, afro: 0, braids: 0, puffs: 0, curly: 100, bun: 100, flat: 250, cornrows: 350, locs: 250,
-    long: 550, knots: 800, mohawk: 1100, topknot: 1500, gele: 600,
+    long: 550, knots: 800, mohawk: 1100, topknot: 1500, gele: 600, malibu_wave: SEASON_EXCLUSIVE_MIN_POINTS,
   },
   outfit: {
     tunic: 0, tee: 0, cloak: 100, wrap: 100, kente: 250, dashiki: 250, boubou: 350, hunter: 550, suit: 800,
     hood: 600, armor: 1100, royal: 1500, furcape: 2000,
+    dream_rose: SEASON_EXCLUSIVE_MIN_POINTS, cape_solidaire: SEASON_EXCLUSIVE_MIN_POINTS, louve_malibu: SEASON_EXCLUSIVE_MIN_POINTS,
   },
-  acc: { none: 0, ring: 0, freckles: 0, glasses: 100, sunglasses: 150, hoops: 200, scar: 250, beads: 350, facepaint: 550, eyepatch: 800 },
-  head: { none: 0, headband: 100, cap: 250, hat: 550, feather: 800, crown: 2000 },
+  acc: {
+    none: 0, ring: 0, freckles: 0, glasses: 100, sunglasses: 150, hoops: 200, scar: 250, beads: 350, facepaint: 550, eyepatch: 800,
+    coeur_lunettes: SEASON_EXCLUSIVE_MIN_POINTS,
+  },
+  head: { none: 0, headband: 100, cap: 250, hat: 550, feather: 800, crown: 2000, ribbon_pink: SEASON_EXCLUSIVE_MIN_POINTS },
   face: { oval: 0, round: 0, square: 0, long: 0, heart: 0 },
 }
 

@@ -20,6 +20,8 @@ import { PromoCarousel } from '../components/PromoCarousel'
 import { useNarrator } from '../hooks/useNarrator'
 import { useActiveEvents } from '../hooks/useActiveEvents'
 import { useActiveBanners } from '../hooks/useActiveBanners'
+import { useMySeason } from '../hooks/useMySeason'
+import { SeasonTrack } from '../components/SeasonTrack'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from '../components/Avatar'
 
@@ -97,6 +99,7 @@ export default function Dashboard() {
   // qui détecterait sa propre fin — le polling de 30s de useActiveBanners
   // suffit à la faire disparaître.
   const { banners } = useActiveBanners()
+  const { season, refresh: refreshSeason } = useMySeason()
 
   function resumeActiveGame() {
     if (!activeGame) return
@@ -269,6 +272,11 @@ export default function Dashboard() {
             automatiquement (voir PromoCarousel) plutôt que de s'empiler à la
             suite. */}
         <PromoCarousel events={events} banners={banners} onExpire={refreshEvents} />
+
+        {/* Piste de saison (voir migration 0203) — absente s'il n'y a pas de
+            saison en cours, ni de récompense en attente d'une saison
+            passée (voir get_my_season). */}
+        {season && <SeasonTrack season={season} onClaimed={refreshSeason} />}
 
         {activeGame && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-moon-400/40 bg-moon-400/5 px-4 py-3">

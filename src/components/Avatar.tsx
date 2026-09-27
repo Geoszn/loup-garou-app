@@ -11,6 +11,9 @@ import {
 const HAIR_COLOR = '#1b120c'
 const HAIR_COLOR_BRAIDS = '#2a1a10'
 const HAIR_COLOR_LOCS = '#241610'
+const HAIR_COLOR_MALIBU = '#f4c95d'
+const RIBBON_PINK = '#ff4f93'
+const RIBBON_PINK_DARK = '#c2185b'
 
 function shade(hex: string, amt: number): string {
   const n = parseInt(hex.slice(1), 16)
@@ -58,6 +61,8 @@ function hairBack(kind: AvatarConfig['hair'], hair: string): ReactNode {
       return <path d="M27 42c0-20 10-27 23-27s23 7 23 27v40H27z" fill={hair} />
     case 'topknot':
       return <circle cx="50" cy="17" r="10" fill={hair} />
+    case 'malibu_wave':
+      return <path d="M26 42c0-21 11-29 24-29s24 8 24 29v42H26z" fill={hair} />
     default:
       return null
   }
@@ -164,6 +169,14 @@ function hairFront(kind: AvatarConfig['hair'], hair: string): ReactNode {
           <path d="M27 40c-2-16 8-27 24-26 14 1 23 10 22 26-5-7-12-9-23-9s-17 2-23 9z" fill="#c2432a" />
           <path d="M31 32c8-6 20-8 36-2M34 26c8-4 18-5 30 0" stroke="#e0623f" strokeWidth="2.4" fill="none" strokeLinecap="round" />
           <path d="M63 18c8-6 16-2 14 6-6-2-10-2-14-6z" fill="#ecc97d" />
+        </>
+      )
+    case 'malibu_wave':
+      return (
+        <>
+          <path d={CAP_FULL} fill={hair} />
+          <path d="M29 44c-2 14-2 28 0 40M71 44c2 14 2 28 0 40" stroke={hair} strokeWidth="7" strokeLinecap="round" fill="none" />
+          <path d="M61 25c4 4 5 10 4 16" stroke="#ff6fa5" strokeWidth="3" strokeLinecap="round" fill="none" />
         </>
       )
     default:
@@ -290,6 +303,33 @@ function outfitArt(kind: AvatarConfig['outfit'], skin: string, dark: string, uid
           <path d="M28 82l3 6 3-7M44 86l3 6 3-7M60 86l3 6 3-7" stroke="#c9ced6" strokeWidth="1.4" fill="none" strokeLinecap="round" />
         </>
       )
+    case 'dream_rose':
+      return (
+        <>
+          <path d={SHOULDERS} fill="#ff8fc0" />
+          <path d="M34 71c4 12 28 12 32 0" fill="none" stroke="#ffe3f0" strokeWidth="3" strokeLinecap="round" />
+          {[[30, 88], [42, 94], [58, 94], [70, 88], [50, 98]].map(([x, y]) => (
+            <circle key={x} cx={x} cy={y} r="1.4" fill="#fff6fb" />
+          ))}
+        </>
+      )
+    case 'cape_solidaire':
+      return (
+        <>
+          <path d={SHOULDERS} fill="#e0559a" />
+          <path d="M16 84c4-14 18-20 34-20s30 6 34 20l-5 5-5-8-5 9-5-9-5 9-5-9-5 9-5-9-5 8z" fill="#ff9ecf" />
+          <path d="M47 82l-4-5v9zM53 82l4-5v9z" fill={RIBBON_PINK} />
+          <circle cx="50" cy="83" r="2.2" fill={RIBBON_PINK} stroke={RIBBON_PINK_DARK} strokeWidth=".8" />
+        </>
+      )
+    case 'louve_malibu':
+      return (
+        <>
+          <path d={SHOULDERS} fill="#ff6fb0" />
+          <path d="M16 84c4-14 18-20 34-20s30 6 34 20l-6 4-4-6-5 7-5-7-5 8-5-8-5 8-5-8-5 7-5-7-4 6z" fill="#ffe3f0" />
+          <path d="M30 66l-6-14 11 6zM70 66l6-14-11 6z" fill="#ff6fb0" stroke={RIBBON_PINK_DARK} strokeWidth="1" strokeLinejoin="round" />
+        </>
+      )
     default:
       return (
         <>
@@ -344,6 +384,14 @@ function headwearArt(kind: AvatarConfig['head']): ReactNode {
           <circle cx="50" cy="26" r="1.7" fill="#c2432a" />
           <circle cx="41" cy="28" r="1.2" fill="#2b5d7a" />
           <circle cx="59" cy="28" r="1.2" fill="#2f6b3a" />
+        </>
+      )
+    case 'ribbon_pink':
+      return (
+        <>
+          <path d="M41 31l-9-7v14z" fill={RIBBON_PINK} />
+          <path d="M59 31l9-7v14z" fill={RIBBON_PINK} />
+          <circle cx="50" cy="31" r="4" fill={RIBBON_PINK} stroke={RIBBON_PINK_DARK} strokeWidth="1" />
         </>
       )
     default:
@@ -423,6 +471,14 @@ function faceAccessory(kind: AvatarConfig['acc'], skin: string): ReactNode {
           <circle cx="57.4" cy="46" r="4.8" fill="#1b120c" />
         </>
       )
+    case 'coeur_lunettes':
+      return (
+        <>
+          <path d="M40 42c-3-3-8-1-8 3 0 4 5 7 8 9 3-2 8-5 8-9 0-4-5-6-8-3z" fill={RIBBON_PINK} />
+          <path d="M60 42c-3-3-8-1-8 3 0 4 5 7 8 9 3-2 8-5 8-9 0-4-5-6-8-3z" fill={RIBBON_PINK} />
+          <path d="M48 46h4" stroke={RIBBON_PINK_DARK} strokeWidth="1.4" />
+        </>
+      )
     default:
       return null
   }
@@ -432,7 +488,11 @@ function AvatarArt({ config, mood }: { config: AvatarConfig; mood: AvatarMood })
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
   const skin = SKIN_TONES[config.skin]
   const dark = shade(skin, -28)
-  const hair = config.hair === 'braids' ? HAIR_COLOR_BRAIDS : config.hair === 'locs' ? HAIR_COLOR_LOCS : HAIR_COLOR
+  const hair =
+    config.hair === 'braids' ? HAIR_COLOR_BRAIDS
+    : config.hair === 'locs' ? HAIR_COLOR_LOCS
+    : config.hair === 'malibu_wave' ? HAIR_COLOR_MALIBU
+    : HAIR_COLOR
 
   const brows =
     mood === 'angry' ? (

@@ -10,6 +10,7 @@ import { LoupCoinIcon } from '../components/LoupCoinIcon'
 import { translations, type TranslationKey } from '../i18n/translations'
 import type { EventBannerColor, EventBonusCurrency, EventBonusType, GameEvent } from '../types/events'
 import type { Banner as BannerData } from '../types/banners'
+import type { SeasonThemeColor } from '../types/season'
 import { continentEmoji, continentName } from '../lib/continents'
 import { compressImageForUpload } from '../lib/imageCompress'
 import { sendNotificationCampaignNow } from '../lib/adminCampaigns'
@@ -34,7 +35,7 @@ import { RARITY_STYLE, SKIN_CATEGORIES, type SkinCategory, type SkinRarity } fro
 // l'écran "Accès refusé".
 // ============================================================================
 
-type Tab = 'stats' | 'users' | 'games' | 'content' | 'events' | 'quests' | 'artifacts' | 'skins' | 'messages' | 'notifications' | 'security' | 'settings'
+type Tab = 'stats' | 'users' | 'games' | 'content' | 'events' | 'seasons' | 'quests' | 'artifacts' | 'skins' | 'messages' | 'notifications' | 'security' | 'settings'
 
 const TAB_ITEMS: { id: Tab; label: string; icon: string; description: string }[] = [
   { id: 'stats', label: 'Vue d’ensemble', icon: '📊', description: 'Chiffres clés et raccourcis vers les autres sections.' },
@@ -46,6 +47,15 @@ const TAB_ITEMS: { id: Tab; label: string; icon: string; description: string }[]
     label: 'Événements & Bannières',
     icon: '🎉',
     description: 'Événements avec bonus (points ou Loup Coins) et bannières cliquables défilant sur le tableau de bord.',
+  },
+  // Saisons (voir migration 0203) : piste de paliers alimentée par l'XP de
+  // partie/quête déjà en place, récompenses en Loup Coins ou en skins
+  // exclusifs (rattachés depuis l'onglet Skins ci-dessous, champ "Saison").
+  {
+    id: 'seasons',
+    label: 'Saisons',
+    icon: '🏆',
+    description: 'Paliers saisonniers (XP de partie et de quête) avec récompenses en Loup Coins ou skins exclusifs.',
   },
   // Catalogue des quêtes quotidiennes (voir QuestsCard.tsx côté joueur,
   // migration 0112) : texte/objectif/récompense/activation, sans passer par
@@ -109,7 +119,7 @@ const NAV_GROUPS: { title: string; items: Tab[] }[] = [
   { title: 'Aperçu', items: ['stats'] },
   { title: 'Communauté', items: ['users', 'security'] },
   { title: 'Jeu', items: ['games', 'content', 'events'] },
-  { title: 'Économie', items: ['quests', 'artifacts', 'skins'] },
+  { title: 'Économie', items: ['seasons', 'quests', 'artifacts', 'skins'] },
   { title: 'Communication', items: ['messages', 'notifications'] },
   { title: 'Système', items: ['settings'] },
 ]
@@ -527,6 +537,7 @@ export default function AdminDashboard() {
             {tab === 'games' && <GamesTab />}
             {tab === 'content' && <ContentTab />}
             {tab === 'events' && <EventsAndBannersTab />}
+            {tab === 'seasons' && <SeasonsTab />}
             {tab === 'quests' && <QuestTemplatesTab />}
             {tab === 'artifacts' && <StoreArtifactsTab />}
             {tab === 'skins' && <StoreSkinsTab />}
@@ -3185,6 +3196,776 @@ function BannerImageUpload({
 }
 
 // ----------------------------------------------------------------------------
+// Saisons (voir migration 0203) : piste de paliers alimentée par l'XP de
+// partie/quête déjà en place (voir grant_season_xp). Même patron que
+// Événements/Bannières ci-dessus, avec un second niveau (SeasonTiersPanel)
+// pour gérer les paliers d'une saison sélectionnée — remplace la liste
+// principale le temps de la consulter plutôt que d'ouvrir un tiroir dans un
+// tiroir. Les skins de récompense se créent depuis l'onglet Skins (champ
+// "Saison" du formulaire, voir StoreSkinFormDrawer) : une saison doit donc
+// être créée EN PREMIER, avant ses skins exclusifs.
+// ----------------------------------------------------------------------------
+interface AdminSeason {
+  id: string
+  slug: string
+  name_fr: string
+  name_en: string
+  theme_color: SeasonThemeColor
+  starts_at: string
+  ends_at: string
+  xp_per_game_played: number
+  xp_per_game_won: number
+  xp_per_quest_claim: number
+  is_enabled: boolean
+  created_at: string
+}
+
+const SEASON_THEME_LABELS: Record<SeasonThemeColor, string> = {
+  blush: '🌸 Rose',
+  gold: '🟡 Or',
+  blood: '🔴 Sang',
+  emerald: '🟢 Émeraude',
+  violet: '🟣 Violet',
+}
+
+function seasonStatus(s: AdminSeason): { label: string; className: string } {
+  const now = Date.now()
+  if (!s.is_enabled) return { label: 'Désactivée', className: 'bg-night-600 text-moon-200/50' }
+  if (now < new Date(s.starts_at).getTime()) return { label: 'Programmée', className: 'bg-night-600 text-moon-200/70' }
+  if (now > new Date(s.ends_at).getTime()) return { label: 'Terminée', className: 'bg-night-600 text-moon-200/50' }
+  return { label: 'En cours', className: 'bg-emerald-700/30 text-emerald-400' }
+}
+
+function SeasonsTab() {
+  const [seasons, setSeasons] = useState<AdminSeason[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<AdminSeason | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<AdminSeason | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [tiersFor, setTiersFor] = useState<AdminSeason | null>(null)
+
+  const load = useCallback(async () => {
+    const { data, error: rpcError } = await supabase.rpc('admin_list_seasons')
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    setError(null)
+    setSeasons((data ?? []) as AdminSeason[])
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  async function toggleEnabled(s: AdminSeason) {
+    setBusyId(s.id)
+    const { error: rpcError } = await supabase.rpc('admin_upsert_season', {
+      p_id: s.id,
+      p_slug: s.slug,
+      p_name_fr: s.name_fr,
+      p_name_en: s.name_en,
+      p_theme_color: s.theme_color,
+      p_starts_at: s.starts_at,
+      p_ends_at: s.ends_at,
+      p_xp_per_game_played: s.xp_per_game_played,
+      p_xp_per_game_won: s.xp_per_game_won,
+      p_xp_per_quest_claim: s.xp_per_quest_claim,
+      p_is_enabled: !s.is_enabled,
+    })
+    setBusyId(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    load()
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    setBusyId(deleteTarget.id)
+    const { error: rpcError } = await supabase.rpc('admin_delete_season', { p_id: deleteTarget.id })
+    setBusyId(null)
+    setDeleteTarget(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    load()
+  }
+
+  if (tiersFor) {
+    return (
+      <SeasonTiersPanel
+        season={tiersFor}
+        onBack={() => {
+          setTiersFor(null)
+          load()
+        }}
+      />
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-moon-200/60">{seasons?.length ?? 0} saison(s)</p>
+        <Button
+          className="px-3.5 py-2 text-xs"
+          onClick={() => {
+            setEditing(null)
+            setFormOpen(true)
+          }}
+        >
+          + Nouvelle saison
+        </Button>
+      </div>
+
+      <ErrorText>{error}</ErrorText>
+
+      {seasons === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
+      {seasons !== null && seasons.length === 0 && <p className="text-sm text-moon-200/50">Aucune saison créée.</p>}
+
+      <div className="flex flex-col gap-2">
+        {seasons?.map((s) => {
+          const status = seasonStatus(s)
+          return (
+            <Card key={s.id} className="flex flex-col gap-3 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="flex items-center gap-2 text-sm font-semibold text-moon-200">
+                    {SEASON_THEME_LABELS[s.theme_color]} {s.name_fr}
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] uppercase ${status.className}`}>{status.label}</span>
+                  </p>
+                  <p className="mt-1 text-xs text-moon-200/50">
+                    Du {fmtDate(s.starts_at)} au {fmtDate(s.ends_at)}
+                  </p>
+                  <p className="mt-1 text-xs text-moon-200/40">
+                    XP : {s.xp_per_game_played}/partie · +{s.xp_per_game_won} victoire · {s.xp_per_quest_claim}/quête réclamée
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="ghost" className="px-3 py-1.5 text-xs" disabled={busyId === s.id} onClick={() => setTiersFor(s)}>
+                    Paliers →
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    className="px-3 py-1.5 text-xs"
+                    disabled={busyId === s.id}
+                    onClick={() => {
+                      setEditing(s)
+                      setFormOpen(true)
+                    }}
+                  >
+                    Modifier
+                  </Button>
+                  <Button variant="ghost" className="px-3 py-1.5 text-xs" disabled={busyId === s.id} onClick={() => toggleEnabled(s)}>
+                    {s.is_enabled ? 'Désactiver' : 'Activer'}
+                  </Button>
+                  <Button variant="danger" className="px-3 py-1.5 text-xs" disabled={busyId === s.id} onClick={() => setDeleteTarget(s)}>
+                    Supprimer
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )
+        })}
+      </div>
+
+      <SeasonFormDrawer
+        open={formOpen}
+        season={editing}
+        onClose={() => setFormOpen(false)}
+        onSaved={() => {
+          setFormOpen(false)
+          load()
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={`Supprimer « ${deleteTarget?.name_fr ?? ''} » ?`}
+        message="Les paliers de cette saison seront supprimés avec elle. Les skins déjà attribués à des joueurs restent possédés — seule la fiche de la saison disparaît."
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        danger
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
+    </div>
+  )
+}
+
+interface SeasonFormState {
+  slug: string
+  name_fr: string
+  name_en: string
+  theme_color: SeasonThemeColor
+  starts_at: string
+  ends_at: string
+  xp_per_game_played: string
+  xp_per_game_won: string
+  xp_per_quest_claim: string
+  is_enabled: boolean
+}
+
+const EMPTY_SEASON_FORM: SeasonFormState = {
+  slug: '',
+  name_fr: '',
+  name_en: '',
+  theme_color: 'blush',
+  starts_at: '',
+  ends_at: '',
+  xp_per_game_played: '10',
+  xp_per_game_won: '15',
+  xp_per_quest_claim: '20',
+  is_enabled: true,
+}
+
+function SeasonFormDrawer({
+  open,
+  season,
+  onClose,
+  onSaved,
+}: {
+  open: boolean
+  season: AdminSeason | null
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [form, setForm] = useState<SeasonFormState>(EMPTY_SEASON_FORM)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    if (season) {
+      setForm({
+        slug: season.slug,
+        name_fr: season.name_fr,
+        name_en: season.name_en,
+        theme_color: season.theme_color,
+        starts_at: toDatetimeLocal(season.starts_at),
+        ends_at: toDatetimeLocal(season.ends_at),
+        xp_per_game_played: String(season.xp_per_game_played),
+        xp_per_game_won: String(season.xp_per_game_won),
+        xp_per_quest_claim: String(season.xp_per_quest_claim),
+        is_enabled: season.is_enabled,
+      })
+    } else {
+      setForm(EMPTY_SEASON_FORM)
+    }
+    setError(null)
+  }, [open, season])
+
+  async function save(e: FormEvent) {
+    e.preventDefault()
+    if (!season && !/^[a-z0-9-]+$/.test(form.slug)) {
+      setError('Identifiant technique invalide (minuscules, chiffres, tirets uniquement).')
+      return
+    }
+    if (!form.name_fr.trim() || !form.name_en.trim()) {
+      setError('Nom requis (FR et EN).')
+      return
+    }
+    if (!form.starts_at || !form.ends_at) {
+      setError('Dates de début et de fin requises.')
+      return
+    }
+    if (new Date(form.ends_at) <= new Date(form.starts_at)) {
+      setError('La date de fin doit être après la date de début.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('admin_upsert_season', {
+      p_id: season?.id ?? null,
+      p_slug: form.slug,
+      p_name_fr: form.name_fr,
+      p_name_en: form.name_en,
+      p_theme_color: form.theme_color,
+      p_starts_at: new Date(form.starts_at).toISOString(),
+      p_ends_at: new Date(form.ends_at).toISOString(),
+      p_xp_per_game_played: Number(form.xp_per_game_played) || 0,
+      p_xp_per_game_won: Number(form.xp_per_game_won) || 0,
+      p_xp_per_quest_claim: Number(form.xp_per_quest_claim) || 0,
+      p_is_enabled: form.is_enabled,
+    })
+    setBusy(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    onSaved()
+  }
+
+  return (
+    <Modal size="lg" open={open} onClose={onClose} title={season ? 'Modifier la saison' : 'Nouvelle saison'}>
+      <form className="flex flex-col gap-4" onSubmit={save}>
+        <div>
+          <Label>Identifiant technique</Label>
+          <Input
+            value={form.slug}
+            disabled={!!season}
+            onChange={(ev) => setForm((f) => ({ ...f, slug: ev.target.value.trim().toLowerCase() }))}
+            placeholder="ex. octobre-rose-barbie"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <Label>Nom (FR)</Label>
+            <Input value={form.name_fr} onChange={(ev) => setForm((f) => ({ ...f, name_fr: ev.target.value }))} placeholder="Octobre Rose × Barbie" />
+          </div>
+          <div>
+            <Label>Nom (EN)</Label>
+            <Input value={form.name_en} onChange={(ev) => setForm((f) => ({ ...f, name_en: ev.target.value }))} placeholder="Pink October × Barbie" />
+          </div>
+        </div>
+
+        <div>
+          <Label>Couleur de thème</Label>
+          <Segmented
+            tabs={(Object.keys(SEASON_THEME_LABELS) as SeasonThemeColor[]).map((id) => ({ id, label: SEASON_THEME_LABELS[id] }))}
+            active={form.theme_color}
+            onChange={(id) => setForm((f) => ({ ...f, theme_color: id }))}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <Label>Début</Label>
+            <input
+              type="datetime-local"
+              value={form.starts_at}
+              onChange={(ev) => setForm((f) => ({ ...f, starts_at: ev.target.value }))}
+              className="w-full rounded-xl border border-night-500 bg-night-800/80 px-3 py-2 text-sm text-moon-200 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20"
+            />
+          </div>
+          <div>
+            <Label>Fin</Label>
+            <input
+              type="datetime-local"
+              value={form.ends_at}
+              onChange={(ev) => setForm((f) => ({ ...f, ends_at: ev.target.value }))}
+              className="w-full rounded-xl border border-night-500 bg-night-800/80 px-3 py-2 text-sm text-moon-200 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20"
+            />
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-night-600/60 bg-night-950/30 p-3">
+          <Label>XP de saison gagné</Label>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div>
+              <Label>Par partie jouée</Label>
+              <Input
+                type="number"
+                min={0}
+                value={form.xp_per_game_played}
+                onChange={(ev) => setForm((f) => ({ ...f, xp_per_game_played: ev.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>Bonus victoire</Label>
+              <Input
+                type="number"
+                min={0}
+                value={form.xp_per_game_won}
+                onChange={(ev) => setForm((f) => ({ ...f, xp_per_game_won: ev.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>Par quête réclamée</Label>
+              <Input
+                type="number"
+                min={0}
+                value={form.xp_per_quest_claim}
+                onChange={(ev) => setForm((f) => ({ ...f, xp_per_quest_claim: ev.target.value }))}
+              />
+            </div>
+          </div>
+          <p className="mt-2 text-[11px] text-moon-200/40">
+            Une victoire rapporte "Par partie jouée" + "Bonus victoire" cumulés.
+          </p>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-moon-200/80">
+          <input
+            type="checkbox"
+            checked={form.is_enabled}
+            onChange={(ev) => setForm((f) => ({ ...f, is_enabled: ev.target.checked }))}
+            className="h-4 w-4 rounded border-night-600/70 bg-night-900/50 accent-blood-600"
+          />
+          Activée
+        </label>
+
+        <ErrorText>{error}</ErrorText>
+
+        <div className="mt-2 flex gap-3">
+          <Button type="button" variant="ghost" className="flex-1" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button type="submit" className="flex-1" disabled={busy}>
+            {season ? 'Enregistrer' : 'Créer'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+interface AdminSeasonTier {
+  id: string
+  season_id: string
+  tier_number: number
+  xp_required: number
+  reward_type: 'coins' | 'skin'
+  reward_coins: number | null
+  reward_skin_id: string | null
+  reward_skin_name: string | null
+  label_fr: string
+  label_en: string
+}
+
+/** Paliers d'une saison (remplace la liste des saisons le temps d'être
+ * consultée — voir SeasonsTab). Les skins proposés dans le sélecteur de
+ * récompense sont uniquement ceux déjà rattachés à CETTE saison (champ
+ * "Saison" du formulaire de skin, onglet Skins) — admin_upsert_season_tier
+ * refuse tout autre skin côté serveur de toute façon. */
+function SeasonTiersPanel({ season, onBack }: { season: AdminSeason; onBack: () => void }) {
+  const [tiers, setTiers] = useState<AdminSeasonTier[] | null>(null)
+  const [seasonSkins, setSeasonSkins] = useState<StoreSkin[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState<AdminSeasonTier | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<AdminSeasonTier | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    const [tiersRes, skinsRes] = await Promise.all([
+      supabase.rpc('admin_list_season_tiers', { p_season_id: season.id }),
+      supabase.rpc('admin_list_store_skins'),
+    ])
+    if (tiersRes.error) {
+      setError(tiersRes.error.message)
+      return
+    }
+    setError(null)
+    setTiers((tiersRes.data ?? []) as AdminSeasonTier[])
+    setSeasonSkins(((skinsRes.data ?? []) as StoreSkin[]).filter((s) => s.season_id === season.id))
+  }, [season.id])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    setBusyId(deleteTarget.id)
+    const { error: rpcError } = await supabase.rpc('admin_delete_season_tier', { p_id: deleteTarget.id })
+    setBusyId(null)
+    setDeleteTarget(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    load()
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <button type="button" onClick={onBack} className="text-xs font-semibold text-moon-300 hover:underline">
+          ← Retour aux saisons
+        </button>
+        <Button
+          className="px-3.5 py-2 text-xs"
+          onClick={() => {
+            setEditing(null)
+            setFormOpen(true)
+          }}
+        >
+          + Nouveau palier
+        </Button>
+      </div>
+
+      <p className="text-sm text-moon-200/60">
+        {SEASON_THEME_LABELS[season.theme_color]} <strong className="text-moon-200">{season.name_fr}</strong> — {tiers?.length ?? 0} palier(s)
+      </p>
+
+      {seasonSkins.length === 0 && (
+        <p className="rounded-xl border border-amber-400/30 bg-amber-400/5 px-3 py-2 text-xs text-amber-300">
+          Aucun skin n'est encore rattaché à cette saison — pour un palier "skin", crée d'abord le skin depuis l'onglet
+          Skins en choisissant cette saison dans son formulaire.
+        </p>
+      )}
+
+      <ErrorText>{error}</ErrorText>
+
+      {tiers === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
+      {tiers !== null && tiers.length === 0 && <p className="text-sm text-moon-200/50">Aucun palier créé.</p>}
+
+      {tiers !== null && tiers.length > 0 && (
+        <Card className="overflow-hidden !p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-night-700/60 text-left text-[10.5px] uppercase tracking-wide text-moon-200/40">
+                  <th className="px-4 py-2.5 font-semibold">#</th>
+                  <th className="px-3 py-2.5 font-semibold">XP requis</th>
+                  <th className="px-3 py-2.5 font-semibold">Récompense</th>
+                  <th className="px-3 py-2.5" />
+                </tr>
+              </thead>
+              <tbody>
+                {tiers.map((tier) => (
+                  <tr key={tier.id} className="border-b border-night-800/60 last:border-0 hover:bg-night-800/25">
+                    <td className="px-4 py-2.5 font-semibold text-moon-200">{tier.tier_number}</td>
+                    <td className="px-3 py-2.5 tabular-nums text-moon-200/80">{tier.xp_required}</td>
+                    <td className="px-3 py-2.5">
+                      {tier.reward_type === 'coins' ? (
+                        <span className="inline-flex items-center gap-1 font-semibold text-amber-300">
+                          <LoupCoinIcon className="h-3 w-3" /> {tier.reward_coins}
+                        </span>
+                      ) : (
+                        <span className="font-semibold text-purple-300">🎁 {tier.reward_skin_name ?? '—'}</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <div className="flex justify-end gap-1.5">
+                        <button
+                          type="button"
+                          title="Modifier"
+                          disabled={busyId === tier.id}
+                          onClick={() => {
+                            setEditing(tier)
+                            setFormOpen(true)
+                          }}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-night-600/70 bg-night-900/40 text-moon-200/70 transition-colors hover:border-moon-400/40 hover:text-moon-200"
+                        >
+                          ✎
+                        </button>
+                        <button
+                          type="button"
+                          title="Supprimer"
+                          disabled={busyId === tier.id}
+                          onClick={() => setDeleteTarget(tier)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-blood-700/50 bg-blood-700/10 text-blood-400 transition-colors hover:bg-blood-700/20"
+                        >
+                          🗑
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      <SeasonTierFormDrawer
+        open={formOpen}
+        season={season}
+        tier={editing}
+        seasonSkins={seasonSkins}
+        onClose={() => setFormOpen(false)}
+        onSaved={() => {
+          setFormOpen(false)
+          load()
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={`Supprimer le palier #${deleteTarget?.tier_number ?? ''} ?`}
+        message="Les joueurs qui l'avaient déjà réclamé gardent leur récompense. Action irréversible."
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        danger
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
+    </div>
+  )
+}
+
+interface SeasonTierFormState {
+  tier_number: string
+  xp_required: string
+  reward_type: 'coins' | 'skin'
+  reward_coins: string
+  reward_skin_id: string
+  label_fr: string
+  label_en: string
+}
+
+const EMPTY_SEASON_TIER_FORM: SeasonTierFormState = {
+  tier_number: '1',
+  xp_required: '0',
+  reward_type: 'coins',
+  reward_coins: '30',
+  reward_skin_id: '',
+  label_fr: '',
+  label_en: '',
+}
+
+function SeasonTierFormDrawer({
+  open,
+  season,
+  tier,
+  seasonSkins,
+  onClose,
+  onSaved,
+}: {
+  open: boolean
+  season: AdminSeason
+  tier: AdminSeasonTier | null
+  seasonSkins: StoreSkin[]
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [form, setForm] = useState<SeasonTierFormState>(EMPTY_SEASON_TIER_FORM)
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    if (tier) {
+      setForm({
+        tier_number: String(tier.tier_number),
+        xp_required: String(tier.xp_required),
+        reward_type: tier.reward_type,
+        reward_coins: tier.reward_coins ? String(tier.reward_coins) : '30',
+        reward_skin_id: tier.reward_skin_id ?? '',
+        label_fr: tier.label_fr,
+        label_en: tier.label_en,
+      })
+    } else {
+      setForm({ ...EMPTY_SEASON_TIER_FORM, reward_skin_id: seasonSkins[0]?.id ?? '' })
+    }
+    setError(null)
+  }, [open, tier, seasonSkins])
+
+  async function save(e: FormEvent) {
+    e.preventDefault()
+    if (!form.label_fr.trim() || !form.label_en.trim()) {
+      setError('Libellé requis (FR et EN).')
+      return
+    }
+    if (form.reward_type === 'skin' && !form.reward_skin_id) {
+      setError('Choisis un skin rattaché à cette saison.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('admin_upsert_season_tier', {
+      p_id: tier?.id ?? null,
+      p_season_id: season.id,
+      p_tier_number: Number(form.tier_number) || 0,
+      p_xp_required: Number(form.xp_required) || 0,
+      p_reward_type: form.reward_type,
+      p_reward_coins: form.reward_type === 'coins' ? Number(form.reward_coins) || 0 : null,
+      p_reward_skin_id: form.reward_type === 'skin' ? form.reward_skin_id : null,
+      p_label_fr: form.label_fr,
+      p_label_en: form.label_en,
+    })
+    setBusy(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    onSaved()
+  }
+
+  return (
+    <Modal size="lg" open={open} onClose={onClose} title={tier ? `Modifier le palier #${tier.tier_number}` : 'Nouveau palier'}>
+      <form className="flex flex-col gap-4" onSubmit={save}>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>Numéro de palier</Label>
+            <Input type="number" min={1} value={form.tier_number} onChange={(ev) => setForm((f) => ({ ...f, tier_number: ev.target.value }))} />
+          </div>
+          <div>
+            <Label>XP requis (cumulatif)</Label>
+            <Input type="number" min={0} value={form.xp_required} onChange={(ev) => setForm((f) => ({ ...f, xp_required: ev.target.value }))} />
+          </div>
+        </div>
+
+        <div>
+          <Label>Type de récompense</Label>
+          <Segmented
+            tabs={[
+              { id: 'coins' as const, label: '🪙 Loup Coins' },
+              { id: 'skin' as const, label: '🎁 Skin de saison' },
+            ]}
+            active={form.reward_type}
+            onChange={(id) => setForm((f) => ({ ...f, reward_type: id }))}
+          />
+        </div>
+
+        {form.reward_type === 'coins' ? (
+          <div>
+            <Label>Montant en Loup Coins</Label>
+            <Input type="number" min={1} value={form.reward_coins} onChange={(ev) => setForm((f) => ({ ...f, reward_coins: ev.target.value }))} />
+          </div>
+        ) : (
+          <div>
+            <Label>Skin de la saison</Label>
+            {seasonSkins.length === 0 ? (
+              <p className="text-xs text-blood-400">Aucun skin rattaché à cette saison — crée-le d'abord depuis l'onglet Skins.</p>
+            ) : (
+              <select
+                value={form.reward_skin_id}
+                onChange={(ev) => setForm((f) => ({ ...f, reward_skin_id: ev.target.value }))}
+                className="w-full rounded-xl border border-night-500 bg-night-800/80 px-3 py-2 text-sm text-moon-200 outline-none transition focus:border-moon-400/60"
+              >
+                {seasonSkins.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name_fr} ({SKIN_RARITY_LABELS_FR[s.rarity]})
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <Label>Libellé (FR)</Label>
+            <Input
+              value={form.label_fr}
+              onChange={(ev) => setForm((f) => ({ ...f, label_fr: ev.target.value }))}
+              placeholder={form.reward_type === 'coins' ? `${form.reward_coins} Loup Coins` : 'Nom du skin'}
+            />
+          </div>
+          <div>
+            <Label>Libellé (EN)</Label>
+            <Input
+              value={form.label_en}
+              onChange={(ev) => setForm((f) => ({ ...f, label_en: ev.target.value }))}
+              placeholder={form.reward_type === 'coins' ? `${form.reward_coins} Loup Coins` : 'Skin name'}
+            />
+          </div>
+        </div>
+
+        <ErrorText>{error}</ErrorText>
+
+        <div className="mt-2 flex gap-3">
+          <Button type="button" variant="ghost" className="flex-1" onClick={onClose}>
+            Annuler
+          </Button>
+          <Button type="submit" className="flex-1" disabled={busy}>
+            {tier ? 'Enregistrer' : 'Créer'}
+          </Button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+// ----------------------------------------------------------------------------
 // Catalogue des quêtes quotidiennes (voir QuestsCard.tsx côté joueur,
 // migration 0112) — même patron que EventsTab/EventFormDrawer juste
 // au-dessus : upsert unique (p_id null = création), toggle Activer/
@@ -4616,6 +5397,9 @@ interface StoreSkin {
   ends_at: string | null
   is_active: boolean
   created_at: string
+  // Skin exclusif à une saison (voir migration 0203) — null = boutique
+  // normale, comportement inchangé pour tout ce qui précède cette colonne.
+  season_id: string | null
 }
 
 const SKIN_CATEGORY_LABELS_FR: Record<SkinCategory, string> = {
@@ -4673,6 +5457,11 @@ function StoreSkinsTab() {
       p_starts_at: s.starts_at,
       p_ends_at: s.ends_at,
       p_active: !s.is_active,
+      // admin_upsert_store_skin réécrit toutes les colonnes à chaque appel
+      // (voir la même remarque sur admin_upsert_event) — omettre season_id
+      // détacherait silencieusement un skin de sa saison à chaque bascule
+      // Activer/Désactiver.
+      p_season_id: s.season_id,
     })
     setBusyId(null)
     if (rpcError) {
@@ -4863,6 +5652,9 @@ interface StoreSkinFormState {
   starts_at: string
   ends_at: string
   active: boolean
+  // '' = boutique normale, sinon id d'une saison (voir migration 0203) — un
+  // skin de saison n'est jamais vendu, le prix ci-dessus est alors ignoré.
+  season_id: string
 }
 
 const EMPTY_SKIN_FORM: StoreSkinFormState = {
@@ -4880,6 +5672,7 @@ const EMPTY_SKIN_FORM: StoreSkinFormState = {
   starts_at: '',
   ends_at: '',
   active: true,
+  season_id: '',
 }
 
 // Un menu déroulant par pièce d'avatar concernée par un skin — même
@@ -4909,6 +5702,14 @@ function StoreSkinFormDrawer({
   const [form, setForm] = useState<StoreSkinFormState>(EMPTY_SKIN_FORM)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [seasons, setSeasons] = useState<AdminSeason[]>([])
+
+  useEffect(() => {
+    if (!open) return
+    supabase.rpc('admin_list_seasons').then(({ data }) => {
+      if (Array.isArray(data)) setSeasons(data as AdminSeason[])
+    })
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -4928,6 +5729,7 @@ function StoreSkinFormDrawer({
         starts_at: skin.starts_at ? toDatetimeLocal(skin.starts_at) : '',
         ends_at: skin.ends_at ? toDatetimeLocal(skin.ends_at) : '',
         active: skin.is_active,
+        season_id: skin.season_id ?? '',
       })
     } else {
       setForm(EMPTY_SKIN_FORM)
@@ -4959,7 +5761,7 @@ function StoreSkinFormDrawer({
       return
     }
     const price = Number(form.price_coins)
-    if (!Number.isFinite(price) || price <= 0) {
+    if (!form.season_id && (!Number.isFinite(price) || price <= 0)) {
       setError('Prix invalide.')
       return
     }
@@ -4988,6 +5790,7 @@ function StoreSkinFormDrawer({
       p_starts_at: form.availMode === 'period' && form.starts_at ? new Date(form.starts_at).toISOString() : null,
       p_ends_at: form.availMode === 'period' && form.ends_at ? new Date(form.ends_at).toISOString() : null,
       p_active: form.active,
+      p_season_id: form.season_id || null,
     })
     setBusy(false)
     if (rpcError) {
@@ -5097,10 +5900,36 @@ function StoreSkinFormDrawer({
           </div>
         </div>
 
+        <div>
+          <Label>Saison</Label>
+          <select
+            value={form.season_id}
+            onChange={(ev) => setForm((f) => ({ ...f, season_id: ev.target.value }))}
+            className="w-full truncate rounded-xl border border-night-500 bg-night-800/80 px-3 py-2.5 text-sm text-moon-200 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20"
+          >
+            <option value="">— Boutique normale (achetable) —</option>
+            {seasons.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name_fr}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-moon-200/40">
+            Rattaché à une saison : jamais dans la boutique, obtenu uniquement en réclamant le palier correspondant (onglet Saisons).
+          </p>
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>Prix (🪙 Loup Coins)</Label>
-            <Input type="number" min={1} value={form.price_coins} onChange={(ev) => setForm((f) => ({ ...f, price_coins: ev.target.value }))} />
+            <Input
+              type="number"
+              min={1}
+              disabled={!!form.season_id}
+              value={form.season_id ? '' : form.price_coins}
+              placeholder={form.season_id ? 'Offert par la saison' : undefined}
+              onChange={(ev) => setForm((f) => ({ ...f, price_coins: ev.target.value }))}
+            />
           </div>
           <div>
             <Label>Ordre d’affichage</Label>

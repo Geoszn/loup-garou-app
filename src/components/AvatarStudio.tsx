@@ -18,6 +18,7 @@ import {
   HEADWEAR,
   OUTFITS,
   PART_MIN_POINTS,
+  SEASON_EXCLUSIVE_MIN_POINTS,
   SKIN_TONES,
   type AvatarConfig,
   type AvatarMood,
@@ -337,9 +338,9 @@ export function AvatarStudio({
           <span className="relative block w-full">
             {thumb({ ...config, [kind]: value } as AvatarConfig, active, zoom)}
             {locked && (
-              <span className="absolute inset-0 flex flex-col items-center justify-center rounded-xl bg-black/55 text-[11px] text-moon-200">
+              <span className="absolute inset-0 flex flex-col items-center justify-center rounded-xl bg-black/55 text-center text-[11px] text-moon-200">
                 <span className="text-base leading-none">🔒</span>
-                {min} pts
+                {min >= SEASON_EXCLUSIVE_MIN_POINTS ? t('avatar.seasonExclusive') : `${min} pts`}
               </span>
             )}
           </span>
@@ -463,7 +464,12 @@ export function AvatarStudio({
       </nav>
 
       <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto px-4 py-3">
-        {lockedNote && (
+        {lockedNote && lockedNote.min >= SEASON_EXCLUSIVE_MIN_POINTS && (
+          <div className="mb-3 rounded-xl border border-moon-400/30 bg-moon-400/5 px-3 py-2 text-xs text-moon-200/80">
+            🔒 {t('avatar.seasonExclusiveMsg')}
+          </div>
+        )}
+        {lockedNote && lockedNote.min < SEASON_EXCLUSIVE_MIN_POINTS && (
           <div className="mb-3 rounded-xl border border-moon-400/30 bg-moon-400/5 px-3 py-2 text-xs text-moon-200/80">
             🔒{' '}
             {t('avatar.lockedMsg', {
