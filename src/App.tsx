@@ -15,6 +15,7 @@ import JoinByLink from './pages/JoinByLink'
 import NotFound from './pages/NotFound'
 import { FullScreenLoader } from './components/FullScreenLoader'
 import { ProtectedRoute } from './components/ProtectedRoute'
+import { AppShell } from './components/AppShell'
 import { UpdateBanner } from './components/UpdateBanner'
 import { SeoManager } from './components/SeoManager'
 
@@ -37,7 +38,9 @@ const Help = lazy(() => import('./pages/Help'))
 // écran vu après connexion (Dashboard, resté eager).
 const Account = lazy(() => import('./pages/Account'))
 const Stats = lazy(() => import('./pages/Stats'))
-const LoupStore = lazy(() => import('./pages/LoupStore'))
+const Play = lazy(() => import('./pages/Play'))
+const Rewards = lazy(() => import('./pages/Rewards'))
+const Profile = lazy(() => import('./pages/Profile'))
 const Friends = lazy(() => import('./pages/Friends'))
 const Lobby = lazy(() => import('./pages/Lobby'))
 const SpectateGame = lazy(() => import('./pages/SpectateGame'))
@@ -120,13 +123,47 @@ export default function App() {
         }
       />
       <Route
-        path="/dashboard"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <AppShell />
           </ProtectedRoute>
         }
-      />
+      >
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route
+          path="/jouer"
+          element={
+            <Suspense fallback={<FullScreenLoader />}>
+              <Play />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/recompenses"
+          element={
+            <Suspense fallback={<FullScreenLoader />}>
+              <Rewards />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/amis"
+          element={
+            <Suspense fallback={<FullScreenLoader />}>
+              <Friends />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/profil"
+          element={
+            <Suspense fallback={<FullScreenLoader />}>
+              <Profile />
+            </Suspense>
+          }
+        />
+      </Route>
+      <Route path="/loup-store" element={<Navigate to="/recompenses" replace />} />
       <Route
         path="/compte"
         element={
@@ -143,26 +180,6 @@ export default function App() {
           <ProtectedRoute>
             <Suspense fallback={<FullScreenLoader />}>
               <Stats />
-            </Suspense>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/loup-store"
-        element={
-          <ProtectedRoute>
-            <Suspense fallback={<FullScreenLoader />}>
-              <LoupStore />
-            </Suspense>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/amis"
-        element={
-          <ProtectedRoute>
-            <Suspense fallback={<FullScreenLoader />}>
-              <Friends />
             </Suspense>
           </ProtectedRoute>
         }

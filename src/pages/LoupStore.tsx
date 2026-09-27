@@ -7,7 +7,7 @@ import { FullScreenLoader } from '../components/FullScreenLoader'
 import { LoupCoinIcon } from '../components/LoupCoinIcon'
 import type { TranslationKey } from '../i18n/translations'
 
-interface LoupCoinsTransaction {
+export interface LoupCoinsTransaction {
   id: string
   amount: number
   reason: string
@@ -15,7 +15,7 @@ interface LoupCoinsTransaction {
   created_at: string
 }
 
-interface LoupCoinsSummary {
+export interface LoupCoinsSummary {
   balance: number
   total_earned: number
   total_spent: number
@@ -57,7 +57,7 @@ export interface StoreArtifact {
   can_purchase: boolean
 }
 
-interface MyArtifact {
+export interface MyArtifact {
   id: string
   name_fr: string
   name_en: string
@@ -85,7 +85,7 @@ export function artifactImageUrl(path: string | null): string | null {
 // Libellé lisible par raison de transaction (voir migration 0147/0148) —
 // reste ouvert : une future raison (nouvel effet du Store) s'ajoute ici sans
 // casser l'affichage des transactions déjà enregistrées.
-const REASON_LABELS: Record<string, TranslationKey> = {
+export const REASON_LABELS: Record<string, TranslationKey> = {
   quest_reward: 'loupStore.reason.quest_reward',
   store_purchase: 'loupStore.reason.store_purchase',
 }
@@ -463,7 +463,7 @@ export function CategoryChip({ active, label, onClick }: { active: boolean; labe
  * (voir migration 0153). Informatif uniquement, pas cliquable — pour
  * racheter, direction l'onglet Boutique (aucun raccourci direct ici, pour
  * garder ce menu simple). */
-function MyArtifactRow({ artifact }: { artifact: MyArtifact }) {
+export function MyArtifactRow({ artifact }: { artifact: MyArtifact }) {
   const { t, lang } = useLanguage()
   const name = lang === 'en' ? artifact.name_en : artifact.name_fr
   const description = lang === 'en' ? artifact.description_en : artifact.description_fr

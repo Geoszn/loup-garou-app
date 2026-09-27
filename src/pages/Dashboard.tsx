@@ -1,23 +1,22 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { notifyJoinRequest } from '../lib/pushSubscription'
-import { Button, Card, ErrorText, Input, Label, Modal, SectionDivider } from '../components/ui'
-import { AccountMenu } from '../components/AccountMenu'
+import { Button, Card, ErrorText, Modal, SectionDivider } from '../components/ui'
 import { RankBadge } from '../components/RankBadge'
 import { DailyLoginBanner } from '../components/DailyLoginBanner'
 import { AnnouncementsModal } from '../components/AnnouncementsModal'
 import { NotificationTimezoneSync } from '../components/NotificationTimezoneSync'
 import { FriendsOnlineWidget, type FriendPerson } from '../components/FriendsOnlineWidget'
-import { RewardsHub } from '../components/RewardsHub'
+import { RankProgress } from '../components/RankProgress'
+import { useMyAvatarConfig } from '../components/AvatarEditor'
+import { useMyQuests } from '../hooks/useMyQuests'
 import { DashboardLeaderboard } from '../components/DashboardLeaderboard'
 import { FeedbackButton } from '../components/FeedbackButton'
 import { ContinentPrompt } from '../components/ContinentPrompt'
 import { NotificationOptInPrompt } from '../components/NotificationOptInPrompt'
-import { PublicGamesList } from '../components/PublicGamesBrowser'
 import { QuoteCarousel } from '../components/QuoteCarousel'
-import { AvatarIcon } from '../components/AvatarIcon'
 import { EventBanner } from '../components/EventBanner'
 import { useNarrator } from '../hooks/useNarrator'
 import { useActiveEvents } from '../hooks/useActiveEvents'
@@ -38,11 +37,12 @@ interface ActiveGame {
   status: string
 }
 
-type JoinStep = 'closed' | 'choose' | 'public' | 'code'
 type NarratorTestState = 'idle' | 'testing' | 'success' | 'failed'
 
 export default function Dashboard() {
-  const { user, profile, signOut } = useAuth()
+  const { user, profile } = useAuth()
+  const myAvatar = useMyAvatarConfig()
+  const { quests, claimableCount } = useMyQuests()
   const navigate = useNavigate()
   const location = useLocation()
   const { t } = useLanguage()
@@ -61,7 +61,6 @@ export default function Dashboard() {
   const [noticeDismissed, setNoticeDismissed] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [invites, setInvites] = useState<GameInvite[]>([])
-  const [pendingFriendCount, setPendingFriendCount] = useState(0)
   const [friends, setFriends] = useState<FriendPerson[]>([])
   const [joiningInvite, setJoiningInvite] = useState<string | null>(null)
 
@@ -100,70 +99,6 @@ export default function Dashboard() {
   }
 
   // --- Créer une partie -----------------------------------------------------
-  const [createOpen, setCreateOpen] = useState(false)
-  const [creating, setCreating] = useState(false)
-  const [createError, setCreateError] = useState<string | null>(null)
-
-  async function handleCreate(isPublic: boolean) {
-    setCreateError(null)
-    setCreating(true)
-    const { data, error: rpcError } = await supabase.rpc('create_game', {
-      p_display_name: profile?.username ?? t('common.playerFallback'),
-      p_settings: null,
-      p_is_public: isPublic,
-    })
-    setCreating(false)
-    if (rpcError) {
-      setCreateError(rpcError.message)
-      return
-    }
-    navigate(`/partie/${data.code}/lobby`)
-  }
-
-  // --- Rejoindre une partie --------------------------------------------------
-  const [joinStep, setJoinStep] = useState<JoinStep>('closed')
-  const [code, setCode] = useState('')
-  const [joining, setJoining] = useState(false)
-  const [joinError, setJoinError] = useState<string | null>(null)
-
-  function closeJoin() {
-    setJoinStep('closed')
-    setJoinError(null)
-  }
-
-  async function handleJoin(e: FormEvent) {
-    e.preventDefault()
-    setJoinError(null)
-    if (code.trim().length < 4) {
-      setJoinError(t('dashboard.join.error.invalidCode'))
-      return
-    }
-    setJoining(true)
-    const { data, error: rpcError } = await supabase.rpc('join_game', {
-      p_code: code.trim().toUpperCase(),
-      p_display_name: profile?.username ?? t('common.playerFallback'),
-    })
-    setJoining(false)
-    if (rpcError) {
-      setJoinError(rpcError.message)
-      return
-    }
-    // La partie peut déjà être en cours (voir join_game, migration 0038) :
-    // dans ce cas la demande reste en attente jusqu'à ce que l'hôte y
-    // réponde, une fois revenu en salon — même écran que pour les demandes
-    // sur une partie publique.
-    if (data.status === 'pending') {
-      void notifyJoinRequest(data.game_id)
-      navigate(`/attente/${data.game_id}`, { state: { code: data.code } })
-      return
-    }
-    navigate(`/partie/${data.code}/lobby`)
-  }
-
-  // --- Test du narrateur -------------------------------------------------
-  // Pas de partie associée ici : useNarrator(null) ne branche ni les
-  // abonnements Realtime ni le suivi du journal, seul testVoice() est utile
-  // sur cet écran (voir hooks/useNarrator.ts).
   const narrator = useNarrator(null)
   const [narratorTest, setNarratorTest] = useState<NarratorTestState>('idle')
   const [narratorTestError, setNarratorTestError] = useState<string | null>(null)
@@ -198,7 +133,6 @@ export default function Dashboard() {
     const { data, error: rpcError } = await supabase.rpc('get_my_social')
     if (rpcError || !data) return
     setInvites(data.game_invites ?? [])
-    setPendingFriendCount((data.incoming_requests ?? []).length)
     setFriends(data.friends ?? [])
   }
 
@@ -255,7 +189,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-10">
+    <div className="min-h-screen px-4 pt-6">
       {/* Comptes créés avant la migration 0057 (continent) : pop-up
           non bloquante, tant que le continent n'est pas choisi. */}
       <ContinentPrompt />
@@ -281,14 +215,6 @@ export default function Dashboard() {
           </Link>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             {profile && <RankBadge points={profile.rank_points} streak={profile.current_streak} />}
-            <AccountMenu
-              username={profile?.username}
-              avatarIcon={profile?.avatar_icon}
-              pendingFriendCount={pendingFriendCount}
-              loupCoins={profile?.loup_coins}
-              loginStreak={profile?.login_streak}
-              onSignOut={() => signOut()}
-            />
           </div>
         </header>
 
@@ -317,46 +243,21 @@ export default function Dashboard() {
             identifié et évité ailleurs (voir le commentaire de Card). Ces
             deux boutons sont en revanche uniques sur cette page, sans
             empilement ni répétition : aucun risque de fluidité comparable. */}
-        <div className="grid grid-cols-2 gap-2.5">
-          <button
-            type="button"
-            onClick={() => setCreateOpen(true)}
-            aria-label={t('dashboard.createGame')}
-            className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-moon-400/5 px-3 py-2.5 shadow-card backdrop-blur-xl transition-colors hover:border-moon-400/50 hover:bg-moon-400/10"
-          >
-            <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-moon-300" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="9" />
-              <path d="M12 8v8M8 12h8" />
-            </svg>
-            <span className="font-display text-sm text-moon-200">{t('dashboard.createShort')}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setJoinStep('choose')}
-            aria-label={t('dashboard.joinGame')}
-            className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-moon-400/5 px-3 py-2.5 shadow-card backdrop-blur-xl transition-colors hover:border-moon-400/50 hover:bg-moon-400/10"
-          >
-            <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-moon-300" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
-              <path d="M10 17l5-5-5-5" />
-              <path d="M15 12H4" />
-            </svg>
-            <span className="font-display text-sm text-moon-200">{t('dashboard.joinShort')}</span>
-          </button>
+        <div className="flex flex-col gap-3 rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/70 to-night-900/85 p-4 shadow-card">
+          <div className="flex items-center gap-3">
+            <Avatar config={myAvatar.config} icon={profile?.avatar_icon} name={profile?.username} className="h-14 w-14 ring-2 ring-moon-400/50" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-moon-200/50">{t('home.welcomeBack')}</p>
+              <p className="truncate font-display text-lg text-moon-200">{profile?.username}</p>
+            </div>
+            <div className="text-right text-xs text-moon-200/60">
+              <p>🔥 {profile?.current_streak ?? 0}</p>
+              <p>📅 {profile?.login_streak ?? 0} {t('dailyStreak.days')}</p>
+            </div>
+          </div>
+          <RankProgress points={profile?.rank_points ?? 0} />
         </div>
 
-        {/* Partie en cours (voir get_my_active_game) : reste discret mais
-            visible tant que la partie n'est pas terminée, pour ne jamais
-            perdre le fil d'un salon quitté "à la légère" via le bouton 🏠.
-            Signalement utilisateur : placé plus bas (après la bannière
-            d'événement), ce rappel finissait poussé hors de l'écran sur
-            mobile dès qu'un événement était actif — le bouton "reprendre"
-            semblait avoir disparu. Remonté juste sous Créer/Rejoindre, sur le
-            même principe déjà en place pour ces deux boutons (voir
-            commentaire plus haut) : ne doit jamais dépendre du nombre de
-            bannières actives pour rester atteignable sans scroll. Même poids
-            visuel qu'avant (pas réduit à une puce discrète) : ce n'est pas
-            moins important qu'un événement, juste rangé au bon endroit. */}
         {activeGame && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-moon-400/40 bg-moon-400/5 px-4 py-3">
             <p className="text-sm text-moon-200/90">
@@ -434,7 +335,29 @@ export default function Dashboard() {
           </div>
         )}
 
-        <RewardsHub />
+        {quests && quests.length > 0 && (
+          <Link
+            to="/recompenses"
+            className="flex items-center gap-3 rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/70 to-night-900/85 px-4 py-3 shadow-card transition-colors hover:border-moon-400/40"
+          >
+            <span className="text-2xl" aria-hidden="true">📜</span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-moon-200">
+                {t('home.quests', { done: quests.filter((q) => q.progress >= q.target).length, total: quests.length })}
+              </span>
+              <span className="mt-1.5 flex gap-1">
+                {quests.map((q) => (
+                  <span key={q.template_id} className={`h-1.5 flex-1 rounded-full ${q.progress >= q.target ? 'bg-moon-300' : 'bg-night-700'}`} />
+                ))}
+              </span>
+            </span>
+            {claimableCount > 0 && (
+              <span className="shrink-0 rounded-full bg-amber-400/15 px-2.5 py-1 text-xs font-semibold text-amber-300">
+                {t('home.claim', { count: claimableCount })}
+              </span>
+            )}
+          </Link>
+        )}
 
         <DashboardLeaderboard />
 
@@ -465,84 +388,6 @@ export default function Dashboard() {
       </div>
 
       {/* Pop-up "Créer une partie" : privé ou public, un choix, un clic. */}
-      <Modal open={createOpen} onClose={() => !creating && setCreateOpen(false)} title={`🌕 ${t('dashboard.create.title')}`}>
-        <div className="flex flex-col gap-3">
-          <ChoiceButton
-            emoji="🔒"
-            title={t('dashboard.create.private.title')}
-            subtitle={t('dashboard.create.private.subtitle')}
-            disabled={creating}
-            onClick={() => handleCreate(false)}
-          />
-          <ChoiceButton
-            emoji="🌍"
-            title={t('dashboard.create.public.title')}
-            subtitle={t('dashboard.create.public.subtitle')}
-            disabled={creating}
-            onClick={() => handleCreate(true)}
-          />
-        </div>
-        {creating && <p className="mt-3 text-center text-xs text-moon-200/40">{t('dashboard.create.creating')}</p>}
-        <ErrorText>{createError}</ErrorText>
-      </Modal>
-
-      {/* Pop-up "Rejoindre une partie" : premier choix (recherche publique
-          ou code), puis un second écran adapté selon la réponse — jamais
-          les deux options affichées en même temps. */}
-      <Modal open={joinStep !== 'closed'} onClose={closeJoin} title={`🔑 ${t('dashboard.join.title')}`}>
-        {joinStep === 'choose' && (
-          <div className="flex flex-col gap-3">
-            <ChoiceButton
-              emoji="🔍"
-              title={t('dashboard.join.searchPublic.title')}
-              subtitle={t('dashboard.join.searchPublic.subtitle')}
-              onClick={() => setJoinStep('public')}
-            />
-            <ChoiceButton
-              emoji="🔢"
-              title={t('dashboard.join.enterCode.title')}
-              subtitle={t('dashboard.join.enterCode.subtitle')}
-              onClick={() => setJoinStep('code')}
-            />
-          </div>
-        )}
-
-        {joinStep === 'public' && (
-          <div className="flex flex-col gap-3">
-            <BackButton onClick={() => setJoinStep('choose')} />
-            <PublicGamesList displayName={profile?.username ?? t('common.playerFallback')} />
-          </div>
-        )}
-
-        {joinStep === 'code' && (
-          <div className="flex flex-col gap-3">
-            <BackButton onClick={() => setJoinStep('choose')} />
-            <form onSubmit={handleJoin} className="flex flex-col gap-3">
-              <div>
-                <Label htmlFor="join-code">{t('dashboard.join.codeLabel')}</Label>
-                <Input
-                  id="join-code"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder="AB12CD"
-                  maxLength={8}
-                  autoFocus
-                  className="tracking-[0.3em] text-center font-display text-lg"
-                />
-              </div>
-              <Button type="submit" disabled={joining} className="w-full">
-                {joining ? t('dashboard.join.submitting') : t('dashboard.join.submit')}
-              </Button>
-              <ErrorText>{joinError}</ErrorText>
-            </form>
-          </div>
-        )}
-      </Modal>
-
-      {/* Pop-up "Tester le narrateur" : prévient que ça peut prendre
-          plusieurs secondes, permet d'annuler pendant le test, puis propose
-          Continuer (succès) ou Recommencer/Continuer (échec) — jamais
-          d'échec totalement silencieux comme avant. */}
       <Modal
         open={narratorTest !== 'idle'}
         onClose={narratorTest === 'testing' ? cancelNarratorTest : closeNarratorTest}
@@ -579,49 +424,5 @@ export default function Dashboard() {
         )}
       </Modal>
     </div>
-  )
-}
-
-/** Grand bouton de choix, utilisé dans les pop-ups "Créer"/"Rejoindre" pour
- * présenter une alternative claire (icône + titre + une phrase max), plutôt
- * que des cases à cocher ou des formulaires. */
-function ChoiceButton({
-  emoji,
-  title,
-  subtitle,
-  disabled,
-  onClick,
-}: {
-  emoji: string
-  title: string
-  subtitle: string
-  disabled?: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className="flex items-center gap-3 rounded-xl border border-night-600/60 bg-night-900/50 p-4 text-left transition-colors hover:border-moon-400/50 disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      <span className="shrink-0 text-2xl">{emoji}</span>
-      <span>
-        <span className="block text-sm font-semibold text-moon-200">{title}</span>
-        <span className="block text-xs text-moon-200/50">{subtitle}</span>
-      </span>
-    </button>
-  )
-}
-
-function BackButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="self-start text-xs text-moon-200/50 underline underline-offset-4 transition-colors hover:text-moon-200"
-    >
-      ← Retour
-    </button>
   )
 }

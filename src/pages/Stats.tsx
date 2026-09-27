@@ -410,7 +410,7 @@ function VolumeTitleCard({ gamesPlayed }: { gamesPlayed: number }) {
 function LoupCoinsCard({ coins }: { coins: number }) {
   const { t } = useLanguage()
   return (
-    <Link to="/loup-store" className="block">
+    <Link to="/recompenses" className="block">
       <Card className="flex items-center justify-between gap-3 transition-colors hover:border-amber-400/40">
         <div>
           <p className="text-[11px] uppercase tracking-wider text-moon-200/50">{t('loupCoins.title')}</p>

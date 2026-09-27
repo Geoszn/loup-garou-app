@@ -74,7 +74,7 @@ export function AccountMenu({
             <>
               {loupCoins !== undefined && (
                 <Link
-                  to="/loup-store"
+                  to="/recompenses"
                   onClick={() => setOpen(false)}
                   className="flex items-center justify-between gap-2 rounded-lg bg-amber-400/10 px-3 py-2 text-sm text-moon-200/80 transition-colors hover:bg-amber-400/15 hover:text-moon-200"
                 >
