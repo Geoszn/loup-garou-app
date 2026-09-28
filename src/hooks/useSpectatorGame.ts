@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import type { SpectatorGameView } from '../types/game'
 
 /** Même patron que useGame.ts (RPC + Realtime + filet de sécurité toutes les
- * 2,5s), mais pour quelqu'un qui n'est pas membre de la partie : une demande
+ * 6s), mais pour quelqu'un qui n'est pas membre de la partie : une demande
  * pour la rejoindre est en attente pendant qu'elle est en cours, et il peut
  * l'observer en lecture seule (get_spectator_game_view, migration 0140). Pas
  * de présence (rien n'affiche qui est en ligne côté spectateur) ni de tick
@@ -53,7 +53,7 @@ export function useSpectatorGame(gameId: string | null) {
 
   useEffect(() => {
     if (!gameId) return
-    const interval = setInterval(refresh, 2500)
+    const interval = setInterval(refresh, 6000)
     return () => clearInterval(interval)
   }, [gameId, refresh])
 

@@ -19,7 +19,7 @@ export function useGame(gameId: string | null, userId: string | null = null) {
   // Dernière réponse brute reçue de l'RPC (sérialisée), pour ne déclencher
   // un `setView` — et donc un re-render de tout l'écran de jeu (grille de
   // joueurs, bannière, panneaux) — que si quelque chose a réellement changé.
-  // Sans ça, le filet de sécurité toutes les 2,5s (voir plus bas) ET chaque
+  // Sans ça, le filet de sécurité toutes les 6s (voir plus bas) ET chaque
   // event Realtime (mouvement de n'importe lequel des joueurs) forçaient un
   // re-render complet même quand rien de visible ne bougeait — un des
   // principaux contributeurs au ressenti de lenteur pendant une partie.
@@ -74,9 +74,14 @@ export function useGame(gameId: string | null, userId: string | null = null) {
   // latence) — sans ça, un joueur pourrait rester bloqué à voir un salon
   // périmé indéfiniment. On re-synchronise donc l'état à intervalle régulier
   // en plus des mises à jour Realtime, qui restent la voie rapide normale.
+  // 6s plutôt que 2,5s (voir dépassement d'egress du 2026-09-28 : ce
+  // sondage, multiplié par chaque joueur connecté pendant toute la durée
+  // d'une partie, pesait lourd sur le volume de données sortantes du plan
+  // gratuit) — Realtime reste la voie rapide pour tout changement normal,
+  // ce filet ne sert qu'à rattraper un événement manqué.
   useEffect(() => {
     if (!gameId) return
-    const interval = setInterval(refresh, 2500)
+    const interval = setInterval(refresh, 6000)
     return () => clearInterval(interval)
   }, [gameId, refresh])
 
