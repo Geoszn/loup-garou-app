@@ -30,13 +30,21 @@ export const supabase = createClient(url, anonKey, {
 //
 // On intercepte donc `rpc()` UNE FOIS ici, plutôt que dans chacun des ~150
 // sites d'appel : sur un 401/JWT, on force un rafraîchissement de session
-// puis on retente l'appel une seule fois avant d'abandonner. Sans danger
-// pour les appels qui réussissent déjà (aucun changement de comportement) —
-// se contente de donner une seconde chance à ceux qui échouent pour cette
-// raison précise. `refreshSessionOnce` mutualise les rafraîchissements
-// concomitants (plusieurs appels ratés au même instant ne déclenchent
-// qu'UN SEUL refreshSession(), pas un par appel).
+// puis on retente l'appel — jusqu'à 2 fois — avant d'abandonner. Un seul
+// essai s'est révélé insuffisant en pratique : ce bug rejette parfois
+// plusieurs requêtes D'AFFILÉE pour la même session, pas juste une fois de
+// façon isolée (voir retour terrain du 2026-09-28 — le bandeau
+// "Connexion instable" s'affichait bien, preuve que ce correctif tournait,
+// mais un unique essai supplémentaire ne suffisait pas toujours). Sans
+// danger pour les appels qui réussissent déjà (aucun changement de
+// comportement) — se contente de donner plus de chances à ceux qui
+// échouent pour cette raison précise. `refreshSessionOnce` mutualise les
+// rafraîchissements concomitants (plusieurs appels ratés au même instant ne
+// déclenchent qu'UN SEUL refreshSession() en vol, pas un par appel) sans
+// empêcher un VRAI nouveau rafraîchissement pour l'essai suivant, une fois
+// le précédent terminé.
 const rawRpc = supabase.rpc.bind(supabase)
+const MAX_RETRIES = 2
 let refreshInFlight: Promise<boolean> | null = null
 
 function looksLikeJwtRejection(status: number, error: { message?: string } | null): boolean {
@@ -50,9 +58,7 @@ function refreshSessionOnce(): Promise<boolean> {
       .refreshSession()
       .then(({ error }) => !error)
       .finally(() => {
-        setTimeout(() => {
-          refreshInFlight = null
-        }, 3000)
+        refreshInFlight = null
       })
   }
   return refreshInFlight
@@ -65,9 +71,11 @@ function refreshSessionOnce(): Promise<boolean> {
 // signature exacte au risque de la désynchroniser d'une future version du
 // SDK.
 supabase.rpc = async (...args: Parameters<typeof rawRpc>) => {
-  const result = await rawRpc(...args)
-  if (result.error && looksLikeJwtRejection(result.status, result.error) && (await refreshSessionOnce())) {
-    return rawRpc(...args)
+  let result = await rawRpc(...args)
+  for (let attempt = 0; attempt < MAX_RETRIES && result.error && looksLikeJwtRejection(result.status, result.error); attempt++) {
+    const refreshed = await refreshSessionOnce()
+    if (!refreshed) break
+    result = await rawRpc(...args)
   }
   return result
 }
