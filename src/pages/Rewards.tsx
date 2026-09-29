@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useLanguage } from '../i18n/LanguageContext'
@@ -92,7 +93,16 @@ function Section({ title, right, children }: { title: string; right?: ReactNode;
 export default function Rewards() {
   const { profile, refreshProfile } = useAuth()
   const { t, lang } = useLanguage()
-  const [tab, setTab] = useState<Tab>('quests')
+  // Lien direct vers un onglet précis (ex. l'annonce de lancement de saison,
+  // voir AnnouncementsModal.tsx) : ?tab=season ouvre directement cet onglet
+  // au lieu du "Quêtes" par défaut. Ignoré si la valeur ne correspond à
+  // aucun onglet connu.
+  const [searchParams] = useSearchParams()
+  const [tab, setTab] = useState<Tab>(() => {
+    const requested = searchParams.get('tab')
+    const valid: Tab[] = ['quests', 'store', 'season', 'mine', 'history']
+    return (valid as string[]).includes(requested ?? '') ? (requested as Tab) : 'quests'
+  })
   const [summary, setSummary] = useState<LoupCoinsSummary | null>(null)
   const [myArtifacts, setMyArtifacts] = useState<MyArtifact[] | null>(null)
   const [ownedSkins, setOwnedSkins] = useState<StoreSkin[] | null>(null)

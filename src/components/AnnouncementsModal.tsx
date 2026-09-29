@@ -7,17 +7,26 @@ import { Avatar } from './Avatar'
 import { useMyAvatarConfig } from './AvatarEditor'
 import { LoupCoinIcon } from './LoupCoinIcon'
 import type { AvatarConfig } from '../lib/avatarParts'
+import type { MySeason } from '../types/season'
 
 /** Clé de l'annonce des avatars (voir migration 0194) : ne jamais la
  * réutiliser pour une autre annonce. */
 export const AVATARS_ANNOUNCEMENT_KEY = 'avatars-2026-09'
+
+/** Clé de l'annonce de lancement d'une saison — une par saison (son slug),
+ * jamais réutilisée d'une saison à l'autre : chaque nouvelle saison doit
+ * pouvoir re-déclencher sa propre annonce, contrairement à AVATARS_ANNOUNCEMENT_KEY
+ * ci-dessus qui ne concerne qu'un seul évènement figé. */
+function seasonAnnouncementKey(slug: string): string {
+  return `season-launch-${slug}`
+}
 
 interface Compensation {
   amount: number
   quests_count: number
 }
 
-type Slide = 'avatars' | 'compensation'
+type Slide = 'avatars' | 'compensation' | 'season'
 
 const SHOWCASE: AvatarConfig[] = [
   { skin: 4, hair: 'afro', outfit: 'cloak', acc: 'glasses', head: 'none', face: 'round', bg: 3 },
@@ -34,11 +43,12 @@ const SHOWCASE: AvatarConfig[] = [
  */
 export function AnnouncementsModal() {
   const { user, refreshProfile } = useAuth()
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const navigate = useNavigate()
   const myAvatar = useMyAvatarConfig()
   const [seen, setSeen] = useState<string[] | null>(null)
   const [comp, setComp] = useState<Compensation | null | undefined>(undefined)
+  const [season, setSeason] = useState<MySeason | null | undefined>(undefined)
   const [slides, setSlides] = useState<Slide[] | null>(null)
   const [index, setIndex] = useState(0)
   const [busy, setBusy] = useState(false)
@@ -47,20 +57,25 @@ export function AnnouncementsModal() {
     if (!user) return
     supabase.rpc('get_my_seen_announcements').then(({ data }) => setSeen(Array.isArray(data) ? (data as string[]) : []))
     supabase.rpc('get_my_quest_compensation').then(({ data }) => setComp(data ? (data as Compensation) : null))
+    supabase.rpc('get_my_season').then(({ data }) => setSeason(data ? (data as MySeason) : null))
   }, [user])
 
   // Composé une seule fois, quand tout est chargé : évite qu'une carte
   // apparaisse ou disparaisse pendant que le joueur lit.
   useEffect(() => {
-    if (slides || seen === null || comp === undefined || !myAvatar.loaded) return
+    if (slides || seen === null || comp === undefined || season === undefined || !myAvatar.loaded) return
     const list: Slide[] = []
     const avatarSeen = seen.includes(AVATARS_ANNOUNCEMENT_KEY)
     if (!avatarSeen && !myAvatar.config) list.push('avatars')
     // Un joueur qui a déjà créé son avatar connaît la nouveauté.
     if (!avatarSeen && myAvatar.config) void supabase.rpc('mark_announcement_seen', { p_key: AVATARS_ANNOUNCEMENT_KEY })
+    // Annonce de lancement de saison : seulement tant qu'elle est vraiment
+    // EN COURS (season.is_active) — jamais rejouée si le joueur ouvre
+    // l'appli après coup, une fois la saison déjà bien avancée ou terminée.
+    if (season && season.is_active && !seen.includes(seasonAnnouncementKey(season.slug))) list.push('season')
     if (comp) list.push('compensation')
     setSlides(list)
-  }, [slides, seen, comp, myAvatar.loaded, myAvatar.config])
+  }, [slides, seen, comp, season, myAvatar.loaded, myAvatar.config])
 
   if (!slides || slides.length === 0) return null
   const current = slides[index]
@@ -85,6 +100,21 @@ export function AnnouncementsModal() {
     markAvatarsSeen()
     setSlides([])
     navigate('/compte?avatar=1')
+  }
+
+  function markSeasonSeen() {
+    if (season) void supabase.rpc('mark_announcement_seen', { p_key: seasonAnnouncementKey(season.slug) })
+  }
+
+  function seasonNext() {
+    markSeasonSeen()
+    advance()
+  }
+
+  function seasonDiscover() {
+    markSeasonSeen()
+    setSlides([])
+    navigate('/recompenses?tab=season')
   }
 
   async function claim() {
@@ -166,6 +196,17 @@ export function AnnouncementsModal() {
           </>
         )}
 
+        {current === 'season' && season && (
+          <>
+            <span className="rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-300">
+              {t('announce.season.badge')}
+            </span>
+            <span className="text-4xl" aria-hidden="true">🍂</span>
+            <h2 className="font-display text-xl text-moon-200">{t('announce.season.title', { name: lang === 'en' ? season.name_en : season.name_fr })}</h2>
+            <p className="text-sm leading-relaxed text-moon-200/80">{t('announce.season.body')}</p>
+          </>
+        )}
+
         {current === 'compensation' && (
           <>
             <LoupCoinIcon className={total > 1 ? 'h-14 w-14' : 'hidden'} />
@@ -208,6 +249,16 @@ export function AnnouncementsModal() {
                   </button>
                 </>
               )}
+            </>
+          )}
+          {current === 'season' && (
+            <>
+              <button type="button" onClick={seasonDiscover} className={primaryButton}>
+                {t('announce.season.cta')}
+              </button>
+              <button type="button" onClick={seasonNext} className={linkButton}>
+                {t('announce.season.later')}
+              </button>
             </>
           )}
           {current === 'compensation' && (
