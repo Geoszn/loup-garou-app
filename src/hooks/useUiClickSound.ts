@@ -54,7 +54,14 @@ export function useUiClickSound() {
     function onClick(e: MouseEvent) {
       if (!isEnabled()) return
       const target = e.target as HTMLElement | null
-      const trigger = target?.closest('button, [role="button"]') as HTMLButtonElement | null
+      // `nav a` en plus de `button`/`[role="button"]` : la barre de
+      // navigation du bas (BottomNav.tsx) est faite de <NavLink> — de vrais
+      // liens de routage, pas des <button> — donc invisibles pour le
+      // sélecteur d'origine. Un lien de navigation EST un bouton du point
+      // de vue de l'utilisateur ; sans ce filtre, ces boutons-là (Accueil,
+      // Récompenses, Jouer, Amis, Profil) ne recevaient ni le son ni la
+      // vibration, contrairement à tous les autres boutons de l'appli.
+      const trigger = target?.closest('button, [role="button"], nav a') as HTMLButtonElement | null
       if (!trigger || trigger.disabled) return
       const el = getEl()
       el.volume = 0.35
