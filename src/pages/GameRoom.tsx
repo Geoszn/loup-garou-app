@@ -93,6 +93,11 @@ export default function GameRoom() {
   // Realtime, donc pas besoin de vérifier "isWolf" avant de s'abonner ici.
   const unreadWolves = useUnreadChatCount(gameId, 'wolves', nightTab === 'wolves')
   const unreadAmoureux = useUnreadChatCount(gameId, view?.lover_id ? 'amoureux' : null, dayTab === 'amoureux')
+  // Même badge pour le village, côté "Discuter" (jour) et côté "Village"
+  // (nuit, onglet des loups) — un seul salon 'village', mais deux endroits
+  // différents d'où on peut le manquer selon la phase en cours.
+  const isNightPhase = view?.game.status === 'night'
+  const unreadVillage = useUnreadChatCount(gameId, 'village', isNightPhase ? nightTab === 'village' : dayTab === 'discuss')
   const [logOpen, setLogOpen] = useState(false)
   const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false)
   const [modOpen, setModOpen] = useState(false)
@@ -482,6 +487,7 @@ export default function GameRoom() {
               players={view.players}
               villageMuted={view.village_muted}
               unreadWolves={unreadWolves}
+              unreadVillage={unreadVillage}
             />
             <WolfPackList view={view} myRole={view.my_role} />
             <RolePanel myRole={view.my_role} />
@@ -567,6 +573,7 @@ export default function GameRoom() {
                     ) : undefined
                   }
                   unreadAmoureux={unreadAmoureux}
+                  unreadVillage={unreadVillage}
                 />
                 <CallVotePanel compact view={view} gameId={gameId!} selfId={user.id} me={me} isHost={isHost} />
               </div>
@@ -638,6 +645,7 @@ export default function GameRoom() {
                   ) : undefined
                 }
                 unreadAmoureux={unreadAmoureux}
+                unreadVillage={unreadVillage}
               />
             )}
             {alive && <RolePanel myRole={view.my_role} />}
@@ -754,6 +762,7 @@ function DayTabs({
   grid,
   loversChat,
   unreadAmoureux = 0,
+  unreadVillage = 0,
   fill = false,
 }: {
   dayTab: 'discuss' | 'village' | 'amoureux'
@@ -769,6 +778,10 @@ function DayTabs({
   /** Messages des amoureux arrivés pendant qu'on est sur un autre onglet —
    * voir useUnreadChatCount. Ignoré si `loversChat` est absent. */
   unreadAmoureux?: number
+  /** Messages du village arrivés pendant qu'on est sur l'onglet "Village"
+   * (grille) ou "Amoureux" — même logique que unreadAmoureux ci-dessus,
+   * pour le salon affiché par l'onglet "Discuter". */
+  unreadVillage?: number
   /** Le parent fixe une hauteur : le chat occupe tout l'espace restant et
    * seul son historique défile (voir ChatPanel `fill`). */
   fill?: boolean
@@ -778,7 +791,15 @@ function DayTabs({
     <div className={fill ? 'flex min-h-0 flex-1 flex-col gap-2' : 'flex flex-col gap-3'}>
       <Segmented
         tabs={[
-          { id: 'discuss' as const, label: t('tabs.discuss') },
+          {
+            id: 'discuss' as const,
+            label: (
+              <span className="inline-flex items-center">
+                {t('tabs.discuss')}
+                <UnreadBadge count={unreadVillage} />
+              </span>
+            ),
+          },
           { id: 'village' as const, label: t('tabs.village') },
           ...(loversChat
             ? [
@@ -877,6 +898,11 @@ function GhostVillageWolvesChat({
 }) {
   const { t } = useLanguage()
   const [tab, setTab] = useState<'village' | 'wolves'>('village')
+  // Hooks appelés avant le `return` anticipé ci-dessous (règle des Hooks) —
+  // sans intérêt tant que `showWolves` est faux, d'où le canal `null` dans
+  // ce cas (même patron que unreadAmoureux dans GameRoom, plus haut).
+  const unreadVillage = useUnreadChatCount(gameId, showWolves ? 'village' : null, tab === 'village')
+  const unreadWolves = useUnreadChatCount(gameId, showWolves ? 'wolves' : null, tab === 'wolves')
 
   if (!showWolves) {
     return <ChatPanel players={players} gameId={gameId} channel="village" selfId={selfId} compact readOnly />
@@ -886,8 +912,24 @@ function GhostVillageWolvesChat({
     <div className="flex flex-col gap-2">
       <Segmented
         tabs={[
-          { id: 'village', label: t('tabs.village') },
-          { id: 'wolves', label: t('tabs.wolves') },
+          {
+            id: 'village',
+            label: (
+              <span className="inline-flex items-center">
+                {t('tabs.village')}
+                <UnreadBadge count={unreadVillage} />
+              </span>
+            ),
+          },
+          {
+            id: 'wolves',
+            label: (
+              <span className="inline-flex items-center">
+                {t('tabs.wolves')}
+                <UnreadBadge count={unreadWolves} />
+              </span>
+            ),
+          },
         ]}
         active={tab}
         onChange={setTab}
@@ -1089,6 +1131,7 @@ function NightChat({
   players,
   villageMuted,
   unreadWolves,
+  unreadVillage,
 }: {
   gameId: string
   code: string
@@ -1106,6 +1149,9 @@ function NightChat({
   /** Messages des loups arrivés pendant qu'on est sur l'onglet "Village" —
    * voir useUnreadChatCount (migration 0206). */
   unreadWolves: number
+  /** Messages du village arrivés pendant qu'on est sur l'onglet "Loups" —
+   * même logique, dans l'autre sens. */
+  unreadVillage: number
 }) {
   const { t } = useLanguage()
 
@@ -1137,7 +1183,15 @@ function NightChat({
       <VoiceChat gameId={gameId} code={code} channel="wolves" displayName={displayName} selfUserId={selfId} players={players} />
       <Segmented
         tabs={[
-          { id: 'village', label: t('tabs.village') },
+          {
+            id: 'village',
+            label: (
+              <span className="inline-flex items-center">
+                {t('tabs.village')}
+                <UnreadBadge count={unreadVillage} />
+              </span>
+            ),
+          },
           {
             id: 'wolves',
             label: (
