@@ -5,7 +5,7 @@ import { useGame } from '../hooks/useGame'
 import { useNotificationSound } from '../hooks/useNotificationSound'
 import { supabase } from '../lib/supabase'
 import { notifyGameInvite, notifyGameStarted, isStandaloneDisplay } from '../lib/pushSubscription'
-import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, Segmented, SideDrawer } from '../components/ui'
+import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, Segmented } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { PlayerProfileModal } from '../components/PlayerProfileModal'
 import { ModerationPanel } from '../components/ModerationPanel'
@@ -176,10 +176,12 @@ export default function Lobby() {
   // voir handleStart (auto_role_counts) et AutoRolesPreview plus bas, qui
   // affiche un aperçu fidèle de ce choix sans dupliquer sa formule ici.
   const [autoRoles, setAutoRoles] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  // Onglet actif du panneau de réglages (refonte — voir plus bas) : Rôles /
-  // Durées / Modération, au lieu d'une seule liste qui empilait tout.
-  const [settingsTab, setSettingsTab] = useState<'roles' | 'durees' | 'mod'>('roles')
+  // Onglet actif de la page (refonte : plus de tiroir superposé — les
+  // réglages de l'hôte sont désormais des compartiments directement sur la
+  // page du salon, même patron que les onglets de chat en jeu). "Joueurs"
+  // par défaut : c'est aussi la seule vue qu'un joueur non-hôte a jamais,
+  // sans barre d'onglets pour lui.
+  const [mainTab, setMainTab] = useState<'joueurs' | 'roles' | 'durees' | 'mod'>('joueurs')
   // Description affichée à la demande (ⓘ) pour UN SEUL rôle à la fois, par
   // groupe — évite d'afficher un paragraphe d'explication en permanence
   // sous chaque rôle activable (retour utilisateur : trop de texte à
@@ -578,19 +580,13 @@ export default function Lobby() {
               un écart plus large réduit le risque de mistap sur un
               téléphone tenu à une main. */}
           <div className="flex items-center gap-4">
-            {isHost && (
-              <Button
-                variant="ghost"
-                onClick={() => setSettingsOpen(true)}
-                aria-label={t('lobby.settingsButton')}
-                className="relative px-3 py-2.5 text-base"
-              >
-                ⚙️
-                {customized && (
-                  <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-blood-500" title={t('lobby.customSettingsTitle')} />
-                )}
-              </Button>
-            )}
+            {/* Plus de bouton ⚙️ ici : les réglages de l'hôte sont
+                maintenant un onglet directement sur la page (voir la barre
+                Segmented sous le vocal, plus bas) — retour utilisateur :
+                "je ne veux plus de menu latéral [...] je veux une
+                technologie qui va instinctivement permettre de se diriger
+                vers les rôles [...] directement disponible sur la page
+                principale". */}
             <Button
               variant="danger"
               onClick={() => setConfirmLeaveOpen(true)}
@@ -696,6 +692,34 @@ export default function Lobby() {
           players={view.players}
         />
 
+        {/* Plus de tiroir superposé (retour utilisateur : "je ne veux plus
+            de menu latéral") — les réglages de l'hôte sont désormais des
+            compartiments directement sur la page, même patron que les
+            onglets de chat en jeu (Village/Loups/Amoureux, voir GameRoom).
+            Absente pour un non-hôte : "Joueurs" est alors sa seule
+            destination possible, pas besoin de barre à une seule pilule. */}
+        {isHost && user && (
+          <Segmented
+            tabs={[
+              { id: 'joueurs' as const, label: t('lobby.mainTab.players') },
+              {
+                id: 'roles' as const,
+                label: (
+                  <span className="inline-flex items-center gap-1.5">
+                    {t('lobby.settingsTab.roles')}
+                    {customized && <span className="h-1.5 w-1.5 rounded-full bg-blood-500" />}
+                  </span>
+                ),
+              },
+              { id: 'durees' as const, label: t('lobby.settingsTab.durations') },
+              { id: 'mod' as const, label: t('lobby.settingsTab.moderation') },
+            ]}
+            active={mainTab}
+            onChange={setMainTab}
+          />
+        )}
+
+        {(!isHost || !user || mainTab === 'joueurs') && (
         <Card>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-display text-lg text-moon-200">{t('lobby.playersTitle', { count: playerCount })}</h2>
@@ -829,99 +853,43 @@ export default function Lobby() {
             })}
           </ul>
         </Card>
-
-        <ErrorText>{actionError}</ErrorText>
-      </div>
-
-      {/* Une seule instance, hors de la boucle ci-dessus : Modal est déjà
-          un overlay plein écran (position fixed), pas besoin d'en monter
-          une par joueur. canTransferHost (migration 0160) : uniquement soi-
-          même hôte du salon en attente, jamais pour soi-même ni pour un bot
-          (même heuristique préfixe que partout ailleurs dans ce fichier) —
-          le serveur revalide de toute façon tout ça (transfer_host). */}
-      {openFriendId &&
-        (() => {
-          const openFriendPlayer = view.players.find((p) => p.user_id === openFriendId)
-          const canTransferHost = isHost && !!openFriendPlayer && !openFriendPlayer.display_name.startsWith('🤖 ')
-          return (
-            <PlayerProfileModal
-              userId={openFriendId}
-              gameId={gameId ?? undefined}
-              canTransferHost={canTransferHost}
-              onClose={() => setOpenFriendId(null)}
-            />
-          )
-        })()}
-
-      <BottomActionBar>
-        {isHost ? (
-          <Button
-            onClick={handleStart}
-            disabled={starting || playerCount < 4 || rolesOverflow}
-            className="w-full py-4 text-base"
-          >
-            {starting ? t('lobby.starting') : playerCount < 4 ? t('lobby.needMorePlayers') : t('lobby.startGame')}
-          </Button>
-        ) : (
-          <p className="text-center text-sm text-moon-200/50">{t('lobby.waitingForHost')}</p>
         )}
-      </BottomActionBar>
 
-      <ConfirmDialog
-        open={confirmLeaveOpen}
-        title={t('lobby.leaveConfirmTitle')}
-        message={t('lobby.leaveConfirmMessage')}
-        confirmLabel={t('common.leave')}
-        danger
-        onCancel={() => setConfirmLeaveOpen(false)}
-        onConfirm={handleLeave}
-      />
-
-      {isHost && user && (
-        <SideDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} title={t('lobby.settingsDrawerTitle')}>
-          <div className="flex flex-col gap-4">
-            {/* Résumé + répartition Loups/Village : toujours visibles, quel
-                que soit l'onglet actif — vérifier l'équilibre de la partie
-                ne devrait jamais nécessiter d'aller chercher un onglet. */}
-            <div>
-              <p className="text-xs text-moon-200/50">
-                {t('lobby.rolesSummary', { special: specialTotal, players: playerCount })}
-                {playerCount - specialTotal >= 0 ? t('lobby.villagersSuffix', { count: playerCount - specialTotal }) : '.'}
-              </p>
-              <div className="mt-2.5 flex h-2 overflow-hidden rounded-full bg-night-700">
-                <div
-                  className="bg-gradient-to-r from-blood-600 to-blood-400 transition-all"
-                  style={{ width: `${(balanceWolves / balanceTotal) * 100}%` }}
-                />
-                <div
-                  className="bg-gradient-to-r from-moon-400/70 to-moon-300/50 transition-all"
-                  style={{ width: `${(balanceVillage / balanceTotal) * 100}%` }}
-                />
+        {isHost && user && mainTab === 'roles' && (
+          <Card>
+            <div className="flex flex-col gap-4">
+              {/* Résumé + répartition Loups/Village : toujours visible tant
+                  qu'on est sur cet onglet — vérifier l'équilibre de la
+                  partie ne devrait jamais nécessiter d'aller chercher un
+                  autre onglet. */}
+              <div>
+                <p className="text-xs text-moon-200/50">
+                  {t('lobby.rolesSummary', { special: specialTotal, players: playerCount })}
+                  {playerCount - specialTotal >= 0 ? t('lobby.villagersSuffix', { count: playerCount - specialTotal }) : '.'}
+                </p>
+                <div className="mt-2.5 flex h-2 overflow-hidden rounded-full bg-night-700">
+                  <div
+                    className="bg-gradient-to-r from-blood-600 to-blood-400 transition-all"
+                    style={{ width: `${(balanceWolves / balanceTotal) * 100}%` }}
+                  />
+                  <div
+                    className="bg-gradient-to-r from-moon-400/70 to-moon-300/50 transition-all"
+                    style={{ width: `${(balanceVillage / balanceTotal) * 100}%` }}
+                  />
+                </div>
+                <div className="mt-1.5 flex justify-between text-[10.5px] text-moon-200/35">
+                  <span>
+                    {t('roster.wolves')} ({balanceWolves})
+                  </span>
+                  <span>
+                    {t('roster.village')} ({balanceVillage})
+                  </span>
+                </div>
               </div>
-              <div className="mt-1.5 flex justify-between text-[10.5px] text-moon-200/35">
-                <span>
-                  {t('roster.wolves')} ({balanceWolves})
-                </span>
-                <span>
-                  {t('roster.village')} ({balanceVillage})
-                </span>
-              </div>
-            </div>
 
-            {rolesOverflow && <ErrorText>{t('lobby.rolesOverflow')}</ErrorText>}
-            {alphaConstraintViolated && <ErrorText>{t('lobby.alphaConstraintViolated')}</ErrorText>}
+              {rolesOverflow && <ErrorText>{t('lobby.rolesOverflow')}</ErrorText>}
+              {alphaConstraintViolated && <ErrorText>{t('lobby.alphaConstraintViolated')}</ErrorText>}
 
-            <Segmented
-              tabs={[
-                { id: 'roles' as const, label: t('lobby.settingsTab.roles') },
-                { id: 'durees' as const, label: t('lobby.settingsTab.durations') },
-                { id: 'mod' as const, label: t('lobby.settingsTab.moderation') },
-              ]}
-              active={settingsTab}
-              onChange={setSettingsTab}
-            />
-
-            {settingsTab === 'roles' && (
               <div className="flex flex-col">
                 {/* Mode automatique (voir migration 0143) : coché, tout le
                     reste de cet onglet devient un aperçu en lecture seule
@@ -1070,106 +1038,158 @@ export default function Lobby() {
                   </>
                 )}
               </div>
-            )}
+            </div>
+          </Card>
+        )}
 
-            {settingsTab === 'durees' && (
-              <div>
-                <p className="mb-3.5 text-xs leading-relaxed text-moon-200/40">{t('lobby.durationsTitle')}</p>
-                <div className="mb-3.5 flex gap-2">
-                  {DURATION_PRESETS.map((preset) => {
-                    const active = JSON.stringify(durations) === JSON.stringify(preset.values)
-                    return (
-                      <button
-                        key={preset.key}
-                        type="button"
-                        onClick={() => {
-                          setDurations(preset.values)
-                          setCustomized(true)
-                        }}
-                        className={`flex-1 rounded-xl border px-2 py-3 text-center transition-colors ${
-                          active
-                            ? 'border-blood-400/60 bg-gradient-to-b from-blood-600/24 to-blood-600/10'
-                            : 'border-night-600/70 bg-night-900/40 hover:border-moon-400/40'
-                        }`}
-                      >
-                        <span className="block text-base leading-none">{preset.icon}</span>
-                        <span className={`mt-1.5 block font-display text-[11.5px] font-semibold ${active ? 'text-moon-200' : 'text-moon-200/80'}`}>
-                          {t(preset.labelKey)}
-                        </span>
-                        <span className="mt-0.5 block text-[10px] text-moon-200/40">{t(preset.hintKey)}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setDurationsAdvancedOpen((v) => !v)}
-                  className="flex w-full items-center justify-between rounded-xl border border-night-600/60 bg-night-900/30 px-3.5 py-2.5 text-xs font-semibold text-moon-200/60 transition-colors hover:text-moon-200"
-                >
-                  <span>{t('lobby.durationsAdvanced', { count: 8 })}</span>
-                  <span className={`transition-transform ${durationsAdvancedOpen ? 'rotate-180' : ''}`}>▾</span>
-                </button>
-
-                {durationsAdvancedOpen && (
-                  <div className="mt-3 flex flex-col gap-3">
-                    <DurationStepper
-                      label={t('lobby.duration.roleReveal')}
-                      value={durations.role_reveal_intro_seconds}
-                      min={15} max={180} step={15}
-                      onChange={(v) => { setDurations((d) => ({ ...d, role_reveal_intro_seconds: v })); setCustomized(true) }}
-                    />
-                    <DurationStepper
-                      label={t('lobby.duration.discussion')}
-                      value={durations.discussion_seconds}
-                      min={60} max={900} step={30}
-                      onChange={(v) => { setDurations((d) => ({ ...d, discussion_seconds: v })); setCustomized(true) }}
-                    />
-                    <DurationStepper
-                      label={t('lobby.duration.vote')}
-                      value={durations.vote_seconds}
-                      min={15} max={120} step={15}
-                      onChange={(v) => { setDurations((d) => ({ ...d, vote_seconds: v })); setCustomized(true) }}
-                    />
-                    <DurationStepper
-                      label={t('lobby.duration.voteRecap')}
-                      value={durations.vote_recap_seconds}
-                      min={15} max={180} step={15}
-                      onChange={(v) => { setDurations((d) => ({ ...d, vote_recap_seconds: v })); setCustomized(true) }}
-                    />
-                    <DurationStepper
-                      label={t('lobby.duration.voyante')}
-                      value={durations.voyante_seconds}
-                      min={20} max={180} step={10}
-                      onChange={(v) => { setDurations((d) => ({ ...d, voyante_seconds: v })); setCustomized(true) }}
-                    />
-                    <DurationStepper
-                      label={t('lobby.duration.sorciere')}
-                      value={durations.sorciere_seconds}
-                      min={20} max={180} step={10}
-                      onChange={(v) => { setDurations((d) => ({ ...d, sorciere_seconds: v })); setCustomized(true) }}
-                    />
-                    <DurationStepper
-                      label={t('lobby.duration.nightSteps')}
-                      value={durations.night_step_seconds}
-                      min={30} max={180} step={10}
-                      onChange={(v) => { setDurations((d) => ({ ...d, night_step_seconds: v })); setCustomized(true) }}
-                    />
-                    <DurationStepper
-                      label={t('lobby.duration.wolfChat')}
-                      value={durations.wolf_chat_seconds}
-                      min={60} max={300} step={30}
-                      onChange={(v) => { setDurations((d) => ({ ...d, wolf_chat_seconds: v })); setCustomized(true) }}
-                    />
-                  </div>
-                )}
+        {isHost && user && mainTab === 'durees' && (
+          <Card>
+            <div>
+              <p className="mb-3.5 text-xs leading-relaxed text-moon-200/40">{t('lobby.durationsTitle')}</p>
+              <div className="mb-3.5 flex gap-2">
+                {DURATION_PRESETS.map((preset) => {
+                  const active = JSON.stringify(durations) === JSON.stringify(preset.values)
+                  return (
+                    <button
+                      key={preset.key}
+                      type="button"
+                      onClick={() => {
+                        setDurations(preset.values)
+                        setCustomized(true)
+                      }}
+                      className={`flex-1 rounded-xl border px-2 py-3 text-center transition-colors ${
+                        active
+                          ? 'border-blood-400/60 bg-gradient-to-b from-blood-600/24 to-blood-600/10'
+                          : 'border-night-600/70 bg-night-900/40 hover:border-moon-400/40'
+                      }`}
+                    >
+                      <span className="block text-base leading-none">{preset.icon}</span>
+                      <span className={`mt-1.5 block font-display text-[11.5px] font-semibold ${active ? 'text-moon-200' : 'text-moon-200/80'}`}>
+                        {t(preset.labelKey)}
+                      </span>
+                      <span className="mt-0.5 block text-[10px] text-moon-200/40">{t(preset.hintKey)}</span>
+                    </button>
+                  )
+                })}
               </div>
-            )}
 
-            {settingsTab === 'mod' && <ModerationPanel view={view} gameId={gameId!} selfId={user.id} />}
-          </div>
-        </SideDrawer>
-      )}
+              <button
+                type="button"
+                onClick={() => setDurationsAdvancedOpen((v) => !v)}
+                className="flex w-full items-center justify-between rounded-xl border border-night-600/60 bg-night-900/30 px-3.5 py-2.5 text-xs font-semibold text-moon-200/60 transition-colors hover:text-moon-200"
+              >
+                <span>{t('lobby.durationsAdvanced', { count: 8 })}</span>
+                <span className={`transition-transform ${durationsAdvancedOpen ? 'rotate-180' : ''}`}>▾</span>
+              </button>
+
+              {durationsAdvancedOpen && (
+                <div className="mt-3 flex flex-col gap-3">
+                  <DurationStepper
+                    label={t('lobby.duration.roleReveal')}
+                    value={durations.role_reveal_intro_seconds}
+                    min={15} max={180} step={15}
+                    onChange={(v) => { setDurations((d) => ({ ...d, role_reveal_intro_seconds: v })); setCustomized(true) }}
+                  />
+                  <DurationStepper
+                    label={t('lobby.duration.discussion')}
+                    value={durations.discussion_seconds}
+                    min={60} max={900} step={30}
+                    onChange={(v) => { setDurations((d) => ({ ...d, discussion_seconds: v })); setCustomized(true) }}
+                  />
+                  <DurationStepper
+                    label={t('lobby.duration.vote')}
+                    value={durations.vote_seconds}
+                    min={15} max={120} step={15}
+                    onChange={(v) => { setDurations((d) => ({ ...d, vote_seconds: v })); setCustomized(true) }}
+                  />
+                  <DurationStepper
+                    label={t('lobby.duration.voteRecap')}
+                    value={durations.vote_recap_seconds}
+                    min={15} max={180} step={15}
+                    onChange={(v) => { setDurations((d) => ({ ...d, vote_recap_seconds: v })); setCustomized(true) }}
+                  />
+                  <DurationStepper
+                    label={t('lobby.duration.voyante')}
+                    value={durations.voyante_seconds}
+                    min={20} max={180} step={10}
+                    onChange={(v) => { setDurations((d) => ({ ...d, voyante_seconds: v })); setCustomized(true) }}
+                  />
+                  <DurationStepper
+                    label={t('lobby.duration.sorciere')}
+                    value={durations.sorciere_seconds}
+                    min={20} max={180} step={10}
+                    onChange={(v) => { setDurations((d) => ({ ...d, sorciere_seconds: v })); setCustomized(true) }}
+                  />
+                  <DurationStepper
+                    label={t('lobby.duration.nightSteps')}
+                    value={durations.night_step_seconds}
+                    min={30} max={180} step={10}
+                    onChange={(v) => { setDurations((d) => ({ ...d, night_step_seconds: v })); setCustomized(true) }}
+                  />
+                  <DurationStepper
+                    label={t('lobby.duration.wolfChat')}
+                    value={durations.wolf_chat_seconds}
+                    min={60} max={300} step={30}
+                    onChange={(v) => { setDurations((d) => ({ ...d, wolf_chat_seconds: v })); setCustomized(true) }}
+                  />
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
+
+        {isHost && user && mainTab === 'mod' && (
+          <Card>
+            <ModerationPanel view={view} gameId={gameId!} selfId={user.id} />
+          </Card>
+        )}
+
+        <ErrorText>{actionError}</ErrorText>
+      </div>
+
+      {/* Une seule instance, hors de la boucle ci-dessus : Modal est déjà
+          un overlay plein écran (position fixed), pas besoin d'en monter
+          une par joueur. canTransferHost (migration 0160) : uniquement soi-
+          même hôte du salon en attente, jamais pour soi-même ni pour un bot
+          (même heuristique préfixe que partout ailleurs dans ce fichier) —
+          le serveur revalide de toute façon tout ça (transfer_host). */}
+      {openFriendId &&
+        (() => {
+          const openFriendPlayer = view.players.find((p) => p.user_id === openFriendId)
+          const canTransferHost = isHost && !!openFriendPlayer && !openFriendPlayer.display_name.startsWith('🤖 ')
+          return (
+            <PlayerProfileModal
+              userId={openFriendId}
+              gameId={gameId ?? undefined}
+              canTransferHost={canTransferHost}
+              onClose={() => setOpenFriendId(null)}
+            />
+          )
+        })()}
+
+      <BottomActionBar>
+        {isHost ? (
+          <Button
+            onClick={handleStart}
+            disabled={starting || playerCount < 4 || rolesOverflow}
+            className="w-full py-4 text-base"
+          >
+            {starting ? t('lobby.starting') : playerCount < 4 ? t('lobby.needMorePlayers') : t('lobby.startGame')}
+          </Button>
+        ) : (
+          <p className="text-center text-sm text-moon-200/50">{t('lobby.waitingForHost')}</p>
+        )}
+      </BottomActionBar>
+
+      <ConfirmDialog
+        open={confirmLeaveOpen}
+        title={t('lobby.leaveConfirmTitle')}
+        message={t('lobby.leaveConfirmMessage')}
+        confirmLabel={t('common.leave')}
+        danger
+        onCancel={() => setConfirmLeaveOpen(false)}
+        onConfirm={handleLeave}
+      />
     </div>
   )
 }

@@ -479,9 +479,8 @@ export const translations = {
     fr: 'Le jeu est déjà sur ton écran d’accueil ? Ouvre-le depuis là plutôt que ce lien, pour profiter du son et des notifications.',
     en: 'Already have the game on your home screen? Open it from there instead of this link, for sound and notifications.',
   },
-  'lobby.settingsButton': { fr: '⚙️ Réglages', en: '⚙️ Settings' },
-  'lobby.customSettingsTitle': { fr: 'Réglages personnalisés', en: 'Customized settings' },
   'lobby.leaveButton': { fr: '🚪 Quitter', en: '🚪 Leave' },
+  'lobby.mainTab.players': { fr: 'Joueurs', en: 'Players' },
   'lobby.joinRequestsTitleSingular': { fr: 'Demande pour rejoindre', en: 'Request to join' },
   'lobby.joinRequestsTitlePlural': { fr: 'Demandes pour rejoindre', en: 'Requests to join' },
   'lobby.publicBadge': { fr: '🌍 Partie publique', en: '🌍 Public game' },
@@ -505,7 +504,6 @@ export const translations = {
     fr: "Vous quitterez ce salon d'attente. Vous pourrez le rejoindre à nouveau avec le code tant que la partie n'a pas commencé.",
     en: "You'll leave this waiting room. You can rejoin it with the code as long as the game hasn't started yet.",
   },
-  'lobby.settingsDrawerTitle': { fr: '⚙️ Réglages de la partie', en: '⚙️ Game settings' },
   'lobby.rolesSummary': {
     fr: '{{special}} rôles spéciaux pour {{players}} joueurs',
     en: '{{special}} special roles for {{players}} players',
