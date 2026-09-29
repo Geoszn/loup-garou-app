@@ -12,6 +12,8 @@ import { useMyQuests } from '../hooks/useMyQuests'
 import { DEFAULT_AVATAR_CONFIG } from '../lib/avatarParts'
 import { useMyAvatarConfig, notifyAvatarChanged } from '../components/AvatarEditor'
 import type { StoreSkin } from '../lib/skins'
+import { useMySeason } from '../hooks/useMySeason'
+import { SeasonTrack } from '../components/SeasonTrack'
 
 const STREAK_REWARD_COINS = 50 // à garder identique à claim_daily_login (migration 0196)
 
@@ -105,6 +107,7 @@ export default function Rewards() {
   const [storeTab, setStoreTab] = useState<'artifacts' | 'skins'>('artifacts')
   const { quests, claiming, claim } = useMyQuests()
   const myAvatar = useMyAvatarConfig()
+  const { season, refresh: refreshSeason } = useMySeason()
 
   const loadAll = useCallback(async () => {
     const [coins, mine, skins] = await Promise.all([
@@ -145,7 +148,7 @@ export default function Rewards() {
   const tabs: { id: Tab; icon: string; label: string; soon?: boolean }[] = [
     { id: 'quests', icon: '📜', label: t('hub.menu.quests') },
     { id: 'store', icon: '🛒', label: t('hub.menu.store') },
-    { id: 'season', icon: '🏆', label: t('hub.menu.season'), soon: true },
+    { id: 'season', icon: '🏆', label: t('hub.menu.season') },
     { id: 'mine', icon: '🎒', label: t('rewards.tab.mine') },
     { id: 'history', icon: '🧾', label: t('rewards.tab.history') },
   ]
@@ -375,32 +378,15 @@ export default function Rewards() {
         )}
 
         {tab === 'season' && (
-          <>
+          season ? (
+            <SeasonTrack season={season} onClaimed={refreshSeason} />
+          ) : (
             <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-moon-400/30 bg-moon-400/[0.04] px-4 py-8 text-center">
               <span className="text-6xl drop-shadow-[0_0_14px_rgba(224,168,74,0.5)]" aria-hidden="true">🏆</span>
-              <p className="font-display text-2xl text-moon-200">{t('hub.season.title')}</p>
-              <SoonBadge />
-              <p className="text-sm leading-relaxed text-moon-200/70">{t('hub.season.body')}</p>
+              <p className="font-display text-2xl text-moon-200">{t('hub.season.noneTitle')}</p>
+              <p className="text-sm leading-relaxed text-moon-200/70">{t('hub.season.noneBody')}</p>
             </div>
-            <ul className="flex flex-col gap-2">
-              {(
-                [
-                  ['📊', 'hub.season.f1'],
-                  ['🎯', 'hub.season.f2'],
-                  ['🎁', 'hub.season.f3'],
-                ] as const
-              ).map(([icon, key]) => (
-                <li key={key} className="flex items-center gap-3 rounded-xl border border-night-600/60 bg-night-900/40 px-3 py-2.5 opacity-70">
-                  <span className="text-xl" aria-hidden="true">{icon}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-moon-200">{t(`${key}.title` as 'hub.season.f1.title')}</p>
-                    <p className="text-xs text-moon-200/50">{t(`${key}.body` as 'hub.season.f1.body')}</p>
-                  </div>
-                  <span className="text-sm" aria-hidden="true">🔒</span>
-                </li>
-              ))}
-            </ul>
-          </>
+          )
         )}
 
         {tab === 'mine' && (
