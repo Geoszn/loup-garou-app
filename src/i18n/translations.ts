@@ -387,8 +387,8 @@ export const translations = {
   },
   'role.cupidon.name': { fr: 'Cupidon', en: 'Cupid' },
   'role.cupidon.description': {
-    fr: 'La première nuit uniquement, vous désignez deux joueurs qui tombent amoureux pour toujours. Si l’un meurt, l’autre meurt de chagrin.',
-    en: 'On the first night only, you choose two players who fall in love forever. If one dies, the other dies of grief.',
+    fr: 'La première nuit uniquement, vous désignez deux joueurs qui tombent amoureux pour toujours. Si l’un meurt, l’autre meurt de chagrin. S’ils survivent tous les deux jusqu’à la fin, vous gagnez vous aussi (+30 points), en plus de votre victoire côté village.',
+    en: 'On the first night only, you choose two players who fall in love forever. If one dies, the other dies of grief. If they both survive to the end, you win too (+30 points), on top of your village win.',
   },
   'role.cupidon.nightAction': {
     fr: 'Désignez les deux amoureux (uniquement la première nuit).',
@@ -1055,7 +1055,10 @@ export const translations = {
   },
   'action.voleur.steal': { fr: 'Voler une carte', en: 'Steal a card' },
   'action.cupidon.title': { fr: 'Désignez les deux amoureux', en: 'Choose the two lovers' },
-  'action.cupidon.subtitle': { fr: "Cette action n'a lieu que la première nuit.", en: 'This action only happens on the first night.' },
+  'action.cupidon.subtitle': {
+    fr: "Cette action n'a lieu que la première nuit. S'ils survivent ensemble jusqu'à la fin, vous gagnez aussi (+30 points), en plus de votre victoire côté village.",
+    en: "This action only happens on the first night. If they survive together to the end, you win too (+30 points), on top of your village win.",
+  },
   'action.cupidon.confirm': { fr: 'Confirmer le couple', en: 'Confirm the couple' },
   'action.enfantSauvage.title': { fr: 'Choisissez votre mentor', en: 'Choose your mentor' },
   'action.enfantSauvage.subtitle': {
@@ -1408,8 +1411,8 @@ export const translations = {
   },
   'rules.victory.title': { fr: '🏆 Victoire', en: '🏆 Victory' },
   'rules.victory.text': {
-    fr: 'Le Village gagne dès que tous les Loups-Garous sont éliminés. Les Loups-Garous gagnent s\'ils parviennent à égaler ou dépasser le nombre de villageois survivants. Cas particulier : si Cupidon a désigné deux Amoureux, ceux-ci gagnent ensemble s\'ils sont les deux derniers survivants, quel que soit leur camp d\'origine.',
-    en: 'The Village wins as soon as all the Werewolves are eliminated. The Werewolves win if they manage to equal or outnumber the surviving villagers. Special case: if Cupid designated two Lovers, they win together if they are the last two survivors, regardless of their original side.',
+    fr: 'Le Village gagne dès que tous les Loups-Garous sont éliminés. Les Loups-Garous gagnent s\'ils parviennent à égaler ou dépasser le nombre de villageois survivants. Cas particulier : si Cupidon a désigné deux Amoureux, ceux-ci gagnent ensemble s\'ils sont les deux derniers survivants, quel que soit leur camp d\'origine — et Cupidon gagne alors lui aussi, en plus de sa victoire côté village.',
+    en: 'The Village wins as soon as all the Werewolves are eliminated. The Werewolves win if they manage to equal or outnumber the surviving villagers. Special case: if Cupid designated two Lovers, they win together if they are the last two survivors, regardless of their original side — and Cupid then wins too, on top of their village win.',
   },
 
   // --- Page Aide (Help.tsx) ---------------------------------------------------
