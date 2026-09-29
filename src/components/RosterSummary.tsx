@@ -8,26 +8,33 @@ import { Modal } from './ui'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from './Avatar'
 
-// Rôles spéciaux qu'on affiche en détail (statut vivant/éliminé).
-// Volontairement sans 'loup_garou', 'loup_alpha', 'sans_visage' ni
-// 'grand_mechant_loup' (tous les quatre comptés à part, camp par camp, dans
-// totalWolves/deadWolves plus bas — Sans-Visage et Grand Méchant Loup
-// fonctionnent tous deux exactement comme un Loup-Garou simple pour le vote
-// et le décompte, voir migrations 0118/0121) ni 'capitaine' (un titre, pas
-// un rôle avec sa propre carte). 'anancy' est inclus ici malgré son camp
-// neutre (voir migration 0119) : contrairement aux loups, il n'est pas
-// comptabilisé dans les totaux Loups/Village (voir totalNeutral plus bas),
-// donc son statut individuel est la seule façon de le suivre dans ce
-// panneau. 'ange' (voir migration 0121) est un rôle village comme les
-// autres de cette liste — inclus pour la même raison qu'eux (suivre s'il
-// est encore en vie), même si sa fenêtre de victoire personnelle ne dure
-// que le tout premier cycle. 'chasseuse' (voir migration 0162, rebaptisée
-// en 0163 — anciennement "Le Juge") : même cas que 'anancy', camp neutre
-// exclu de totalWolves/totalVillage — sauf que la Chasseuse qui abandonne
-// devient une Villageoise pour de bon (revealed_role passe à 'villageois' à
-// sa mort ensuite) : son entrée ici reste alors affichée "vivant"
-// indéfiniment, comportement accepté (mineur, purement cosmétique).
+// Rôles spéciaux qu'on affiche en détail (statut vivant/éliminé). Retour
+// utilisateur : même une carte spéciale côté Loups (Loup Alpha, Sans-Visage,
+// Grand Méchant Loup) doit apparaître ici comme les autres, pas seulement
+// noyée dans le total générique "Loups X/Y" plus bas (totalWolves/deadWolves,
+// que ces trois-là continuent d'alimenter en parallèle — Sans-Visage et
+// Grand Méchant Loup fonctionnent exactement comme un Loup-Garou simple pour
+// le vote et le décompte, voir migrations 0088/0118/0121, ce qui ne change
+// rien au calcul agrégé ci-dessous). Toujours sans 'loup_garou' (effectif
+// variable, déjà résumé par le total agrégé — une carte par loup simple
+// n'aurait pas de sens) ni 'capitaine' (un titre, pas un rôle avec sa propre
+// carte). 'anancy' est inclus ici malgré son camp neutre (voir migration
+// 0119) : contrairement aux loups, il n'est pas comptabilisé dans les
+// totaux Loups/Village (voir totalNeutral plus bas), donc son statut
+// individuel est la seule façon de le suivre dans ce panneau. 'ange' (voir
+// migration 0121) est un rôle village comme les autres de cette liste —
+// inclus pour la même raison qu'eux (suivre s'il est encore en vie), même
+// si sa fenêtre de victoire personnelle ne dure que le tout premier cycle.
+// 'chasseuse' (voir migration 0162, rebaptisée en 0163 — anciennement "Le
+// Juge") : même cas que 'anancy', camp neutre exclu de
+// totalWolves/totalVillage — sauf que la Chasseuse qui abandonne devient une
+// Villageoise pour de bon (revealed_role passe à 'villageois' à sa mort
+// ensuite) : son entrée ici reste alors affichée "vivant" indéfiniment,
+// comportement accepté (mineur, purement cosmétique).
 const SPECIAL_ROLE_KEYS: RoleId[] = [
+  'loup_alpha',
+  'sans_visage',
+  'grand_mechant_loup',
   'voyante',
   'sorciere',
   'chasseur',
