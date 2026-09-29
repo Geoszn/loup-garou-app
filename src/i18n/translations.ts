@@ -1007,6 +1007,7 @@ export const translations = {
   'game.myResultTotal': { fr: 'Total', en: 'Total' },
   'game.myResultNewTotal': { fr: 'Nouveau total', en: 'New total' },
   'game.myResultTierUp': { fr: '🎉 Nouveau palier !', en: '🎉 New tier!' },
+  'game.myResultSeasonXp': { fr: '🎟️ XP de saison', en: '🎟️ Season XP' },
   'game.playAgain': { fr: '🔄 Rejouer avec ce groupe', en: '🔄 Play again with this group' },
   'game.leaveLobbyButton': { fr: '🚪 Quitter le salon', en: '🚪 Leave the lobby' },
   'game.waitHostRestart': {

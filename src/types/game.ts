@@ -554,4 +554,8 @@ export interface MyGameResult {
   new_rank_points: number
   new_rank_tier: string
   won: boolean
+  // XP de saison gagné pour cette partie précise (voir migration 0203) —
+  // absent/0 hors saison active. Optionnel : les parties jouées avant
+  // l'ajout de ce champ (ou sans saison en cours) n'en ont pas.
+  season_xp_gained?: number
 }

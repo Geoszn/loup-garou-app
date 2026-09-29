@@ -1642,7 +1642,7 @@ function LogList({ entries, compact = false }: { entries: { id: string; message:
   )
 }
 
-function EndScreen({
+export function EndScreen({
   view,
   isHost,
   selfId,
@@ -1870,6 +1870,17 @@ function EndScreen({
             </div>
             {myTierChanged && <span className="text-xs font-semibold text-moon-300">{t('game.myResultTierUp')}</span>}
           </div>
+
+          {/* XP de saison gagné pour cette partie (voir migration 0203) —
+              rendu séparé du bloc points de rang ci-dessus : deux compteurs
+              indépendants (voir échange avec l'admin), jamais mélangés.
+              Absent hors saison active (season_xp_gained alors undefined/0). */}
+          {!!myResult.season_xp_gained && (
+            <div className="mt-2 flex items-center justify-between rounded-xl border border-pink-400/30 bg-pink-400/10 px-3 py-2.5">
+              <span className="text-sm font-semibold text-pink-300">{t('game.myResultSeasonXp')}</span>
+              <span className="font-display font-bold text-pink-300">+{myResult.season_xp_gained} XP</span>
+            </div>
+          )}
         </div>
       )}
 
