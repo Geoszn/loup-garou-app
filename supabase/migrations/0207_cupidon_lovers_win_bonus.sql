@@ -33,9 +33,12 @@ begin
   loop
     v_won := case
       when r.is_lover then (p_winner = 'amoureux')
-      -- Cupidon gagne aussi quand SES amoureux gagnent : il n'a alors plus
-      -- aucune raison de vouloir leur mort plutôt que leur survie.
-      when r.role = 'cupidon' then (p_winner = 'amoureux')
+      -- Cupidon gagne AUSSI (en plus de son gain normal côté village ci-
+      -- dessous) quand SES amoureux gagnent : il n'a alors plus aucune
+      -- raison de vouloir leur mort plutôt que leur survie. Condition
+      -- restreinte à p_winner = 'amoureux' précisément pour ne jamais
+      -- intercepter son cas normal (p_winner = 'village', plus bas).
+      when r.role = 'cupidon' and p_winner = 'amoureux' then true
       when p_winner = 'loups' then coalesce(r.role in ('loup_garou', 'loup_alpha', 'sans_visage', 'grand_mechant_loup'), false)
       when p_winner = 'village' then coalesce(r.role not in ('loup_garou', 'loup_alpha', 'sans_visage', 'grand_mechant_loup', 'anancy', 'chasseuse'), true)
       when p_winner = 'anancy' then coalesce(r.role = 'anancy', false)
