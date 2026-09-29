@@ -16,6 +16,7 @@ import { ReadyGrid } from '../components/ReadyGrid'
 import { ActionPanel, VotePanel, CaptainVotePanel, WolfPanel, GRIOT_REVEAL_KEYS } from '../components/ActionPanel'
 import { ArtifactsMenu, hasArtifactsToShow, hasUsableArtifact } from '../components/ArtifactsMenu'
 import { ChatPanel } from '../components/ChatPanel'
+import { useUnreadChatCount } from '../hooks/useChat'
 import { VoteRecapModal } from '../components/VoteRecapModal'
 import { NightRecapModal } from '../components/NightRecapModal'
 import { DeathImpactModal, impactLabel } from '../components/DeathImpactModal'
@@ -78,13 +79,20 @@ export default function GameRoom() {
     view?.pending_action_required ?? null,
     view ? `${view.game.status}-${view.game.night_number}` : 'none'
   )
-  // Onglets "Village" (liste des joueurs) / "Discuter" (texte + vocal) pour
-  // les phases de jour : évite d'empiler chat, vocal et grille de joueurs
-  // les uns sous les autres, un seul écran focalisé à la fois.
-  const [dayTab, setDayTab] = useState<'discuss' | 'village'>('discuss')
+  // Onglets "Village" (liste des joueurs) / "Discuter" (texte + vocal) /
+  // "Amoureux" (chat privé, seulement s'il y en a un — voir migration 0206)
+  // pour les phases de jour : évite d'empiler chat, vocal et grille de
+  // joueurs les uns sous les autres, un seul écran focalisé à la fois.
+  const [dayTab, setDayTab] = useState<'discuss' | 'village' | 'amoureux'>('discuss')
   // Onglet "Village" (anonyme) / "Loups" (nominatif, uniquement pour les
   // Loups-Garous pendant leur tour) pour la phase de nuit — voir NightChat.
   const [nightTab, setNightTab] = useState<'village' | 'wolves'>('village')
+  // Badges "message non lu" sur les onglets Loups/Amoureux (voir migration
+  // 0206 + useUnreadChatCount) — la RLS de chat_messages empêche de toute
+  // façon quiconque n'y ayant pas accès de recevoir ces évènements
+  // Realtime, donc pas besoin de vérifier "isWolf" avant de s'abonner ici.
+  const unreadWolves = useUnreadChatCount(gameId, 'wolves', nightTab === 'wolves')
+  const unreadAmoureux = useUnreadChatCount(gameId, view?.lover_id ? 'amoureux' : null, dayTab === 'amoureux')
   const [logOpen, setLogOpen] = useState(false)
   const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false)
   const [modOpen, setModOpen] = useState(false)
@@ -473,6 +481,7 @@ export default function GameRoom() {
               setNightTab={setNightTab}
               players={view.players}
               villageMuted={view.village_muted}
+              unreadWolves={unreadWolves}
             />
             <WolfPackList view={view} myRole={view.my_role} />
             <RolePanel myRole={view.my_role} />
@@ -552,6 +561,12 @@ export default function GameRoom() {
                     />
                   }
                   grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} moodContext={{ status: view.game.status, nightNumber: view.game.night_number }} />}
+                  loversChat={
+                    view.lover_id ? (
+                      <ChatPanel fill players={view.players} gameId={gameId!} channel="amoureux" selfId={user.id} />
+                    ) : undefined
+                  }
+                  unreadAmoureux={unreadAmoureux}
                 />
                 <CallVotePanel compact view={view} gameId={gameId!} selfId={user.id} me={me} isHost={isHost} />
               </div>
@@ -617,6 +632,12 @@ export default function GameRoom() {
                   />
                 }
                 grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} moodContext={{ status: view.game.status, nightNumber: view.game.night_number }} />}
+                loversChat={
+                  view.lover_id ? (
+                    <ChatPanel players={view.players} gameId={gameId!} channel="amoureux" selfId={user.id} compact />
+                  ) : undefined
+                }
+                unreadAmoureux={unreadAmoureux}
               />
             )}
             {alive && <RolePanel myRole={view.my_role} />}
@@ -712,19 +733,42 @@ export default function GameRoom() {
  * coupait micro + son et forçait une reconnexion à chaque aller-retour entre
  * "Discuter" et "Village". Seule sa visibilité change (`hidden`), la
  * connexion Daily, elle, ne bouge plus. */
+/** Petit badge rond façon messagerie (WhatsApp) — compte de messages
+ * arrivés dans un salon pendant qu'on ne le regarde pas (voir
+ * useUnreadChatCount). Rien n'est affiché à 0, pour ne pas alourdir
+ * l'onglet en permanence. */
+function UnreadBadge({ count }: { count: number }) {
+  if (count <= 0) return null
+  return (
+    <span className="ml-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-blood-500 px-1 text-[10px] font-bold leading-none text-white">
+      {count > 9 ? '9+' : count}
+    </span>
+  )
+}
+
 function DayTabs({
   dayTab,
   setDayTab,
   voice,
   chat,
   grid,
+  loversChat,
+  unreadAmoureux = 0,
   fill = false,
 }: {
-  dayTab: 'discuss' | 'village'
-  setDayTab: (t: 'discuss' | 'village') => void
+  dayTab: 'discuss' | 'village' | 'amoureux'
+  setDayTab: (t: 'discuss' | 'village' | 'amoureux') => void
   voice: ReactNode
   chat: ReactNode
   grid: ReactNode
+  /** Chat privé des Amoureux (voir migration 0206) — onglet "Amoureux"
+   * seulement affiché quand ce joueur en fait partie (`view.lover_id`).
+   * Absent (undefined) pour tout le monde d'autre : pas d'onglet du tout,
+   * plutôt qu'un onglet vide inutile. */
+  loversChat?: ReactNode
+  /** Messages des amoureux arrivés pendant qu'on est sur un autre onglet —
+   * voir useUnreadChatCount. Ignoré si `loversChat` est absent. */
+  unreadAmoureux?: number
   /** Le parent fixe une hauteur : le chat occupe tout l'espace restant et
    * seul son historique défile (voir ChatPanel `fill`). */
   fill?: boolean
@@ -734,14 +778,27 @@ function DayTabs({
     <div className={fill ? 'flex min-h-0 flex-1 flex-col gap-2' : 'flex flex-col gap-3'}>
       <Segmented
         tabs={[
-          { id: 'discuss', label: t('tabs.discuss') },
-          { id: 'village', label: t('tabs.village') },
+          { id: 'discuss' as const, label: t('tabs.discuss') },
+          { id: 'village' as const, label: t('tabs.village') },
+          ...(loversChat
+            ? [
+                {
+                  id: 'amoureux' as const,
+                  label: (
+                    <span className="inline-flex items-center">
+                      {t('tabs.amoureux')}
+                      <UnreadBadge count={unreadAmoureux} />
+                    </span>
+                  ),
+                },
+              ]
+            : []),
         ]}
         active={dayTab}
         onChange={setDayTab}
       />
       <div className={dayTab === 'discuss' ? 'contents' : 'hidden'}>{voice}</div>
-      {dayTab === 'discuss' ? chat : fill ? <div className="min-h-0 flex-1 overflow-y-auto">{grid}</div> : grid}
+      {dayTab === 'discuss' ? chat : dayTab === 'amoureux' ? loversChat : fill ? <div className="min-h-0 flex-1 overflow-y-auto">{grid}</div> : grid}
     </div>
   )
 }
@@ -1031,6 +1088,7 @@ function NightChat({
   setNightTab,
   players,
   villageMuted,
+  unreadWolves,
 }: {
   gameId: string
   code: string
@@ -1045,6 +1103,9 @@ function NightChat({
    * jamais le salon 'wolves' (celui-ci n'est de toute façon plus accessible
    * une fois qu'on n'est plus loup). */
   villageMuted: boolean
+  /** Messages des loups arrivés pendant qu'on est sur l'onglet "Village" —
+   * voir useUnreadChatCount (migration 0206). */
+  unreadWolves: number
 }) {
   const { t } = useLanguage()
 
@@ -1077,7 +1138,15 @@ function NightChat({
       <Segmented
         tabs={[
           { id: 'village', label: t('tabs.village') },
-          { id: 'wolves', label: t('tabs.wolves') },
+          {
+            id: 'wolves',
+            label: (
+              <span className="inline-flex items-center">
+                {t('tabs.wolves')}
+                <UnreadBadge count={unreadWolves} />
+              </span>
+            ),
+          },
         ]}
         active={nightTab}
         onChange={setNightTab}

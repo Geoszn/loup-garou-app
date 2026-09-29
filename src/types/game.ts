@@ -95,7 +95,7 @@ export interface GameSettings {
   auto_role_counts?: boolean
 }
 
-export type ChatChannel = 'village' | 'wolves' | 'graveyard'
+export type ChatChannel = 'village' | 'wolves' | 'graveyard' | 'amoureux'
 
 export interface ChatMessage {
   id: string

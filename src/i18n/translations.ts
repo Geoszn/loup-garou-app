@@ -725,6 +725,7 @@ export const translations = {
   'tabs.village': { fr: '👥 Village', en: '👥 Village' },
   'tabs.graveyard': { fr: '👻 Cimetière', en: '👻 Graveyard' },
   'tabs.wolves': { fr: '🐺 Loups', en: '🐺 Wolves' },
+  'tabs.amoureux': { fr: '💘 Amoureux', en: '💘 Lovers' },
 
   // --- Déroulement de partie (GameRoom.tsx) -----------------------------------
   'game.notFound': { fr: "Cette partie n'existe pas ou vous n'y avez pas accès.", en: "This game doesn't exist or you don't have access to it." },
@@ -825,6 +826,7 @@ export const translations = {
   'impact.anancy_solo_win': { fr: '🕸️ Victoire solitaire d’Anancy', en: '🕸️ Anancy’s solo win' },
   'impact.gml_second_kill': { fr: '👹 Seconde victime dévorée', en: '👹 Second victim devoured' },
   'impact.wolf_team_win': { fr: '🐺 Victoire en tant que Loup-Garou', en: '🐺 Victory as a Werewolf' },
+  'impact.lovers_win': { fr: '💘 Victoire des Amoureux', en: '💘 Lovers’ victory' },
   'impact.daron_save': { fr: '🛡️ Protection réussie', en: '🛡️ Successful protection' },
 
   'game.yourRole': { fr: 'Votre rôle', en: 'Your role' },
@@ -1340,6 +1342,8 @@ export const translations = {
   'chat.wolves.placeholder': { fr: 'Écrire à la meute...', en: 'Write to the pack...' },
   'chat.graveyard.title': { fr: 'Cimetière', en: 'Graveyard' },
   'chat.graveyard.placeholder': { fr: 'Écrire aux fantômes...', en: 'Write to the ghosts...' },
+  'chat.amoureux.title': { fr: 'Chat des amoureux', en: 'Lovers chat' },
+  'chat.amoureux.placeholder': { fr: 'Écrire à votre amoureux...', en: 'Write to your lover...' },
   'chat.readOnly': { fr: '👁️ lecture seule', en: '👁️ read-only' },
   'chat.live': { fr: 'en direct', en: 'live' },
   'voiceChat.expand': { fr: 'Déplier le vocal', en: 'Expand voice chat' },

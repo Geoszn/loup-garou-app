@@ -9,6 +9,7 @@ const CHANNEL_LABEL: Record<ChatChannel, { titleKey: TranslationKey; emoji: stri
   village: { titleKey: 'chat.village.title', emoji: '💬', placeholderKey: 'chat.village.placeholder' },
   wolves: { titleKey: 'chat.wolves.title', emoji: '🐺', placeholderKey: 'chat.wolves.placeholder' },
   graveyard: { titleKey: 'chat.graveyard.title', emoji: '👻', placeholderKey: 'chat.graveyard.placeholder' },
+  amoureux: { titleKey: 'chat.amoureux.title', emoji: '💘', placeholderKey: 'chat.amoureux.placeholder' },
 }
 
 // Référence stable partagée par tous les messages sans réaction — évite de

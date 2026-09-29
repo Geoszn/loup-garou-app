@@ -262,7 +262,11 @@ export function Segmented<T extends string>({
   active,
   onChange,
 }: {
-  tabs: { id: T; label: string }[]
+  // ReactNode plutôt que string : permet à un appelant (ex. l'onglet
+  // "Loups"/"Amoureux" pendant une partie) de glisser un petit badge de
+  // messages non lus après le texte — une string reste un ReactNode valide,
+  // donc tous les appels existants continuent de fonctionner sans y toucher.
+  tabs: { id: T; label: ReactNode }[]
   active: T
   onChange: (id: T) => void
 }) {

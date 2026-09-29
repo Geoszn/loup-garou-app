@@ -168,3 +168,46 @@ export function useChat(gameId: string | null, channel: ChatChannel | null) {
 
   return { messages, identities, reactions, send, sending, toggleReaction }
 }
+
+/** Nombre de messages arrivés dans `channel` depuis qu'on ne le regarde plus
+ * (`active=false`) — pour un petit badge sur l'onglet "Loups"/"Amoureux"
+ * pendant qu'on lit un autre salon (ex. le village). Volontairement léger :
+ * une seule souscription Realtime dédiée au comptage, aucun historique
+ * chargé (contrairement à useChat ci-dessus, monté seulement pour le salon
+ * actif) — ne compte que les nouveaux messages reçus pendant que ce hook est
+ * monté, pas l'historique antérieur. Remis à zéro dès que `active` repasse à
+ * vrai (l'onglet vient d'être ouvert). */
+export function useUnreadChatCount(gameId: string | null, channel: ChatChannel | null, active: boolean): number {
+  const [count, setCount] = useState(0)
+  const activeRef = useRef(active)
+
+  useEffect(() => {
+    activeRef.current = active
+    if (active) setCount(0)
+  }, [active])
+
+  useEffect(() => {
+    setCount(0)
+    if (!gameId || !channel) return
+
+    const sub = supabase
+      .channel(`unread-${gameId}-${channel}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `game_id=eq.${gameId}` },
+        (payload) => {
+          const row = payload.new as { channel: string }
+          if (row.channel !== channel) return
+          if (activeRef.current) return
+          setCount((c) => c + 1)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(sub)
+    }
+  }, [gameId, channel])
+
+  return count
+}

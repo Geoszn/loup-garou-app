@@ -39,7 +39,7 @@ export function ActionPanel({ view, gameId, selfId }: { view: MyGameView; gameId
           case 'voleur':
             return <VoleurPanel view={view} gameId={gameId} />
           case 'cupidon':
-            return <CupidonPanel view={view} gameId={gameId} />
+            return <CupidonPanel view={view} gameId={gameId} selfId={selfId} />
           case 'enfant_sauvage':
             return <EnfantSauvagePanel view={view} gameId={gameId} selfId={selfId} />
           case 'voyante':
@@ -134,13 +134,16 @@ function VoleurPanel({ gameId }: { view: MyGameView; gameId: string }) {
   )
 }
 
-function CupidonPanel({ view, gameId }: { view: MyGameView; gameId: string }) {
+function CupidonPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
   const { t } = useLanguage()
   const [first, setFirst] = useState<string | null>(null)
   const [second, setSecond] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const alive = view.players.filter((p) => p.is_alive)
+  // Cupidon ne peut pas se choisir lui-même comme amoureux (voir migration
+  // 0206) — exclu de la liste, comme la Voyante/le vote excluent déjà
+  // selfId de leurs propres cibles.
+  const alive = view.players.filter((p) => p.is_alive && p.user_id !== selfId)
 
   function pick(id: string) {
     if (first === id) { setFirst(second); setSecond(null); return }
