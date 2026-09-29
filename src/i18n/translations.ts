@@ -827,6 +827,7 @@ export const translations = {
   'impact.gml_second_kill': { fr: '👹 Seconde victime dévorée', en: '👹 Second victim devoured' },
   'impact.wolf_team_win': { fr: '🐺 Victoire en tant que Loup-Garou', en: '🐺 Victory as a Werewolf' },
   'impact.lovers_win': { fr: '💘 Victoire des Amoureux', en: '💘 Lovers’ victory' },
+  'impact.cupidon_lovers_win': { fr: '💘 Ses amoureux ont gagné', en: '💘 Cupid’s lovers won' },
   'impact.daron_save': { fr: '🛡️ Protection réussie', en: '🛡️ Successful protection' },
 
   'game.yourRole': { fr: 'Votre rôle', en: 'Your role' },
