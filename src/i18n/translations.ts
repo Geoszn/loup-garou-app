@@ -320,6 +320,7 @@ export const translations = {
   'common.backHome': { fr: "Retour à l'accueil", en: 'Back to home' },
   'common.backPlain': { fr: 'Retour', en: 'Back' },
   'common.leave': { fr: 'Quitter', en: 'Leave' },
+  'common.leaving': { fr: 'Sortie...', en: 'Leaving...' },
   'common.gameCodeLabel': { fr: 'Code de la partie', en: 'Game code' },
   'common.hide': { fr: '▲ masquer', en: '▲ hide' },
   'common.show': { fr: '▼ afficher', en: '▼ show' },
@@ -2178,7 +2179,19 @@ export const translations = {
     fr: "Vous n'êtes pas encore membre de cette partie. Vous pouvez suivre le village et le cimetière en lecture seule, et écouter le vocal pendant les débats — vous la rejoindrez officiellement dès que l'hôte validera votre demande.",
     en: "You're not a member of this game yet. You can follow the village and the graveyard in read-only mode, and listen in on voice during debates — you'll officially join as soon as the host approves your request.",
   },
-  'spectate.backToWaiting': { fr: "Retour à l'attente", en: 'Back to waiting' },
+  'spectate.exit': { fr: '🚪 Quitter', en: '🚪 Leave' },
+
+  // --- Choix rejoindre/regarder pour une partie déjà en cours
+  // (GameInProgressChoice.tsx, utilisé par JoinByLink.tsx et
+  // PublicGamesBrowser.tsx) -----------------------------------------------
+  'joinChoice.title': { fr: 'Cette partie a déjà commencé', en: 'This game has already started' },
+  'joinChoice.body': {
+    fr: "Vous pouvez la regarder en direct en attendant, ou juste envoyer votre demande et revenir plus tard — l'hôte pourra vous accepter dès le retour au salon.",
+    en: "You can watch it live in the meantime, or just send your request and come back later — the host will be able to accept you once back in the lobby.",
+  },
+  'joinChoice.watch': { fr: '👁️ Rejoindre et regarder', en: '👁️ Join and watch' },
+  'joinChoice.requestOnly': { fr: '⏳ Envoyer ma demande sans regarder', en: '⏳ Send my request without watching' },
+  'joinChoice.later': { fr: 'Plus tard', en: 'Later' },
 
   // --- Rejoindre par lien (JoinByLink.tsx) -------------------------------------
   'joinByLink.cannotJoinTitle': { fr: 'Impossible de rejoindre', en: 'Unable to join' },

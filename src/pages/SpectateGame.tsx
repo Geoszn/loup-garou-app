@@ -83,7 +83,22 @@ export default function SpectateGame() {
   const { view, loading } = useSpectatorGame(gameId ?? null)
   const [rosterOpen, setRosterOpen] = useState(false)
   const [logOpen, setLogOpen] = useState(false)
+  const [exiting, setExiting] = useState(false)
   const redirectedRef = useRef(false)
+
+  // Sortir directement d'ici, en un clic — retour utilisateur : avant, il
+  // fallait revenir sur l'écran d'attente (spectate.backToWaiting) puis y
+  // cliquer "Annuler ma demande" pour vraiment quitter. `redirectedRef` est
+  // marqué avant même l'appel réseau : sans ça, le sondage ci-dessous (qui
+  // tourne toutes les 2s) verrait la demande disparaître entre-temps et
+  // nous renverrait sur l'écran d'attente au lieu du tableau de bord.
+  async function exitSpectating() {
+    if (!gameId) return
+    setExiting(true)
+    redirectedRef.current = true
+    await supabase.rpc('cancel_join_request', { p_game_id: gameId })
+    navigate('/dashboard')
+  }
 
   useEffect(() => {
     if (!gameId) return
@@ -125,8 +140,8 @@ export default function SpectateGame() {
               <p className="text-xs text-moon-200/40">{t('spectate.badge')}</p>
             </div>
           </div>
-          <Button variant="ghost" onClick={() => navigate(`/attente/${gameId}`)} className="!px-3 !py-2 text-xs">
-            {t('spectate.backToWaiting')}
+          <Button variant="ghost" disabled={exiting} onClick={exitSpectating} className="!px-3 !py-2 text-xs">
+            {exiting ? t('common.leaving') : t('spectate.exit')}
           </Button>
         </Card>
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { notifyJoinRequest } from '../lib/pushSubscription'
 import { Button, ErrorText } from './ui'
+import { GameInProgressChoice } from './GameInProgressChoice'
 import { AvatarIcon } from './AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { PublicGameListing } from '../types/game'
@@ -19,6 +20,11 @@ export function PublicGamesList({ displayName }: { displayName: string }) {
   const [loading, setLoading] = useState(false)
   const [requestingId, setRequestingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Partie déjà en cours choisie dans la liste : affiche le choix
+  // rejoindre/regarder (voir GameInProgressChoice) au lieu d'envoyer la
+  // demande tout de suite — une partie encore au salon, elle, rejoint
+  // directement (voir requestJoin plus bas), rien à choisir.
+  const [choiceGame, setChoiceGame] = useState<PublicGameListing | null>(null)
   const navigate = useNavigate()
 
   async function load() {
@@ -38,7 +44,7 @@ export function PublicGamesList({ displayName }: { displayName: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function requestJoin(game: PublicGameListing) {
+  async function submitJoinRequest(game: PublicGameListing): Promise<boolean> {
     setRequestingId(game.game_id)
     setError(null)
     const { error: rpcError } = await supabase.rpc('request_join_public_game', {
@@ -48,10 +54,30 @@ export function PublicGamesList({ displayName }: { displayName: string }) {
     setRequestingId(null)
     if (rpcError) {
       setError(rpcError.message)
-      return
+      return false
     }
     void notifyJoinRequest(game.game_id)
-    navigate(`/attente/${game.game_id}`, { state: { code: game.code } })
+    return true
+  }
+
+  async function requestJoin(game: PublicGameListing) {
+    if (game.status !== 'lobby') {
+      setChoiceGame(game)
+      return
+    }
+    if (await submitJoinRequest(game)) navigate(`/attente/${game.game_id}`, { state: { code: game.code } })
+  }
+
+  async function watchChosen() {
+    if (!choiceGame) return
+    const game = choiceGame
+    if (await submitJoinRequest(game)) navigate(`/attente/${game.game_id}/observer`)
+  }
+
+  async function requestOnlyChosen() {
+    if (!choiceGame) return
+    const game = choiceGame
+    if (await submitJoinRequest(game)) navigate(`/attente/${game.game_id}`, { state: { code: game.code } })
   }
 
   return (
@@ -112,6 +138,24 @@ export function PublicGamesList({ displayName }: { displayName: string }) {
               </Button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Choix rejoindre/regarder pour une partie déjà en cours (voir
+          GameInProgressChoice) — pas le Modal partagé de ui.tsx, qui
+          ajoute déjà sa propre carte/en-tête autour de son contenu : ce
+          composant est lui-même une carte autonome, faite pour être
+          centrée directement (même patron que JoinByLink.tsx). */}
+      {choiceGame && (
+        <div className="fixed inset-0 z-50 flex animate-overlay-in items-center justify-center bg-black/60 px-4 backdrop-blur-sm" onClick={() => setChoiceGame(null)}>
+          <div onClick={(e) => e.stopPropagation()}>
+            <GameInProgressChoice
+              onWatch={watchChosen}
+              onRequestOnly={requestOnlyChosen}
+              onCancel={() => setChoiceGame(null)}
+              busy={requestingId === choiceGame.game_id}
+            />
+          </div>
         </div>
       )}
     </div>

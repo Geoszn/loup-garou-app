@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { notifyJoinRequest } from '../lib/pushSubscription'
 import { Card, ErrorText, LinkButton } from '../components/ui'
+import { GameInProgressChoice } from '../components/GameInProgressChoice'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { useLanguage } from '../i18n/LanguageContext'
 
@@ -13,6 +14,13 @@ export default function JoinByLink() {
   const navigate = useNavigate()
   const { t } = useLanguage()
   const [error, setError] = useState<string | null>(null)
+  // Partie déjà en cours (pas au salon) : on s'arrête avant d'appeler
+  // join_game pour proposer explicitement le choix rejoindre/regarder au
+  // lieu de rejoindre automatiquement en silence (retour utilisateur). false
+  // = pas encore su ou partie encore au salon (rejoint alors directement,
+  // rien à choisir).
+  const [gameInProgress, setGameInProgress] = useState(false)
+  const [choiceBusy, setChoiceBusy] = useState(false)
   // Le profil (pseudo réel) est chargé séparément de la session, sur un
   // aller-retour réseau qui lui est propre (voir AuthContext.tsx :
   // `loading` retombe à false dès que la session est prête, sans attendre
@@ -48,9 +56,27 @@ export default function JoinByLink() {
     }
     if (!code) return
     if (!profile && !profileTimedOut) return
+    if (gameInProgress) return
 
     let cancelled = false
     ;(async () => {
+      // Vérifie le statut AVANT d'appeler join_game (qui créerait déjà la
+      // demande) : une partie encore au salon rejoint directement comme
+      // avant (rien à choisir), mais une partie déjà en cours affiche le
+      // choix rejoindre/regarder au lieu de rejoindre automatiquement en
+      // silence. `games` n'étant lisible que par ses participants (voir
+      // migration 0008), un inconnu ne peut pas simplement le lire lui-même
+      // — d'où get_game_status_by_code (migration 0209), dédiée à ce cas.
+      // Un échec de cette vérification (partie introuvable, réseau...)
+      // n'empêche pas de continuer : join_game refera le même travail et
+      // produira lui-même l'erreur appropriée.
+      const { data: status } = await supabase.rpc('get_game_status_by_code', { p_code: code.toUpperCase() })
+      if (cancelled) return
+      if (status && status !== 'lobby' && status !== 'ended') {
+        setGameInProgress(true)
+        return
+      }
+
       const { data, error: rpcError } = await supabase.rpc('join_game', {
         p_code: code.toUpperCase(),
         p_display_name: profile?.username ?? t('common.playerFallback'),
@@ -61,7 +87,10 @@ export default function JoinByLink() {
         return
       }
       // La partie peut déjà être en cours (voir join_game, migration 0038) :
-      // la demande reste alors en attente jusqu'au retour en salon.
+      // la demande reste alors en attente jusqu'au retour en salon. Ne
+      // devrait plus arriver ici en pratique (déjà détecté ci-dessus), sauf
+      // partie qui vient de démarrer entre la vérification et cet appel —
+      // filet de sécurité, pas le chemin normal.
       if (data.status === 'pending') {
         void notifyJoinRequest(data.game_id)
         navigate(`/attente/${data.game_id}`, { replace: true, state: { code: data.code } })
@@ -73,7 +102,33 @@ export default function JoinByLink() {
     return () => {
       cancelled = true
     }
-  }, [loading, session, code, profile, profileTimedOut, navigate])
+  }, [loading, session, code, profile, profileTimedOut, navigate, gameInProgress])
+
+  async function submitJoinRequest(): Promise<{ gameId: string; code: string } | null> {
+    if (!code) return null
+    setChoiceBusy(true)
+    const { data, error: rpcError } = await supabase.rpc('join_game', {
+      p_code: code.toUpperCase(),
+      p_display_name: profile?.username ?? t('common.playerFallback'),
+    })
+    setChoiceBusy(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      return null
+    }
+    void notifyJoinRequest(data.game_id)
+    return { gameId: data.game_id, code: data.code }
+  }
+
+  async function handleWatch() {
+    const result = await submitJoinRequest()
+    if (result) navigate(`/attente/${result.gameId}/observer`, { replace: true })
+  }
+
+  async function handleRequestOnly() {
+    const result = await submitJoinRequest()
+    if (result) navigate(`/attente/${result.gameId}`, { replace: true, state: { code: result.code } })
+  }
 
   if (error) {
     return (
@@ -83,6 +138,19 @@ export default function JoinByLink() {
           <h1 className="mb-2 font-display text-xl text-moon-200">{t('joinByLink.cannotJoinTitle')}</h1>
           <ErrorText>{error}</ErrorText>
         </Card>
+      </div>
+    )
+  }
+
+  if (gameInProgress) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <GameInProgressChoice
+          onWatch={handleWatch}
+          onRequestOnly={handleRequestOnly}
+          onCancel={() => navigate('/dashboard')}
+          busy={choiceBusy}
+        />
       </div>
     )
   }
