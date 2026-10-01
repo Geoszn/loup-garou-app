@@ -88,13 +88,22 @@ export function useGame(gameId: string | null, userId: string | null = null) {
   // Fait avancer le temps : tick régulier tant qu'une partie est en cours.
   // La fonction SQL est idempotente (elle ne fait rien si le délai n'est pas
   // écoulé), donc plusieurs clients peuvent l'appeler sans risque.
+  // 1,5s → 4s (audit de charge du 2026-10-01) : la fréquence par CLIENT
+  // comptait peu pour la réactivité perçue — dès qu'UN seul des N joueurs
+  // présents réussit son tick, le changement de phase arrive aux autres
+  // par Realtime (abonnement sur `games` ci-dessus), pas en attendant leur
+  // propre prochain tick. Avec N joueurs qui tickent chacun toutes les 4s à
+  // des instants décalés, le salon dans son ensemble reste réactif, mais
+  // chaque client envoie ~2,7x moins de requêtes — c'était, avec le filet
+  // de sécurité 6s ci-dessus, la plus grosse source de requêtes continues
+  // de l'appli à l'échelle de plusieurs parties simultanées.
   useEffect(() => {
     if (!gameId) return
     if (!view || view.game.status === 'lobby' || view.game.status === 'ended') return
 
     const interval = setInterval(async () => {
       await supabase.rpc('tick_game', { p_game_id: gameId })
-    }, 1500)
+    }, 4000)
 
     return () => clearInterval(interval)
   }, [gameId, view?.game.status])
