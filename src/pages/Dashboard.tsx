@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { notifyJoinRequest } from '../lib/pushSubscription'
-import { Button, Card, ErrorText, Modal, SectionDivider } from '../components/ui'
+import { Button, Card, ErrorText, SectionDivider } from '../components/ui'
 import { RankBadge } from '../components/RankBadge'
 import { DailyLoginBanner } from '../components/DailyLoginBanner'
 import { AnnouncementsModal } from '../components/AnnouncementsModal'
@@ -17,7 +17,6 @@ import { ContinentPrompt } from '../components/ContinentPrompt'
 import { NotificationOptInPrompt } from '../components/NotificationOptInPrompt'
 import { QuoteCarousel } from '../components/QuoteCarousel'
 import { PromoCarousel } from '../components/PromoCarousel'
-import { useNarrator } from '../hooks/useNarrator'
 import { useActiveEvents } from '../hooks/useActiveEvents'
 import { useActiveBanners } from '../hooks/useActiveBanners'
 import { useMySeason } from '../hooks/useMySeason'
@@ -38,8 +37,6 @@ interface ActiveGame {
   code: string
   status: string
 }
-
-type NarratorTestState = 'idle' | 'testing' | 'success' | 'failed'
 
 export default function Dashboard() {
   const { user, profile } = useAuth()
@@ -104,37 +101,6 @@ export default function Dashboard() {
   function resumeActiveGame() {
     if (!activeGame) return
     navigate(activeGame.status === 'lobby' ? `/partie/${activeGame.code}/lobby` : `/partie/${activeGame.code}`)
-  }
-
-  // --- Créer une partie -----------------------------------------------------
-  const narrator = useNarrator(null)
-  const [narratorTest, setNarratorTest] = useState<NarratorTestState>('idle')
-  const [narratorTestError, setNarratorTestError] = useState<string | null>(null)
-  const narratorCancelledRef = useRef(false)
-
-  async function runNarratorTest() {
-    narratorCancelledRef.current = false
-    setNarratorTest('testing')
-    setNarratorTestError(null)
-    try {
-      await narrator.testVoice()
-      if (narratorCancelledRef.current) return
-      setNarratorTest('success')
-    } catch (err) {
-      if (narratorCancelledRef.current) return
-      setNarratorTestError(err instanceof Error ? err.message : t('dashboard.narrator.fallbackError'))
-      setNarratorTest('failed')
-    }
-  }
-
-  function cancelNarratorTest() {
-    narratorCancelledRef.current = true
-    narrator.stop()
-    setNarratorTest('idle')
-  }
-
-  function closeNarratorTest() {
-    setNarratorTest('idle')
   }
 
   async function loadSocial() {
@@ -377,60 +343,8 @@ export default function Dashboard() {
 
         <SectionDivider />
 
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-moon-200/40">
-          {narrator.supported && (
-            <span className="flex items-center gap-1.5">
-              <span>🔊</span>
-              <button
-                type="button"
-                onClick={runNarratorTest}
-                className="underline underline-offset-4 transition-colors hover:text-moon-200/70"
-              >
-                {t('dashboard.testNarrator')}
-              </button>
-            </span>
-          )}
-        </div>
-
         <QuoteCarousel />
       </div>
-
-      {/* Pop-up "Créer une partie" : privé ou public, un choix, un clic. */}
-      <Modal
-        open={narratorTest !== 'idle'}
-        onClose={narratorTest === 'testing' ? cancelNarratorTest : closeNarratorTest}
-        title={`🔊 ${t('dashboard.narrator.title')}`}
-      >
-        {narratorTest === 'testing' && (
-          <>
-            <p className="mb-5 text-sm text-moon-200/70">{t('dashboard.narrator.testing')}</p>
-            <Button variant="ghost" className="w-full" onClick={cancelNarratorTest}>
-              {t('common.cancel')}
-            </Button>
-          </>
-        )}
-        {narratorTest === 'success' && (
-          <>
-            <p className="mb-5 text-sm text-emerald-400">✅ {t('dashboard.narrator.success')}</p>
-            <Button className="w-full" onClick={closeNarratorTest}>
-              {t('dashboard.narrator.continue')}
-            </Button>
-          </>
-        )}
-        {narratorTest === 'failed' && (
-          <>
-            <ErrorText>{narratorTestError}</ErrorText>
-            <div className="mt-4 flex gap-3">
-              <Button variant="ghost" className="flex-1" onClick={closeNarratorTest}>
-                {t('dashboard.narrator.continue')}
-              </Button>
-              <Button className="flex-1" onClick={runNarratorTest}>
-                {t('dashboard.narrator.retry')}
-              </Button>
-            </div>
-          </>
-        )}
-      </Modal>
     </div>
   )
 }

@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { usePresence } from '../context/PresenceContext'
 import { useGame } from '../hooks/useGame'
-import { useNarrator } from '../hooks/useNarrator'
 import { useSoundEffects } from '../hooks/useSoundEffects'
 import { useTurnNotifications } from '../hooks/useTurnNotifications'
 import { supabase } from '../lib/supabase'
@@ -73,7 +72,6 @@ export default function GameRoom() {
   }, [code])
 
   const { view, error: gameError, onlineUserIds } = useGame(gameId, user?.id ?? null)
-  const narrator = useNarrator(gameId)
   const sfx = useSoundEffects(view)
   const notifications = useTurnNotifications(
     view?.pending_action_required ?? null,
@@ -314,9 +312,6 @@ export default function GameRoom() {
         infectionOccurred={view.alpha_infection_occurred}
         wildChildConversionOccurred={view.wild_child_conversion_occurred}
         selfId={user.id}
-        narratorEnabled={narrator.enabled}
-        narratorSupported={narrator.supported}
-        onToggleNarrator={narrator.toggle}
         sfxEnabled={sfx.enabled}
         sfxSupported={sfx.supported}
         onToggleSfx={sfx.toggle}

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 
 /**
  * Joue un court son ponctuel (fichier dans public/sounds/) sur commande,
- * avec le même mécanisme de déverrouillage mobile que useNarrator.ts /
+ * avec le même mécanisme de déverrouillage mobile que
  * useSoundEffects.ts : un seul <audio> réutilisé, débloqué par un premier
  * play() réussi en réaction à un vrai geste utilisateur (Safari/iOS n'
  * autorise pas de lecture audio hors interaction). Plus léger que

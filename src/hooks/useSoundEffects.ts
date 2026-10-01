@@ -24,8 +24,8 @@ type SoundKey = keyof typeof SOUND_FILES
  * correspondant échoue silencieusement (voir public/sounds/README.md) : rien
  * ne casse, le moment est juste silencieux.
  *
- * Même piège Safari/iOS que le narrateur (voir useNarrator.ts) : un élément
- * <audio> ne peut être "débloqué" que par un premier play() déclenché en
+ * Même piège Safari/iOS qu'ailleurs dans l'app (voir useNotificationSound.ts) :
+ * un élément <audio> ne peut être "débloqué" que par un premier play() déclenché en
  * réaction directe à un geste utilisateur, et ce déverrouillage ne s'applique
  * qu'à cette instance précise. On garde donc un pool d'éléments <audio>
  * persistants (un par son) plutôt que de recréer `new Audio()` à chaque fois.
@@ -60,7 +60,7 @@ export function useSoundEffects(view: MyGameView | null) {
 
   function unlock() {
     if (unlockedRef.current || !supported) return
-    // Comme pour le narrateur (useNarrator.ts) : on ne marque "déverrouillé"
+    // Même principe qu'useNotificationSound.ts : on ne marque "déverrouillé"
     // qu'après confirmation qu'au moins un play() a réussi, jamais avant.
     // Sur mobile le tout premier essai peut échouer légitimement ; comme les
     // écouteurs ci-dessous ne sont plus en `once`, un échec ici retente

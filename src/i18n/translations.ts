@@ -242,7 +242,6 @@ export const translations = {
   'dashboard.inviteJoining': { fr: 'Connexion...', en: 'Joining...' },
   'dashboard.createGame': { fr: 'Créer une partie', en: 'Create a game' },
   'dashboard.joinGame': { fr: 'Rejoindre une partie', en: 'Join a game' },
-  'dashboard.testNarrator': { fr: 'Tester le narrateur', en: 'Test the narrator' },
   'dashboard.leaderboard.title': { fr: 'Classement mondial', en: 'Global leaderboard' },
   'dashboard.leaderboard.seeAll': { fr: 'Tout voir →', en: 'See all →' },
   'dashboard.leaderboard.empty': {
@@ -297,19 +296,6 @@ export const translations = {
   'dashboard.join.submit': { fr: 'Rejoindre', en: 'Join' },
   'dashboard.join.submitting': { fr: 'Connexion...', en: 'Joining...' },
   'dashboard.join.error.invalidCode': { fr: 'Entrez un code de partie valide.', en: 'Enter a valid game code.' },
-
-  'dashboard.narrator.title': { fr: 'Test du narrateur', en: 'Narrator test' },
-  'dashboard.narrator.testing': {
-    fr: 'Lecture d’un extrait de voix en cours... cela peut prendre plusieurs secondes.',
-    en: 'Playing a voice sample... this can take a few seconds.',
-  },
-  'dashboard.narrator.success': { fr: 'La voix a bien été jouée.', en: 'The voice played successfully.' },
-  'dashboard.narrator.continue': { fr: 'Continuer', en: 'Continue' },
-  'dashboard.narrator.retry': { fr: 'Recommencer', en: 'Try again' },
-  'dashboard.narrator.fallbackError': {
-    fr: 'Le test du narrateur a échoué.',
-    en: 'The narrator test failed.',
-  },
 
   // --- Commun (suite) --------------------------------------------------------
   'common.sending': { fr: 'Envoi...', en: 'Sending...' },
@@ -1042,7 +1028,6 @@ export const translations = {
   'phase.day_vote': { fr: 'Vote', en: 'Vote' },
   'phase.day_vote_recap': { fr: 'Résultat du vote', en: 'Vote result' },
   'phase.ended': { fr: 'Partie terminée', en: 'Game over' },
-  'menu.narrator': { fr: 'Narrateur', en: 'Narrator' },
   'menu.sfx': { fr: 'Effets sonores', en: 'Sound effects' },
   'menu.notifications': { fr: 'Notifs "à vous de jouer"', en: '"Your turn" notifications' },
 
@@ -2339,8 +2324,8 @@ export const translations = {
   },
   'privacy.s2.local.label': { fr: 'Préférences locales :', en: 'Local preferences:' },
   'privacy.s2.local.text': {
-    fr: 'quelques réglages (son activé/coupé, narrateur, notifications) sont enregistrés uniquement dans le navigateur (stockage local), sans être transmis à nos serveurs.',
-    en: 'a few settings (sound on/off, narrator, notifications) are saved only in the browser (local storage), and are not sent to our servers.',
+    fr: 'quelques réglages (son activé/coupé, notifications) sont enregistrés uniquement dans le navigateur (stockage local), sans être transmis à nos serveurs.',
+    en: 'a few settings (sound on/off, notifications) are saved only in the browser (local storage), and are not sent to our servers.',
   },
   'privacy.s2.tech.label': { fr: 'Techniques :', en: 'Technical:' },
   'privacy.s2.tech.text': {

@@ -94,39 +94,15 @@ En local (`npm run dev`), le vocal ne fonctionnera pas car il n'y a pas de fonct
 
 ---
 
-## 5. Voix du narrateur (ElevenLabs)
+## 5. Effets sonores
 
-Par défaut, le narrateur utilise la synthèse vocale gratuite du navigateur (robotique mais fonctionnelle). Pour une voix bien plus réaliste et dramatique, l'app passe par [ElevenLabs](https://elevenlabs.io), dont l'offre gratuite (~10 000 caractères/mois, largement suffisant pour animer plusieurs parties) suffit pour ce narrateur.
-
-1. Créez un compte gratuit sur [elevenlabs.io/app/sign-up](https://elevenlabs.io/app/sign-up).
-2. Dans **Settings → API Keys**, créez une clé API et copiez-la.
-3. *(Optionnel)* Dans la [bibliothèque de voix](https://elevenlabs.io/app/voice-library), choisissez une voix qui vous plaît pour le ton "meneur de jeu" et copiez son **Voice ID** (sinon une voix par défaut est utilisée).
-4. Ajoutez la clé comme variable d'environnement sur Vercel (depuis le dossier `loup-garou-app`) :
-   ```bash
-   npx vercel env add ELEVENLABS_API_KEY production
-   # optionnel, si vous avez choisi une voix différente :
-   npx vercel env add ELEVENLABS_VOICE_ID production
-   ```
-5. Redéployez :
-   ```bash
-   npx vercel --prod
-   ```
-
-⚠️ Comme pour Daily.co, cette clé ne doit **jamais** être mise dans `.env` ni dans `VITE_...` — elle reste strictement côté serveur (`api/narrator-voice.ts`).
-
-Si la clé n'est pas configurée, ou si le quota gratuit mensuel est épuisé, l'app bascule **automatiquement et silencieusement** sur la voix du navigateur : la narration ne casse jamais, elle est juste moins belle.
-
----
-
-## 5bis. Effets sonores
-
-En plus du narrateur, l'app peut jouer un court effet sonore à 5 moments clés de la partie (la nuit tombe, le village se réveille, un vote s'ouvre, un joueur meurt, la partie se termine — `src/hooks/useSoundEffects.ts`) ainsi qu'un petit clic sur n'importe quel bouton de l'appli (`src/hooks/useUiClickSound.ts`, actif partout, pas seulement en partie). Bouton 🎶/🔇 dans le bandeau de phase, à côté de celui du narrateur — il coupe les deux en même temps (même réglage partagé).
+L'app peut jouer un court effet sonore à 5 moments clés de la partie (la nuit tombe, le village se réveille, un vote s'ouvre, un joueur meurt, la partie se termine — `src/hooks/useSoundEffects.ts`) ainsi qu'un petit clic sur n'importe quel bouton de l'appli (`src/hooks/useUiClickSound.ts`, actif partout, pas seulement en partie). Bouton 🎶/🔇 dans le bandeau de phase.
 
 Le code est déjà branché mais n'inclut aucun fichier audio par défaut : voir **`public/sounds/README.md`** pour la liste exacte des 8 fichiers attendus, avec une sélection de sons libres de droit (licence Mixkit, gratuite et sans attribution) prête à télécharger. Tant qu'un fichier manque, son moment reste simplement silencieux.
 
 ---
 
-## 5ter. Notifications push (web)
+## 5bis. Notifications push (web)
 
 Notifications navigateur (Web Push API), activables depuis **Mon compte → Notifications**, sans passer par l'App Store ni le Play Store — ça fonctionne dès que le site est déployé (ou même en local pour la partie abonnement, voir plus bas).
 
@@ -137,7 +113,7 @@ Notifications navigateur (Web Push API), activables depuis **Mon compte → Noti
    npx web-push generate-vapid-keys
    ```
 2. Clé **publique** → variable `VITE_VAPID_PUBLIC_KEY` dans `.env` (local) **et** dans les Environment Variables du projet Vercel. Sans danger à exposer côté client.
-3. Clé **privée** → variable `VAPID_PRIVATE_KEY` sur Vercel **uniquement**, jamais dans `.env` ni `VITE_...` (comme `DAILY_API_KEY` et `ELEVENLABS_API_KEY`, voir sections 4 et 5) :
+3. Clé **privée** → variable `VAPID_PRIVATE_KEY` sur Vercel **uniquement**, jamais dans `.env` ni `VITE_...` (comme `DAILY_API_KEY`, voir section 4) :
    ```bash
    npx vercel env add VAPID_PRIVATE_KEY production
    npx vercel env add VAPID_PUBLIC_KEY production
@@ -148,7 +124,7 @@ Notifications navigateur (Web Push API), activables depuis **Mon compte → Noti
    ```
 5. Redéployez : `npx vercel --prod`.
 
-**Tester** : "Mon compte" → "Notifications" → "Activer" (le navigateur demande la permission), puis "Envoyer un test" — un bandeau système doit apparaître en quelques secondes. Le bouton de test appelle `api/send-push.ts`, qui n'existe qu'en production (fonction serverless Vercel) : en local (`npm run dev`), l'abonnement fonctionne mais le test échouera, comme pour le vocal (section 4) et le narrateur (section 5).
+**Tester** : "Mon compte" → "Notifications" → "Activer" (le navigateur demande la permission), puis "Envoyer un test" — un bandeau système doit apparaître en quelques secondes. Le bouton de test appelle `api/send-push.ts`, qui n'existe qu'en production (fonction serverless Vercel) : en local (`npm run dev`), l'abonnement fonctionne mais le test échouera, comme pour le vocal (section 4).
 
 Ce qui existe pour l'instant :
 - notification de **test**, envoyée par le joueur à lui-même (`api/send-push.ts`) ;
@@ -204,9 +180,7 @@ Dès qu'une phase change, le salon correspondant se ferme automatiquement (la fo
 - [ ] Le chat du village apparaît bien pendant le débat et disparaît une fois la nuit tombée.
 - [ ] Le vocal du village se connecte (autoriser le micro dans le navigateur au premier essai).
 - [ ] En tuant un joueur de test, son compte bascule bien dans le salon "Cimetière" (texte + vocal) et ne voit plus les salons du village.
-- [ ] `ELEVENLABS_API_KEY` est configurée sur Vercel et le site a été redéployé après (sinon le narrateur utilise simplement la voix du navigateur).
-- [ ] Le narrateur s'entend bien pendant une partie (cliquer n'importe où dans la partie une première fois, sur Safari notamment, pour "débloquer" le son).
-- [ ] `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `SUPABASE_SERVICE_ROLE_KEY` sont configurées sur Vercel et le site a été redéployé après (voir section 5ter) ; "Mon compte → Notifications → Activer" puis "Envoyer un test" affiche bien un bandeau système.
+- [ ] `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `SUPABASE_SERVICE_ROLE_KEY` sont configurées sur Vercel et le site a été redéployé après (voir section 5bis) ; "Mon compte → Notifications → Activer" puis "Envoyer un test" affiche bien un bandeau système.
 
 ---
 

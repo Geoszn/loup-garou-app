@@ -74,9 +74,6 @@ export function PhaseBanner({
   onlineUserIds,
   infectionOccurred = false,
   wildChildConversionOccurred = false,
-  narratorEnabled,
-  onToggleNarrator,
-  narratorSupported = true,
   sfxEnabled,
   onToggleSfx,
   sfxSupported = true,
@@ -105,9 +102,6 @@ export function PhaseBanner({
    * composant. */
   wildChildConversionOccurred?: boolean
   selfId?: string
-  narratorEnabled?: boolean
-  onToggleNarrator?: () => void
-  narratorSupported?: boolean
   sfxEnabled?: boolean
   onToggleSfx?: () => void
   sfxSupported?: boolean
@@ -248,9 +242,6 @@ export function PhaseBanner({
           </button>
         )}
         <GameMenu
-          narratorEnabled={narratorEnabled}
-          onToggleNarrator={onToggleNarrator}
-          narratorSupported={narratorSupported}
           sfxEnabled={sfxEnabled}
           onToggleSfx={onToggleSfx}
           sfxSupported={sfxSupported}
@@ -266,14 +257,11 @@ export function PhaseBanner({
   )
 }
 
-/** Menu ⋮ regroupant les réglages qu'on ajuste rarement (narrateur, effets
- * sonores, notifications) et le bouton "Quitter" — même patron que
- * AccountMenu (Dashboard), pour ne pas empiler une icône par réglage dans la
- * barre du haut. */
+/** Menu ⋮ regroupant les réglages qu'on ajuste rarement (effets sonores,
+ * notifications) et le bouton "Quitter" — même patron que AccountMenu
+ * (Dashboard), pour ne pas empiler une icône par réglage dans la barre du
+ * haut. */
 function GameMenu({
-  narratorEnabled,
-  onToggleNarrator,
-  narratorSupported,
   sfxEnabled,
   onToggleSfx,
   sfxSupported,
@@ -284,9 +272,6 @@ function GameMenu({
   isHost,
   onOpenModeration,
 }: {
-  narratorEnabled?: boolean
-  onToggleNarrator?: () => void
-  narratorSupported: boolean
   sfxEnabled?: boolean
   onToggleSfx?: () => void
   sfxSupported: boolean
@@ -317,11 +302,10 @@ function GameMenu({
     }
   }, [open])
 
-  const hasNarrator = narratorSupported && !!onToggleNarrator
   const hasSfx = sfxSupported && !!onToggleSfx
   const hasNotif = notifSupported && !!onToggleNotif
   const hasModeration = isHost && !!onOpenModeration
-  if (!hasNarrator && !hasSfx && !hasNotif && !hasModeration && !onLeave) return null
+  if (!hasSfx && !hasNotif && !hasModeration && !onLeave) return null
 
   return (
     <div ref={containerRef} className="relative">
@@ -338,14 +322,6 @@ function GameMenu({
 
       {open && (
         <div className="absolute right-0 top-full z-30 mt-2 w-56 rounded-xl border border-night-600 bg-night-800 p-1.5 shadow-card">
-          {hasNarrator && (
-            <MenuToggle
-              icon={narratorEnabled ? '🔊' : '🔈'}
-              label={t('menu.narrator')}
-              enabled={!!narratorEnabled}
-              onClick={onToggleNarrator!}
-            />
-          )}
           {hasSfx && (
             <MenuToggle
               icon={sfxEnabled ? '🎶' : '🔇'}
@@ -364,7 +340,7 @@ function GameMenu({
           )}
           {hasModeration && (
             <>
-              {(hasNarrator || hasSfx || hasNotif) && <div className="my-1 border-t border-night-700" />}
+              {(hasSfx || hasNotif) && <div className="my-1 border-t border-night-700" />}
               <button
                 type="button"
                 onClick={() => {
