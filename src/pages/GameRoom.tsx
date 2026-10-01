@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { usePresence } from '../context/PresenceContext'
@@ -161,6 +161,16 @@ export default function GameRoom() {
     const wolfWindowOpen = view && view.game.status === 'night' && isWolfTeam(view.my_role)
     if (!wolfWindowOpen) setNightTab('village')
   }, [view])
+
+  // Stabilisé (audit de fluidité du 2026-10-01) : un littéral objet recréé
+  // à chaque rendu de GameRoom aurait empêché le memo() de PlayerGrid de
+  // jamais servir à quoi que ce soit (voir son usage plus bas, passé en
+  // prop `moodContext`) — seules status/night_number comptent ici, pas
+  // besoin d'un nouvel objet tant qu'aucun des deux n'a changé.
+  const moodContext = useMemo(
+    () => (view ? { status: view.game.status, nightNumber: view.game.night_number } : undefined),
+    [view?.game.status, view?.game.night_number]
+  )
 
   if (resolveError) {
     return (
@@ -566,7 +576,7 @@ export default function GameRoom() {
                       note={view.village_muted ? t('game.villageMutedNote') : undefined}
                     />
                   }
-                  grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} moodContext={{ status: view.game.status, nightNumber: view.game.night_number }} />}
+                  grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} moodContext={moodContext} />}
                   loversChat={
                     view.lover_id ? (
                       <ChatPanel fill players={view.players} gameId={gameId!} channel="amoureux" selfId={user.id} />
@@ -638,7 +648,7 @@ export default function GameRoom() {
                     note={view.village_muted ? t('game.villageMutedNote') : undefined}
                   />
                 }
-                grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} moodContext={{ status: view.game.status, nightNumber: view.game.night_number }} />}
+                grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} moodContext={moodContext} />}
                 loversChat={
                   view.lover_id ? (
                     <ChatPanel players={view.players} gameId={gameId!} channel="amoureux" selfId={user.id} compact />
@@ -745,16 +755,16 @@ export default function GameRoom() {
  * arrivés dans un salon pendant qu'on ne le regarde pas (voir
  * useUnreadChatCount). Rien n'est affiché à 0, pour ne pas alourdir
  * l'onglet en permanence. */
-function UnreadBadge({ count }: { count: number }) {
+const UnreadBadge = memo(function UnreadBadge({ count }: { count: number }) {
   if (count <= 0) return null
   return (
     <span className="ml-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-blood-500 px-1 text-[10px] font-bold leading-none text-white">
       {count > 9 ? '9+' : count}
     </span>
   )
-}
+})
 
-function DayTabs({
+const DayTabs = memo(function DayTabs({
   dayTab,
   setDayTab,
   voice,
@@ -822,7 +832,7 @@ function DayTabs({
       {dayTab === 'discuss' ? chat : dayTab === 'amoureux' ? loversChat : fill ? <div className="min-h-0 flex-1 overflow-y-auto">{grid}</div> : grid}
     </div>
   )
-}
+})
 
 /** Écran fantôme fusionné : village en haut (lecture seule), cimetière en
  * bas (chat toujours actif). Demande utilisateur : plus de vocal du tout au
@@ -830,7 +840,7 @@ function DayTabs({
  * le vocal du village (écoute seule, quand les vivants parlent en journée)
  * reste seul survivant, donc plus besoin de bouton pour choisir un canal —
  * il s'affiche tout seul quand disponible. */
-function GhostPanel({
+const GhostPanel = memo(function GhostPanel({
   gameId,
   code,
   selfId,
@@ -875,7 +885,7 @@ function GhostPanel({
       <ChatPanel players={players} gameId={gameId} channel="graveyard" selfId={selfId} compact compactHeightClassName="h-96" />
     </div>
   )
-}
+})
 
 /** Village (lecture seule) + Loups (lecture seule, seulement si le Parchemin
  * du Griot a été activé) regroupés en deux onglets collés, plutôt qu'empilés
@@ -885,7 +895,7 @@ function GhostPanel({
  * vivant), qui bascule déjà entre ces deux mêmes salons pour les loups en
  * vie. Sans onglet Loups à proposer, revient au simple chat village d'avant
  * (pas de pilule à un seul choix, inutile). */
-function GhostVillageWolvesChat({
+const GhostVillageWolvesChat = memo(function GhostVillageWolvesChat({
   gameId,
   selfId,
   showWolves,
@@ -941,14 +951,14 @@ function GhostVillageWolvesChat({
       )}
     </div>
   )
-}
+})
 
 /** Formulaire "Dernier Souffle" (artefact du Loup Store, migration 0148) :
  * affiché une seule fois, juste après l'élimination, tant que l'artefact n'a
  * pas déjà été utilisé cette partie (dernierSouffleUsed vient de
  * get_my_game_view, recalculé à chaque lecture — pas besoin de suivre
  * l'état "envoyé" localement au-delà du succès immédiat de l'appel). */
-function LastWordsForm({ gameId }: { gameId: string }) {
+const LastWordsForm = memo(function LastWordsForm({ gameId }: { gameId: string }) {
   const { t } = useLanguage()
   const [content, setContent] = useState('')
   const [sending, setSending] = useState(false)
@@ -990,7 +1000,7 @@ function LastWordsForm({ gameId }: { gameId: string }) {
       <ErrorText>{error}</ErrorText>
     </div>
   )
-}
+})
 
 /** Grille des joueurs repliée par défaut — utilisée là où elle s'affiche
  * inconditionnellement à côté du chat/vocal du fantôme (élection du
@@ -1000,7 +1010,7 @@ function LastWordsForm({ gameId }: { gameId: string }) {
  * autant de place" — la grille prenait plusieurs écrans de hauteur en
  * dessous du chat du cimetière, déjà agrandi. Même style de bouton que le
  * journal de la partie plus bas (Card + libellé/compteur + afficher/masquer).*/
-function CollapsiblePlayerGrid({
+const CollapsiblePlayerGrid = memo(function CollapsiblePlayerGrid({
   players,
   selfId,
   onlineUserIds,
@@ -1030,7 +1040,7 @@ function CollapsiblePlayerGrid({
       )}
     </Card>
   )
-}
+})
 
 /** Boussole du Village (artefact du Loup Store, effect_key =
  * 'boussole_village', migration 0152) : historique des votes de tous les
@@ -1039,7 +1049,7 @@ function CollapsiblePlayerGrid({
  * patron que CollapsiblePlayerGrid juste au-dessus. Personnel : seul le
  * propriétaire de l'artefact la voit (view.vote_history est null pour tous
  * les autres joueurs). */
-function VoteHistoryPanel({
+const VoteHistoryPanel = memo(function VoteHistoryPanel({
   voteHistory,
   players,
 }: {
@@ -1095,7 +1105,7 @@ function VoteHistoryPanel({
       )}
     </Card>
   )
-}
+})
 
 /** Chat de nuit : le village (anonyme, ouvert toute la nuit pour que les
  * joueurs sans action en cours ne s'ennuient pas en silence) et, en plus,
@@ -1120,7 +1130,7 @@ function VoteHistoryPanel({
  * salon au démontage) à chaque changement d'onglet — corrigé en sortant
  * VoiceChat du `nightTab === 'wolves' ? ... : ...`, seul le ChatPanel texte
  * change avec l'onglet actif. */
-function NightChat({
+const NightChat = memo(function NightChat({
   gameId,
   code,
   selfId,
@@ -1219,13 +1229,13 @@ function NightChat({
       )}
     </div>
   )
-}
+})
 
 /** Bouton "prêt" pendant la distribution des rôles : dès que tout le monde a
  * cliqué, la partie démarre immédiatement sans attendre la fin des 60s
  * (voir submit_ready côté serveur, qui force l'avancement une fois
  * complet). */
-function ReadyPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
+const ReadyPanel = memo(function ReadyPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
   const { t } = useLanguage()
   const [loading, setLoading] = useState(false)
   const me = view.players.find((p) => p.user_id === selfId)
@@ -1250,7 +1260,7 @@ function ReadyPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string
       </BottomActionBar>
     </>
   )
-}
+})
 
 /** Pendant le débat : chaque joueur vivant (hors acteur) peut se déclarer
  * d'accord pour passer au vote. L'acteur n'a pas besoin de se déclarer
@@ -1270,7 +1280,7 @@ function ReadyPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string
  *     modération, voir ModerationPanel) — c'est pourquoi ce composant est
  *     désormais aussi rendu pour un hôte non vivant (voir son appel plus
  *     bas, `alive || isHost`), pas seulement pour les joueurs vivants. */
-function CallVotePanel({
+const CallVotePanel = memo(function CallVotePanel({
   view,
   gameId,
   selfId,
@@ -1432,13 +1442,13 @@ function CallVotePanel({
       <ErrorText>{error}</ErrorText>
     </div>
   )
-}
+})
 
 // `voting` a disparu (voir day_vote/captain_election dans GameRoom : la
 // grille de vote reste maintenant affichée après un premier vote au lieu de
 // basculer sur cet écran d'attente générique) — ne reste utilisé que pour
 // la nuit (nightStep) et pour les joueurs éliminés (!alive).
-function WaitingCard({
+const WaitingCard = memo(function WaitingCard({
   alive,
   myRole,
   nightStep,
@@ -1495,13 +1505,13 @@ function WaitingCard({
       )}
     </Card>
   )
-}
+})
 
 /** Affiche, pendant toute la durée de la nuit, le résultat de l'action
  * jouée cette nuit-là par la Voyante ou la Petite Fille — dès qu'il est
  * disponible côté serveur — plutôt que de le laisser disparaître dès que
  * `pending_action_required` repasse à null. */
-function NightResultPanel({ view }: { view: MyGameView }) {
+const NightResultPanel = memo(function NightResultPanel({ view }: { view: MyGameView }) {
   const { t } = useLanguage()
   const nightNumber = view.game.night_number
 
@@ -1621,7 +1631,7 @@ function NightResultPanel({ view }: { view: MyGameView }) {
   }
 
   return null
-}
+})
 
 /** Rappel discret du rôle du joueur — une simple puce dépliable plutôt qu'une
  * carte pleine toujours affichée : le joueur connaît déjà son rôle (révélé en
@@ -1631,7 +1641,7 @@ function NightResultPanel({ view }: { view: MyGameView }) {
  * retour utilisateur : utile à tout moment, d'autant plus depuis Anancy
  * (échange de rôles en cours de partie) où un joueur peut légitimement ne
  * plus être certain de son rôle actuel. */
-function RolePanel({ myRole }: { myRole: string | null }) {
+const RolePanel = memo(function RolePanel({ myRole }: { myRole: string | null }) {
   const { t } = useLanguage()
   const [open, setOpen] = useState(false)
   if (!myRole) return null
@@ -1651,7 +1661,7 @@ function RolePanel({ myRole }: { myRole: string | null }) {
       {open && <p className="mt-2 text-xs text-moon-200/50">{t(role.descriptionKey)}</p>}
     </button>
   )
-}
+})
 
 /** Rappel discret et persistant qu'Anancy a échangé mon rôle avec un autre
  * joueur cette nuit-là — jamais avec qui ni contre quel rôle (voir
@@ -1661,7 +1671,7 @@ function RolePanel({ myRole }: { myRole: string | null }) {
  * Affiché ici à côté de RolePanel (même endroit, même esprit) tant que
  * anancy_swapped_me reste vrai côté serveur, soit tout le jour de
  * l'échange et la nuit qui suit. */
-function AnancySwapNotice({ swapped }: { swapped: boolean }) {
+const AnancySwapNotice = memo(function AnancySwapNotice({ swapped }: { swapped: boolean }) {
   const { t } = useLanguage()
   if (!swapped) return null
   return (
@@ -1670,14 +1680,14 @@ function AnancySwapNotice({ swapped }: { swapped: boolean }) {
       <p className="mt-1 text-xs text-moon-200/70">{t('game.anancySwappedMe')}</p>
     </div>
   )
-}
+})
 
 /** La Chasseuse (voir migration 0162, rebaptisée en 0163) : rappel
  * persistant de sa cible actuelle — jamais son camp ni son rôle, juste son
  * nom (voir my_chasseuse_target_name, calculé côté serveur). null tant
  * qu'aucune cible n'est encore attribuée (avant la deuxième nuit) : rien à
  * afficher dans ce cas, pas d'encart vide. */
-function ChasseuseTargetPanel({ view }: { view: MyGameView }) {
+const ChasseuseTargetPanel = memo(function ChasseuseTargetPanel({ view }: { view: MyGameView }) {
   const { t } = useLanguage()
   if (view.my_role !== 'chasseuse' || !view.my_chasseuse_target_name) return null
   return (
@@ -1686,7 +1696,7 @@ function ChasseuseTargetPanel({ view }: { view: MyGameView }) {
       <p className="mt-1 text-xs text-moon-200/70">{t('game.chasseuseTargetNote', { name: view.my_chasseuse_target_name })}</p>
     </div>
   )
-}
+})
 
 /** Retour utilisateur (migration 0168) : la cible protégée par le Daron
  * doit le savoir PENDANT la nuit, en direct, pas seulement dans le récap de
@@ -1698,7 +1708,7 @@ function ChasseuseTargetPanel({ view }: { view: MyGameView }) {
  * plus. Jamais affiché au Daron lui-même (déjà exclu côté serveur), et ne
  * nomme jamais le Daron — même discrétion que son ancienne version dans le
  * récap. */
-function DaronProtectionPanel({ view }: { view: MyGameView }) {
+const DaronProtectionPanel = memo(function DaronProtectionPanel({ view }: { view: MyGameView }) {
   const { t } = useLanguage()
   if (!view.my_protected_by_daron_this_round) return null
   return (
@@ -1707,7 +1717,7 @@ function DaronProtectionPanel({ view }: { view: MyGameView }) {
       <p className="mt-1 text-xs text-moon-200/70">{t('game.daronProtectedMe')}</p>
     </div>
   )
-}
+})
 
 /** Liste des coéquipiers Loups-Garous — affichée dès la révélation du rôle
  * (voir status 'role_reveal' plus haut), donc dès la toute première nuit et
@@ -1722,7 +1732,7 @@ function DaronProtectionPanel({ view }: { view: MyGameView }) {
  * Demande utilisateur : "les autres loups doivent aussi savoir qui est le
  * loup alpha si il y en a" — wolf_alpha_id (get_my_game_view) permet de
  * distinguer l'Alpha dans la liste avec un badge dédié. */
-function WolfPackList({ view, myRole }: { view: MyGameView; myRole: string | null }) {
+const WolfPackList = memo(function WolfPackList({ view, myRole }: { view: MyGameView; myRole: string | null }) {
   const { t } = useLanguage()
   if (!isWolfTeam(myRole)) return null
   const teammates = view.players.filter((p) => (view.wolf_teammates ?? []).includes(p.user_id))
@@ -1749,9 +1759,9 @@ function WolfPackList({ view, myRole }: { view: MyGameView; myRole: string | nul
       </div>
     </div>
   )
-}
+})
 
-function LogList({ entries, compact = false }: { entries: { id: string; message: string }[]; compact?: boolean }) {
+const LogList = memo(function LogList({ entries, compact = false }: { entries: { id: string; message: string }[]; compact?: boolean }) {
   const { t, lang } = useLanguage()
   if (entries.length === 0) return <p className="text-sm text-moon-200/40">{t('game.logEmpty')}</p>
   return (
@@ -1763,7 +1773,7 @@ function LogList({ entries, compact = false }: { entries: { id: string; message:
       ))}
     </ul>
   )
-}
+})
 
 export function EndScreen({
   view,

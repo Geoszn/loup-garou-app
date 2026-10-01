@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react'
+import { memo, useId, type ReactNode } from 'react'
 import { AvatarIcon } from './AvatarIcon'
 import {
   AVATAR_BGS,
@@ -568,7 +568,16 @@ function AvatarArt({ config, mood }: { config: AvatarConfig; mood: AvatarMood })
  * pour les joueurs qui n'ont pas encore personnalisé le leur.
  * `className` porte la taille (ex. `h-10 w-10`).
  */
-export function Avatar({
+// memo (audit de fluidité du 2026-10-01) : rendu SVG procédural coûteux
+// (15-20 formes par avatar, voir AvatarArt plus haut) appelé jusqu'à 25 fois
+// dans une grille de joueurs — sans ça, un seul avatar qui change recalcule
+// les 25, et toute grille parente qui re-rend pour une raison sans rapport
+// (voir PlayerGrid.tsx) les recalcule tous une fois de plus. Bénéfice
+// partiel seulement quand `config`/`icon` restent les mêmes références
+// qu'au rendu précédent (une mise à jour réelle de `view` recrée tous les
+// objets joueur, voir useGame.ts) — net gain partout ailleurs (listes de
+// coéquipiers, pastilles de profil...) où ces props restent stables.
+export const Avatar = memo(function Avatar({
   config,
   icon,
   color,
@@ -599,4 +608,4 @@ export function Avatar({
       {icon ? <AvatarIcon icon={icon} className="h-1/2 w-1/2" /> : (name ?? '?').slice(0, 1).toUpperCase()}
     </span>
   )
-}
+})

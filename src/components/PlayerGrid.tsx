@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { roleLabel } from '../lib/roles'
 import { tierGroup } from '../lib/ranks'
 import type { PublicPlayer } from '../types/game'
@@ -67,7 +67,15 @@ interface Props {
   moodContext?: { status: GameStatus; nightNumber: number }
 }
 
-export function PlayerGrid({
+// memo (audit de fluidité du 2026-10-01) : GameRoom.tsx re-rend souvent pour
+// des raisons sans rapport avec la grille (compteurs de non-lus, présence —
+// voir ChatPanel.tsx pour le même patron déjà appliqué au chat) ; sans ça,
+// chaque avatar (rendu SVG procédural, voir Avatar.tsx) de chaque joueur se
+// recalculait à chaque fois. Nécessite que l'appelant passe des props
+// stables, en particulier `moodContext` : un littéral objet recréé à chaque
+// rendu empêcherait ce memo de servir à quoi que ce soit (voir son usage
+// dans GameRoom.tsx, désormais passé par une valeur stabilisée).
+export const PlayerGrid = memo(function PlayerGrid({
   players,
   selfId,
   selectable = false,
@@ -210,4 +218,4 @@ export function PlayerGrid({
       })}
     </div>
   )
-}
+})
