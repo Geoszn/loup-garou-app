@@ -103,5 +103,10 @@
       "path": "/api/cron-send-campaigns",
       "schedule": "0 8 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "api/admin-daily-usage.ts": {
+      "maxDuration": 60
+    }
+  }
 }

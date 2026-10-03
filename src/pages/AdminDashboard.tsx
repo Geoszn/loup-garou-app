@@ -17,6 +17,7 @@ import { sendNotificationCampaignNow } from '../lib/adminCampaigns'
 import { Avatar } from '../components/Avatar'
 import { ACCESSORIES, DEFAULT_AVATAR_CONFIG, FACES, HAIRS, HEADWEAR, OUTFITS, type AvatarConfig } from '../lib/avatarParts'
 import { RARITY_STYLE, SKIN_CATEGORIES, type SkinCategory, type SkinRarity } from '../lib/skins'
+import { DailyUsageCard } from '../components/DailyUsageCard'
 
 // ============================================================================
 // Dashboard administrateur. Volontairement en français uniquement, pas
@@ -777,6 +778,8 @@ function StatsTab({ onGoToTab }: { onGoToTab: (target: Tab, usersFilter?: Omit<U
           )}
         </Card>
       </div>
+
+      <DailyUsageCard />
 
       <Card className="p-4">
         <h2 className="mb-3 font-display text-[15px] text-moon-200">
