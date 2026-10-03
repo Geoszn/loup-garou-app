@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useVoiceChat, type VoiceChannel } from '../hooks/useVoiceChat'
+import { useVoiceOptIn } from '../hooks/useVoiceOptIn'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from './Avatar'
 import type { PublicPlayer } from '../types/game'
@@ -37,6 +38,10 @@ export function VoiceChat({
   listenOnly?: boolean
   players?: PublicPlayer[]
 }) {
+  // Connexion à la demande (voir useVoiceOptIn.ts) : tant que le joueur n'a pas
+  // appuyé sur « Rejoindre », le hook reçoit un canal `null` et ne se connecte
+  // pas à Daily — donc aucune minute facturée.
+  const [joined, setJoined] = useVoiceOptIn(gameId)
   const {
     connected,
     connecting,
@@ -52,7 +57,7 @@ export function VoiceChat({
     deafened,
     toggleSound,
     forcedMuteNotice,
-  } = useVoiceChat(gameId, code, channel, displayName, selfUserId, listenOnly)
+  } = useVoiceChat(gameId, code, joined ? channel : null, displayName, selfUserId, listenOnly)
   const { t } = useLanguage()
   // Grille de participants repliée par défaut (demande utilisateur, suite à
   // la maquette comparative validée : "le bloc vocal doit économiser encore
@@ -83,6 +88,22 @@ export function VoiceChat({
   }
 
   if (!channel) return null
+
+  if (!joined) {
+    return (
+      <div className="flex items-center gap-2 rounded-2xl border border-night-600/60 bg-night-900/50 px-3 py-2">
+        <span className="shrink-0 text-base">🎙️</span>
+        <p className="min-w-0 flex-1 truncate text-xs text-moon-200/70">{t('voiceChat.idle')}</p>
+        <button
+          type="button"
+          onClick={() => setJoined(true)}
+          className="shrink-0 rounded-xl bg-gradient-to-b from-blood-500 to-blood-700 px-3 py-1.5 text-[11px] font-semibold text-[#fdf6e3] shadow-blood-btn transition-transform active:scale-[0.97]"
+        >
+          {listenOnly ? t('voiceChat.joinListen') : t('voiceChat.join')}
+        </button>
+      </div>
+    )
+  }
 
   const byId = new Map(players.map((p) => [p.user_id, p]))
   const me = selfUserId ? byId.get(selfUserId) : undefined
@@ -179,6 +200,15 @@ export function VoiceChat({
             {muted ? '🔇' : '🎤'}
           </button>
         )}
+        <button
+          type="button"
+          onClick={() => setJoined(false)}
+          aria-label={t('voiceChat.leave')}
+          title={t('voiceChat.leave')}
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-night-700/70 text-[11px] text-moon-200 transition-colors hover:bg-blood-700/50"
+        >
+          ✕
+        </button>
         <button
           type="button"
           onClick={toggleCollapsed}
