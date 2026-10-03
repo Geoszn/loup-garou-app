@@ -14,7 +14,7 @@ import { DEFAULT_AVATAR_CONFIG } from '../lib/avatarParts'
 import { useMyAvatarConfig, notifyAvatarChanged } from '../components/AvatarEditor'
 import type { StoreSkin } from '../lib/skins'
 import { useMySeason } from '../hooks/useMySeason'
-import { SeasonTrack } from '../components/SeasonTrack'
+import { SeasonHub, SeasonQuestsCard } from '../components/SeasonHub'
 
 const STREAK_REWARD_COINS = 50 // à garder identique à claim_daily_login (migration 0196)
 
@@ -275,13 +275,20 @@ export default function Rewards() {
               </div>
             )}
 
-            {!hasSeasonQuests && (
-              <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-moon-400/30 bg-moon-400/[0.04] p-4 text-center">
-              <p className="font-display text-base text-moon-200">{t('hub.quests.seasonTitle')}</p>
-              <p className="text-xs text-moon-200/60">{t('hub.quests.seasonBody')}</p>
-              <SoonBadge />
-            </div>
-            )}
+            {!hasSeasonQuests &&
+              (season ? (
+                <SeasonQuestsCard
+                  season={season}
+                  claimableQuests={(dayQuests ?? []).filter((q) => q.progress >= q.target && !q.claimed_at).length}
+                  onOpen={() => setTab('season')}
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-moon-400/30 bg-moon-400/[0.04] p-4 text-center">
+                  <p className="font-display text-base text-moon-200">{t('hub.quests.seasonTitle')}</p>
+                  <p className="text-xs text-moon-200/60">{t('hub.quests.seasonBody')}</p>
+                  <SoonBadge />
+                </div>
+              ))}
 
             {questScope === 'day' || !hasSeasonQuests ? (
               <>
@@ -389,7 +396,7 @@ export default function Rewards() {
 
         {tab === 'season' && (
           season ? (
-            <SeasonTrack season={season} onClaimed={refreshSeason} />
+            <SeasonHub season={season} baseConfig={myAvatar.config} onClaimed={refreshSeason} />
           ) : (
             <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-moon-400/30 bg-moon-400/[0.04] px-4 py-8 text-center">
               <span className="text-6xl drop-shadow-[0_0_14px_rgba(224,168,74,0.5)]" aria-hidden="true">🏆</span>

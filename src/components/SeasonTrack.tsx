@@ -7,7 +7,7 @@ import { DEFAULT_AVATAR_CONFIG } from '../lib/avatarParts'
 import { RARITY_STYLE } from '../lib/skins'
 import type { MySeason, SeasonThemeColor, SeasonTier } from '../types/season'
 
-const THEME_STYLE: Record<SeasonThemeColor, { border: string; glow: string; bar: string }> = {
+export const THEME_STYLE: Record<SeasonThemeColor, { border: string; glow: string; bar: string }> = {
   blush: { border: 'border-pink-400/30', glow: 'from-pink-500/15 via-pink-400/5', bar: 'from-pink-400 to-pink-300' },
   gold: { border: 'border-amber-400/30', glow: 'from-amber-500/15 via-amber-400/5', bar: 'from-amber-400 to-amber-300' },
   blood: { border: 'border-blood-500/30', glow: 'from-blood-600/15 via-blood-500/5', bar: 'from-blood-500 to-blood-400' },
@@ -15,7 +15,7 @@ const THEME_STYLE: Record<SeasonThemeColor, { border: string; glow: string; bar:
   violet: { border: 'border-purple-400/30', glow: 'from-purple-500/15 via-purple-400/5', bar: 'from-purple-400 to-purple-300' },
 }
 
-function daysLeftLabel(endsAt: string, lang: 'fr' | 'en'): string {
+export function daysLeftLabel(endsAt: string, lang: 'fr' | 'en'): string {
   const ms = new Date(endsAt).getTime() - Date.now()
   if (ms <= 0) return lang === 'en' ? 'Ended' : 'Terminée'
   const days = Math.ceil(ms / (24 * 3600 * 1000))
