@@ -320,6 +320,7 @@ export function ConfirmDialog({
   confirmLabel,
   cancelLabel,
   danger = false,
+  hideCancel = false,
   onConfirm,
   onCancel,
 }: {
@@ -329,6 +330,8 @@ export function ConfirmDialog({
   confirmLabel?: string
   cancelLabel?: string
   danger?: boolean
+  // Simple message d'information : un seul bouton (confirmLabel), pas d'annulation.
+  hideCancel?: boolean
   onConfirm: () => void
   onCancel: () => void
 }) {
@@ -353,9 +356,11 @@ export function ConfirmDialog({
         </h3>
         <p className="mb-6 text-sm text-moon-200/70">{message}</p>
         <div className="flex gap-3">
-          <Button variant="ghost" className="flex-1" onClick={onCancel}>
-            {resolvedCancelLabel}
-          </Button>
+          {!hideCancel && (
+            <Button variant="ghost" className="flex-1" onClick={onCancel}>
+              {resolvedCancelLabel}
+            </Button>
+          )}
           <Button variant={danger ? 'danger' : 'primary'} className="flex-1" onClick={onConfirm}>
             {resolvedConfirmLabel}
           </Button>

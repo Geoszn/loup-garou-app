@@ -98,6 +98,7 @@ export default function GameRoom() {
   const unreadVillage = useUnreadChatCount(gameId, 'village', isNightPhase ? nightTab === 'village' : dayTab === 'discuss')
   const [logOpen, setLogOpen] = useState(false)
   const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false)
+  const [cannotLeaveOpen, setCannotLeaveOpen] = useState(false)
   const [modOpen, setModOpen] = useState(false)
   const [artifactsOpen, setArtifactsOpen] = useState(false)
   const [showDeathImpact, setShowDeathImpact] = useState(false)
@@ -217,7 +218,18 @@ export default function GameRoom() {
     navigate('/dashboard')
   }
 
+  // Une fois la partie lancée, un joueur VIVANT ne peut plus la quitter de lui-
+  // même (sinon on quitte au moment d'être démasqué pour éviter la sanction) :
+  // le bouton reste affiché mais explique qu'il faut demander à l'hôte de le
+  // retirer — voir leave_game, migration 0212, qui l'impose aussi côté
+  // serveur. L'hôte et les joueurs déjà éliminés peuvent partir.
+  const midGame = view.game.status !== 'lobby' && view.game.status !== 'ended'
+
   function requestLeave() {
+    if (midGame && alive && !isHost) {
+      setCannotLeaveOpen(true)
+      return
+    }
     setConfirmLeaveOpen(true)
   }
 
@@ -731,12 +743,24 @@ export default function GameRoom() {
         message={
           view.game.status === 'ended'
             ? t('game.leaveConfirmMessageEnded')
-            : t('game.leaveConfirmMessageActive')
+            : alive
+              ? t('game.leaveConfirmMessageActive')
+              : t('game.leaveConfirmMessageGhost')
         }
         confirmLabel={t('common.leave')}
         danger
         onCancel={() => setConfirmLeaveOpen(false)}
         onConfirm={handleLeave}
+      />
+
+      <ConfirmDialog
+        open={cannotLeaveOpen}
+        title={t('game.cannotLeaveTitle')}
+        message={t('game.cannotLeaveMessage')}
+        confirmLabel={t('game.cannotLeaveOk')}
+        hideCancel
+        onCancel={() => setCannotLeaveOpen(false)}
+        onConfirm={() => setCannotLeaveOpen(false)}
       />
     </div>
   )

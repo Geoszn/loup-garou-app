@@ -677,8 +677,8 @@ export const translations = {
     en: '{{name}} will be removed from the lobby. This action is irreversible.',
   },
   'moderation.kickMessageGame': {
-    fr: '{{name}} sera retiré de la partie (éliminé, et privé du chat pour le reste de la partie). Cette action est irréversible.',
-    en: '{{name}} will be removed from the game (eliminated, and blocked from chat for the rest of the game). This action is irreversible.',
+    fr: '{{name}} sera retiré de la partie (éliminé, privé du chat pour le reste de la partie, et sa partie comptera comme une défaite). Cette action est irréversible.',
+    en: '{{name}} will be removed from the game (eliminated, blocked from chat for the rest of the game, and the game will count as a defeat for them). This action is irreversible.',
   },
   'moderation.restartGameTitle': { fr: '🔄 Recommencer la partie', en: '🔄 Restart the game' },
   'moderation.restartGameHint': {
@@ -944,9 +944,19 @@ export const translations = {
   'game.leaveConfirmTitle': { fr: 'Quitter la partie ?', en: 'Leave the game?' },
   'game.leaveConfirmMessageEnded': { fr: 'Vous allez retourner à l’accueil.', en: "You'll go back to the home screen." },
   'game.leaveConfirmMessageActive': {
-    fr: 'Votre personnage sera éliminé et la partie continuera sans vous. Cette action est irréversible.',
-    en: 'Your character will be eliminated and the game will continue without you. This action is irreversible.',
+    fr: 'Votre personnage sera éliminé et la partie continuera sans vous. Quitter une partie en cours compte comme une défaite (perte de points). Cette action est irréversible.',
+    en: 'Your character will be eliminated and the game will continue without you. Leaving a game in progress counts as a defeat (points lost). This action is irreversible.',
   },
+  'game.leaveConfirmMessageGhost': {
+    fr: 'Vous retournez à l’accueil. La partie continue sans vous et votre résultat dépendra de la victoire de votre camp.',
+    en: "You'll go back to the home screen. The game continues without you and your result will depend on whether your side wins.",
+  },
+  'game.cannotLeaveTitle': { fr: 'Impossible de quitter en pleine partie', en: "You can't leave mid-game" },
+  'game.cannotLeaveMessage': {
+    fr: 'Une fois la partie lancée, tu ne peux plus la quitter toi-même. Si tu dois partir, demande à l’hôte de te retirer de la partie. Attention : un joueur retiré en cours de partie compte comme une défaite (perte de points).',
+    en: "Once the game has started you can't leave it yourself. If you need to go, ask the host to remove you from the game. Note: a player removed mid-game counts as a defeat (points lost).",
+  },
+  'game.cannotLeaveOk': { fr: 'Compris', en: 'Got it' },
   'game.endVillageWins': { fr: '🌞 Le Village triomphe !', en: '🌞 The Village triumphs!' },
   'game.endWolvesWin': { fr: '🐺 Les Loups-Garous ont gagné !', en: '🐺 The Werewolves have won!' },
   'game.endLoversWin': { fr: '💘 Les Amoureux ont gagné !', en: '💘 The Lovers have won!' },
@@ -1425,8 +1435,8 @@ export const translations = {
   },
   'help.ranking.points.title': { fr: '⚔️ Comment gagner des points', en: '⚔️ How points are earned' },
   'help.ranking.points.text': {
-    fr: 'Victoire : jusqu\'à +30 points, selon la part de la partie que tu as survécue (mourir tôt réduit le gain, mais jamais en dessous de 40% même à la nuit 1), plus un bonus si tu enchaînes plusieurs victoires d\'affilée (+10 par victoire consécutive au-delà de la première, jusqu\'à +50 à partir d\'une série de 6). Défaite : -15 points — mais jamais en dessous du palier le plus haut que tu as déjà atteint.',
-    en: 'Win: up to +30 points, based on how much of the game you survived (dying early reduces the gain, but never below 40% even on night 1), plus a bonus for consecutive wins (+10 per win in a row beyond the first, up to +50 from a streak of 6). Loss: -15 points — but never below the highest tier you\'ve already reached.',
+    fr: 'Victoire : jusqu\'à +30 points, selon la part de la partie que tu as survécue (mourir tôt réduit le gain, mais jamais en dessous de 40% même à la nuit 1), plus un bonus si tu enchaînes plusieurs victoires d\'affilée (+10 par victoire consécutive au-delà de la première, jusqu\'à +50 à partir d\'une série de 6). Défaite : -15 points — mais jamais en dessous du palier le plus haut que tu as déjà atteint. Quitter une partie en cours (ou en être retiré par l\'hôte) compte toujours comme une défaite, sans aucun bonus.',
+    en: 'Win: up to +30 points, based on how much of the game you survived (dying early reduces the gain, but never below 40% even on night 1), plus a bonus for consecutive wins (+10 per win in a row beyond the first, up to +50 from a streak of 6). Loss: -15 points — but never below the highest tier you\'ve already reached. Leaving a game in progress (or being removed by the host) always counts as a defeat, with no bonus.',
   },
   'help.ranking.impact.title': { fr: '🎯 Bonus d’impact', en: '🎯 Impact bonus' },
   'help.ranking.impact.text': {
