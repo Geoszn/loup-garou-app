@@ -268,7 +268,12 @@ export default function GameRoom() {
   // + vocal) coexister selon le rôle du joueur.
   let voiceChannel: VoiceChannel = null
 
-  if (!alive) {
+  // Partie terminée : plus de vocal pour personne (le texte reste ouvert pour
+  // le débrief). Sans ça, un joueur éliminé restait connecté — et facturé par
+  // Daily — au cimetière tant qu'il laissait l'écran de fin ouvert.
+  if (view.game.status === 'ended') {
+    voiceChannel = null
+  } else if (!alive) {
     voiceChannel = 'graveyard'
   } else if (['day_reveal', 'day_discussion', 'day_vote', 'captain_election'].includes(view.game.status)) {
     voiceChannel = 'village'

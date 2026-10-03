@@ -1335,6 +1335,7 @@ export const translations = {
   'chat.readOnly': { fr: '👁️ lecture seule', en: '👁️ read-only' },
   'chat.live': { fr: 'en direct', en: 'live' },
   'voiceChat.idle': { fr: 'Vocal désactivé', en: 'Voice off' },
+  'voiceChat.inVoice': { fr: '{{count}} dans le vocal', en: '{{count}} in voice' },
   'voiceChat.join': { fr: '🎧 Rejoindre le vocal', en: '🎧 Join voice' },
   'voiceChat.joinListen': { fr: '👂 Écouter', en: '👂 Listen' },
   'voiceChat.leave': { fr: 'Quitter le vocal', en: 'Leave voice' },

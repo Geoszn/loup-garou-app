@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useVoiceChat, type VoiceChannel } from '../hooks/useVoiceChat'
 import { useVoiceOptIn } from '../hooks/useVoiceOptIn'
+import { useIdleWhenHidden } from '../hooks/useIdleWhenHidden'
+import { useVoicePresence } from '../lib/voicePresence'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from './Avatar'
 import type { PublicPlayer } from '../types/game'
@@ -29,6 +31,9 @@ export function VoiceChat({
   // pas sous la main (aucun cas actuel) retombe simplement sur l'initiale du
   // nom, comme avant.
   players = [],
+  // Délai en arrière-plan avant de couper la connexion (voir
+  // useIdleWhenHidden.ts) — paramétrable uniquement pour les aperçus.
+  suspendAfterMs,
 }: {
   gameId: string
   code: string
@@ -37,11 +42,22 @@ export function VoiceChat({
   selfUserId: string | null
   listenOnly?: boolean
   players?: PublicPlayer[]
+  suspendAfterMs?: number
 }) {
   // Connexion à la demande (voir useVoiceOptIn.ts) : tant que le joueur n'a pas
   // appuyé sur « Rejoindre », le hook reçoit un canal `null` et ne se connecte
   // pas à Daily — donc aucune minute facturée.
   const [joined, setJoined] = useVoiceOptIn(gameId)
+  // Arrière-plan prolongé : on coupe la connexion Daily (donc la facturation)
+  // sans toucher au choix « j'ai rejoint » — retour au premier plan = reconnexion.
+  const suspended = useIdleWhenHidden(joined && !!channel, suspendAfterMs)
+  const connectChannel = joined && !suspended ? channel : null
+  // Qui est dans le vocal, vu SANS être connecté (présence Supabase, voir
+  // voicePresence.ts) : permet à un joueur qui n'a pas rejoint de savoir que
+  // ça parle, et de décider d'y entrer. Un fantôme en écoute n'est pas annoncé
+  // (comme dans la liste Daily, voir `ghost` dans useVoiceChat.ts).
+  const voiceIds = useVoicePresence(gameId, selfUserId, joined && !suspended && !listenOnly)
+  const othersInVoice = useMemo(() => voiceIds.filter((id) => id !== selfUserId), [voiceIds, selfUserId])
   const {
     connected,
     connecting,
@@ -57,7 +73,7 @@ export function VoiceChat({
     deafened,
     toggleSound,
     forcedMuteNotice,
-  } = useVoiceChat(gameId, code, joined ? channel : null, displayName, selfUserId, listenOnly)
+  } = useVoiceChat(gameId, code, connectChannel, displayName, selfUserId, listenOnly)
   const { t } = useLanguage()
   // Grille de participants repliée par défaut (demande utilisateur, suite à
   // la maquette comparative validée : "le bloc vocal doit économiser encore
@@ -89,11 +105,30 @@ export function VoiceChat({
 
   if (!channel) return null
 
+  const byId = new Map(players.map((p) => [p.user_id, p]))
+
   if (!joined) {
+    const talkers = othersInVoice.map((id) => byId.get(id)).filter((p): p is PublicPlayer => !!p).slice(0, 3)
     return (
       <div className="flex items-center gap-2 rounded-2xl border border-night-600/60 bg-night-900/50 px-3 py-2">
         <span className="shrink-0 text-base">🎙️</span>
-        <p className="min-w-0 flex-1 truncate text-xs text-moon-200/70">{t('voiceChat.idle')}</p>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          {othersInVoice.length > 0 ? (
+            <>
+              <span className="flex shrink-0 -space-x-2">
+                {talkers.map((p) => (
+                  <Avatar key={p.user_id} config={p.avatar_config} icon={p.avatar_icon} color={p.avatar_color} name={p.display_name} className="h-6 w-6 ring-2 ring-night-900" />
+                ))}
+              </span>
+              <p className="min-w-0 truncate text-xs font-semibold text-emerald-400">
+                <span className="mr-1 inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 align-middle" />
+                {t('voiceChat.inVoice', { count: othersInVoice.length })}
+              </p>
+            </>
+          ) : (
+            <p className="min-w-0 truncate text-xs text-moon-200/70">{t('voiceChat.idle')}</p>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => setJoined(true)}
@@ -105,7 +140,6 @@ export function VoiceChat({
     )
   }
 
-  const byId = new Map(players.map((p) => [p.user_id, p]))
   const me = selfUserId ? byId.get(selfUserId) : undefined
 
   // BUG CORRIGÉ (capture d'écran utilisateur : "le texte s'entremêle") : tout
