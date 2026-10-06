@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { onGameAction } from '../lib/gameRpc'
 import type { MyGameView } from '../types/game'
 
 // userId sert de clé de présence (voir plus bas) : passer l'id de
@@ -77,6 +78,11 @@ export function useGame(gameId: string | null, userId: string | null = null) {
     }, 120 + Math.random() * 280)
   }, [refresh])
 
+  // Une action du joueur lui-même (voter, agir, se déclarer prêt...) vient
+  // d'aboutir : relire l'état TOUT DE SUITE (sans le regroupement ci-dessus, la
+  // confirmation doit être immédiate) — voir lib/gameRpc.ts.
+  useEffect(() => onGameAction(() => void refresh()), [refresh])
+
   useEffect(() => {
     if (!gameId) return
     setLoading(true)
@@ -128,7 +134,7 @@ export function useGame(gameId: string | null, userId: string | null = null) {
     if (!gameId) return
     const check = setInterval(() => {
       if (typeof document !== 'undefined' && document.hidden) return
-      const limit = realtimeOkRef.current ? 15000 : 5000
+      const limit = realtimeOkRef.current ? 10000 : 5000
       if (Date.now() - lastRefreshAtRef.current >= limit) void refresh()
     }, 2500)
     const onVisible = () => {

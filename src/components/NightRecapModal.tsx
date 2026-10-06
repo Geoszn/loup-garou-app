@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { gameRpc } from '../lib/gameRpc'
 import { useCountdown } from './Timer'
 import { useLanguage } from '../i18n/LanguageContext'
 import { translateGameLogMessage } from '../lib/gameLogTranslate'
@@ -116,7 +116,7 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
 
   async function handleReady() {
     setSubmitting(true)
-    await supabase.rpc('submit_day_reveal_ready', { p_game_id: gameId })
+    await gameRpc('submit_day_reveal_ready', { p_game_id: gameId })
     setSubmitting(false)
   }
 

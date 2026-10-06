@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import DailyIframe, { type DailyCall, type DailyEventObjectTrack } from '@daily-co/daily-js'
+// Types seulement : la bibliothèque Daily (~220 Ko, 64 Ko compressés) n'est
+// chargée qu'au moment où le joueur appuie sur « Rejoindre le vocal » (voir
+// connect() plus bas) — elle alourdissait avant CHAQUE ouverture d'un salon ou
+// d'une partie, même pour ceux qui n'utilisent jamais le vocal.
+import type { DailyCall, DailyEventObjectTrack } from '@daily-co/daily-js'
 import { getVoiceRoomUrl } from '../lib/daily'
 import { useLanguage } from '../i18n/LanguageContext'
 
@@ -277,6 +281,8 @@ export function useVoiceChat(
         const { url, token: ownerToken } = await getVoiceRoomUrl(gameId, code, channel)
         if (cancelled) return
 
+        const { default: DailyIframe } = await import('@daily-co/daily-js')
+        if (cancelled) return
         const call = DailyIframe.createCallObject({ subscribeToTracksAutomatically: true })
         callRef.current = call
 

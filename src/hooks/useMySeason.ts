@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { cachedRpc } from '../lib/rpcCache'
 import type { MySeason } from '../types/season'
 
 /** Saison en cours pour le joueur connecté (voir migration 0203) — null s'il
@@ -11,19 +11,23 @@ export function useMySeason() {
   const [season, setSeason] = useState<MySeason | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const refresh = useCallback(() => {
-    supabase.rpc('get_my_season').then(({ data, error }) => {
+  // `refresh()` relit pour de bon (après une réclamation, une fin de partie,
+  // le sondage de 30 s) ; seule la première lecture au montage partage la
+  // requête avec les annonces, qui demandent la même saison (rpcCache.ts).
+  const load = useCallback((force: boolean) => {
+    cachedRpc<MySeason>('get_my_season', undefined, { force }).then(({ data, error }) => {
       setLoading(false)
       if (error) return
-      setSeason((data ?? null) as MySeason | null)
+      setSeason(data ?? null)
     })
   }, [])
+  const refresh = useCallback(() => load(true), [load])
 
   useEffect(() => {
-    refresh()
-    const interval = setInterval(refresh, 30000)
+    load(false)
+    const interval = setInterval(() => load(true), 30000)
     return () => clearInterval(interval)
-  }, [refresh])
+  }, [load])
 
   return { season, loading, refresh }
 }

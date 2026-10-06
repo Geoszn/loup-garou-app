@@ -6,6 +6,7 @@ import { useGame } from '../hooks/useGame'
 import { useSoundEffects } from '../hooks/useSoundEffects'
 import { useTurnNotifications } from '../hooks/useTurnNotifications'
 import { supabase } from '../lib/supabase'
+import { gameRpc } from '../lib/gameRpc'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { PhaseBanner, NIGHT_STEP_LABEL, NIGHT_STEP_ICON } from '../components/PhaseBanner'
 import { RoleCard } from '../components/RoleCard'
@@ -996,7 +997,7 @@ const LastWordsForm = memo(function LastWordsForm({ gameId }: { gameId: string }
     if (!trimmed) return
     setSending(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('send_last_words', { p_game_id: gameId, p_content: trimmed })
+    const { error: rpcError } = await gameRpc('send_last_words', { p_game_id: gameId, p_content: trimmed })
     setSending(false)
     if (rpcError) {
       setError(rpcError.message)
@@ -1267,7 +1268,7 @@ const ReadyPanel = memo(function ReadyPanel({ view, gameId, selfId }: { view: My
 
   async function markReady() {
     setLoading(true)
-    await supabase.rpc('submit_ready', { p_game_id: gameId })
+    await gameRpc('submit_ready', { p_game_id: gameId })
     setLoading(false)
   }
 
@@ -1348,7 +1349,7 @@ const CallVotePanel = memo(function CallVotePanel({
   async function toggleAgree() {
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_vote_call_agreement', { p_game_id: gameId, p_agree: !agreed })
+    const { error: rpcError } = await gameRpc('submit_vote_call_agreement', { p_game_id: gameId, p_agree: !agreed })
     setLoading(false)
     if (rpcError) setError(rpcError.message)
   }
@@ -1356,7 +1357,7 @@ const CallVotePanel = memo(function CallVotePanel({
   async function callVote() {
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc(
+    const { error: rpcError } = await gameRpc(
       hasCaptainRole ? 'submit_captain_call_vote' : 'submit_host_call_vote',
       { p_game_id: gameId }
     )

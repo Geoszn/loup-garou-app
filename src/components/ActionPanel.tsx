@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { supabase } from '../lib/supabase'
+import { gameRpc } from '../lib/gameRpc'
 import { roleLabel } from '../lib/roles'
 import { PlayerGrid } from './PlayerGrid'
 import { Button, Card, ConfirmDialog, ErrorText, Modal } from './ui'
@@ -119,7 +119,7 @@ function VoleurPanel({ gameId }: { view: MyGameView; gameId: string }) {
   async function steal() {
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_voleur', { p_game_id: gameId })
+    const { error: rpcError } = await gameRpc('submit_voleur', { p_game_id: gameId })
     setLoading(false)
     if (rpcError) setError(rpcError.message)
   }
@@ -158,7 +158,7 @@ function CupidonPanel({ view, gameId, selfId }: { view: MyGameView; gameId: stri
     if (!first || !second) return
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_cupidon', { p_game_id: gameId, p_lover1: first, p_lover2: second })
+    const { error: rpcError } = await gameRpc('submit_cupidon', { p_game_id: gameId, p_lover1: first, p_lover2: second })
     setLoading(false)
     if (rpcError) setError(rpcError.message)
   }
@@ -194,7 +194,7 @@ function DaronPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string
     if (!selected) return
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_daron', { p_game_id: gameId, p_target: selected })
+    const { error: rpcError } = await gameRpc('submit_daron', { p_game_id: gameId, p_target: selected })
     setLoading(false)
     if (rpcError) setError(rpcError.message)
   }
@@ -233,7 +233,7 @@ function VoyantePanel({ view, gameId, selfId }: { view: MyGameView; gameId: stri
     if (!selected) return
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_voyante', { p_game_id: gameId, p_target: selected })
+    const { error: rpcError } = await gameRpc('submit_voyante', { p_game_id: gameId, p_target: selected })
     setLoading(false)
     if (rpcError) setError(rpcError.message)
   }
@@ -296,7 +296,7 @@ function GriotPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string
     if (!selected) return
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_griot', { p_game_id: gameId, p_target: selected })
+    const { error: rpcError } = await gameRpc('submit_griot', { p_game_id: gameId, p_target: selected })
     setLoading(false)
     if (rpcError) setError(rpcError.message)
   }
@@ -360,7 +360,7 @@ function AnancyPanel({ view, gameId, selfId }: { view: MyGameView; gameId: strin
     if (selected.length !== 2) return
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_anancy', {
+    const { error: rpcError } = await gameRpc('submit_anancy', {
       p_game_id: gameId,
       p_target1: selected[0],
       p_target2: selected[1],
@@ -373,7 +373,7 @@ function AnancyPanel({ view, gameId, selfId }: { view: MyGameView; gameId: strin
   async function doNothing() {
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_anancy', {
+    const { error: rpcError } = await gameRpc('submit_anancy', {
       p_game_id: gameId,
       p_target1: null,
       p_target2: null,
@@ -449,7 +449,7 @@ function GrandMechantLoupPanel({ view, gameId, selfId }: { view: MyGameView; gam
     if (!selected) return
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_grand_mechant_loup', { p_game_id: gameId, p_target: selected })
+    const { error: rpcError } = await gameRpc('submit_grand_mechant_loup', { p_game_id: gameId, p_target: selected })
     setLoading(false)
     setConfirmOpen(false)
     if (rpcError) setError(rpcError.message)
@@ -458,7 +458,7 @@ function GrandMechantLoupPanel({ view, gameId, selfId }: { view: MyGameView; gam
   async function skip() {
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_grand_mechant_loup', { p_game_id: gameId, p_target: null })
+    const { error: rpcError } = await gameRpc('submit_grand_mechant_loup', { p_game_id: gameId, p_target: null })
     setLoading(false)
     setSkipOpen(false)
     if (rpcError) setError(rpcError.message)
@@ -521,7 +521,7 @@ function EnfantSauvagePanel({ view, gameId, selfId }: { view: MyGameView; gameId
     if (!selected) return
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_enfant_sauvage', { p_game_id: gameId, p_mentor_id: selected })
+    const { error: rpcError } = await gameRpc('submit_enfant_sauvage', { p_game_id: gameId, p_mentor_id: selected })
     setLoading(false)
     if (rpcError) setError(rpcError.message)
   }
@@ -636,7 +636,7 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
     if (!selected) return
     setLoading(true)
     setError(null)
-    const { error: voteErr } = await supabase.rpc('submit_wolf_vote', { p_game_id: gameId, p_target: selected })
+    const { error: voteErr } = await gameRpc('submit_wolf_vote', { p_game_id: gameId, p_target: selected })
     if (voteErr) {
       setLoading(false)
       setError(voteErr.message)
@@ -647,7 +647,7 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
     // ne participe pas à ce vote (voir submit_alpha_infect_agreement,
     // migration 0108 : rejette désormais explicitement son rôle).
     if (infectPossible && !isAlpha) {
-      const { error: agreeErr } = await supabase.rpc('submit_alpha_infect_agreement', {
+      const { error: agreeErr } = await gameRpc('submit_alpha_infect_agreement', {
         p_game_id: gameId,
         p_agree: false,
       })
@@ -667,7 +667,7 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
     // l'infection lui-même. Choisir "Éliminer" doit toujours vouloir dire
     // éliminer, même après une confirmation d'infection déjà donnée.
     if (isAlpha && view.alpha_infect_confirmed) {
-      const { error: confirmErr } = await supabase.rpc('submit_loup_alpha_confirm_infect', {
+      const { error: confirmErr } = await gameRpc('submit_loup_alpha_confirm_infect', {
         p_game_id: gameId,
         p_confirm: false,
       })
@@ -697,13 +697,13 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
     if (!selected) return
     setLoading(true)
     setError(null)
-    const { error: voteErr } = await supabase.rpc('submit_wolf_vote', { p_game_id: gameId, p_target: selected })
+    const { error: voteErr } = await gameRpc('submit_wolf_vote', { p_game_id: gameId, p_target: selected })
     if (voteErr) {
       setLoading(false)
       setError(voteErr.message)
       return
     }
-    const { error: confirmErr } = await supabase.rpc('submit_loup_alpha_confirm_infect', {
+    const { error: confirmErr } = await gameRpc('submit_loup_alpha_confirm_infect', {
       p_game_id: gameId,
       p_confirm: true,
     })
@@ -728,13 +728,13 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
     setIntent('infect')
     setLoading(true)
     setError(null)
-    const { error: voteErr } = await supabase.rpc('submit_wolf_vote', { p_game_id: gameId, p_target: null })
+    const { error: voteErr } = await gameRpc('submit_wolf_vote', { p_game_id: gameId, p_target: null })
     if (voteErr) {
       setLoading(false)
       setError(voteErr.message)
       return
     }
-    const { error: agreeErr } = await supabase.rpc('submit_alpha_infect_agreement', { p_game_id: gameId, p_agree: true })
+    const { error: agreeErr } = await gameRpc('submit_alpha_infect_agreement', { p_game_id: gameId, p_agree: true })
     setLoading(false)
     if (agreeErr) {
       setError(agreeErr.message)
@@ -752,9 +752,9 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
   async function submitAbstain() {
     setLoading(true)
     setError(null)
-    const { error: voteErr } = await supabase.rpc('submit_wolf_vote', { p_game_id: gameId, p_target: null })
+    const { error: voteErr } = await gameRpc('submit_wolf_vote', { p_game_id: gameId, p_target: null })
     if (!voteErr && infectPossible && !isAlpha) {
-      await supabase.rpc('submit_alpha_infect_agreement', { p_game_id: gameId, p_agree: false })
+      await gameRpc('submit_alpha_infect_agreement', { p_game_id: gameId, p_agree: false })
     }
     setLoading(false)
     setConfirmAbstainOpen(false)
@@ -770,7 +770,7 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
   async function toggleAlphaConfirm() {
     setAlphaLoading(true)
     setAlphaError(null)
-    const { error: rpcError } = await supabase.rpc('submit_loup_alpha_confirm_infect', {
+    const { error: rpcError } = await gameRpc('submit_loup_alpha_confirm_infect', {
       p_game_id: gameId,
       p_confirm: !view.alpha_infect_confirmed,
     })
@@ -1055,7 +1055,7 @@ function SorcierePanel({ view, gameId }: { view: MyGameView; gameId: string; sel
     if (loading) return
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_sorciere', {
+    const { error: rpcError } = await gameRpc('submit_sorciere', {
       p_game_id: gameId,
       p_heal: healChoice,
       p_poison_target: poisonTarget,
@@ -1205,7 +1205,7 @@ export function VotePanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
     setSelected(id)
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_vote', { p_game_id: gameId, p_target: id })
+    const { error: rpcError } = await gameRpc('submit_vote', { p_game_id: gameId, p_target: id })
     setLoading(false)
     if (rpcError) setError(rpcError.message)
   }
@@ -1243,7 +1243,7 @@ export function CaptainVotePanel({ view, gameId, selfId }: { view: MyGameView; g
     setSelected(id)
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_captain_vote', { p_game_id: gameId, p_target: id })
+    const { error: rpcError } = await gameRpc('submit_captain_vote', { p_game_id: gameId, p_target: id })
     setLoading(false)
     if (rpcError) setError(rpcError.message)
   }
@@ -1281,7 +1281,7 @@ function CaptainSuccessionPanel({ view, gameId, selfId }: { view: MyGameView; ga
   async function choose(id: string) {
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_captain_succession', { p_game_id: gameId, p_successor_id: id })
+    const { error: rpcError } = await gameRpc('submit_captain_succession', { p_game_id: gameId, p_successor_id: id })
     setLoading(false)
     if (rpcError) setError(rpcError.message)
   }
@@ -1325,7 +1325,7 @@ function BalanceAngePanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
   async function choose(id: string) {
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_balance_ange_vote', { p_game_id: gameId, p_target_id: id })
+    const { error: rpcError } = await gameRpc('submit_balance_ange_vote', { p_game_id: gameId, p_target_id: id })
     setLoading(false)
     if (rpcError) setError(rpcError.message)
   }
@@ -1348,7 +1348,7 @@ function HunterPanel({ view, gameId, selfId }: { view: MyGameView; gameId: strin
   async function shoot(id: string | null) {
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_hunter_shot', { p_game_id: gameId, p_target: id })
+    const { error: rpcError } = await gameRpc('submit_hunter_shot', { p_game_id: gameId, p_target: id })
     setLoading(false)
     if (rpcError) setError(rpcError.message)
   }
@@ -1382,7 +1382,7 @@ function RevivalChoicePanel({ view, gameId }: { view: MyGameView; gameId: string
   async function choose(use: boolean) {
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_revival_choice', { p_game_id: gameId, p_use: use })
+    const { error: rpcError } = await gameRpc('submit_revival_choice', { p_game_id: gameId, p_use: use })
     setLoading(false)
     if (rpcError) setError(rpcError.message)
   }
@@ -1417,7 +1417,7 @@ function ChasseuseChoicePanel({ gameId }: { gameId: string }) {
   async function choose(pContinue: boolean) {
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('submit_chasseuse_choice', { p_game_id: gameId, p_continue: pContinue })
+    const { error: rpcError } = await gameRpc('submit_chasseuse_choice', { p_game_id: gameId, p_continue: pContinue })
     setLoading(false)
     if (rpcError) setError(rpcError.message)
   }

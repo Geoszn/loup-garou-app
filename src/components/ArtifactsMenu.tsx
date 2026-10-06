@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { supabase } from '../lib/supabase'
+import { gameRpc } from '../lib/gameRpc'
 import { Button, ErrorText } from './ui'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { MyGameView } from '../types/game'
@@ -104,7 +104,7 @@ function ParcheminGriotRow({ gameId, used }: { gameId: string; used: boolean }) 
   async function confirm() {
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('use_parchemin_griot', { p_game_id: gameId })
+    const { error: rpcError } = await gameRpc('use_parchemin_griot', { p_game_id: gameId })
     setLoading(false)
     if (rpcError) {
       setError(rpcError.message)

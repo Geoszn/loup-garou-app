@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { cachedRpc } from '../lib/rpcCache'
 import { notifyJoinRequest } from '../lib/pushSubscription'
 import { Button, Card, ErrorText, SectionDivider } from '../components/ui'
 import { RankBadge } from '../components/RankBadge'
@@ -104,8 +105,8 @@ export default function Dashboard() {
     navigate(activeGame.status === 'lobby' ? `/partie/${activeGame.code}/lobby` : `/partie/${activeGame.code}`)
   }
 
-  async function loadSocial() {
-    const { data, error: rpcError } = await supabase.rpc('get_my_social')
+  async function loadSocial(force = false) {
+    const { data, error: rpcError } = await cachedRpc<{ game_invites?: GameInvite[]; friends?: FriendPerson[] }>('get_my_social', undefined, { force })
     if (rpcError || !data) return
     setInvites(data.game_invites ?? [])
     setFriends(data.friends ?? [])
@@ -122,12 +123,12 @@ export default function Dashboard() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'game_invites', filter: `to_user_id=eq.${user.id}` },
-        loadSocial
+        () => void loadSocial(true)
       )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'friend_requests', filter: `addressee_id=eq.${user.id}` },
-        loadSocial
+        () => void loadSocial(true)
       )
       .subscribe()
 

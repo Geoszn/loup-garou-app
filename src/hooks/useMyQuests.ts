@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { cachedRpc } from '../lib/rpcCache'
 import { useAuth } from '../context/AuthContext'
 
 export interface Quest {
@@ -20,9 +21,12 @@ export function useMyQuests() {
   const [quests, setQuests] = useState<Quest[] | null>(null)
   const [claiming, setClaiming] = useState<string | null>(null)
 
-  const reload = useCallback(async () => {
-    const { data } = await supabase.rpc('get_my_quests')
-    if (data) setQuests(data as Quest[])
+  // Les appels sans `force` partagent la requête en vol / récente (la barre du
+  // bas et l'accueil la demandaient chacune au même instant — voir rpcCache.ts) ;
+  // après une réclamation on relit pour de bon.
+  const reload = useCallback(async (force = false) => {
+    const { data } = await cachedRpc<Quest[]>('get_my_quests', undefined, { force })
+    if (data) setQuests(data)
   }, [])
 
   useEffect(() => {
@@ -35,7 +39,7 @@ export function useMyQuests() {
     setClaiming(null)
     if (!error && data) {
       void refreshProfile()
-      await reload()
+      await reload(true)
     }
   }
 

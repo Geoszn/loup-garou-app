@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { cachedRpc } from '../lib/rpcCache'
 import { BottomNav } from './BottomNav'
 import { useMyQuests } from '../hooks/useMyQuests'
 
@@ -18,14 +19,16 @@ export function AppShell() {
   useEffect(() => {
     if (!user) return
     let active = true
-    async function load() {
-      const { data } = await supabase.rpc('get_my_social')
+    // `force` : relecture réelle quand une demande d'ami arrive (évènement
+    // Realtime) ; au montage on partage la requête de l'accueil (rpcCache.ts).
+    async function load(force = false) {
+      const { data } = await cachedRpc<{ incoming_requests?: unknown[] }>('get_my_social', undefined, { force })
       if (active && data) setPendingFriends((data.incoming_requests ?? []).length)
     }
     void load()
     const channel = supabase
       .channel(`shell-social-${user.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'friend_requests', filter: `addressee_id=eq.${user.id}` }, load)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'friend_requests', filter: `addressee_id=eq.${user.id}` }, () => void load(true))
       .subscribe()
     return () => {
       active = false
