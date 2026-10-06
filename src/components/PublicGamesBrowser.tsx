@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { notifyJoinRequest } from '../lib/pushSubscription'
 import { Button, ErrorText } from './ui'
-import { GameInProgressChoice } from './GameInProgressChoice'
-import { AvatarIcon } from './AvatarIcon'
+import { JoinChoiceOverlay } from './JoinChoiceOverlay'
+import { useJoinPublicGame } from '../hooks/useJoinPublicGame'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { PublicGameListing } from '../types/game'
 import { Avatar } from './Avatar'
@@ -18,14 +16,9 @@ export function PublicGamesList({ displayName }: { displayName: string }) {
   const { t } = useLanguage()
   const [games, setGames] = useState<PublicGameListing[] | null>(null)
   const [loading, setLoading] = useState(false)
-  const [requestingId, setRequestingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  // Partie déjà en cours choisie dans la liste : affiche le choix
-  // rejoindre/regarder (voir GameInProgressChoice) au lieu d'envoyer la
-  // demande tout de suite — une partie encore au salon, elle, rejoint
-  // directement (voir requestJoin plus bas), rien à choisir.
-  const [choiceGame, setChoiceGame] = useState<PublicGameListing | null>(null)
-  const navigate = useNavigate()
+  // Demande de participation / choix rejoindre-regarder : voir useJoinPublicGame.
+  const join = useJoinPublicGame(displayName)
 
   async function load() {
     setLoading(true)
@@ -44,42 +37,6 @@ export function PublicGamesList({ displayName }: { displayName: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function submitJoinRequest(game: PublicGameListing): Promise<boolean> {
-    setRequestingId(game.game_id)
-    setError(null)
-    const { error: rpcError } = await supabase.rpc('request_join_public_game', {
-      p_game_id: game.game_id,
-      p_display_name: displayName,
-    })
-    setRequestingId(null)
-    if (rpcError) {
-      setError(rpcError.message)
-      return false
-    }
-    void notifyJoinRequest(game.game_id)
-    return true
-  }
-
-  async function requestJoin(game: PublicGameListing) {
-    if (game.status !== 'lobby') {
-      setChoiceGame(game)
-      return
-    }
-    if (await submitJoinRequest(game)) navigate(`/attente/${game.game_id}`, { state: { code: game.code } })
-  }
-
-  async function watchChosen() {
-    if (!choiceGame) return
-    const game = choiceGame
-    if (await submitJoinRequest(game)) navigate(`/attente/${game.game_id}/observer`)
-  }
-
-  async function requestOnlyChosen() {
-    if (!choiceGame) return
-    const game = choiceGame
-    if (await submitJoinRequest(game)) navigate(`/attente/${game.game_id}`, { state: { code: game.code } })
-  }
-
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
@@ -94,7 +51,7 @@ export function PublicGamesList({ displayName }: { displayName: string }) {
         </button>
       </div>
 
-      <ErrorText>{error}</ErrorText>
+      <ErrorText>{error ?? join.error}</ErrorText>
 
       {loading && games === null && <p className="py-2 text-center text-sm text-moon-200/40">{t('publicGames.searching')}</p>}
 
@@ -126,13 +83,13 @@ export function PublicGamesList({ displayName }: { displayName: string }) {
               <Button
                 className="px-3 py-1.5 text-xs"
                 variant={g.already_requested ? 'ghost' : 'primary'}
-                disabled={g.already_requested || requestingId === g.game_id}
-                onClick={() => requestJoin(g)}
+                disabled={g.already_requested || join.requestingId === g.game_id}
+                onClick={() => join.requestJoin(g)}
                 title={g.status !== 'lobby' ? t('publicGames.inProgressTooltip') : undefined}
               >
                 {g.already_requested
                   ? t('publicGames.requestSent')
-                  : requestingId === g.game_id
+                  : join.requestingId === g.game_id
                     ? t('publicGames.requesting')
                     : t('publicGames.requestButton')}
               </Button>
@@ -141,23 +98,7 @@ export function PublicGamesList({ displayName }: { displayName: string }) {
         </div>
       )}
 
-      {/* Choix rejoindre/regarder pour une partie déjà en cours (voir
-          GameInProgressChoice) — pas le Modal partagé de ui.tsx, qui
-          ajoute déjà sa propre carte/en-tête autour de son contenu : ce
-          composant est lui-même une carte autonome, faite pour être
-          centrée directement (même patron que JoinByLink.tsx). */}
-      {choiceGame && (
-        <div className="fixed inset-0 z-50 flex animate-overlay-in items-center justify-center bg-black/60 px-4 backdrop-blur-sm" onClick={() => setChoiceGame(null)}>
-          <div onClick={(e) => e.stopPropagation()}>
-            <GameInProgressChoice
-              onWatch={watchChosen}
-              onRequestOnly={requestOnlyChosen}
-              onCancel={() => setChoiceGame(null)}
-              busy={requestingId === choiceGame.game_id}
-            />
-          </div>
-        </div>
-      )}
+      <JoinChoiceOverlay join={join} />
     </div>
   )
 }

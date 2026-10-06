@@ -21,6 +21,7 @@ import { useActiveEvents } from '../hooks/useActiveEvents'
 import { useActiveBanners } from '../hooks/useActiveBanners'
 import { useMySeason } from '../hooks/useMySeason'
 import { SeasonTrack } from '../components/SeasonTrack'
+import { LiveVillage } from '../components/LiveVillage'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from '../components/Avatar'
 
@@ -231,6 +232,11 @@ export default function Dashboard() {
           </div>
           <RankProgress points={profile?.rank_points ?? 0} />
         </div>
+
+        {/* « Le village veille » : une maison par partie en cours (publiques et
+            privées), pour montrer d'emblée que le jeu est vivant et qu'on
+            peut rejoindre — voir LiveVillage.tsx / migration 0213. */}
+        <LiveVillage />
 
         {/* Espace bannière (événements ET bannières du tableau de bord admin,
             voir migration 0202) : juste sous la carte du joueur, avant les
