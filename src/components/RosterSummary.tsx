@@ -50,6 +50,55 @@ const SPECIAL_ROLE_KEYS: RoleId[] = [
   'chasseuse',
 ]
 
+// Camp de chaque rôle spécial, pour les afficher en groupes distincts (retour
+// utilisateur : le Sans-Visage, un loup, apparaissait au milieu des rôles du
+// village sous un même titre « Rôles spéciaux » et se confondait avec eux).
+// Même découpage que les totaux plus bas : loups d'un côté, solitaires (camp
+// neutre, voir totalNeutral) de l'autre, tout le reste = village.
+const WOLF_SPECIAL_KEYS: RoleId[] = ['loup_alpha', 'sans_visage', 'grand_mechant_loup']
+const NEUTRAL_SPECIAL_KEYS: RoleId[] = ['anancy', 'chasseuse']
+
+const CAMP_STYLE = {
+  wolves: { box: 'border-blood-500/40 bg-blood-600/[0.08]', title: 'text-blood-400', rule: 'border-blood-500/20' },
+  village: { box: 'border-emerald-500/35 bg-emerald-500/[0.07]', title: 'text-emerald-500', rule: 'border-emerald-500/20' },
+  neutral: { box: 'border-amber-500/40 bg-amber-400/[0.08]', title: 'text-amber-500', rule: 'border-amber-500/20' },
+} as const
+
+/** Encadré d'un camp : titre + effectif restant, puis ses rôles spéciaux. */
+function CampBox({
+  camp,
+  icon,
+  title,
+  remaining,
+  total,
+  hint,
+  children,
+}: {
+  camp: keyof typeof CAMP_STYLE
+  icon: string
+  title: string
+  remaining: number
+  total: number
+  hint?: string
+  children?: React.ReactNode
+}) {
+  const st = CAMP_STYLE[camp]
+  return (
+    <section className={`rounded-xl border px-3 py-2.5 ${st.box}`}>
+      <div className="flex items-center justify-between gap-2">
+        <h4 className={`text-sm font-bold ${st.title}`}>
+          <span aria-hidden="true">{icon}</span> {title}
+        </h4>
+        <span className="font-display text-base font-semibold tabular-nums text-moon-200">
+          {remaining} / {total}
+        </span>
+      </div>
+      {hint && <p className="mt-0.5 text-[11px] leading-snug text-moon-200/55">{hint}</p>}
+      {children && <div className={`mt-2 flex flex-col gap-1.5 border-t pt-2 ${st.rule}`}>{children}</div>}
+    </section>
+  )
+}
+
 /** Petit bouton "effectifs", ouvert/fermé à la demande, visible pendant
  * toute la partie (branché dans PhaseBanner) — pour répondre à "combien de
  * loups il reste, combien de villageois, est-ce que la voyante est encore
@@ -158,6 +207,30 @@ export function RosterSummary({
   const remainingVillage = Math.max(alive.length - remainingWolves - remainingNeutral, 0)
   const totalVillage = Math.max(players.length - totalWolves - totalNeutral, 0)
   const specialRoles = SPECIAL_ROLE_KEYS.filter((k) => roleCounts?.[k as keyof RoleCounts])
+  const wolfRoles = specialRoles.filter((k) => WOLF_SPECIAL_KEYS.includes(k))
+  const neutralRoles = specialRoles.filter((k) => NEUTRAL_SPECIAL_KEYS.includes(k))
+  const villageRoles = specialRoles.filter((k) => !WOLF_SPECIAL_KEYS.includes(k) && !NEUTRAL_SPECIAL_KEYS.includes(k))
+
+  const roleRow = (key: RoleId, wolfTag = false) => {
+    const role = ROLES[key]
+    const eliminated = players.some((p) => !p.is_alive && p.revealed_role === key)
+    return (
+      <div key={key} className="flex items-center justify-between gap-2 text-sm">
+        <span className={`flex min-w-0 items-center gap-1.5 ${eliminated ? 'text-moon-200/45 line-through' : 'text-moon-200/90'}`}>
+          <span aria-hidden="true">{role.emoji}</span>
+          <span className="truncate">{t(role.nameKey)}</span>
+          {wolfTag && (
+            <span className="shrink-0 rounded-full bg-blood-500/15 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-blood-400 no-underline">
+              {t('roster.wolfTag')}
+            </span>
+          )}
+        </span>
+        <span className={`shrink-0 text-xs font-semibold ${eliminated ? 'text-blood-400' : 'text-emerald-500'}`}>
+          {eliminated ? t('roster.eliminated') : t('roster.alive')}
+        </span>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -187,42 +260,19 @@ export function RosterSummary({
           👥 <strong>{alive.length}</strong> / {players.length} {t('roster.aliveSuffix')}
         </p>
 
-        <div className="mb-4 flex flex-col gap-1 text-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-moon-200/80">{t('roster.wolves')}</span>
-            <span className="font-semibold text-moon-200">
-              {remainingWolves} / {totalWolves}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-moon-200/80">{t('roster.village')}</span>
-            <span className="font-semibold text-moon-200">
-              {remainingVillage} / {totalVillage}
-            </span>
-          </div>
+        <div className="mb-4 flex flex-col gap-2">
+          <CampBox camp="wolves" icon="🐺" title={t('roster.campWolves')} remaining={remainingWolves} total={totalWolves}>
+            {wolfRoles.length > 0 ? wolfRoles.map((k) => roleRow(k, true)) : undefined}
+          </CampBox>
+          <CampBox camp="village" icon="🏘️" title={t('roster.campVillage')} remaining={remainingVillage} total={totalVillage}>
+            {villageRoles.length > 0 ? villageRoles.map((k) => roleRow(k)) : undefined}
+          </CampBox>
+          {totalNeutral > 0 && (
+            <CampBox camp="neutral" icon="⚖️" title={t('roster.campNeutral')} remaining={remainingNeutral} total={totalNeutral} hint={t('roster.campNeutralHint')}>
+              {neutralRoles.map((k) => roleRow(k))}
+            </CampBox>
+          )}
         </div>
-
-        {specialRoles.length > 0 && (
-          <>
-            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-moon-200/50">{t('roster.specialRoles')}</p>
-            <div className="mb-4 flex flex-col gap-1 text-sm">
-              {specialRoles.map((key) => {
-                const role = ROLES[key]
-                const eliminated = players.some((p) => !p.is_alive && p.revealed_role === key)
-                return (
-                  <div key={key} className="flex items-center justify-between">
-                    <span className="text-moon-200/80">
-                      {role.emoji} {t(role.nameKey)}
-                    </span>
-                    <span className={eliminated ? 'text-blood-400' : 'text-emerald-400'}>
-                      {eliminated ? t('roster.eliminated') : t('roster.alive')}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          </>
-        )}
 
         {selfId && (
           <>
