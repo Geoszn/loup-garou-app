@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
@@ -130,7 +130,10 @@ function House({ p, selected, label, onSelect }: { p: Placed; selected: boolean;
   )
 }
 
-function Scene({ placed, selectedKey, labelOf, onSelect }: { placed: Placed[]; selectedKey: string | null; labelOf: (g: LiveGame) => string; onSelect: (key: string) => void }) {
+// memo : LiveVillage se re-rend à chaque changement de présence (n'importe quel
+// joueur qui arrive ou part, voir usePresence) — sans ça, toute la scène SVG
+// (~150 éléments animés) serait redessinée pour rien à chaque fois.
+const Scene = memo(function Scene({ placed, selectedKey, labels, onSelect }: { placed: Placed[]; selectedKey: string | null; labels: Record<string, string>; onSelect: (key: string) => void }) {
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="block w-full" role="group">
       <defs>
@@ -176,14 +179,14 @@ function Scene({ placed, selectedKey, labelOf, onSelect }: { placed: Placed[]; s
       ))}
       <rect x="0" y="250" width={W} height="50" fill="#0a0817" />
       {placed.map((p) => (
-        <House key={p.game.key} p={p} selected={selectedKey === p.game.key} label={labelOf(p.game)} onSelect={() => onSelect(p.game.key)} />
+        <House key={p.game.key} p={p} selected={selectedKey === p.game.key} label={labels[p.game.key] ?? ''} onSelect={() => onSelect(p.game.key)} />
       ))}
       {Array.from({ length: 12 }).map((_, k) => (
         <circle key={k} cx={16 + k * 29} cy={258 + (k % 3) * 10} r="1.6" fill="#d8ff7a" className="village-fly" style={{ animationDelay: `${k * 0.6}s` }} />
       ))}
     </svg>
   )
-}
+})
 
 export function LiveVillage() {
   const { t, lang } = useLanguage()
@@ -239,7 +242,11 @@ export function LiveVillage() {
   }
   const continentLabel = (g: LiveGame) => continentName(g.continent, lang) ?? t('village.unknownContinent')
   const titleOf = (g: LiveGame) => (g.is_public ? t('village.gameOf', { name: g.host_name ?? '?' }) : t('village.private'))
-  const labelOf = (g: LiveGame) => `${titleOf(g)}, ${statusLabel(g)}, ${continentLabel(g)}, ${t('village.players', { count: g.player_count })}`
+  const labels = useMemo(
+    () => Object.fromEntries(pageGames.map((g) => [g.key, `${titleOf(g)}, ${statusLabel(g)}, ${continentLabel(g)}, ${t('village.players', { count: g.player_count })}`])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pageGames, lang]
+  )
 
   if (games === null) return <div className="h-64 animate-pulse rounded-3xl border border-white/10 bg-night-900/60" />
 
@@ -261,7 +268,7 @@ export function LiveVillage() {
           </span>
         )}
 
-        <Scene placed={placed} selectedKey={selected?.key ?? null} labelOf={labelOf} onSelect={setSelectedKey} />
+        <Scene placed={placed} selectedKey={selected?.key ?? null} labels={labels} onSelect={setSelectedKey} />
 
         {sorted.length === 0 && (
           <div className="absolute inset-x-0 bottom-[18%] z-10 flex flex-col items-center gap-2 px-6 text-center">

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { subscribeChatEvents } from '../lib/chatRealtime'
 import type { ChatChannel, ChatMessage, ChatReaction, ReactionEmoji } from '../types/game'
 
 /** Identité réelle démasquée pour un message anonyme — n'existe que pour les
@@ -76,58 +77,38 @@ export function useChat(gameId: string | null, channel: ChatChannel | null) {
         setReactions(data as ChatReaction[])
       })
 
-    let chatChannel = supabase
-      .channel(`chat-${gameId}-${channel}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `game_id=eq.${gameId}` },
-        (payload) => {
-          const row = payload.new as ChatMessage
-          if (row.channel !== channel) return
-          if (seenIds.current.has(row.id)) return
-          seenIds.current.add(row.id)
-          setMessages((prev) => [...prev, row])
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'chat_message_reactions', filter: `game_id=eq.${gameId}` },
-        (payload) => {
-          const row = payload.new as ChatReaction & { channel: ChatChannel }
-          if (row.channel !== channel) return
-          if (seenReactionIds.current.has(row.id)) return
-          seenReactionIds.current.add(row.id)
-          setReactions((prev) => [...prev, row])
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'chat_message_reactions', filter: `game_id=eq.${gameId}` },
-        (payload) => {
-          const row = payload.old as { id: string }
-          seenReactionIds.current.delete(row.id)
-          setReactions((prev) => prev.filter((r) => r.id !== row.id))
-        }
-      )
-
-    if (channel === 'village') {
-      chatChannel = chatChannel.on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'chat_message_identities', filter: `game_id=eq.${gameId}` },
-        (payload) => {
-          const row = payload.new as { message_id: string; user_id: string; display_name: string }
-          if (seenIdentityIds.current.has(row.message_id)) return
-          seenIdentityIds.current.add(row.message_id)
-          setIdentities((prev) => ({ ...prev, [row.message_id]: { user_id: row.user_id, display_name: row.display_name } }))
-        }
-      )
-    }
-
-    const sub = chatChannel.subscribe()
+    // Un seul canal Realtime partagé par partie (voir lib/chatRealtime.ts).
+    const unsubscribe = subscribeChatEvents(gameId, {
+      onMessage: (row) => {
+        if (row.channel !== channel) return
+        if (seenIds.current.has(row.id)) return
+        seenIds.current.add(row.id)
+        setMessages((prev) => [...prev, row])
+      },
+      onReactionInsert: (row) => {
+        if (row.channel !== channel) return
+        if (seenReactionIds.current.has(row.id)) return
+        seenReactionIds.current.add(row.id)
+        setReactions((prev) => [...prev, row])
+      },
+      onReactionDelete: (row) => {
+        seenReactionIds.current.delete(row.id)
+        setReactions((prev) => prev.filter((r) => r.id !== row.id))
+      },
+      // Seul le salon "village" peut contenir des messages anonymes.
+      onIdentity:
+        channel === 'village'
+          ? (row) => {
+              if (seenIdentityIds.current.has(row.message_id)) return
+              seenIdentityIds.current.add(row.message_id)
+              setIdentities((prev) => ({ ...prev, [row.message_id]: { user_id: row.user_id, display_name: row.display_name } }))
+            }
+          : undefined,
+    })
 
     return () => {
       cancelled = true
-      supabase.removeChannel(sub)
+      unsubscribe()
     }
   }, [gameId, channel])
 
@@ -172,7 +153,7 @@ export function useChat(gameId: string | null, channel: ChatChannel | null) {
 /** Nombre de messages arrivés dans `channel` depuis qu'on ne le regarde plus
  * (`active=false`) — pour un petit badge sur l'onglet "Loups"/"Amoureux"
  * pendant qu'on lit un autre salon (ex. le village). Volontairement léger :
- * une seule souscription Realtime dédiée au comptage, aucun historique
+ * aucune souscription dédiée (écoute le canal partagé de lib/chatRealtime.ts), aucun historique
  * chargé (contrairement à useChat ci-dessus, monté seulement pour le salon
  * actif) — ne compte que les nouveaux messages reçus pendant que ce hook est
  * monté, pas l'historique antérieur. Remis à zéro dès que `active` repasse à
@@ -190,23 +171,16 @@ export function useUnreadChatCount(gameId: string | null, channel: ChatChannel |
     setCount(0)
     if (!gameId || !channel) return
 
-    const sub = supabase
-      .channel(`unread-${gameId}-${channel}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `game_id=eq.${gameId}` },
-        (payload) => {
-          const row = payload.new as { channel: string }
-          if (row.channel !== channel) return
-          if (activeRef.current) return
-          setCount((c) => c + 1)
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(sub)
-    }
+    // Même canal partagé que useChat (voir lib/chatRealtime.ts) : plus
+    // d'abonnement dédié par onglet, qui multipliait les vérifications de droits
+    // côté base à chaque message.
+    return subscribeChatEvents(gameId, {
+      onMessage: (row) => {
+        if (row.channel !== channel) return
+        if (activeRef.current) return
+        setCount((c) => c + 1)
+      },
+    })
   }, [gameId, channel])
 
   return count
