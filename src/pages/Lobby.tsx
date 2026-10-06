@@ -529,15 +529,9 @@ export default function Lobby() {
     Number(counts.daron)
   const balanceTotal = Math.max(balanceWolves + balanceVillage, 1)
   const rolesOverflow = customized && specialTotal > playerCount
-  // Contrainte du Loup Alpha (voir migration 0088, assouplie en 0094 —
-  // demande utilisateur : retrait du plafond de 2 Loups-Garous simples,
-  // devenu obsolète depuis la refonte 0093 où l'Alpha vote avec le reste de
-  // la meute) : seuls les 10 joueurs minimum restent requis. Vérifiée aussi
-  // côté serveur (start_game) — ceci n'est qu'un avertissement anticipé,
-  // même registre que rolesOverflow ci-dessus (pas de blocage dur du
-  // toggle, cohérent avec le reste des réglages qui ne grisent jamais un
-  // rôle selon le nombre de joueurs).
-  const alphaConstraintViolated = counts.loup_alpha && playerCount < 10
+  // Le Loup Alpha n'a plus de minimum de joueurs (migration 0216) : comme le
+  // Sans-Visage et le Grand Méchant Loup, l'hôte le choisit à n'importe quel
+  // effectif.
 
   return (
     <div className="relative min-h-screen overflow-hidden px-4 py-6 pb-28 sm:py-10">
@@ -888,7 +882,6 @@ export default function Lobby() {
               </div>
 
               {rolesOverflow && <ErrorText>{t('lobby.rolesOverflow')}</ErrorText>}
-              {alphaConstraintViolated && <ErrorText>{t('lobby.alphaConstraintViolated')}</ErrorText>}
 
               <div className="flex flex-col">
                 {/* Mode automatique (voir migration 0143) : coché, tout le

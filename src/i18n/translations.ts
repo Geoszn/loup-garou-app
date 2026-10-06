@@ -333,8 +333,8 @@ export const translations = {
   },
   'role.loup_alpha.name': { fr: 'Loup Alpha', en: 'Alpha Wolf' },
   'role.loup_alpha.description': {
-    fr: "Nécessite au moins 10 joueurs. Vous votez chaque nuit avec le reste de la meute, mais votre vote compte double — comme celui du Capitaine en journée. Si la majorité des loups est d'accord, vous pouvez choisir d'infecter la victime au lieu de l'éliminer, pour la faire rejoindre les loups (une seule infection par partie, et vous ne décidez jamais seul).",
-    en: "Requires at least 10 players. You vote each night with the rest of the pack, but your vote counts double — like the Captain's during the day. If the majority of wolves agree, you can choose to infect the victim instead of eliminating them, making them join the wolves (one infection per game, and you never decide alone).",
+    fr: "Vous votez chaque nuit avec le reste de la meute, mais votre vote compte double — comme celui du Capitaine en journée. Si la majorité des loups est d'accord, vous pouvez choisir d'infecter la victime au lieu de l'éliminer, pour la faire rejoindre les loups (une seule infection par partie, et vous ne décidez jamais seul).",
+    en: "You vote each night with the rest of the pack, but your vote counts double — like the Captain's during the day. If the majority of wolves agree, you can choose to infect the victim instead of eliminating them, making them join the wolves (one infection per game, and you never decide alone).",
   },
   'role.loup_alpha.nightAction': {
     fr: 'Votez avec votre meute (votre voix compte double). Si la majorité des loups est d’accord, vous pouvez infecter la victime au lieu de l’éliminer.',
@@ -501,16 +501,12 @@ export const translations = {
     en: 'Too many special roles for the current number of players.',
   },
   'lobby.alphaToggleHint': {
-    fr: "Nécessite au moins 10 joueurs. Vote avec le reste de la meute (son vote compte double) ; si la majorité des loups est d'accord, il peut infecter une victime au lieu de l'éliminer (une seule fois par partie).",
-    en: "Requires at least 10 players. Votes with the rest of the pack (their vote counts double); if the majority of wolves agree, they can infect a victim instead of eliminating them (once per game).",
+    fr: "Vote avec le reste de la meute (son vote compte double) ; si la majorité des loups est d'accord, il peut infecter une victime au lieu de l'éliminer (une seule fois par partie).",
+    en: "Votes with the rest of the pack (their vote counts double); if the majority of wolves agree, they can infect a victim instead of eliminating them (once per game).",
   },
   'lobby.sansVisageToggleHint': {
     fr: "Vote avec le reste de la meute exactement comme un Loup simple. Sa seule différence : la Voyante le voit toujours comme un villageois, jamais comme un Loup.",
     en: 'Votes with the rest of the pack exactly like a simple Wolf. Their only difference: the Seer always sees them as a villager, never as a Wolf.',
-  },
-  'lobby.alphaConstraintViolated': {
-    fr: 'Le Loup Alpha nécessite au moins 10 joueurs.',
-    en: 'The Alpha Wolf requires at least 10 players.',
   },
   'lobby.captainToggleHint': {
     fr: 'Élu par le village juste avant la première nuit (garde son vrai rôle) — vote compte double, et tranche les égalités. Ne prend pas de place de rôle spécial.',
