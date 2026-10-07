@@ -16,7 +16,7 @@ const cache = new Map<string, string>()
 const MAX = 400
 
 export function avatarImageUrl(config: AvatarConfig, mood: AvatarMood): string | null {
-  const key = `${config.skin}|${config.hair}|${config.outfit}|${config.acc}|${config.head}|${config.face}|${config.bg}|${mood}`
+  const key = `${config.skin}|${config.hair}|${config.outfit}|${config.acc}|${config.acc2 ?? 'none'}|${config.head}|${config.face}|${config.bg}|${mood}`
   const hit = cache.get(key)
   if (hit) return hit
   if (cache.size >= MAX) return null

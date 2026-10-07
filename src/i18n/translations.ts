@@ -1706,6 +1706,7 @@ export const translations = {
   'avatar.head.cowboy_pink': { fr: 'Cowboy Rose', en: 'Pink cowboy hat' },
   'avatar.head.bandana_biker': { fr: 'Bandana Motard', en: 'Biker bandana' },
   'avatar.acc.lipstick_pink': { fr: 'Maquillage Rose', en: 'Pink makeup' },
+  'avatar.acc.hint': { fr: "Jusqu'à {{max}} détails à la fois ({{count}}/{{max}}), un seul par zone (lunettes, oreilles, bouche…). Touche un détail porté pour le retirer.", en: 'Up to {{max}} details at once ({{count}}/{{max}}), one per area (eyes, ears, mouth…). Tap a worn detail to remove it.' },
   'avatar.acc.cigarette': { fr: 'Cigarette', en: 'Cigarette' },
   'avatar.acc.toothpick': { fr: 'Cure-dent', en: 'Toothpick' },
   'avatar.acc.gold_chain': { fr: 'Chaîne en Or', en: 'Gold chain' },

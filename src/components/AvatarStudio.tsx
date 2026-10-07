@@ -22,6 +22,10 @@ import {
   SEASON_EXCLUSIVE_MIN_POINTS,
   SKIN_TONES,
   STORE_EXCLUSIVE_MIN_POINTS,
+  MAX_ACCESSORIES,
+  accessoriesOf,
+  toggleAccessory,
+  type Accessory,
   type AvatarConfig,
   type AvatarMood,
 } from '../lib/avatarParts'
@@ -67,7 +71,9 @@ const LOOKS: { label: TranslationKey; config: AvatarConfig }[] = [
   { label: 'avatar.look.wolf', config: { skin: 4, hair: 'locs', outfit: 'furcape', acc: 'scar', head: 'none', face: 'oval', bg: 5 } },
 ]
 
-const sameConfig = (a: AvatarConfig, b: AvatarConfig) => JSON.stringify(a) === JSON.stringify(b)
+// acc2 absent (avatars d'avant le 2e détail) vaut « aucun » : on compare normalisé.
+const norm = (c: AvatarConfig): AvatarConfig => ({ ...c, acc2: c.acc2 ?? 'none' })
+const sameConfig = (a: AvatarConfig, b: AvatarConfig) => JSON.stringify(norm(a)) === JSON.stringify(norm(b))
 
 /**
  * Éditeur d'avatar plein écran : aperçu fixe en haut, catégories en onglets,
@@ -188,6 +194,10 @@ export function AvatarStudio({
       const ok = OPTIONS[kind].filter((v) => isUnlocked(kind, v))
       return ok[Math.floor(Math.random() * ok.length)]
     }
+    // Un détail, et une fois sur deux un second (d'une autre zone que le premier).
+    let withAcc = norm(config)
+    withAcc = toggleAccessory({ ...withAcc, acc: 'none', acc2: 'none' }, pickUnlocked('acc') as Accessory)
+    if (Math.random() < 0.5) withAcc = toggleAccessory(withAcc, pickUnlocked('acc') as Accessory)
     apply({
       skin: Math.floor(Math.random() * SKIN_TONES.length),
       bg: (() => {
@@ -196,7 +206,8 @@ export function AvatarStudio({
       })(),
       hair: pickUnlocked('hair') as AvatarConfig['hair'],
       outfit: pickUnlocked('outfit') as AvatarConfig['outfit'],
-      acc: pickUnlocked('acc') as AvatarConfig['acc'],
+      acc: withAcc.acc,
+      acc2: withAcc.acc2,
       head: pickUnlocked('head') as AvatarConfig['head'],
       face: FACES[Math.floor(Math.random() * FACES.length)],
     })
@@ -209,7 +220,9 @@ export function AvatarStudio({
       return
     }
     setLockedNote(null)
-    apply({ ...config, [kind]: value })
+    // Les détails se cumulent (deux au plus) ; tout le reste remplace la pièce.
+    if (kind === 'acc') apply(toggleAccessory(config, value as Accessory))
+    else apply({ ...config, [kind]: value })
   }
 
   function requestClose() {
@@ -336,10 +349,11 @@ export function AvatarStudio({
     // Les pièces vendues en boutique n'apparaissent ici qu'une fois achetées ;
     // celles du rang ou des paliers de saison restent visibles, verrouillées.
     const visible = OPTIONS[kind].filter((value) => (PART_MIN_POINTS[kind] as Record<string, number>)[value] !== STORE_EXCLUSIVE_MIN_POINTS || isUnlocked(kind, value))
-    grid = visible.map((value) => {
+    const tiles = visible.map((value) => {
       const min = (PART_MIN_POINTS[kind] as Record<string, number>)[value]
       const locked = !isUnlocked(kind, value)
-      const active = config[kind] === value
+      const worn = accessoriesOf(config)
+      const active = kind === 'acc' ? (value === 'none' ? worn.length === 0 : worn.includes(value as Accessory)) : config[kind] === value
       return (
         <button
           key={value}
@@ -349,7 +363,7 @@ export function AvatarStudio({
           className={`flex flex-col items-center gap-1 text-[11px] ${locked ? 'opacity-60' : ''}`}
         >
           <span className="relative block w-full">
-            {thumb({ ...config, [kind]: value } as AvatarConfig, active, zoom)}
+            {thumb((kind === 'acc' ? (active ? config : toggleAccessory(config, value as Accessory)) : { ...config, [kind]: value }) as AvatarConfig, active, zoom)}
             {locked && (
               <span className="absolute inset-0 flex flex-col items-center justify-center rounded-xl bg-black/55 text-center text-[11px] text-moon-200">
                 <span className="text-base leading-none">🔒</span>
@@ -363,6 +377,15 @@ export function AvatarStudio({
         </button>
       )
     })
+    grid =
+      kind === 'acc' ? (
+        <>
+          <p className="col-span-full text-[11px] leading-snug text-moon-200/60">{t('avatar.acc.hint', { max: MAX_ACCESSORIES, count: accessoriesOf(config).length })}</p>
+          {tiles}
+        </>
+      ) : (
+        tiles
+      )
   }
 
   const iconButton = 'inline-flex h-9 w-9 items-center justify-center rounded-xl border border-night-500 bg-gradient-to-b from-night-700/70 to-night-800/50 text-sm text-moon-200 transition-colors hover:border-night-500/80 disabled:opacity-40'

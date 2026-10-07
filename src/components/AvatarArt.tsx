@@ -1364,7 +1364,8 @@ export function AvatarArt({ config, mood = 'smile' }: { config: AvatarConfig; mo
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
   const skin = SKIN_TONES[config.skin]
   const dark = shade(skin, -34)
-  const lipC = config.acc === 'lipstick_pink' ? '#ff3d8b' : mix(shade(skin, -46), '#b3262c', 0.5)
+  const acc2 = config.acc2 ?? 'none'
+  const lipC = config.acc === 'lipstick_pink' || acc2 === 'lipstick_pink' ? '#ff3d8b' : mix(shade(skin, -46), '#b3262c', 0.5)
   const hairC = HAIR_COLORS[config.hair] ?? '#1b120c'
   const browC = config.hair === 'braids_pink' || config.hair === 'afro_pink' || config.hair === 'ponytail_pop' ? '#2a1a10' : hairC
   const head = HEAD_PATHS[config.face]
@@ -1533,8 +1534,10 @@ export function AvatarArt({ config, mood = 'smile' }: { config: AvatarConfig; mo
       )}
       <ellipse cx="50.4" cy="52" rx="1.9" ry="1.1" fill="#fff" opacity=".22" />
       {mouthProp(config.acc)}
+      {mouthProp(acc2)}
       {mouth}
       {faceAccessory(config.acc, skin, ey)}
+      {faceAccessory(acc2, skin, ey)}
       {headwearArt(headwear, uid)}
     </svg>
   )

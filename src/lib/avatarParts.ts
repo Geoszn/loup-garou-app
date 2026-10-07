@@ -50,6 +50,8 @@ export interface AvatarConfig {
   hair: Hair
   outfit: Outfit
   acc: Accessory
+  // 2e détail (migration 0219) : absent des avatars enregistrés avant, lu comme « aucun ».
+  acc2?: Accessory
   head: Headwear
   face: FaceShape
   bg: number
@@ -96,16 +98,54 @@ export function parseAvatarConfig(value: unknown): AvatarConfig | null {
   const v = value as Record<string, unknown>
   const head = v.head === undefined || v.head === null ? 'none' : v.head
   const face = v.face === undefined || v.face === null ? 'oval' : v.face
+  const acc2 = v.acc2 === undefined || v.acc2 === null ? 'none' : v.acc2
   if (
     Number.isInteger(v.skin) && (v.skin as number) >= 0 && (v.skin as number) < SKIN_TONES.length &&
     Number.isInteger(v.bg) && (v.bg as number) >= 0 && (v.bg as number) < AVATAR_BGS.length &&
     (HAIRS as readonly unknown[]).includes(v.hair) &&
     (OUTFITS as readonly unknown[]).includes(v.outfit) &&
     (ACCESSORIES as readonly unknown[]).includes(v.acc) &&
+    (ACCESSORIES as readonly unknown[]).includes(acc2) &&
     (HEADWEAR as readonly unknown[]).includes(head) &&
     (FACES as readonly unknown[]).includes(face)
   ) {
-    return { skin: v.skin as number, bg: v.bg as number, hair: v.hair as Hair, outfit: v.outfit as Outfit, acc: v.acc as Accessory, head: head as Headwear, face: face as FaceShape }
+    return { skin: v.skin as number, bg: v.bg as number, hair: v.hair as Hair, outfit: v.outfit as Outfit, acc: v.acc as Accessory, acc2: acc2 as Accessory, head: head as Headwear, face: face as FaceShape }
   }
   return null
+}
+
+// ---------------------------------------------------------------------------
+// Deux détails à la fois (acc + acc2). Pour éviter deux objets au même endroit
+// (deux paires de lunettes, boucles + anneaux, cigarette + cure-dent…), chaque
+// détail appartient à une zone : en choisir un remplace celui de la même zone.
+// ---------------------------------------------------------------------------
+export const ACC_ZONE: Record<string, string> = {
+  glasses: 'eyes', sunglasses: 'eyes', eyepatch: 'eyes', coeur_lunettes: 'eyes',
+  hoops: 'ears', ring: 'ears',
+  cigarette: 'mouth', toothpick: 'mouth',
+  beads: 'neck', gold_chain: 'neck',
+  freckles: 'skin', scar: 'skin', facepaint: 'skin',
+  lipstick_pink: 'makeup',
+}
+export const MAX_ACCESSORIES = 2
+
+/** Détails portés (sans « aucun »), dans l'ordre des deux emplacements. */
+export function accessoriesOf(c: Pick<AvatarConfig, 'acc' | 'acc2'>): Accessory[] {
+  return [c.acc, c.acc2 ?? 'none'].filter((a): a is Accessory => a !== 'none')
+}
+
+export function withAccessories(c: AvatarConfig, list: Accessory[]): AvatarConfig {
+  return { ...c, acc: list[0] ?? 'none', acc2: list[1] ?? 'none' }
+}
+
+/** Ajoute / retire un détail : « aucun » vide tout ; un détail déjà porté est
+ * retiré ; sinon il remplace celui de sa zone, et au-delà de deux le plus
+ * ancien tombe. */
+export function toggleAccessory(c: AvatarConfig, value: Accessory): AvatarConfig {
+  if (value === 'none') return withAccessories(c, [])
+  const cur = accessoriesOf(c)
+  if (cur.includes(value)) return withAccessories(c, cur.filter((a) => a !== value))
+  const zone = ACC_ZONE[value]
+  const next = [...cur.filter((a) => ACC_ZONE[a] !== zone), value]
+  return withAccessories(c, next.slice(-MAX_ACCESSORIES))
 }
