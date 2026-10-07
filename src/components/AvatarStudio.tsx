@@ -312,7 +312,8 @@ export function AvatarStudio({
     const colors = tab === 'skin' ? SKIN_TONES : AVATAR_BGS
     const key = tab === 'skin' ? 'skin' : 'bg'
     grid = colors.map((color, i) => {
-      const locked = tab === 'bg' && !isBgUnlocked(i)
+      // Fond de boutique : invisible tant qu'il n'est pas acheté.
+      if (tab === 'bg' && !isBgUnlocked(i)) return null
       return (
         <button
           key={color}
@@ -320,10 +321,6 @@ export function AvatarStudio({
           aria-pressed={config[key] === i}
           aria-label={`${t(tab === 'skin' ? 'avatar.tab.skin' : 'avatar.tab.bg')} ${i + 1}`}
           onClick={() => {
-            if (locked) {
-              setLockedNote({ label: t('avatar.bg.night'), min: STORE_EXCLUSIVE_MIN_POINTS })
-              return
-            }
             setLockedNote(null)
             apply({ ...config, [key]: i })
           }}
@@ -331,14 +328,15 @@ export function AvatarStudio({
             config[key] === i ? 'border-moon-400 shadow-[0_0_0_3px_rgba(224,168,74,0.45)]' : 'border-night-600'
           }`}
           style={tab === 'bg' && i >= FREE_BG_COUNT ? { background: 'linear-gradient(#2a0f45, #7a2a78 60%, #e0558f)' } : { backgroundColor: color }}
-        >
-          {locked && <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/55 text-sm">🔒</span>}
-        </button>
+        />
       )
     })
   } else {
     const kind = tab as PartKind
-    grid = OPTIONS[kind].map((value) => {
+    // Les pièces vendues en boutique n'apparaissent ici qu'une fois achetées ;
+    // celles du rang ou des paliers de saison restent visibles, verrouillées.
+    const visible = OPTIONS[kind].filter((value) => (PART_MIN_POINTS[kind] as Record<string, number>)[value] !== STORE_EXCLUSIVE_MIN_POINTS || isUnlocked(kind, value))
+    grid = visible.map((value) => {
       const min = (PART_MIN_POINTS[kind] as Record<string, number>)[value]
       const locked = !isUnlocked(kind, value)
       const active = config[kind] === value
@@ -355,7 +353,7 @@ export function AvatarStudio({
             {locked && (
               <span className="absolute inset-0 flex flex-col items-center justify-center rounded-xl bg-black/55 text-center text-[11px] text-moon-200">
                 <span className="text-base leading-none">🔒</span>
-                {min >= SEASON_EXCLUSIVE_MIN_POINTS ? t('avatar.seasonExclusive') : min >= STORE_EXCLUSIVE_MIN_POINTS ? t('avatar.storeExclusive') : `${min} pts`}
+                {min >= SEASON_EXCLUSIVE_MIN_POINTS ? t('avatar.seasonExclusive') : `${min} pts`}
               </span>
             )}
           </span>
@@ -479,12 +477,12 @@ export function AvatarStudio({
       </nav>
 
       <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto px-4 py-3">
-        {lockedNote && lockedNote.min >= STORE_EXCLUSIVE_MIN_POINTS && (
+        {lockedNote && lockedNote.min >= SEASON_EXCLUSIVE_MIN_POINTS && (
           <div className="mb-3 rounded-xl border border-moon-400/30 bg-moon-400/5 px-3 py-2 text-xs text-moon-200/80">
-            🔒 {lockedNote.min >= SEASON_EXCLUSIVE_MIN_POINTS ? t('avatar.seasonExclusiveMsg') : t('avatar.storeExclusiveMsg')}
+            🔒 {t('avatar.seasonExclusiveMsg')}
           </div>
         )}
-        {lockedNote && lockedNote.min < STORE_EXCLUSIVE_MIN_POINTS && (
+        {lockedNote && lockedNote.min < SEASON_EXCLUSIVE_MIN_POINTS && (
           <div className="mb-3 rounded-xl border border-moon-400/30 bg-moon-400/5 px-3 py-2 text-xs text-moon-200/80">
             🔒{' '}
             {t('avatar.lockedMsg', {
