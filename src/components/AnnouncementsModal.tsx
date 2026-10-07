@@ -6,7 +6,6 @@ import { cachedRpc } from '../lib/rpcCache'
 import { homeSection } from '../lib/homeBootstrap'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from './Avatar'
-import { ItemArt } from './AvatarArt'
 import { useMyAvatarConfig } from './AvatarEditor'
 import { LoupCoinIcon } from './LoupCoinIcon'
 import type { AvatarConfig } from '../lib/avatarParts'
@@ -23,13 +22,17 @@ export const AVATARS_ANNOUNCEMENT_KEY = 'avatars-2026-09'
 /** Annonce de la collection boutique Octobre Rose (migration 0218). */
 export const STORE_ANNOUNCEMENT_KEY = 'store-pink-october-2026'
 
-// Quatre pièces vedettes de la collection, montrées seules (comme en boutique).
-const STORE_SHOWCASE: { part: 'hair' | 'outfit' | 'head' | 'bg'; value: string; glow: string }[] = [
-  { part: 'hair', value: 'braids_pink', glow: 'rgba(56,189,248,0.28)' },
-  { part: 'outfit', value: 'gala_gown', glow: 'rgba(168,85,247,0.32)' },
-  { part: 'head', value: 'cowboy_pink', glow: 'rgba(56,189,248,0.28)' },
-  { part: 'bg', value: '6', glow: 'rgba(56,189,248,0.28)' },
-]
+// Les cinq looks de la vitrine de l'annonce « nouveautés boutique » : de vrais
+// avatars qui portent des pièces de la collection, sur le fond Nuit Étoilée.
+const showcaseLook = (o: Partial<AvatarConfig>): AvatarConfig => ({ skin: 3, hair: 'braids', outfit: 'tunic', acc: 'none', head: 'none', face: 'oval', bg: 6, ...o })
+const STORE_LOOKS = {
+  gala: showcaseLook({ skin: 2, hair: 'ponytail_pop', outfit: 'gala_gown', acc: 'lipstick_pink' }),
+  cowboy: showcaseLook({ skin: 3, hair: 'braids_pink', outfit: 'varsity', head: 'cowboy_pink' }),
+  biker: showcaseLook({ skin: 4, hair: 'beard_full', outfit: 'tracksuit_neon', acc: 'gold_chain', head: 'bandana_biker' }),
+  ken: showcaseLook({ skin: 0, hair: 'pompadour_ken', outfit: 'hawaiian', acc: 'toothpick' }),
+  afro: showcaseLook({ skin: 5, hair: 'afro_pink', outfit: 'varsity', acc: 'cigarette' }),
+}
+const STORE_SPARKLES: [number, number, number][] = [[8, 14, 10], [88, 10, 14], [20, 72, 8], [92, 62, 10], [50, 6, 8], [74, 84, 8], [6, 44, 7], [60, 92, 6]]
 
 function seasonAnnouncementKey(slug: string): string {
   return `season-launch-${slug}`
@@ -65,7 +68,7 @@ export function AnnouncementsModal() {
   const [season, setSeason] = useState<MySeason | null | undefined>(undefined)
   // Date de fin de vente de la collection boutique, ou null si elle n'est pas
   // (ou plus) en vente ; undefined = pas encore vérifié.
-  const [storeEnds, setStoreEnds] = useState<string | null | undefined>(undefined)
+  const [store, setStore] = useState<{ ends: string; from: number } | null | undefined>(undefined)
   const [slides, setSlides] = useState<Slide[] | null>(null)
   const [index, setIndex] = useState(0)
   const [busy, setBusy] = useState(false)
@@ -83,15 +86,15 @@ export function AnnouncementsModal() {
   useEffect(() => {
     if (!user || seen === null) return
     if (seen.includes(STORE_ANNOUNCEMENT_KEY)) {
-      setStoreEnds(null)
+      setStore(null)
       return
     }
     let active = true
     supabase.rpc('list_store_skins').then(({ data, error }) => {
       if (!active) return
-      const list = !error && Array.isArray(data) ? (data as { category: string; owned: boolean; ends_at: string | null }[]) : []
+      const list = !error && Array.isArray(data) ? (data as { category: string; owned: boolean; ends_at: string | null; price_coins: number }[]) : []
       const fresh = list.filter((s) => (s.category === 'accessoires' || s.category === 'fonds') && !s.owned && s.ends_at && new Date(s.ends_at).getTime() > Date.now())
-      setStoreEnds(fresh.length > 0 ? fresh.map((s) => s.ends_at as string).sort()[0] : null)
+      setStore(fresh.length > 0 ? { ends: fresh.map((s) => s.ends_at as string).sort()[0], from: Math.min(...list.filter((s) => s.ends_at && !s.owned).map((s) => s.price_coins)) } : null)
     })
     return () => {
       active = false
@@ -101,7 +104,7 @@ export function AnnouncementsModal() {
   // Composé une seule fois, quand tout est chargé : évite qu'une carte
   // apparaisse ou disparaisse pendant que le joueur lit.
   useEffect(() => {
-    if (slides || seen === null || comp === undefined || season === undefined || storeEnds === undefined || !myAvatar.loaded) return
+    if (slides || seen === null || comp === undefined || season === undefined || store === undefined || !myAvatar.loaded) return
     const list: Slide[] = []
     const avatarSeen = seen.includes(AVATARS_ANNOUNCEMENT_KEY)
     if (!avatarSeen && !myAvatar.config) list.push('avatars')
@@ -111,10 +114,10 @@ export function AnnouncementsModal() {
     // EN COURS (season.is_active) — jamais rejouée si le joueur ouvre
     // l'appli après coup, une fois la saison déjà bien avancée ou terminée.
     if (season && season.is_active && !seen.includes(seasonAnnouncementKey(season.slug))) list.push('season')
-    if (storeEnds) list.push('store')
+    if (store) list.push('store')
     if (comp) list.push('compensation')
     setSlides(list)
-  }, [slides, seen, comp, season, storeEnds, myAvatar.loaded, myAvatar.config])
+  }, [slides, seen, comp, season, store, myAvatar.loaded, myAvatar.config])
 
   if (!slides || slides.length === 0) return null
   const current = slides[index]
@@ -197,7 +200,7 @@ export function AnnouncementsModal() {
       <div
         role="dialog"
         aria-modal="true"
-        className="flex max-h-full w-full max-w-sm animate-modal-in flex-col items-center gap-4 overflow-y-auto rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/95 to-night-900/95 px-6 pb-5 pt-6 text-center shadow-card"
+        className="flex max-h-full w-full max-w-sm animate-modal-in flex-col items-center gap-4 overflow-y-auto overflow-x-hidden rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/95 to-night-900/95 px-6 pb-5 pt-6 text-center shadow-card"
       >
         {total > 1 && (
           <div className="flex w-full items-center justify-between text-[11px] text-moon-200/50">
@@ -261,36 +264,33 @@ export function AnnouncementsModal() {
           </>
         )}
 
-        {current === 'store' && storeEnds && (
+        {current === 'store' && store && (
           <>
-            <span className="rounded-full border border-pink-400/40 bg-pink-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-pink-300">
-              {t('announce.store.badge')}
-            </span>
-            <div className="grid w-full grid-cols-4 gap-2">
-              {STORE_SHOWCASE.map((it) => (
-                <span
-                  key={it.value}
-                  className="block aspect-square overflow-hidden rounded-lg border border-night-600/70"
-                  style={{ background: `radial-gradient(circle at 50% 38%, ${it.glow}, rgba(15,12,20,0.85) 78%)` }}
-                >
-                  <ItemArt part={it.part} value={it.value} className="h-full w-full p-1" />
+            <div
+              className={`relative -mx-6 h-52 shrink-0 self-stretch overflow-hidden ${total > 1 ? '' : '-mt-6'}`}
+              style={{ background: 'linear-gradient(180deg,#2a0f45 0%,#7a2a78 62%,#e0558f 100%)' }}
+            >
+              {STORE_SPARKLES.map(([x, y, size], i) => (
+                <span key={i} aria-hidden="true" className="pointer-events-none absolute text-pink-100" style={{ left: `${x}%`, top: `${y}%`, fontSize: size, opacity: 0.85 }}>
+                  ✦
                 </span>
               ))}
+              <span className="absolute left-1/2 top-2.5 z-20 -translate-x-1/2 rounded-full bg-pink-500 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-white shadow">
+                {t('announce.store.badge')}
+              </span>
+              <Avatar config={STORE_LOOKS.ken} className="absolute left-3 top-[96px] h-[72px] w-[72px] -rotate-6 shadow-lg ring-2 ring-night-900" />
+              <Avatar config={STORE_LOOKS.afro} className="absolute right-3 top-[96px] h-[72px] w-[72px] rotate-6 shadow-lg ring-2 ring-night-900" />
+              <Avatar config={STORE_LOOKS.cowboy} className="absolute left-10 top-[34px] h-[84px] w-[84px] -rotate-3 shadow-lg ring-2 ring-night-900" />
+              <Avatar config={STORE_LOOKS.biker} className="absolute right-10 top-[34px] h-[84px] w-[84px] rotate-3 shadow-lg ring-2 ring-night-900" />
+              <Avatar config={STORE_LOOKS.gala} className="absolute left-1/2 top-[52px] z-10 h-[124px] w-[124px] -translate-x-1/2 shadow-xl ring-4 ring-pink-300/80" />
             </div>
-            <h2 className="font-display text-xl text-moon-200">{t('announce.store.title')}</h2>
+            <h2 className="font-display text-xl leading-tight text-moon-200">{t('announce.store.title')}</h2>
             <p className="text-sm leading-relaxed text-moon-200/80">
-              {t('announce.store.body', { date: new Date(storeEnds).toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR', { day: 'numeric', month: 'long' }) })}
+              {t('announce.store.body', { date: new Date(store.ends).toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR', { day: 'numeric', month: 'long' }) })}
             </p>
-            <ul className="flex w-full flex-col gap-1.5 text-left text-xs text-moon-200/70">
-              <li className="flex items-center gap-2 rounded-xl border border-night-600/60 bg-night-900/50 px-3 py-2">
-                <span aria-hidden="true">👀</span>
-                {t('announce.store.bullet1')}
-              </li>
-              <li className="flex items-center gap-2 rounded-xl border border-night-600/60 bg-night-900/50 px-3 py-2">
-                <span aria-hidden="true">⏳</span>
-                {t('announce.store.bullet2')}
-              </li>
-            </ul>
+            <p className="flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-300">
+              {t('announce.store.from', { n: store.from })} <LoupCoinIcon className="h-3.5 w-3.5" /> · {t('announce.store.tryFirst')}
+            </p>
           </>
         )}
 
