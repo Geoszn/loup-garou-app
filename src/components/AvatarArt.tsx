@@ -201,6 +201,105 @@ function nightSky(uid: string): ReactNode {
   )
 }
 
+/** Fond n°7 « Aurore Dorée » (édition limitée, 1000 Loup Coins) : nuit
+ * profonde, rubans d'aurore qui ondulent, soleil de rayons dorés qui tourne
+ * lentement derrière la tête, anneau d'or et poussière d'étoiles qui
+ * scintille. Aucun filtre (flou) : seuls des transforms et des opacités
+ * animés, pour rester léger même avec plusieurs avatars à l'écran ; les
+ * animations s'arrêtent si le joueur a demandé moins de mouvement. */
+function goldenAurora(uid: string): ReactNode {
+  const cx = 50
+  const cy = 42
+  const rays = Array.from({ length: 14 }, (_, i) => {
+    const a0 = ((i * 360) / 14 - 4.2) * (Math.PI / 180)
+    const a1 = ((i * 360) / 14 + 4.2) * (Math.PI / 180)
+    const r = 84
+    return `M${cx} ${cy}L${(cx + Math.cos(a0) * r).toFixed(2)} ${(cy + Math.sin(a0) * r).toFixed(2)}L${(cx + Math.cos(a1) * r).toFixed(2)} ${(cy + Math.sin(a1) * r).toFixed(2)}Z`
+  }).join('')
+  const dust = Array.from({ length: 30 }, (_, i) => ({
+    x: (i * 37 + 11) % 100,
+    y: (i * 53 + 7) % 78,
+    r: i % 6 === 0 ? 0.95 : i % 3 === 0 ? 0.65 : 0.4,
+    d: (i % 9) * 0.45,
+  }))
+  const css =
+    '@keyframes bgp7a{from{transform:translate(-6px,1.5px)}to{transform:translate(6px,-2px)}}' +
+    '@keyframes bgp7b{from{transform:translate(5px,-1px)}to{transform:translate(-7px,2px)}}' +
+    '@keyframes bgp7r{to{transform:rotate(360deg)}}' +
+    '@keyframes bgp7t{0%,100%{opacity:.15}50%{opacity:1}}' +
+    '@keyframes bgp7h{0%,100%{opacity:.75}50%{opacity:1}}' +
+    '.bgp7{animation-timing-function:ease-in-out;animation-iteration-count:infinite}' +
+    '@media (prefers-reduced-motion:reduce){.bgp7{animation:none!important}}'
+  return (
+    <>
+      <defs>
+        <radialGradient id={`${uid}ab`} cx="50%" cy="42%" r="78%">
+          <stop offset="0" stopColor="#2c1670" />
+          <stop offset=".5" stopColor="#140b3a" />
+          <stop offset="1" stopColor="#05030f" />
+        </radialGradient>
+        <linearGradient id={`${uid}r1`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#2de2b0" stopOpacity="0" />
+          <stop offset=".5" stopColor="#2de2b0" stopOpacity=".62" />
+          <stop offset="1" stopColor="#3a8bff" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id={`${uid}r2`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#8a5cff" stopOpacity="0" />
+          <stop offset=".5" stopColor="#b27cff" stopOpacity=".55" />
+          <stop offset="1" stopColor="#ff6fb5" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id={`${uid}r3`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#ffd56a" stopOpacity="0" />
+          <stop offset=".5" stopColor="#ffd56a" stopOpacity=".42" />
+          <stop offset="1" stopColor="#ff9a4a" stopOpacity="0" />
+        </linearGradient>
+        <radialGradient id={`${uid}ry`} cx={`${cx}%`} cy={`${cy}%`} r="62%" gradientUnits="objectBoundingBox">
+          <stop offset="0" stopColor="#ffe08a" stopOpacity=".55" />
+          <stop offset="1" stopColor="#ffe08a" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id={`${uid}gl`}>
+          <stop offset="0" stopColor="#ffe9a8" stopOpacity=".55" />
+          <stop offset=".6" stopColor="#ffc94d" stopOpacity=".18" />
+          <stop offset="1" stopColor="#ffc94d" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id={`${uid}rg`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#fff2c2" />
+          <stop offset=".5" stopColor="#f0b93c" />
+          <stop offset="1" stopColor="#ffe08a" />
+        </linearGradient>
+        <radialGradient id={`${uid}vg`} cx="50%" cy="46%" r="72%">
+          <stop offset=".62" stopColor="#000" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity=".55" />
+        </radialGradient>
+      </defs>
+      <style dangerouslySetInnerHTML={{ __html: css }} />
+      <rect width="100" height="100" fill={`url(#${uid}ab)`} />
+      <g className="bgp7" style={{ animation: 'bgp7a 12s ease-in-out infinite alternate' }}>
+        <path d="M-12 30C8 14 28 46 50 28S88 10 112 30V56C90 38 70 66 48 48S8 36 -12 56Z" fill={`url(#${uid}r1)`} />
+      </g>
+      <g className="bgp7" style={{ animation: 'bgp7b 15s ease-in-out infinite alternate' }}>
+        <path d="M-12 46C10 30 34 62 54 44S90 28 112 48V74C92 56 72 82 52 66S10 54 -12 76Z" fill={`url(#${uid}r2)`} />
+      </g>
+      <g className="bgp7" style={{ animation: 'bgp7a 19s ease-in-out infinite alternate-reverse' }}>
+        <path d="M-12 62C12 50 34 76 56 62S90 50 112 64V84C90 72 70 94 50 82S10 74 -12 90Z" fill={`url(#${uid}r3)`} />
+      </g>
+      <g className="bgp7" style={{ transformOrigin: `${cx}px ${cy}px`, animation: 'bgp7r 80s linear infinite' }}>
+        <path d={rays} fill={`url(#${uid}ry)`} opacity=".55" />
+      </g>
+      <circle cx={cx} cy={cy - 1} r="34" fill={`url(#${uid}gl)`} className="bgp7" style={{ animation: 'bgp7h 5s ease-in-out infinite' }} />
+      <circle cx={cx} cy={cy - 1} r="27.5" fill="none" stroke={`url(#${uid}rg)`} strokeWidth="1.3" opacity=".9" />
+      <circle cx={cx} cy={cy - 1} r="31" fill="none" stroke="#ffe08a" strokeWidth=".35" opacity=".55" strokeDasharray="1.2 2.2" />
+      {dust.map((d, i) => (
+        <circle key={i} cx={d.x} cy={d.y} r={d.r} fill={i % 4 === 0 ? '#ffe08a' : '#fff'} className="bgp7" style={{ animation: `bgp7t ${3 + (i % 5) * 0.7}s ease-in-out ${d.d}s infinite` }} />
+      ))}
+      {[[14, 20, 1.3], [86, 16, 1.6], [90, 52, 1.1], [9, 58, 1.1], [72, 8, 0.9]].map(([x, y, s], i) => (
+        <path key={`s${i}`} d={sparkle(x, y, s)} fill="#fff4cf" className="bgp7" style={{ animation: `bgp7t ${2.6 + i * 0.5}s ease-in-out ${i * 0.6}s infinite` }} />
+      ))}
+      <rect width="100" height="100" fill={`url(#${uid}vg)`} />
+    </>
+  )
+}
+
 const arc = (n: number, a0: number, a1: number, cx: number, cy: number, rx: number, ry: number): [number, number][] =>
   Array.from({ length: n }, (_, i) => {
     const a = Math.PI * (a0 + ((a1 - a0) * i) / (n - 1))
@@ -1496,6 +1595,7 @@ export function AvatarArt({ config, mood = 'smile' }: { config: AvatarConfig; mo
       </defs>
       <rect width="100" height="100" fill={AVATAR_BGS[config.bg]} />
       {config.bg === 6 && nightSky(uid)}
+      {config.bg === 7 && goldenAurora(uid)}
       <rect width="100" height="100" fill={`url(#${uid}bg)`} />
 
       {hairBack(config.hair, hairC, cover, hairHiding)}
@@ -1592,7 +1692,7 @@ export function ItemArt({ part, value, className = 'h-full w-full' }: { part: It
   let viewBox = '0 0 100 100'
   let body: ReactNode = null
   if (part === 'bg') {
-    body = nightSky(uid)
+    body = value === '7' ? goldenAurora(uid) : nightSky(uid)
   } else if (part === 'hair') {
     const kind = value as AvatarConfig['hair']
     const h = HAIR_COLORS[kind] ?? '#1b120c'

@@ -6,7 +6,7 @@
 // pièces déjà existantes ne doivent JAMAIS être relevés : un joueur qui les a
 // déjà choisies ne pourrait plus enregistrer son avatar.
 export const SKIN_TONES = ['#f0c29b', '#d9a06f', '#b97a4c', '#8a5a3c', '#5c3a24', '#3e2617'] as const
-export const AVATAR_BGS = ['#3b2a1c', '#2c3a2e', '#3a2530', '#26324a', '#4a3212', '#6a4a2a', '#3a1550'] as const
+export const AVATAR_BGS = ['#3b2a1c', '#2c3a2e', '#3a2530', '#26324a', '#4a3212', '#6a4a2a', '#3a1550', '#0a0620'] as const
 // Les 6 premiers fonds sont libres ; les suivants s'obtiennent via un skin de la boutique.
 export const FREE_BG_COUNT = 6
 

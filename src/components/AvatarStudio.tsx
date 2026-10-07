@@ -71,6 +71,12 @@ const LOOKS: { label: TranslationKey; config: AvatarConfig }[] = [
   { label: 'avatar.look.wolf', config: { skin: 4, hair: 'locs', outfit: 'furcape', acc: 'scar', head: 'none', face: 'oval', bg: 5 } },
 ]
 
+// Pastilles des fonds de boutique (index >= FREE_BG_COUNT) : un aperçu de leur dégradé.
+const BG_SWATCH: Record<number, string> = {
+  6: 'linear-gradient(#2a0f45, #7a2a78 60%, #e0558f)',
+  7: 'conic-gradient(from 20deg, #1b1040, #2de2b0, #8a5cff, #ffd56a, #1b1040)',
+}
+
 // acc2 absent (avatars d'avant le 2e détail) vaut « aucun » : on compare normalisé.
 const norm = (c: AvatarConfig): AvatarConfig => ({ ...c, acc2: c.acc2 ?? 'none' })
 const sameConfig = (a: AvatarConfig, b: AvatarConfig) => JSON.stringify(norm(a)) === JSON.stringify(norm(b))
@@ -340,7 +346,7 @@ export function AvatarStudio({
           className={`relative aspect-square w-full rounded-full border-2 transition-shadow ${
             config[key] === i ? 'border-moon-400 shadow-[0_0_0_3px_rgba(224,168,74,0.45)]' : 'border-night-600'
           }`}
-          style={tab === 'bg' && i >= FREE_BG_COUNT ? { background: 'linear-gradient(#2a0f45, #7a2a78 60%, #e0558f)' } : { backgroundColor: color }}
+          style={tab === 'bg' && i >= FREE_BG_COUNT ? { background: BG_SWATCH[i] ?? color } : { backgroundColor: color }}
         />
       )
     })
