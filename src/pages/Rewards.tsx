@@ -114,7 +114,9 @@ export default function Rewards() {
   const [historyPage, setHistoryPage] = useState(0)
   const [canScrollRight, setCanScrollRight] = useState(false)
   const navRef = useRef<HTMLElement>(null)
-  const [storeTab, setStoreTab] = useState<'artifacts' | 'skins'>('artifacts')
+  // ?section=skins ouvre directement les skins (lien de l'annonce « nouveaux
+  // articles » et de la notification push correspondante).
+  const [storeTab, setStoreTab] = useState<'artifacts' | 'skins'>(() => (searchParams.get('section') === 'skins' ? 'skins' : 'artifacts'))
   const { quests, claiming, claim } = useMyQuests()
   const myAvatar = useMyAvatarConfig()
   const { season, refresh: refreshSeason } = useMySeason()

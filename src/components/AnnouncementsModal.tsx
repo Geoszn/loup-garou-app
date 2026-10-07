@@ -6,6 +6,7 @@ import { cachedRpc } from '../lib/rpcCache'
 import { homeSection } from '../lib/homeBootstrap'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from './Avatar'
+import { ItemArt } from './AvatarArt'
 import { useMyAvatarConfig } from './AvatarEditor'
 import { LoupCoinIcon } from './LoupCoinIcon'
 import type { AvatarConfig } from '../lib/avatarParts'
@@ -19,6 +20,17 @@ export const AVATARS_ANNOUNCEMENT_KEY = 'avatars-2026-09'
  * jamais réutilisée d'une saison à l'autre : chaque nouvelle saison doit
  * pouvoir re-déclencher sa propre annonce, contrairement à AVATARS_ANNOUNCEMENT_KEY
  * ci-dessus qui ne concerne qu'un seul évènement figé. */
+/** Annonce de la collection boutique Octobre Rose (migration 0218). */
+export const STORE_ANNOUNCEMENT_KEY = 'store-pink-october-2026'
+
+// Quatre pièces vedettes de la collection, montrées seules (comme en boutique).
+const STORE_SHOWCASE: { part: 'hair' | 'outfit' | 'head' | 'bg'; value: string; glow: string }[] = [
+  { part: 'hair', value: 'braids_pink', glow: 'rgba(56,189,248,0.28)' },
+  { part: 'outfit', value: 'gala_gown', glow: 'rgba(168,85,247,0.32)' },
+  { part: 'head', value: 'cowboy_pink', glow: 'rgba(56,189,248,0.28)' },
+  { part: 'bg', value: '6', glow: 'rgba(56,189,248,0.28)' },
+]
+
 function seasonAnnouncementKey(slug: string): string {
   return `season-launch-${slug}`
 }
@@ -28,7 +40,7 @@ interface Compensation {
   quests_count: number
 }
 
-type Slide = 'avatars' | 'compensation' | 'season'
+type Slide = 'avatars' | 'compensation' | 'season' | 'store'
 
 const SHOWCASE: AvatarConfig[] = [
   { skin: 4, hair: 'afro', outfit: 'cloak', acc: 'glasses', head: 'none', face: 'round', bg: 3 },
@@ -51,6 +63,9 @@ export function AnnouncementsModal() {
   const [seen, setSeen] = useState<string[] | null>(null)
   const [comp, setComp] = useState<Compensation | null | undefined>(undefined)
   const [season, setSeason] = useState<MySeason | null | undefined>(undefined)
+  // Date de fin de vente de la collection boutique, ou null si elle n'est pas
+  // (ou plus) en vente ; undefined = pas encore vérifié.
+  const [storeEnds, setStoreEnds] = useState<string | null | undefined>(undefined)
   const [slides, setSlides] = useState<Slide[] | null>(null)
   const [index, setIndex] = useState(0)
   const [busy, setBusy] = useState(false)
@@ -62,10 +77,31 @@ export function AnnouncementsModal() {
     homeSection<MySeason>('season', async () => (await cachedRpc<MySeason>('get_my_season')).data).then((data) => setSeason(data ?? null))
   }, [user])
 
+  // La collection boutique n'est annoncée que si elle est réellement en vente
+  // (au moins un skin des catégories « accessoires » / « fonds », créées avec
+  // elle) et seulement à ceux qui n'ont pas encore vu l'annonce.
+  useEffect(() => {
+    if (!user || seen === null) return
+    if (seen.includes(STORE_ANNOUNCEMENT_KEY)) {
+      setStoreEnds(null)
+      return
+    }
+    let active = true
+    supabase.rpc('list_store_skins').then(({ data, error }) => {
+      if (!active) return
+      const list = !error && Array.isArray(data) ? (data as { category: string; owned: boolean; ends_at: string | null }[]) : []
+      const fresh = list.filter((s) => (s.category === 'accessoires' || s.category === 'fonds') && !s.owned && s.ends_at && new Date(s.ends_at).getTime() > Date.now())
+      setStoreEnds(fresh.length > 0 ? fresh.map((s) => s.ends_at as string).sort()[0] : null)
+    })
+    return () => {
+      active = false
+    }
+  }, [user, seen])
+
   // Composé une seule fois, quand tout est chargé : évite qu'une carte
   // apparaisse ou disparaisse pendant que le joueur lit.
   useEffect(() => {
-    if (slides || seen === null || comp === undefined || season === undefined || !myAvatar.loaded) return
+    if (slides || seen === null || comp === undefined || season === undefined || storeEnds === undefined || !myAvatar.loaded) return
     const list: Slide[] = []
     const avatarSeen = seen.includes(AVATARS_ANNOUNCEMENT_KEY)
     if (!avatarSeen && !myAvatar.config) list.push('avatars')
@@ -75,9 +111,10 @@ export function AnnouncementsModal() {
     // EN COURS (season.is_active) — jamais rejouée si le joueur ouvre
     // l'appli après coup, une fois la saison déjà bien avancée ou terminée.
     if (season && season.is_active && !seen.includes(seasonAnnouncementKey(season.slug))) list.push('season')
+    if (storeEnds) list.push('store')
     if (comp) list.push('compensation')
     setSlides(list)
-  }, [slides, seen, comp, season, myAvatar.loaded, myAvatar.config])
+  }, [slides, seen, comp, season, storeEnds, myAvatar.loaded, myAvatar.config])
 
   if (!slides || slides.length === 0) return null
   const current = slides[index]
@@ -117,6 +154,21 @@ export function AnnouncementsModal() {
     markSeasonSeen()
     setSlides([])
     navigate('/recompenses?tab=season')
+  }
+
+  function markStoreSeen() {
+    void supabase.rpc('mark_announcement_seen', { p_key: STORE_ANNOUNCEMENT_KEY })
+  }
+
+  function storeNext() {
+    markStoreSeen()
+    advance()
+  }
+
+  function storeDiscover() {
+    markStoreSeen()
+    setSlides([])
+    navigate('/recompenses?tab=store&section=skins')
   }
 
   async function claim() {
@@ -209,6 +261,39 @@ export function AnnouncementsModal() {
           </>
         )}
 
+        {current === 'store' && storeEnds && (
+          <>
+            <span className="rounded-full border border-pink-400/40 bg-pink-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-pink-300">
+              {t('announce.store.badge')}
+            </span>
+            <div className="grid w-full grid-cols-4 gap-2">
+              {STORE_SHOWCASE.map((it) => (
+                <span
+                  key={it.value}
+                  className="block aspect-square overflow-hidden rounded-lg border border-night-600/70"
+                  style={{ background: `radial-gradient(circle at 50% 38%, ${it.glow}, rgba(15,12,20,0.85) 78%)` }}
+                >
+                  <ItemArt part={it.part} value={it.value} className="h-full w-full p-1" />
+                </span>
+              ))}
+            </div>
+            <h2 className="font-display text-xl text-moon-200">{t('announce.store.title')}</h2>
+            <p className="text-sm leading-relaxed text-moon-200/80">
+              {t('announce.store.body', { date: new Date(storeEnds).toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR', { day: 'numeric', month: 'long' }) })}
+            </p>
+            <ul className="flex w-full flex-col gap-1.5 text-left text-xs text-moon-200/70">
+              <li className="flex items-center gap-2 rounded-xl border border-night-600/60 bg-night-900/50 px-3 py-2">
+                <span aria-hidden="true">👀</span>
+                {t('announce.store.bullet1')}
+              </li>
+              <li className="flex items-center gap-2 rounded-xl border border-night-600/60 bg-night-900/50 px-3 py-2">
+                <span aria-hidden="true">⏳</span>
+                {t('announce.store.bullet2')}
+              </li>
+            </ul>
+          </>
+        )}
+
         {current === 'compensation' && (
           <>
             <LoupCoinIcon className={total > 1 ? 'h-14 w-14' : 'hidden'} />
@@ -260,6 +345,16 @@ export function AnnouncementsModal() {
               </button>
               <button type="button" onClick={seasonNext} className={linkButton}>
                 {t('announce.season.later')}
+              </button>
+            </>
+          )}
+          {current === 'store' && (
+            <>
+              <button type="button" onClick={storeDiscover} className={primaryButton}>
+                {t('announce.store.cta')}
+              </button>
+              <button type="button" onClick={storeNext} className={linkButton}>
+                {t('announce.store.later')}
               </button>
             </>
           )}
