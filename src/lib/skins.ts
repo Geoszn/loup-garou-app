@@ -1,6 +1,6 @@
 import type { AvatarConfig } from './avatarParts'
 
-export const SKIN_CATEGORIES = ['tenues', 'coiffures', 'chapeaux', 'packs'] as const
+export const SKIN_CATEGORIES = ['tenues', 'coiffures', 'chapeaux', 'accessoires', 'fonds', 'packs'] as const
 export type SkinCategory = (typeof SKIN_CATEGORIES)[number]
 export type SkinRarity = 'commun' | 'rare' | 'epique' | 'legendaire'
 
@@ -20,6 +20,16 @@ export interface StoreSkin {
   // déjà possédé reste renvoyé même après cette date (voir list_store_skins) ;
   // ce champ ne sert alors plus qu'à l'affichage, jamais à masquer "mes skins".
   ends_at: string | null
+}
+
+/** Si le skin ne touche qu'UNE seule pièce (coiffure, tenue, couvre-chef,
+ * accessoire ou fond), renvoie laquelle : la boutique montre alors l'objet
+ * seul au lieu d'un avatar entier. Un pack (plusieurs pièces) renvoie null. */
+export function soleItem(config: Partial<AvatarConfig>): { part: 'hair' | 'outfit' | 'acc' | 'head' | 'bg'; value: string } | null {
+  const parts = (['hair', 'outfit', 'acc', 'head', 'bg'] as const).filter((k) => config[k] !== undefined)
+  if (parts.length !== 1) return null
+  const part = parts[0]
+  return { part, value: String(config[part]) }
 }
 
 export const RARITY_STYLE: Record<SkinRarity, { border: string; text: string; dot: string }> = {

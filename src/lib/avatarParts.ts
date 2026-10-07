@@ -6,20 +6,25 @@
 // pièces déjà existantes ne doivent JAMAIS être relevés : un joueur qui les a
 // déjà choisies ne pourrait plus enregistrer son avatar.
 export const SKIN_TONES = ['#f0c29b', '#d9a06f', '#b97a4c', '#8a5a3c', '#5c3a24', '#3e2617'] as const
-export const AVATAR_BGS = ['#3b2a1c', '#2c3a2e', '#3a2530', '#26324a', '#4a3212', '#6a4a2a'] as const
+export const AVATAR_BGS = ['#3b2a1c', '#2c3a2e', '#3a2530', '#26324a', '#4a3212', '#6a4a2a', '#3a1550'] as const
+// Les 6 premiers fonds sont libres ; les suivants s'obtiennent via un skin de la boutique.
+export const FREE_BG_COUNT = 6
 
 export const HAIRS = [
   'none', 'fade', 'afro', 'braids', 'puffs', 'curly', 'bun', 'flat', 'cornrows', 'locs',
   'long', 'knots', 'mohawk', 'topknot', 'gele', 'malibu_wave',
+  'braids_pink', 'afro_pink', 'ponytail_pop', 'pompadour_ken', 'slick_back', 'beard_full',
 ] as const
 export const OUTFITS = [
   'tunic', 'tee', 'cloak', 'wrap', 'kente', 'dashiki', 'boubou', 'hunter', 'suit', 'hood', 'armor', 'royal', 'furcape',
   'dream_rose', 'cape_solidaire', 'louve_malibu',
+  'varsity', 'gala_gown', 'tracksuit_neon', 'hawaiian',
 ] as const
 export const ACCESSORIES = [
   'none', 'ring', 'freckles', 'glasses', 'sunglasses', 'hoops', 'scar', 'beads', 'facepaint', 'eyepatch', 'coeur_lunettes',
+  'lipstick_pink', 'cigarette', 'toothpick', 'gold_chain',
 ] as const
-export const HEADWEAR = ['none', 'headband', 'cap', 'hat', 'feather', 'crown', 'ribbon_pink'] as const
+export const HEADWEAR = ['none', 'headband', 'cap', 'hat', 'feather', 'crown', 'ribbon_pink', 'scarf_pink', 'cowboy_pink', 'bandana_biker'] as const
 export const FACES = ['oval', 'round', 'square', 'long', 'heart'] as const
 
 // Seuil-sentinelle utilisé pour les pièces exclusives à une saison (voir
@@ -29,6 +34,9 @@ export const FACES = ['oval', 'round', 'square', 'long', 'heart'] as const
 // Sert aussi côté UI (AvatarStudio) pour afficher "Exclusif de saison" au
 // lieu d'un nombre de points absurde sur les pièces verrouillées.
 export const SEASON_EXCLUSIVE_MIN_POINTS = 999999
+// Même principe pour les pièces vendues uniquement dans la boutique (seule la
+// possession du skin les débloque). Valeur distincte pour l'affichage.
+export const STORE_EXCLUSIVE_MIN_POINTS = 999998
 
 export type Hair = (typeof HAIRS)[number]
 export type Outfit = (typeof OUTFITS)[number]
@@ -59,17 +67,24 @@ export const PART_MIN_POINTS: {
   hair: {
     none: 0, fade: 0, afro: 0, braids: 0, puffs: 0, curly: 100, bun: 100, flat: 250, cornrows: 350, locs: 250,
     long: 550, knots: 800, mohawk: 1100, topknot: 1500, gele: 600, malibu_wave: SEASON_EXCLUSIVE_MIN_POINTS,
+    braids_pink: STORE_EXCLUSIVE_MIN_POINTS, afro_pink: STORE_EXCLUSIVE_MIN_POINTS, ponytail_pop: STORE_EXCLUSIVE_MIN_POINTS,
+    pompadour_ken: STORE_EXCLUSIVE_MIN_POINTS, slick_back: STORE_EXCLUSIVE_MIN_POINTS, beard_full: STORE_EXCLUSIVE_MIN_POINTS,
   },
   outfit: {
     tunic: 0, tee: 0, cloak: 100, wrap: 100, kente: 250, dashiki: 250, boubou: 350, hunter: 550, suit: 800,
     hood: 600, armor: 1100, royal: 1500, furcape: 2000,
     dream_rose: SEASON_EXCLUSIVE_MIN_POINTS, cape_solidaire: SEASON_EXCLUSIVE_MIN_POINTS, louve_malibu: SEASON_EXCLUSIVE_MIN_POINTS,
+    varsity: STORE_EXCLUSIVE_MIN_POINTS, gala_gown: STORE_EXCLUSIVE_MIN_POINTS,
+    tracksuit_neon: STORE_EXCLUSIVE_MIN_POINTS, hawaiian: STORE_EXCLUSIVE_MIN_POINTS,
   },
   acc: {
     none: 0, ring: 0, freckles: 0, glasses: 100, sunglasses: 150, hoops: 200, scar: 250, beads: 350, facepaint: 550, eyepatch: 800,
     coeur_lunettes: SEASON_EXCLUSIVE_MIN_POINTS,
+    lipstick_pink: STORE_EXCLUSIVE_MIN_POINTS, cigarette: STORE_EXCLUSIVE_MIN_POINTS,
+    toothpick: STORE_EXCLUSIVE_MIN_POINTS, gold_chain: STORE_EXCLUSIVE_MIN_POINTS,
   },
-  head: { none: 0, headband: 100, cap: 250, hat: 550, feather: 800, crown: 2000, ribbon_pink: SEASON_EXCLUSIVE_MIN_POINTS },
+  head: { none: 0, headband: 100, cap: 250, hat: 550, feather: 800, crown: 2000, ribbon_pink: SEASON_EXCLUSIVE_MIN_POINTS,
+    scarf_pink: STORE_EXCLUSIVE_MIN_POINTS, cowboy_pink: STORE_EXCLUSIVE_MIN_POINTS, bandana_biker: STORE_EXCLUSIVE_MIN_POINTS },
   face: { oval: 0, round: 0, square: 0, long: 0, heart: 0 },
 }
 

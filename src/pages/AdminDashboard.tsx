@@ -5410,6 +5410,8 @@ const SKIN_CATEGORY_LABELS_FR: Record<SkinCategory, string> = {
   coiffures: 'Coiffures',
   chapeaux: 'Chapeaux',
   packs: 'Packs',
+  accessoires: 'Accessoires',
+  fonds: 'Fonds',
 }
 
 const SKIN_RARITY_LABELS_FR: Record<SkinRarity, string> = {

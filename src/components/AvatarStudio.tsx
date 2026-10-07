@@ -17,9 +17,11 @@ import {
   HAIRS,
   HEADWEAR,
   OUTFITS,
+  FREE_BG_COUNT,
   PART_MIN_POINTS,
   SEASON_EXCLUSIVE_MIN_POINTS,
   SKIN_TONES,
+  STORE_EXCLUSIVE_MIN_POINTS,
   type AvatarConfig,
   type AvatarMood,
 } from '../lib/avatarParts'
@@ -103,6 +105,7 @@ export function AvatarStudio({
   const { t } = useLanguage()
   const points = profile?.rank_points ?? 0
   const unlockedParts = useMyUnlockedParts(open)
+  const isBgUnlocked = (index: number) => index < FREE_BG_COUNT || unlockedParts.has(`bg:${index}`)
   const isUnlocked = (kind: PartKind, value: string) =>
     points >= ((PART_MIN_POINTS[kind] as Record<string, number>)[value] ?? 0) || unlockedParts.has(`${kind}:${value}`)
   const start = initial ?? DEFAULT_AVATAR_CONFIG
@@ -187,7 +190,10 @@ export function AvatarStudio({
     }
     apply({
       skin: Math.floor(Math.random() * SKIN_TONES.length),
-      bg: Math.floor(Math.random() * AVATAR_BGS.length),
+      bg: (() => {
+        const ok = AVATAR_BGS.map((_, i) => i).filter(isBgUnlocked)
+        return ok[Math.floor(Math.random() * ok.length)]
+      })(),
       hair: pickUnlocked('hair') as AvatarConfig['hair'],
       outfit: pickUnlocked('outfit') as AvatarConfig['outfit'],
       acc: pickUnlocked('acc') as AvatarConfig['acc'],
@@ -305,22 +311,31 @@ export function AvatarStudio({
   } else if (tab === 'skin' || tab === 'bg') {
     const colors = tab === 'skin' ? SKIN_TONES : AVATAR_BGS
     const key = tab === 'skin' ? 'skin' : 'bg'
-    grid = colors.map((color, i) => (
-      <button
-        key={color}
-        type="button"
-        aria-pressed={config[key] === i}
-        aria-label={`${t(tab === 'skin' ? 'avatar.tab.skin' : 'avatar.tab.bg')} ${i + 1}`}
-        onClick={() => {
-          setLockedNote(null)
-          apply({ ...config, [key]: i })
-        }}
-        className={`aspect-square w-full rounded-full border-2 transition-shadow ${
-          config[key] === i ? 'border-moon-400 shadow-[0_0_0_3px_rgba(224,168,74,0.45)]' : 'border-night-600'
-        }`}
-        style={{ backgroundColor: color }}
-      />
-    ))
+    grid = colors.map((color, i) => {
+      const locked = tab === 'bg' && !isBgUnlocked(i)
+      return (
+        <button
+          key={color}
+          type="button"
+          aria-pressed={config[key] === i}
+          aria-label={`${t(tab === 'skin' ? 'avatar.tab.skin' : 'avatar.tab.bg')} ${i + 1}`}
+          onClick={() => {
+            if (locked) {
+              setLockedNote({ label: t('avatar.bg.night'), min: STORE_EXCLUSIVE_MIN_POINTS })
+              return
+            }
+            setLockedNote(null)
+            apply({ ...config, [key]: i })
+          }}
+          className={`relative aspect-square w-full rounded-full border-2 transition-shadow ${
+            config[key] === i ? 'border-moon-400 shadow-[0_0_0_3px_rgba(224,168,74,0.45)]' : 'border-night-600'
+          }`}
+          style={tab === 'bg' && i >= FREE_BG_COUNT ? { background: 'linear-gradient(#2a0f45, #7a2a78 60%, #e0558f)' } : { backgroundColor: color }}
+        >
+          {locked && <span className="absolute inset-0 flex items-center justify-center rounded-full bg-black/55 text-sm">🔒</span>}
+        </button>
+      )
+    })
   } else {
     const kind = tab as PartKind
     grid = OPTIONS[kind].map((value) => {
@@ -340,7 +355,7 @@ export function AvatarStudio({
             {locked && (
               <span className="absolute inset-0 flex flex-col items-center justify-center rounded-xl bg-black/55 text-center text-[11px] text-moon-200">
                 <span className="text-base leading-none">🔒</span>
-                {min >= SEASON_EXCLUSIVE_MIN_POINTS ? t('avatar.seasonExclusive') : `${min} pts`}
+                {min >= SEASON_EXCLUSIVE_MIN_POINTS ? t('avatar.seasonExclusive') : min >= STORE_EXCLUSIVE_MIN_POINTS ? t('avatar.storeExclusive') : `${min} pts`}
               </span>
             )}
           </span>
@@ -464,12 +479,12 @@ export function AvatarStudio({
       </nav>
 
       <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto px-4 py-3">
-        {lockedNote && lockedNote.min >= SEASON_EXCLUSIVE_MIN_POINTS && (
+        {lockedNote && lockedNote.min >= STORE_EXCLUSIVE_MIN_POINTS && (
           <div className="mb-3 rounded-xl border border-moon-400/30 bg-moon-400/5 px-3 py-2 text-xs text-moon-200/80">
-            🔒 {t('avatar.seasonExclusiveMsg')}
+            🔒 {lockedNote.min >= SEASON_EXCLUSIVE_MIN_POINTS ? t('avatar.seasonExclusiveMsg') : t('avatar.storeExclusiveMsg')}
           </div>
         )}
-        {lockedNote && lockedNote.min < SEASON_EXCLUSIVE_MIN_POINTS && (
+        {lockedNote && lockedNote.min < STORE_EXCLUSIVE_MIN_POINTS && (
           <div className="mb-3 rounded-xl border border-moon-400/30 bg-moon-400/5 px-3 py-2 text-xs text-moon-200/80">
             🔒{' '}
             {t('avatar.lockedMsg', {

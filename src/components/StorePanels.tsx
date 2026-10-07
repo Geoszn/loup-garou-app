@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from './Avatar'
+import { ItemArt } from './AvatarArt'
 import { LoupCoinIcon } from './LoupCoinIcon'
 import { Button, ConfirmDialog, ErrorText, Modal } from './ui'
 import { notifyAvatarChanged, useMyAvatarConfig } from './AvatarEditor'
@@ -15,7 +16,7 @@ import {
   type StoreArtifact,
 } from '../pages/LoupStore'
 import { DEFAULT_AVATAR_CONFIG, type AvatarConfig } from '../lib/avatarParts'
-import { RARITY_STYLE, SKIN_CATEGORIES, type SkinCategory, type StoreSkin } from '../lib/skins'
+import { RARITY_STYLE, SKIN_CATEGORIES, soleItem, type SkinCategory, type SkinRarity, type StoreSkin } from '../lib/skins'
 import type { TranslationKey } from '../i18n/translations'
 
 const SKIN_CATEGORY_LABEL: Record<SkinCategory, TranslationKey> = {
@@ -23,6 +24,16 @@ const SKIN_CATEGORY_LABEL: Record<SkinCategory, TranslationKey> = {
   coiffures: 'hub.skins.cat.coiffures',
   chapeaux: 'hub.skins.cat.chapeaux',
   packs: 'hub.skins.cat.packs',
+  accessoires: 'hub.skins.cat.accessoires',
+  fonds: 'hub.skins.cat.fonds',
+}
+
+// Halo de fond des vignettes, teinté par la rareté.
+const RARITY_GLOW: Record<SkinRarity, string> = {
+  commun: 'rgba(148,163,184,0.20)',
+  rare: 'rgba(56,189,248,0.26)',
+  epique: 'rgba(168,85,247,0.30)',
+  legendaire: 'rgba(251,191,36,0.34)',
 }
 
 /** Décompte avant la fin de vente d'un article limité dans le temps (voir
@@ -152,7 +163,7 @@ export function ArtifactsPanel({ balance, onPurchased }: { balance: number; onPu
             </span>
             {detail.ends_at && (
               <p className={`-mt-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${timeLeftLabel(detail.ends_at, lang).urgent ? 'border-blood-500/50 bg-blood-600/10 text-blood-400' : 'border-sky-400/40 bg-sky-400/10 text-sky-300'}`}>
-                ⏳ {lang === 'en' ? 'Ends in' : 'Se termine dans'} {timeLeftLabel(detail.ends_at, lang).label}
+                ⏳ {lang === 'en' ? 'Ends in' : 'Se termine dans'} {timeLeftLabel(detail.ends_at, lang).label.replace(/ left$/, '')}
               </p>
             )}
             {detail.max_stock !== null && (
@@ -197,6 +208,26 @@ export function ArtifactsPanel({ balance, onPurchased }: { balance: number; onPu
 /** Skins : lots de pièces d'avatar achetés avec des Loup Coins (migration
  * 0195). Posséder un skin débloque ses pièces dans l'éditeur ; « Équiper »
  * l'applique directement à l'avatar. */
+/** Vignette de la boutique : l'objet seul sur un fond doux teinté par sa
+ * rareté. Seuls les packs (plusieurs pièces) montrent un avatar. L'essayage
+ * sur l'avatar du joueur se fait dans la fenêtre de détail. */
+function SkinThumb({ skin }: { skin: StoreSkin }) {
+  const sole = soleItem(skin.config)
+  const glow = RARITY_GLOW[skin.rarity]
+  return (
+    <span
+      className="relative block aspect-square w-full overflow-hidden rounded-lg border border-night-700/70"
+      style={{ background: `radial-gradient(circle at 50% 38%, ${glow}, rgba(15,12,20,0.85) 78%)` }}
+    >
+      {sole ? (
+        <ItemArt part={sole.part} value={sole.value} className="h-full w-full p-1.5" />
+      ) : (
+        <Avatar config={{ ...DEFAULT_AVATAR_CONFIG, ...skin.config }} className="h-full w-full !rounded-none" />
+      )}
+    </span>
+  )
+}
+
 export function SkinsPanel({ balance, onPurchased }: { balance: number; onPurchased: () => void }) {
   const { t, lang } = useLanguage()
   const { refreshProfile } = useAuth()
@@ -238,7 +269,8 @@ export function SkinsPanel({ balance, onPurchased }: { balance: number; onPurcha
       return
     }
     setError(null)
-    setDetail(null)
+    // On reste sur la fiche : le bouton devient « Équiper » pour le porter tout de suite.
+    setDetail({ ...target, owned: true })
     say(t('hub.skins.bought'))
     onPurchased()
     void load()
@@ -287,7 +319,7 @@ export function SkinsPanel({ balance, onPurchased }: { balance: number; onPurcha
                 className={`relative flex flex-col items-center gap-1 rounded-xl border-2 ${r.border} bg-night-900/40 px-1.5 pb-2 pt-2.5 text-center transition-colors hover:bg-night-800/50`}
               >
                 <span className={`absolute left-1.5 top-1.5 h-2 w-2 rounded-full ${r.dot}`} aria-hidden="true" />
-                <Avatar config={preview(s)} className="h-14 w-14 ring-1 ring-night-700" />
+                <SkinThumb skin={s} />
                 <p className="line-clamp-1 w-full text-[11px] font-semibold text-moon-200">{name(s)}</p>
                 {s.owned ? (
                   <span className="text-[10px] font-semibold text-emerald-400">{t('loupStore.boutique.owned')}</span>
@@ -311,6 +343,7 @@ export function SkinsPanel({ balance, onPurchased }: { balance: number; onPurcha
               {t(`hub.skins.rarity.${detail.rarity}` as TranslationKey)}
             </span>
             <Avatar config={preview(detail)} className="h-28 w-28 ring-2 ring-moon-400/60 ring-offset-2 ring-offset-night-900" />
+            {!detail.owned && <p className="-mt-1 text-[11px] font-semibold uppercase tracking-wider text-moon-200/50">{t('hub.skins.tryOn')}</p>}
             <p className="text-sm text-moon-200/70">{lang === 'en' ? detail.description_en : detail.description_fr}</p>
             {!detail.owned && (
               <span className="flex items-center gap-1.5 font-display text-xl font-semibold text-amber-300">
@@ -319,7 +352,7 @@ export function SkinsPanel({ balance, onPurchased }: { balance: number; onPurcha
             )}
             {!detail.owned && detail.ends_at && (
               <p className={`-mt-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${timeLeftLabel(detail.ends_at, lang).urgent ? 'border-blood-500/50 bg-blood-600/10 text-blood-400' : 'border-sky-400/40 bg-sky-400/10 text-sky-300'}`}>
-                ⏳ {lang === 'en' ? 'Ends in' : 'Se termine dans'} {timeLeftLabel(detail.ends_at, lang).label}
+                ⏳ {lang === 'en' ? 'Ends in' : 'Se termine dans'} {timeLeftLabel(detail.ends_at, lang).label.replace(/ left$/, '')}
               </p>
             )}
             <div className="mt-1 flex w-full gap-3">
