@@ -134,9 +134,16 @@ function House({ p, selected, label, onSelect }: { p: Placed; selected: boolean;
 // memo : LiveVillage se re-rend à chaque changement de présence (n'importe quel
 // joueur qui arrive ou part, voir usePresence) — sans ça, toute la scène SVG
 // (~150 éléments animés) serait redessinée pour rien à chaque fois.
-const Scene = memo(function Scene({ placed, selectedKey, labels, onSelect }: { placed: Placed[]; selectedKey: string | null; labels: Record<string, string>; onSelect: (key: string) => void }) {
+// `wide` (écran large) : la scène s'étire à 600 de large, le village reste centré
+// (maisons, lune, loup) et le ciel, les collines, les arbres et les lucioles se
+// prolongent de chaque côté — la carte prend alors toute la largeur de l'accueil
+// sans devenir immense en hauteur.
+const Scene = memo(function Scene({ placed, selectedKey, labels, onSelect, wide }: { placed: Placed[]; selectedKey: string | null; labels: Record<string, string>; onSelect: (key: string) => void; wide: boolean }) {
+  const VW = wide ? 600 : W
+  const dx = (VW - W) / 2
+  const trees = [16, 60, 112, 168, 224, 276, 322, 348].flatMap((x) => [x - W, x, x + W]).filter((x) => x >= -dx - 14 && x <= W + dx)
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="block w-full" role="group">
+    <svg viewBox={`0 0 ${VW} ${H}`} className="block w-full" role="group">
       <defs>
         <linearGradient id="vlSky" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#070918" />
@@ -156,16 +163,17 @@ const Scene = memo(function Scene({ placed, selectedKey, labels, onSelect }: { p
           <stop offset="1" stopColor="#ff5a4a" stopOpacity="0" />
         </radialGradient>
       </defs>
-      <rect width={W} height={H} fill="url(#vlSky)" />
-      {Array.from({ length: 38 }).map((_, k) => (
-        <circle key={k} cx={(k * 97) % W} cy={(k * 53) % 130} r={k % 5 === 0 ? 1.1 : 0.6} fill="#fff" className="village-twinkle" style={{ animationDelay: `${(k % 7) * 0.4}s` }} />
+      <rect width={VW} height={H} fill="url(#vlSky)" />
+      {Array.from({ length: wide ? 63 : 38 }).map((_, k) => (
+        <circle key={k} cx={(k * 97) % VW} cy={(k * 53) % 130} r={k % 5 === 0 ? 1.1 : 0.6} fill="#fff" className="village-twinkle" style={{ animationDelay: `${(k % 7) * 0.4}s` }} />
       ))}
+      <g transform={`translate(${dx} 0)`}>
       <circle cx="290" cy="62" r="66" fill="url(#vlMoonGlow)" />
       <circle cx="290" cy="62" r="21" fill="#fff4d2" />
       <circle cx="283" cy="56" r="3.6" fill="#f1dfae" opacity=".7" />
       <circle cx="297" cy="68" r="5.2" fill="#f1dfae" opacity=".55" />
       <circle cx="295" cy="52" r="2.4" fill="#f1dfae" opacity=".6" />
-      <path d="M0 158 C50 128 100 146 150 134 S240 124 290 142 S345 132 360 138 V300 H0Z" fill="#181430" />
+      <path d={`M${-dx} 158 L0 158 C50 128 100 146 150 134 S240 124 290 142 S345 132 360 138 L${W + dx} 138 V300 H${-dx}Z`} fill="#181430" />
       {/* loup qui hurle à la lune */}
       <g transform="translate(226 74) scale(.92)" fill="#0a0813" stroke="#0a0813" strokeLinejoin="round" strokeLinecap="round">
         <path d="M5 58 L5 46 C6 36 12 28 19 22 C24 17 27 12 30 8 L38 16 C35 22 33 28 32 34 C31 42 33 50 34 58 Z" />
@@ -174,22 +182,39 @@ const Scene = memo(function Scene({ placed, selectedKey, labels, onSelect }: { p
         <path d="M28 4 L27 -6 L34 0 Z" />
         <path d="M6 54 C-4 52 -9 44 -7 35" strokeWidth="5" fill="none" />
       </g>
-      <path d="M0 176 C40 156 90 170 140 160 S230 152 280 164 S340 156 360 162 V300 H0Z" fill="#110e22" />
-      {[16, 60, 112, 168, 224, 276, 322, 348].map((x, k) => (
+      <path d={`M${-dx} 176 L0 176 C40 156 90 170 140 160 S230 152 280 164 S340 156 360 162 L${W + dx} 162 V300 H${-dx}Z`} fill="#110e22" />
+      {trees.map((x, k) => (
         <path key={k} d={`M${x} 196 l7 -22 l7 22z M${x + 1} 184 l6 -18 l6 18z`} fill="#0a0817" />
       ))}
-      <rect x="0" y="250" width={W} height="50" fill="#0a0817" />
+      <rect x={-dx} y="250" width={VW} height="50" fill="#0a0817" />
       {placed.map((p) => (
         <House key={p.game.key} p={p} selected={selectedKey === p.game.key} label={labels[p.game.key] ?? ''} onSelect={() => onSelect(p.game.key)} />
       ))}
-      {Array.from({ length: 12 }).map((_, k) => (
-        <circle key={k} cx={16 + k * 29} cy={258 + (k % 3) * 10} r="1.6" fill="#d8ff7a" className="village-fly" style={{ animationDelay: `${k * 0.6}s` }} />
+      {Array.from({ length: wide ? 20 : 12 }).map((_, k) => (
+        <circle key={k} cx={16 + k * 29 - dx} cy={258 + (k % 3) * 10} r="1.6" fill="#d8ff7a" className="village-fly" style={{ animationDelay: `${k * 0.6}s` }} />
       ))}
+      </g>
     </svg>
   )
 })
 
+/** Écran large (≥ 640 px) : voir `Scene`. */
+function useWideScreen(): boolean {
+  const query = '(min-width: 640px)'
+  const [wide, setWide] = useState(() => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia(query).matches)
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return
+    const mq = window.matchMedia(query)
+    const onChange = () => setWide(mq.matches)
+    onChange()
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return wide
+}
+
 export function LiveVillage() {
+  const wide = useWideScreen()
   const { t, lang } = useLanguage()
   const { profile } = useAuth()
   const { onlineStatus } = usePresence()
@@ -263,7 +288,7 @@ export function LiveVillage() {
 
   return (
     <section className="flex flex-col gap-2.5" aria-label={t('village.title')}>
-      <div className="relative mx-auto w-full max-w-[560px] overflow-hidden rounded-3xl border border-white/10 bg-[#0b0d1a]">
+      <div className="relative w-full overflow-hidden rounded-3xl border border-white/10 bg-[#0b0d1a]">
         <div className="absolute left-4 top-4 z-10">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-moon-300/80">{t('village.eyebrow')}</p>
           <p className="font-display text-lg leading-tight text-moon-200">{t('village.title')}</p>
@@ -275,7 +300,7 @@ export function LiveVillage() {
           </span>
         )}
 
-        <Scene placed={placed} selectedKey={selected?.key ?? null} labels={labels} onSelect={setSelectedKey} />
+        <Scene placed={placed} selectedKey={selected?.key ?? null} labels={labels} onSelect={setSelectedKey} wide={wide} />
 
         {sorted.length === 0 && (
           <div className="absolute inset-x-0 bottom-[18%] z-10 flex flex-col items-center gap-2 px-6 text-center">
@@ -335,7 +360,7 @@ export function LiveVillage() {
       )}
 
       {selected && (
-        <div className="mx-auto flex w-full max-w-[560px] items-center gap-3 rounded-2xl border border-night-600/60 bg-night-900/60 px-3 py-2.5">
+        <div className="flex w-full items-center gap-3 rounded-2xl border border-night-600/60 bg-night-900/60 px-3 py-2.5">
           {selected.is_public ? (
             <Avatar config={selected.host_avatar_config} icon={selected.host_avatar_icon} name={selected.host_name} className="h-11 w-11 shrink-0" />
           ) : (
@@ -372,7 +397,7 @@ export function LiveVillage() {
           )}
         </div>
       )}
-      {join.error && <p className="mx-auto w-full max-w-[560px] text-xs text-blood-400">{join.error}</p>}
+      {join.error && <p className="w-full text-xs text-blood-400">{join.error}</p>}
       <JoinChoiceOverlay join={join} />
     </section>
   )
