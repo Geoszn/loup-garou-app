@@ -1,6 +1,7 @@
-import { memo } from 'react'
+import { memo, useMemo } from 'react'
 import { AvatarIcon } from './AvatarIcon'
 import { AvatarArt } from './AvatarArt'
+import { avatarImageUrl } from '../lib/avatarImage'
 import { parseAvatarConfig, type AvatarMood } from '../lib/avatarParts'
 
 /**
@@ -35,10 +36,13 @@ export const Avatar = memo(function Avatar({
   mood?: AvatarMood
 }) {
   const parsed = parseAvatarConfig(config)
+  // Image mise en cache plutôt que ~130 éléments SVG par avatar (voir
+  // lib/avatarImage.ts) ; SVG en ligne en dernier recours.
+  const imageUrl = useMemo(() => (parsed ? avatarImageUrl(parsed, mood) : null), [parsed, mood])
   if (parsed) {
     return (
       <span className={`inline-block shrink-0 overflow-hidden rounded-full ${className}`}>
-        <AvatarArt config={parsed} mood={mood} />
+        {imageUrl ? <img src={imageUrl} alt="" draggable={false} className="block h-full w-full select-none" /> : <AvatarArt config={parsed} mood={mood} />}
       </span>
     )
   }

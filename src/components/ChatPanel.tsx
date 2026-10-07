@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type MutableRefObject } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type MutableRefObject } from 'react'
 import { useChat, type RevealedIdentity } from '../hooks/useChat'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
@@ -29,6 +29,10 @@ const LONG_PRESS_MS = 450
 // readOnly, note) sont des primitives stables d'un rendu à l'autre — le
 // comparateur par défaut de React.memo suffit, pas besoin d'un comparateur
 // personnalisé.
+// Nombre de messages dessinés à l'ouverture, et pas de dévoilement vers le haut.
+const MESSAGE_WINDOW = 60
+const MESSAGE_WINDOW_STEP = 50
+
 export const ChatPanel = memo(function ChatPanel({
   gameId,
   channel,
@@ -96,6 +100,13 @@ export const ChatPanel = memo(function ChatPanel({
   const listRef = useRef<HTMLDivElement>(null)
   const atBottomRef = useRef(true)
   const [unreadBelow, setUnreadBelow] = useState(0)
+  // Seuls les derniers messages sont dessinés (voir MESSAGE_WINDOW) : un chat de
+  // fin de partie compte des centaines de messages, chacun avec sa bulle (et un
+  // avatar par groupe) — le navigateur devait tout restyler à chaque changement
+  // de phase, et la partie ralentissait au fil des tours. L'historique complet
+  // reste en mémoire ; « messages plus anciens » en dévoile 50 de plus.
+  const [visibleCount, setVisibleCount] = useState(MESSAGE_WINDOW)
+  const heightBeforeExpandRef = useRef<number | null>(null)
   const info = CHANNEL_LABEL[channel]
 
   // Quand le clavier virtuel est ouvert ET qu'on écrit dans CE salon, le
@@ -199,6 +210,8 @@ export const ChatPanel = memo(function ChatPanel({
   // joueur y était déjà ou si le dernier message est le sien — s'il relit
   // plus haut, on ne le déplace pas et on affiche un bouton "nouveaux
   // messages", pour ne jamais lui faire perdre le fil.
+  const hiddenCount = Math.max(messages.length - visibleCount, 0)
+  const shownMessages = useMemo(() => (hiddenCount > 0 ? messages.slice(hiddenCount) : messages), [messages, hiddenCount])
   const lastMessage = messages[messages.length - 1]
   const prevCountRef = useRef(0)
   useEffect(() => {
@@ -214,6 +227,20 @@ export const ChatPanel = memo(function ChatPanel({
       setUnreadBelow((n) => n + added)
     }
   }, [messages.length, lastMessage?.user_id, selfId])
+
+  // Après avoir dévoilé des messages plus anciens (ajoutés AU-DESSUS), garde le
+  // joueur sur le message qu'il lisait au lieu de le faire sauter vers le haut.
+  useLayoutEffect(() => {
+    const el = listRef.current
+    if (!el || heightBeforeExpandRef.current === null) return
+    el.scrollTop += el.scrollHeight - heightBeforeExpandRef.current
+    heightBeforeExpandRef.current = null
+  }, [visibleCount])
+
+  function showOlder() {
+    heightBeforeExpandRef.current = listRef.current?.scrollHeight ?? null
+    setVisibleCount((n) => n + MESSAGE_WINDOW_STEP)
+  }
 
   function handleListScroll() {
     const el = listRef.current
@@ -345,9 +372,18 @@ export const ChatPanel = memo(function ChatPanel({
         {messages.length === 0 && (
           <p className="text-center text-xs text-moon-200/30">{t('chat.empty')}</p>
         )}
-        {messages.map((m, i) => {
+        {hiddenCount > 0 && (
+          <button
+            type="button"
+            onClick={showOlder}
+            className="mx-auto block rounded-full border border-night-600/60 bg-night-800/60 px-3 py-1 text-[11px] font-semibold text-moon-200/70 transition-colors hover:text-moon-200"
+          >
+            ↑ {t('chat.showOlder', { count: hiddenCount })}
+          </button>
+        )}
+        {shownMessages.map((m, i) => {
           const authorId = authorIdOf(m, identities)
-          const next = messages[i + 1]
+          const next = shownMessages[i + 1]
           const showAvatar = !!players && (!next || authorIdOf(next, identities) !== authorId)
           return (
           <MessageRow

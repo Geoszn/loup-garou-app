@@ -178,10 +178,15 @@ body {
 
 /* Anime le basculement jour/nuit dans la partie : chaque élément descendant
    de `.game-theme-root` transitionne en douceur ses couleurs de fond/texte/
-   bordure quand la classe `.theme-day` apparaît ou disparaît sur l'ancêtre. */
-.game-theme-root,
-.game-theme-root * {
-  transition: background-color 700ms ease, border-color 700ms ease, color 700ms ease, box-shadow 700ms ease;
+   bordure quand la classe `.theme-day` apparaît ou disparaît sur l'ancêtre.
+   UNIQUEMENT pendant la bascule (attribut posé par GameRoom pendant ~700 ms) :
+   en permanence, cette règle donnait une transition à des milliers d'éléments
+   (messages, avatars...) et ralentissait la partie au fil des phases. Les
+   ombres (box-shadow) ne sont plus animées : très coûteuses à repeindre, pour
+   un effet à peine visible. */
+.game-theme-root[data-theme-switching],
+.game-theme-root[data-theme-switching] * {
+  transition: background-color 600ms ease, border-color 600ms ease, color 600ms ease;
 }
 
 /* Ombre "premium" à trois couches (liseré clair en haut + ombre de contact

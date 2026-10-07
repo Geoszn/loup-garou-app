@@ -1376,6 +1376,7 @@ export const translations = {
   'voiceChat.expand': { fr: 'Déplier le vocal', en: 'Expand voice chat' },
   'voiceChat.collapse': { fr: 'Replier le vocal', en: 'Collapse voice chat' },
   'chat.newMessages': { fr: 'Nouveaux messages', en: 'New messages' },
+  'chat.showOlder': { fr: '{{count}} messages plus anciens', en: '{{count}} older messages' },
   'chat.empty': { fr: 'Aucun message pour le moment...', en: 'No messages yet...' },
   'chat.anonymous': { fr: '🎭 Anonyme', en: '🎭 Anonymous' },
   'chat.lastWords': { fr: 'Dernier souffle', en: 'Last breath' },

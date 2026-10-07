@@ -97,6 +97,25 @@ export default function GameRoom() {
   // différents d'où on peut le manquer selon la phase en cours.
   const isNightPhase = view?.game.status === 'night'
   const unreadVillage = useUnreadChatCount(gameId, 'village', isNightPhase ? nightTab === 'village' : dayTab === 'discuss')
+  // Bascule jour/nuit : l'animation de fondu (voir index.css, .game-theme-root)
+  // ne doit exister QUE pendant la bascule. Avant, la transition était posée en
+  // permanence sur tous les éléments de l'écran — avec des centaines de
+  // messages et d'avatars, chaque changement de phase animait des milliers
+  // d'éléments d'un coup et la partie ralentissait au fil des tours.
+  // État dérivé pendant le rendu (et non dans un effet) : l'attribut doit être
+  // posé dans le MÊME rendu que le changement de thème, sinon rien ne s'anime.
+  const nightTheme = view?.game.status === 'night' || view?.game.status === 'role_reveal'
+  const [prevNightTheme, setPrevNightTheme] = useState(nightTheme)
+  const [themeSwitching, setThemeSwitching] = useState(false)
+  if (prevNightTheme !== nightTheme) {
+    setPrevNightTheme(nightTheme)
+    setThemeSwitching(true)
+  }
+  useEffect(() => {
+    if (!themeSwitching) return
+    const id = setTimeout(() => setThemeSwitching(false), 700)
+    return () => clearTimeout(id)
+  }, [themeSwitching])
   const [logOpen, setLogOpen] = useState(false)
   const [confirmLeaveOpen, setConfirmLeaveOpen] = useState(false)
   const [cannotLeaveOpen, setCannotLeaveOpen] = useState(false)
@@ -297,6 +316,7 @@ export default function GameRoom() {
   // avec un fondu animé porté par `.game-theme-root` sur chaque enfant.
   return (
     <div
+      data-theme-switching={themeSwitching ? '' : undefined}
       className={`game-theme-root relative min-h-screen bg-night-950 pb-16 ${isNight ? '' : 'theme-day'}`}
       style={{
         backgroundImage: isNight
