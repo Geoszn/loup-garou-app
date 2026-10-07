@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { cachedRpc } from '../lib/rpcCache'
+import { homeSection } from '../lib/homeBootstrap'
 import { notifyJoinRequest } from '../lib/pushSubscription'
 import { Button, Card, ErrorText, SectionDivider } from '../components/ui'
 import { RankBadge } from '../components/RankBadge'
@@ -23,6 +24,7 @@ import { useActiveBanners } from '../hooks/useActiveBanners'
 import { useMySeason } from '../hooks/useMySeason'
 import { SeasonTrack } from '../components/SeasonTrack'
 import { LiveVillage } from '../components/LiveVillage'
+import { AfterIdle, LazyMount } from '../components/Deferred'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from '../components/Avatar'
 
@@ -72,9 +74,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!user) return
-    supabase.rpc('get_my_active_game').then(({ data, error: rpcError }) => {
-      if (!rpcError) setActiveGame((data as ActiveGame | null) ?? null)
-    })
+    homeSection<ActiveGame>('active_game', async () => {
+      const { data, error: rpcError } = await supabase.rpc('get_my_active_game')
+      return rpcError ? null : ((data as ActiveGame | null) ?? null)
+    }).then((data) => setActiveGame(data ?? null))
   }, [user])
 
   // Interrupteur admin "nouvelles parties" (voir AdminDashboard.tsx / migration
@@ -83,8 +86,11 @@ export default function Dashboard() {
   // de partie est temporairement coupée.
   const [newGamesEnabled, setNewGamesEnabled] = useState(true)
   useEffect(() => {
-    supabase.rpc('get_app_status').then(({ data, error: rpcError }) => {
-      if (!rpcError && data) setNewGamesEnabled(!!(data as { new_games_enabled: boolean }).new_games_enabled)
+    homeSection<{ new_games_enabled: boolean }>('app_status', async () => {
+      const { data, error: rpcError } = await supabase.rpc('get_app_status')
+      return rpcError ? null : (data as { new_games_enabled: boolean } | null)
+    }).then((data) => {
+      if (data) setNewGamesEnabled(!!data.new_games_enabled)
     })
   }, [])
 
@@ -106,8 +112,11 @@ export default function Dashboard() {
   }
 
   async function loadSocial(force = false) {
-    const { data, error: rpcError } = await cachedRpc<{ game_invites?: GameInvite[]; friends?: FriendPerson[] }>('get_my_social', undefined, { force })
-    if (rpcError || !data) return
+    type Social = { game_invites?: GameInvite[]; friends?: FriendPerson[] }
+    const data = force
+      ? (await cachedRpc<Social>('get_my_social', undefined, { force: true })).data
+      : await homeSection<Social>('social', async () => (await cachedRpc<Social>('get_my_social')).data)
+    if (!data) return
     setInvites(data.game_invites ?? [])
     setFriends(data.friends ?? [])
   }
@@ -263,8 +272,14 @@ export default function Dashboard() {
         )}
 
         <DailyLoginBanner hasActiveEvent={events.length > 0} />
-        <AnnouncementsModal />
-        <NotificationTimezoneSync />
+        {/* Pas urgents : montés quelques secondes après l'affichage (leurs
+            requêtes ne se battent plus avec celles de l'accueil). */}
+        <AfterIdle delay={1500}>
+          <AnnouncementsModal />
+        </AfterIdle>
+        <AfterIdle delay={4000}>
+          <NotificationTimezoneSync />
+        </AfterIdle>
 
         {notice && !noticeDismissed && (
           <div
@@ -344,7 +359,11 @@ export default function Dashboard() {
           </Link>
         )}
 
-        <DashboardLeaderboard />
+        {/* Tout en bas de la page : ses requêtes ne partent que quand on s'en
+            approche. */}
+        <LazyMount minHeight={260}>
+          <DashboardLeaderboard />
+        </LazyMount>
 
         <FriendsOnlineWidget friends={friends} />
 

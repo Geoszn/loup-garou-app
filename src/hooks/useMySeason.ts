@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { cachedRpc } from '../lib/rpcCache'
+import { homeSection } from '../lib/homeBootstrap'
 import type { MySeason } from '../types/season'
 
 /** Saison en cours pour le joueur connecté (voir migration 0203) — null s'il
@@ -15,7 +16,10 @@ export function useMySeason() {
   // le sondage de 30 s) ; seule la première lecture au montage partage la
   // requête avec les annonces, qui demandent la même saison (rpcCache.ts).
   const load = useCallback((force: boolean) => {
-    cachedRpc<MySeason>('get_my_season', undefined, { force }).then(({ data, error }) => {
+    const request = force
+      ? cachedRpc<MySeason>('get_my_season', undefined, { force: true }).then(({ data, error }) => ({ data, error: !!error }))
+      : homeSection<MySeason>('season', async () => (await cachedRpc<MySeason>('get_my_season')).data).then((data) => ({ data, error: false }))
+    request.then(({ data, error }) => {
       setLoading(false)
       if (error) return
       setSeason(data ?? null)
@@ -25,7 +29,11 @@ export function useMySeason() {
 
   useEffect(() => {
     load(false)
-    const interval = setInterval(() => load(true), 30000)
+    // 60 s (au lieu de 30 s) et rien tant que l'onglet est caché : la saison ne
+    // bouge que quand une partie se termine, et refresh() relit déjà à ce moment-là.
+    const interval = setInterval(() => {
+      if (!document.hidden) load(true)
+    }, 60000)
     return () => clearInterval(interval)
   }, [load])
 

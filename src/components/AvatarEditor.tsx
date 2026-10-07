@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { cachedCall } from '../lib/rpcCache'
 import { parseAvatarConfig, type AvatarConfig } from '../lib/avatarParts'
 
 export const AVATAR_CHANGED_EVENT = 'lg-avatar-changed'
@@ -47,12 +48,14 @@ export function useMyAvatarConfig() {
   useEffect(() => {
     if (!user) return
     let active = true
-    supabase
-      .from('profiles')
-      .select('avatar_config')
-      .eq('id', user.id)
-      .maybeSingle()
-      .then(({ data, error }) => {
+    // L'accueil monte ce hook deux fois (carte du joueur + classement) : les
+    // lectures simultanées partagent une seule requête (rpcCache.ts) ; après un
+    // changement d'avatar (version > 0), on relit pour de bon.
+    cachedCall(
+      `profile-avatar-${user.id}`,
+      () => supabase.from('profiles').select('avatar_config').eq('id', user.id).maybeSingle(),
+      { force: version > 0 }
+    ).then(({ data, error }) => {
         if (!active) return
         setLoaded(true)
         if (error) return

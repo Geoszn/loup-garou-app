@@ -9,6 +9,7 @@ import { JoinChoiceOverlay } from './JoinChoiceOverlay'
 import { Avatar } from './Avatar'
 import { Button } from './ui'
 import { continentName } from '../lib/continents'
+import { homeSection } from '../lib/homeBootstrap'
 import type { GameStatus } from '../types/game'
 
 // « Le village veille » : sur l'accueil, une maison par partie en cours —
@@ -206,7 +207,13 @@ export function LiveVillage() {
   }, [])
 
   useEffect(() => {
-    void load()
+    // Première lecture : section du groupé de l'accueil (homeBootstrap.ts).
+    void homeSection<LiveGame[]>('live_games', async () => {
+      const { data, error } = await supabase.rpc('get_live_games')
+      return error ? null : ((data ?? []) as LiveGame[])
+    }).then((data) => {
+      if (data) setGames(data)
+    })
     const id = setInterval(load, POLL_MS)
     const onVisible = () => {
       if (!document.hidden) void load()

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { cachedRpc } from '../lib/rpcCache'
+import { homeSection } from '../lib/homeBootstrap'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from './Avatar'
 import { useMyAvatarConfig } from './AvatarEditor'
@@ -58,7 +59,7 @@ export function AnnouncementsModal() {
     if (!user) return
     supabase.rpc('get_my_seen_announcements').then(({ data }) => setSeen(Array.isArray(data) ? (data as string[]) : []))
     supabase.rpc('get_my_quest_compensation').then(({ data }) => setComp(data ? (data as Compensation) : null))
-    cachedRpc<MySeason>('get_my_season').then(({ data }) => setSeason(data ?? null))
+    homeSection<MySeason>('season', async () => (await cachedRpc<MySeason>('get_my_season')).data).then((data) => setSeason(data ?? null))
   }, [user])
 
   // Composé une seule fois, quand tout est chargé : évite qu'une carte

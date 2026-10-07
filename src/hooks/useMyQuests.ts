@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { cachedRpc } from '../lib/rpcCache'
+import { homeSection } from '../lib/homeBootstrap'
 import { useAuth } from '../context/AuthContext'
 
 export interface Quest {
@@ -25,7 +26,11 @@ export function useMyQuests() {
   // bas et l'accueil la demandaient chacune au même instant — voir rpcCache.ts) ;
   // après une réclamation on relit pour de bon.
   const reload = useCallback(async (force = false) => {
-    const { data } = await cachedRpc<Quest[]>('get_my_quests', undefined, { force })
+    // Première lecture sur l'accueil : section du groupé (homeBootstrap.ts) ;
+    // relecture forcée (après une réclamation) : appel direct.
+    const data = force
+      ? (await cachedRpc<Quest[]>('get_my_quests', undefined, { force: true })).data
+      : await homeSection<Quest[]>('quests', async () => (await cachedRpc<Quest[]>('get_my_quests')).data)
     if (data) setQuests(data)
   }, [])
 

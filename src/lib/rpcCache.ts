@@ -33,3 +33,15 @@ export function cachedRpc<T = unknown>(
   entries.set(key, { at: Date.now(), promise })
   return promise as Promise<{ data: T | null; error: { message: string } | null }>
 }
+
+/** Même principe que cachedRpc pour n'importe quelle lecture (ex. un select
+ * sur profiles) : les appels identiques lancés au même moment partagent une
+ * seule requête. */
+const calls = new Map<string, { at: number; promise: Promise<unknown> }>()
+export function cachedCall<T>(key: string, fn: () => PromiseLike<T>, opts: { ttl?: number; force?: boolean } = {}): Promise<T> {
+  const existing = calls.get(key)
+  if (!opts.force && existing && Date.now() - existing.at < (opts.ttl ?? DEFAULT_TTL_MS)) return existing.promise as Promise<T>
+  const promise = Promise.resolve(fn())
+  calls.set(key, { at: Date.now(), promise })
+  return promise
+}

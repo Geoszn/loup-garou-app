@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { homeSection } from '../lib/homeBootstrap'
 import type { GameEvent } from '../types/events'
 
 /** Événements actifs (voir migration 0067), utilisé par la bannière sur
@@ -19,8 +20,16 @@ export function useActiveEvents() {
   }, [])
 
   useEffect(() => {
-    refresh()
-    const interval = setInterval(refresh, 30000)
+    // Première lecture : section du groupé sur l'accueil (homeBootstrap.ts), appel
+    // direct ailleurs (ex. page d'accueil publique, sans compte).
+    homeSection<GameEvent[]>('events', async () => (await supabase.rpc('get_active_events')).data as GameEvent[] | null).then((data) => {
+      if (data) setEvents(data)
+    })
+    // 60 s au lieu de 30 s, et rien tant que l'onglet est caché : un événement
+    // qui démarre ou se termine n'a pas besoin d'une précision à la demi-minute.
+    const interval = setInterval(() => {
+      if (!document.hidden) refresh()
+    }, 60000)
     return () => clearInterval(interval)
   }, [refresh])
 

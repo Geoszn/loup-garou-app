@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { cachedRpc } from '../lib/rpcCache'
+import { homeSection } from '../lib/homeBootstrap'
 import { BottomNav } from './BottomNav'
 import { useMyQuests } from '../hooks/useMyQuests'
 
@@ -22,7 +23,10 @@ export function AppShell() {
     // `force` : relecture réelle quand une demande d'ami arrive (évènement
     // Realtime) ; au montage on partage la requête de l'accueil (rpcCache.ts).
     async function load(force = false) {
-      const { data } = await cachedRpc<{ incoming_requests?: unknown[] }>('get_my_social', undefined, { force })
+      type Social = { incoming_requests?: unknown[] }
+      const data = force
+        ? (await cachedRpc<Social>('get_my_social', undefined, { force: true })).data
+        : await homeSection<Social>('social', async () => (await cachedRpc<Social>('get_my_social')).data)
       if (active && data) setPendingFriends((data.incoming_requests ?? []).length)
     }
     void load()
