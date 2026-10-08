@@ -15,7 +15,7 @@ export function TribeCard() {
 
   const tribe = summary.tribe
   const invite = summary.invites[0]
-  const link = '/amis?tab=tribu'
+  const link = '/tribu'
 
   if (tribe) {
     return (

@@ -259,3 +259,35 @@ body {
   .village-fly { animation: village-fly 4s ease-in-out infinite; transform-box: fill-box; transform-origin: center }
   .village-smoke { animation: village-smoke 3s ease-out infinite; transform-box: fill-box; transform-origin: center }
 }
+
+/* Village de la tribu (TribePanel / VillageView) */
+@keyframes tribe-house-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.55); }
+  60% { opacity: 1; transform: translateY(-3px) scale(1.07); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes tribe-smoke {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.5); }
+  30% { opacity: 0.65; }
+  100% { opacity: 0; transform: translate(7px, -24px) scale(1.5); }
+}
+@keyframes tribe-flame {
+  0%, 100% { transform: scale(1, 1); }
+  50% { transform: scale(0.9, 1.14); }
+}
+@keyframes tribe-glow {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.95; }
+}
+@keyframes tribe-spark {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-34px) scale(0.3); }
+}
+@keyframes tribe-welcome {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 207, 107, 0); }
+  50% { box-shadow: 0 0 22px 4px rgba(255, 207, 107, 0.55); }
+}
+.tribe-house-in { animation: tribe-house-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.1) backwards; }
+@media (prefers-reduced-motion: reduce) {
+  .tribe-house-in, .tribe-anim { animation: none !important; }
+}

@@ -111,7 +111,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { sent, removed } = await sendPushToUser(service, invite.invited_user, {
       title: en ? '🛡️ Tribe invitation' : '🛡️ Invitation à une tribu',
       body: en ? `${who} invites you to join the tribe "${tribe.name}".` : `${who} t'invite à rejoindre la tribu « ${tribe.name} ».`,
-      url: '/amis?tab=tribu',
+      url: '/tribu',
     })
     res.status(200).json({ sent, removed })
     return

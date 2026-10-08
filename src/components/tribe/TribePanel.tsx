@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { usePresence } from '../../context/PresenceContext'
 import { useAuth } from '../../context/AuthContext'
 import { useLanguage } from '../../i18n/LanguageContext'
-import { useTribeSummary } from '../../hooks/useTribeSummary'
+import { useTribeSummary, notifyTribeSummaryChanged } from '../../hooks/useTribeSummary'
 import { notifyTribeInvite } from '../../lib/pushSubscription'
+import { cachedRpc } from '../../lib/rpcCache'
 import {
   TRIBE_COLORS,
   TRIBE_EMBLEMS,
@@ -17,11 +19,16 @@ import {
   type TribeEmblem,
   type TribeInfo,
   type TribeMember,
+  type TribeRequestOut,
+  type TribeSearchResult,
+  type TribeInviteIn,
 } from '../../lib/tribe'
+import { FriendsPanel } from '../../pages/Friends'
 import { Avatar } from '../Avatar'
 import { Button, Card, ConfirmDialog, ErrorText, Modal, Segmented } from '../ui'
 import { TribeShield } from './TribeShield'
 import { TribeChat } from './TribeChat'
+import { VillageView } from './VillageView'
 import { OnlineDot, RoleBadge } from './TribeBits'
 
 const primaryBtn =
@@ -30,13 +37,54 @@ const fieldCls =
   'w-full rounded-xl border border-night-500 bg-night-800/80 px-4 py-3 text-sm text-moon-200 outline-none placeholder:text-moon-200/30 focus:border-moon-400/60'
 const sectionLabel = 'text-[11px] font-semibold uppercase tracking-wider text-moon-200/45'
 
-/** Onglet « Tribu » de la page Amis (migration 0222). */
-export function TribePanel() {
-  const { summary, loaded, refresh } = useTribeSummary()
+type RoomTab = 'village' | 'chat' | 'members' | 'manage' | 'friends'
+const ROOM_TABS: RoomTab[] = ['village', 'chat', 'members', 'manage', 'friends']
+
+/** Petite pastille rouge (nombre) ou point rouge. */
+function Dot({ n }: { n?: number }) {
+  if (n !== undefined && n <= 0) return null
+  return (
+    <span className="ml-1 inline-flex min-w-4 items-center justify-center rounded-full bg-blood-500 px-1 text-[10px] font-bold leading-4 text-[#fdf6e3]">
+      {n === undefined ? '' : n > 99 ? '99+' : n}
+    </span>
+  )
+}
+
+/** Nombre de demandes d'amis en attente (pastille de l'onglet « Amis »). */
+function usePendingFriends(): number {
+  const { user } = useAuth()
+  const [n, setN] = useState(0)
+  useEffect(() => {
+    if (!user) return
+    let active = true
+    cachedRpc<{ incoming_requests?: unknown[] }>('get_my_social').then(({ data }) => {
+      if (active && data) setN((data.incoming_requests ?? []).length)
+    })
+    return () => {
+      active = false
+    }
+  }, [user])
+  return n
+}
+
+/**
+ * Page « Tribu » (migration 0222/0223) : avec une tribu, un village où chaque membre
+ * a sa maison, le chat, la liste des membres, les invitations et demandes, et —
+ * en option secondaire — les amis. Sans tribu : chercher une tribu (par nom ou
+ * par code) pour lui demander à entrer, répondre aux invitations ou fonder la
+ * sienne.
+ */
+export function TribeHub() {
+  const { summary, loaded, refresh } = useTribeSummary(true, 45000)
+  const [params] = useSearchParams()
+  const requested = params.get('tab')
+  const [tab, setTab] = useState<RoomTab>(() => (requested === 'amis' ? 'friends' : (ROOM_TABS as string[]).includes(requested ?? '') ? (requested as RoomTab) : 'village'))
   const [creating, setCreating] = useState(false)
+  const pendingFriends = usePendingFriends()
 
   if (!loaded) return <div className="h-40 animate-pulse rounded-2xl bg-night-900/40" />
-  if (summary?.tribe) return <TribeRoom tribe={summary.tribe} refresh={refresh} />
+  if (summary?.tribe) return <TribeRoom tribe={summary.tribe} refresh={refresh} tab={tab} setTab={setTab} pendingFriends={pendingFriends} />
+
   if (creating) {
     return (
       <TribeForm
@@ -45,20 +93,72 @@ export function TribePanel() {
         onDone={async () => {
           setCreating(false)
           await refresh()
+          notifyTribeSummaryChanged()
         }}
       />
     )
   }
-  return <NoTribe invites={summary?.invites ?? []} refresh={refresh} onCreate={() => setCreating(true)} />
+  return (
+    <TribeLanding
+      invites={summary?.invites ?? []}
+      myRequests={summary?.my_requests ?? []}
+      refresh={refresh}
+      onCreate={() => setCreating(true)}
+      friendsTab={tab === 'friends'}
+      setFriendsTab={(on) => setTab(on ? 'friends' : 'village')}
+      pendingFriends={pendingFriends}
+    />
+  )
 }
 
 // ---------------------------------------------------------------------------
-// Sans tribu : créer la sienne ou répondre aux invitations reçues
+// Sans tribu : chercher, demander à entrer, répondre aux invitations, fonder
 // ---------------------------------------------------------------------------
-function NoTribe({ invites, refresh, onCreate }: { invites: NonNullable<ReturnType<typeof useTribeSummary>['summary']>['invites']; refresh: () => Promise<void>; onCreate: () => void }) {
+function useDebounced<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay)
+    return () => clearTimeout(id)
+  }, [value, delay])
+  return debounced
+}
+
+function TribeLanding({
+  invites,
+  myRequests,
+  refresh,
+  onCreate,
+  friendsTab,
+  setFriendsTab,
+  pendingFriends,
+}: {
+  invites: TribeInviteIn[]
+  myRequests: TribeRequestOut[]
+  refresh: () => Promise<void>
+  onCreate: () => void
+  friendsTab: boolean
+  setFriendsTab: (on: boolean) => void
+  pendingFriends: number
+}) {
   const { t } = useLanguage()
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<TribeSearchResult[] | null>(null)
+  const debounced = useDebounced(query.trim(), 350)
+
+  const search = useCallback(async (q: string) => {
+    if (q.length < 2) {
+      setResults(null)
+      return
+    }
+    const { data, error: rpcError } = await supabase.rpc('search_tribes', { p_query: q })
+    if (rpcError) setError(rpcError.message)
+    else setResults((data as TribeSearchResult[]) ?? [])
+  }, [])
+  useEffect(() => {
+    void search(debounced)
+  }, [debounced, search])
 
   async function respond(id: string, accept: boolean) {
     setBusy(id)
@@ -67,40 +167,124 @@ function NoTribe({ invites, refresh, onCreate }: { invites: NonNullable<ReturnTy
     setBusy(null)
     if (rpcError) setError(rpcError.message)
     await refresh()
+    notifyTribeSummaryChanged()
+  }
+
+  async function requestJoin(tribeId: string) {
+    setBusy(tribeId)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('request_join_tribe', { p_tribe_id: tribeId })
+    setBusy(null)
+    if (rpcError) setError(rpcError.message)
+    await Promise.all([search(debounced), refresh()])
+  }
+
+  async function cancelRequest(id: string) {
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('cancel_join_request', { p_request_id: id })
+    if (rpcError) setError(rpcError.message)
+    await Promise.all([search(debounced), refresh()])
   }
 
   return (
     <div className="flex flex-col gap-4">
-      <Card className="flex flex-col items-center gap-2 text-center">
-        <span className="text-4xl" aria-hidden="true">🛡️</span>
-        <h2 className="font-display text-lg text-moon-200">{t('tribe.empty.title')}</h2>
-        <p className="text-xs leading-relaxed text-moon-200/60">{t('tribe.empty.body')}</p>
-        <button type="button" onClick={onCreate} className={`${primaryBtn} mt-2`}>
-          {t('tribe.create.cta')}
-        </button>
-      </Card>
-
-      {invites.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <p className={sectionLabel}>{t('tribe.invites.received', { n: invites.length })}</p>
-          {invites.map((i) => (
-            <div key={i.id} className="flex items-center gap-3 rounded-2xl border border-night-600/60 bg-night-900/50 p-3">
-              <TribeShield emblem={i.emblem} color={i.color} className="h-11 w-11 text-xl" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-moon-200">{i.tribe_name}</p>
-                <p className="truncate text-[11px] text-moon-200/50">{t('tribe.invite.by', { count: i.member_count, by: i.invited_by_name })}</p>
-              </div>
-              <button type="button" disabled={busy === i.id} onClick={() => respond(i.id, true)} className="rounded-lg bg-emerald-600/80 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">
-                {t('tribe.invite.join')}
-              </button>
-              <button type="button" disabled={busy === i.id} onClick={() => respond(i.id, false)} aria-label={t('tribe.invite.decline')} className="px-1 text-moon-200/40 hover:text-moon-200">
-                ✕
-              </button>
+      <Segmented<'tribe' | 'friends'>
+        tabs={[
+          { id: 'tribe', label: `🛡️ ${t('tribe.tab')}` },
+          { id: 'friends', label: <span>👥 {t('tribe.tabs.friends')}<Dot n={pendingFriends} /></span> },
+        ]}
+        active={friendsTab ? 'friends' : 'tribe'}
+        onChange={(id) => setFriendsTab(id === 'friends')}
+      />
+      {friendsTab ? (
+        <FriendsPanel />
+      ) : (
+        <>
+          <Card className="flex flex-col gap-3">
+            <div>
+              <h2 className="font-display text-lg text-moon-200">{t('tribe.search.title')}</h2>
+              <p className="text-xs text-moon-200/55">{t('tribe.search.subtitle')}</p>
             </div>
-          ))}
-        </div>
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`🔍 ${t('tribe.search.placeholder')}`} className={fieldCls} />
+            {debounced.length >= 2 && results !== null && (
+              results.length === 0 ? (
+                <p className="text-xs text-moon-200/45">{t('tribe.search.none')}</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {results.map((r) => (
+                    <div key={r.id} className="flex items-center gap-3 rounded-2xl border border-night-600/60 bg-night-900/50 p-3">
+                      <TribeShield emblem={r.emblem} color={r.color} className="h-11 w-11 text-xl" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-moon-200">{r.name}</p>
+                        <p className="truncate text-[11px] text-moon-200/50">{t('tribe.members.count', { n: r.member_count, max: 30 })}{r.motto ? ` · ${r.motto}` : ''}</p>
+                      </div>
+                      {r.requested ? (
+                        <button type="button" onClick={() => r.request_id && cancelRequest(r.request_id)} className="rounded-lg bg-night-700 px-3 py-1.5 text-xs text-moon-200/70">
+                          {t('tribe.request.sent')} ✓
+                        </button>
+                      ) : r.full ? (
+                        <span className="text-[11px] text-moon-200/45">{t('tribe.search.full')}</span>
+                      ) : !r.accepting ? (
+                        <span className="text-[11px] text-moon-200/45">{t('tribe.search.closed')}</span>
+                      ) : (
+                        <button type="button" disabled={busy === r.id} onClick={() => requestJoin(r.id)} className="rounded-lg bg-blood-600 px-3 py-1.5 text-xs font-semibold text-[#fdf6e3] disabled:opacity-50">
+                          {t('tribe.request.send')}
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+          </Card>
+
+          {invites.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <p className={sectionLabel}>{t('tribe.invites.received', { n: invites.length })}</p>
+              {invites.map((i) => (
+                <div key={i.id} className="flex items-center gap-3 rounded-2xl border border-night-600/60 bg-night-900/50 p-3">
+                  <TribeShield emblem={i.emblem} color={i.color} className="h-11 w-11 text-xl" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-moon-200">{i.tribe_name}</p>
+                    <p className="truncate text-[11px] text-moon-200/50">{t('tribe.invite.by', { count: i.member_count, by: i.invited_by_name })}</p>
+                  </div>
+                  <button type="button" disabled={busy === i.id} onClick={() => respond(i.id, true)} className="rounded-lg bg-emerald-600/80 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">
+                    {t('tribe.invite.join')}
+                  </button>
+                  <button type="button" disabled={busy === i.id} onClick={() => respond(i.id, false)} aria-label={t('tribe.invite.decline')} className="px-1 text-moon-200/40 hover:text-moon-200">
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {myRequests.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <p className={sectionLabel}>{t('tribe.request.mine', { n: myRequests.length })}</p>
+              {myRequests.map((r) => (
+                <div key={r.id} className="flex items-center gap-3 rounded-2xl border border-night-600/60 bg-night-900/50 p-3">
+                  <TribeShield emblem={r.emblem} color={r.color} className="h-10 w-10 text-lg" />
+                  <p className="min-w-0 flex-1 truncate text-sm font-semibold text-moon-200">{r.tribe_name}</p>
+                  <button type="button" onClick={() => cancelRequest(r.id)} className="text-xs text-moon-200/50 hover:text-moon-200">
+                    {t('tribe.invite.cancel')}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <Card className="flex flex-col items-center gap-2 text-center">
+            <span className="text-3xl" aria-hidden="true">🛡️</span>
+            <h2 className="font-display text-lg text-moon-200">{t('tribe.empty.title')}</h2>
+            <p className="text-xs leading-relaxed text-moon-200/60">{t('tribe.empty.body')}</p>
+            <button type="button" onClick={onCreate} className={`${primaryBtn} mt-1`}>
+              {t('tribe.create.cta')}
+            </button>
+          </Card>
+          <ErrorText>{error}</ErrorText>
+        </>
       )}
-      <ErrorText>{error}</ErrorText>
     </div>
   )
 }
@@ -114,6 +298,7 @@ function TribeForm({ mode, tribe, onCancel, onDone }: { mode: 'create' | 'edit';
   const [color, setColor] = useState<TribeColor>(tribe?.color ?? 'sky')
   const [name, setName] = useState(tribe?.name ?? '')
   const [motto, setMotto] = useState(tribe?.motto ?? '')
+  const [accepting, setAccepting] = useState(tribe?.accepting_requests ?? true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const valid = mode === 'edit' || name.trim().length >= TRIBE_NAME_MIN
@@ -126,7 +311,7 @@ function TribeForm({ mode, tribe, onCancel, onDone }: { mode: 'create' | 'edit';
     const { error: rpcError } =
       mode === 'create'
         ? await supabase.rpc('create_tribe', { p_name: name, p_motto: motto, p_emblem: emblem, p_color: color })
-        : await supabase.rpc('update_tribe', { p_motto: motto, p_emblem: emblem, p_color: color })
+        : await supabase.rpc('update_tribe', { p_motto: motto, p_emblem: emblem, p_color: color, p_accepting: accepting })
     setBusy(false)
     if (rpcError) {
       setError(rpcError.message)
@@ -184,6 +369,15 @@ function TribeForm({ mode, tribe, onCancel, onDone }: { mode: 'create' | 'edit';
         <p className={`${sectionLabel} mb-1.5`}>{t('tribe.create.motto')}</p>
         <input value={motto} onChange={(e) => setMotto(e.target.value.slice(0, TRIBE_MOTTO_MAX))} maxLength={TRIBE_MOTTO_MAX} placeholder={t('tribe.create.mottoPh')} className={fieldCls} />
       </div>
+      {mode === 'edit' && (
+        <label className="flex items-center gap-3 rounded-xl border border-night-600/60 bg-night-900/50 px-4 py-3 text-sm text-moon-200">
+          <input type="checkbox" checked={accepting} onChange={(e) => setAccepting(e.target.checked)} className="h-4 w-4 accent-blood-500" />
+          <span className="min-w-0 flex-1">
+            {t('tribe.edit.accepting')}
+            <span className="block text-[11px] text-moon-200/45">{t('tribe.edit.acceptingHint')}</span>
+          </span>
+        </label>
+      )}
       <ErrorText>{error}</ErrorText>
       <button type="submit" disabled={!valid || busy} className={primaryBtn}>
         {mode === 'create' ? t('tribe.create.submit') : t('tribe.edit.submit')}
@@ -194,20 +388,21 @@ function TribeForm({ mode, tribe, onCancel, onDone }: { mode: 'create' | 'edit';
 }
 
 // ---------------------------------------------------------------------------
-// Ma tribu : discussion, membres, invitations
+// Ma tribu : village, chat, membres, invitations et demandes, amis
 // ---------------------------------------------------------------------------
-type RoomTab = 'chat' | 'members' | 'invites'
-
-function TribeRoom({ tribe, refresh }: { tribe: TribeInfo; refresh: () => Promise<void> }) {
+function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: TribeInfo; refresh: () => Promise<void>; tab: RoomTab; setTab: (t: RoomTab) => void; pendingFriends: number }) {
   const { t } = useLanguage()
+  const { user } = useAuth()
   const { onlineStatus } = usePresence()
-  const [tab, setTab] = useState<RoomTab>('chat')
   const [detail, setDetail] = useState<TribeDetail | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirm, setConfirm] = useState<'leave' | 'disband' | null>(null)
   const [editing, setEditing] = useState(false)
+  const [selected, setSelected] = useState<TribeMember | null>(null)
+  const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const isManager = tribe.my_role === 'chef' || tribe.my_role === 'sous_chef'
+  const activeTab: RoomTab = tab === 'manage' && !isManager ? 'village' : tab
 
   const loadDetail = useCallback(async () => {
     const { data, error: rpcError } = await supabase.rpc('get_tribe_detail')
@@ -215,9 +410,28 @@ function TribeRoom({ tribe, refresh }: { tribe: TribeInfo; refresh: () => Promis
   }, [])
   useEffect(() => {
     void loadDetail()
-  }, [loadDetail])
+  }, [loadDetail, tribe.member_count, tribe.pending_requests])
+  // Les arrivées apparaissent dans le village sans recharger : relecture douce
+  // tant qu'un onglet qui montre les membres est ouvert et visible.
+  useEffect(() => {
+    if (activeTab !== 'village' && activeTab !== 'members' && activeTab !== 'manage') return
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible') void loadDetail()
+    }, 20000)
+    return () => clearInterval(id)
+  }, [activeTab, loadDetail])
 
-  const onlineCount = detail ? detail.members.filter((m) => onlineStatus[m.user_id]).length : 0
+  const onlineIds = useMemo(() => {
+    const ids = new Set<string>(Object.keys(onlineStatus))
+    if (user) ids.add(user.id)
+    return ids
+  }, [onlineStatus, user])
+  const onlineCount = detail ? detail.members.filter((m) => onlineIds.has(m.user_id)).length : 0
+  const reloadAll = useCallback(async () => {
+    await loadDetail()
+    await refresh()
+    notifyTribeSummaryChanged()
+  }, [loadDetail, refresh])
 
   async function runConfirmed() {
     const action = confirm
@@ -227,6 +441,17 @@ function TribeRoom({ tribe, refresh }: { tribe: TribeInfo; refresh: () => Promis
     const { error: rpcError } = await supabase.rpc(action === 'leave' ? 'leave_tribe' : 'disband_tribe')
     if (rpcError) setError(rpcError.message)
     await refresh()
+    notifyTribeSummaryChanged()
+  }
+
+  async function copyCode() {
+    try {
+      await navigator.clipboard.writeText(tribe.code)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // Presse-papiers indisponible : le code reste affiché, on peut le recopier à la main.
+    }
   }
 
   if (editing) {
@@ -237,11 +462,20 @@ function TribeRoom({ tribe, refresh }: { tribe: TribeInfo; refresh: () => Promis
         onCancel={() => setEditing(false)}
         onDone={async () => {
           setEditing(false)
-          await refresh()
+          await reloadAll()
         }}
       />
     )
   }
+
+  const unreadForTab = activeTab === 'chat' ? 0 : tribe.unread
+  const tabs: { id: RoomTab; label: string; badge?: number }[] = [
+    { id: 'village', label: `🏘️ ${t('tribe.tabs.village')}` },
+    { id: 'chat', label: `💬 ${t('tribe.tabs.chat')}`, badge: unreadForTab },
+    { id: 'members', label: `👥 ${t('tribe.tabs.members')}` },
+    ...(isManager ? [{ id: 'manage' as const, label: `✉️ ${t('tribe.tabs.invites')}`, badge: tribe.pending_requests }] : []),
+    { id: 'friends', label: `🤝 ${t('tribe.tabs.friends')}`, badge: pendingFriends },
+  ]
 
   return (
     <div className="flex flex-col gap-3">
@@ -253,27 +487,44 @@ function TribeRoom({ tribe, refresh }: { tribe: TribeInfo; refresh: () => Promis
             {detail && <span className="text-emerald-400">● {t('tribe.online', { n: onlineCount })}</span>} {detail && '· '}
             {t('tribe.members.count', { n: detail?.members.length ?? tribe.member_count, max: tribe.max })}
           </p>
-          {tribe.motto && <p className="truncate text-[11px] italic text-moon-200/40">« {tribe.motto} »</p>}
+          <button type="button" onClick={copyCode} className="text-[11px] text-moon-200/45 hover:text-moon-200/80">
+            {t('tribe.code')} <b className="font-mono tracking-widest text-amber-300">{tribe.code}</b> {copied ? `✓ ${t('common.copied')}` : '📋'}
+          </button>
         </div>
         <button type="button" onClick={() => setMenuOpen(true)} aria-label={t('tribe.menu.title')} className="rounded-lg border border-night-500 px-2.5 py-1 text-moon-200/70">
           ⋯
         </button>
       </div>
 
-      <Segmented<RoomTab>
-        tabs={[
-          { id: 'chat', label: `💬 ${t('tribe.tabs.chat')}` },
-          { id: 'members', label: `👥 ${t('tribe.tabs.members')}` },
-          ...(isManager ? [{ id: 'invites' as const, label: `✉️ ${t('tribe.tabs.invites')}` }] : []),
-        ]}
-        active={tab}
-        onChange={setTab}
-      />
+      <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]">
+        {tabs.map((x) => (
+          <button
+            key={x.id}
+            type="button"
+            onClick={() => setTab(x.id)}
+            aria-pressed={activeTab === x.id}
+            className={`flex shrink-0 items-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${activeTab === x.id ? 'bg-blood-600 text-[#fdf6e3]' : 'border border-night-600/60 bg-night-900/40 text-moon-200/65'}`}
+          >
+            {x.label}
+            {x.badge !== undefined && <Dot n={x.badge} />}
+          </button>
+        ))}
+      </div>
 
-      {tab === 'chat' && <TribeChat tribe={tribe} />}
-      {tab === 'members' && <MembersView tribe={tribe} detail={detail} reload={async () => { await loadDetail(); await refresh() }} goInvite={() => setTab('invites')} />}
-      {tab === 'invites' && isManager && <InvitesView detail={detail} reload={loadDetail} />}
+      {activeTab === 'village' && (
+        detail ? (
+          <VillageView tribe={tribe} members={detail.members} onlineIds={onlineIds} selfId={user?.id} onSelect={setSelected} />
+        ) : (
+          <div className="h-72 animate-pulse rounded-3xl bg-night-900/40" />
+        )
+      )}
+      {activeTab === 'chat' && <TribeChat tribe={tribe} />}
+      {activeTab === 'members' && <MembersView tribe={tribe} detail={detail} onlineIds={onlineIds} onSelect={setSelected} goInvite={() => setTab('manage')} />}
+      {activeTab === 'manage' && isManager && <ManageView detail={detail} reload={reloadAll} />}
+      {activeTab === 'friends' && <FriendsPanel />}
       <ErrorText>{error}</ErrorText>
+
+      <MemberSheet tribe={tribe} member={selected} onlineIds={onlineIds} onClose={() => setSelected(null)} reload={reloadAll} />
 
       <Modal open={menuOpen} onClose={() => setMenuOpen(false)} title={tribe.name}>
         <div className="flex flex-col gap-2">
@@ -306,30 +557,92 @@ function TribeRoom({ tribe, refresh }: { tribe: TribeInfo; refresh: () => Promis
 }
 
 // ---------------------------------------------------------------------------
-// Membres
+// Fiche d'un membre (touche une maison du village ou une ligne de la liste)
 // ---------------------------------------------------------------------------
-function MembersView({ tribe, detail, reload, goInvite }: { tribe: TribeInfo; detail: TribeDetail | null; reload: () => Promise<void>; goInvite: () => void }) {
+function MemberSheet({ tribe, member, onlineIds, onClose, reload }: { tribe: TribeInfo; member: TribeMember | null; onlineIds: Set<string>; onClose: () => void; reload: () => Promise<void> }) {
   const { t } = useLanguage()
   const { user } = useAuth()
-  const { onlineStatus } = usePresence()
-  const [target, setTarget] = useState<TribeMember | null>(null)
   const [confirm, setConfirm] = useState<'kick' | 'transfer' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const isChef = tribe.my_role === 'chef'
-  const isManager = isChef || tribe.my_role === 'sous_chef'
 
-  // Ce que mon rôle m'autorise à faire sur ce membre (le serveur revérifie tout).
-  const canManage = (m: TribeMember) => m.user_id !== user?.id && (isChef || (tribe.my_role === 'sous_chef' && m.role === 'membre'))
+  if (!member) return null
+  const manage = member.user_id !== user?.id && (isChef || (tribe.my_role === 'sous_chef' && member.role === 'membre'))
 
   async function run(fn: string, args: Record<string, unknown>) {
     setConfirm(null)
-    setTarget(null)
     setError(null)
     const { error: rpcError } = await supabase.rpc(fn, args)
-    if (rpcError) setError(rpcError.message)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    onClose()
     await reload()
   }
 
+  return (
+    <>
+      <Modal open={confirm === null} onClose={onClose} title={member.username}>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <Avatar config={member.avatar_config} icon={member.avatar_icon} name={member.username} className="h-16 w-16" />
+            <div>
+              <RoleBadge role={member.role} />
+              <p className="mt-1 flex items-center gap-1.5 text-xs text-moon-200/60">
+                <OnlineDot online={onlineIds.has(member.user_id)} /> {onlineIds.has(member.user_id) ? t('tribe.status.online') : t('tribe.status.offline')}
+                {member.muted && <span> · 🔇 {t('tribe.member.muted')}</span>}
+              </p>
+            </div>
+          </div>
+          {manage && (
+            <div className="flex flex-col gap-2">
+              {isChef && member.role !== 'sous_chef' && (
+                <Button variant="ghost" onClick={() => run('set_tribe_role', { p_user_id: member.user_id, p_role: 'sous_chef' })}>
+                  ⭐ {t('tribe.member.promote')}
+                </Button>
+              )}
+              {isChef && member.role === 'sous_chef' && (
+                <Button variant="ghost" onClick={() => run('set_tribe_role', { p_user_id: member.user_id, p_role: 'membre' })}>
+                  {t('tribe.member.demote')}
+                </Button>
+              )}
+              {isChef && (
+                <Button variant="ghost" onClick={() => setConfirm('transfer')}>
+                  👑 {t('tribe.member.transfer')}
+                </Button>
+              )}
+              <Button variant="ghost" onClick={() => run('mute_tribe_member', { p_user_id: member.user_id, p_hours: member.muted ? 0 : 24 })}>
+                {member.muted ? `🔊 ${t('tribe.member.unmute')}` : `🔇 ${t('tribe.member.mute')}`}
+              </Button>
+              <Button variant="ghost" onClick={() => setConfirm('kick')} className="!text-blood-400">
+                🚪 {t('tribe.member.kick')}
+              </Button>
+            </div>
+          )}
+          <ErrorText>{error}</ErrorText>
+        </div>
+      </Modal>
+      <ConfirmDialog
+        open={confirm !== null}
+        title={confirm === 'transfer' ? t('tribe.transfer.title') : t('tribe.kick.title')}
+        message={confirm === 'transfer' ? t('tribe.transfer.body', { name: member.username }) : t('tribe.kick.body', { name: member.username })}
+        confirmLabel={confirm === 'transfer' ? t('tribe.member.transfer') : t('tribe.member.kick')}
+        cancelLabel={t('common.cancel')}
+        onCancel={() => setConfirm(null)}
+        onConfirm={() => run(confirm === 'transfer' ? 'transfer_tribe_chief' : 'kick_tribe_member', { p_user_id: member.user_id })}
+      />
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Membres (liste)
+// ---------------------------------------------------------------------------
+function MembersView({ tribe, detail, onlineIds, onSelect, goInvite }: { tribe: TribeInfo; detail: TribeDetail | null; onlineIds: Set<string>; onSelect: (m: TribeMember) => void; goInvite: () => void }) {
+  const { t } = useLanguage()
+  const { user } = useAuth()
+  const isManager = tribe.my_role === 'chef' || tribe.my_role === 'sous_chef'
   if (!detail) return <div className="h-32 animate-pulse rounded-2xl bg-night-900/40" />
 
   return (
@@ -343,11 +656,11 @@ function MembersView({ tribe, detail, reload, goInvite }: { tribe: TribeInfo; de
         )}
       </div>
       {detail.members.map((m) => (
-        <div key={m.user_id} className="flex items-center gap-3 rounded-2xl border border-night-600/60 bg-night-900/50 px-3 py-2.5">
+        <button key={m.user_id} type="button" onClick={() => onSelect(m)} className="flex items-center gap-3 rounded-2xl border border-night-600/60 bg-night-900/50 px-3 py-2.5 text-left transition-colors hover:border-moon-400/30">
           <div className="relative">
             <Avatar config={m.avatar_config} icon={m.avatar_icon} name={m.username} className="h-10 w-10" />
             <span className="absolute -bottom-0.5 -right-0.5 rounded-full bg-night-950 p-0.5">
-              <OnlineDot online={!!onlineStatus[m.user_id]} />
+              <OnlineDot online={onlineIds.has(m.user_id)} />
             </span>
           </div>
           <div className="min-w-0 flex-1">
@@ -359,68 +672,17 @@ function MembersView({ tribe, detail, reload, goInvite }: { tribe: TribeInfo; de
               {m.muted && <span className="text-[10px] text-moon-200/45">🔇 {t('tribe.member.muted')}</span>}
             </div>
           </div>
-          {canManage(m) && (
-            <button type="button" onClick={() => setTarget(m)} aria-label={t('tribe.menu.title')} className="rounded-lg px-2 py-1 text-moon-200/50 hover:text-moon-200">
-              ⋯
-            </button>
-          )}
-        </div>
+          <span className="text-moon-200/30" aria-hidden="true">›</span>
+        </button>
       ))}
-      <ErrorText>{error}</ErrorText>
-
-      <Modal open={!!target && confirm === null} onClose={() => setTarget(null)} title={target?.username ?? ''}>
-        {target && (
-          <div className="flex flex-col gap-2">
-            {isChef && target.role !== 'sous_chef' && (
-              <Button variant="ghost" onClick={() => run('set_tribe_role', { p_user_id: target.user_id, p_role: 'sous_chef' })}>
-                ⭐ {t('tribe.member.promote')}
-              </Button>
-            )}
-            {isChef && target.role === 'sous_chef' && (
-              <Button variant="ghost" onClick={() => run('set_tribe_role', { p_user_id: target.user_id, p_role: 'membre' })}>
-                {t('tribe.member.demote')}
-              </Button>
-            )}
-            {isChef && (
-              <Button variant="ghost" onClick={() => setConfirm('transfer')}>
-                👑 {t('tribe.member.transfer')}
-              </Button>
-            )}
-            <Button variant="ghost" onClick={() => run('mute_tribe_member', { p_user_id: target.user_id, p_hours: target.muted ? 0 : 24 })}>
-              {target.muted ? `🔊 ${t('tribe.member.unmute')}` : `🔇 ${t('tribe.member.mute')}`}
-            </Button>
-            <Button variant="ghost" onClick={() => setConfirm('kick')} className="!text-blood-400">
-              🚪 {t('tribe.member.kick')}
-            </Button>
-          </div>
-        )}
-      </Modal>
-      <ConfirmDialog
-        open={confirm !== null && !!target}
-        title={confirm === 'transfer' ? t('tribe.transfer.title') : t('tribe.kick.title')}
-        message={confirm === 'transfer' ? t('tribe.transfer.body', { name: target?.username ?? '' }) : t('tribe.kick.body', { name: target?.username ?? '' })}
-        confirmLabel={confirm === 'transfer' ? t('tribe.member.transfer') : t('tribe.member.kick')}
-        cancelLabel={t('common.cancel')}
-        onCancel={() => setConfirm(null)}
-        onConfirm={() => target && run(confirm === 'transfer' ? 'transfer_tribe_chief' : 'kick_tribe_member', { p_user_id: target.user_id })}
-      />
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Invitations (chef et sous-chefs)
+// Invitations et demandes d'adhésion (chef et sous-chefs)
 // ---------------------------------------------------------------------------
-function useDebounced<T>(value: T, delay: number): T {
-  const [debounced, setDebounced] = useState(value)
-  useEffect(() => {
-    const id = setTimeout(() => setDebounced(value), delay)
-    return () => clearTimeout(id)
-  }, [value, delay])
-  return debounced
-}
-
-function InvitesView({ detail, reload }: { detail: TribeDetail | null; reload: () => Promise<void> }) {
+function ManageView({ detail, reload }: { detail: TribeDetail | null; reload: () => Promise<void> }) {
   const { t } = useLanguage()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<TribeCandidate[] | null>(null)
@@ -457,11 +719,38 @@ function InvitesView({ detail, reload }: { detail: TribeDetail | null; reload: (
     await Promise.all([search(debounced), reload()])
   }
 
+  async function answer(id: string, accept: boolean) {
+    setBusy(id)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('respond_join_request', { p_request_id: id, p_accept: accept })
+    setBusy(null)
+    if (rpcError) setError(rpcError.message)
+    await reload()
+  }
+
   const daysLeft = (iso: string) => Math.max(1, Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000))
   const left = detail ? Math.max(detail.invites_limit - detail.invites_today, 0) : null
 
   return (
     <div className="flex flex-col gap-3">
+      {detail && detail.requests_in.length > 0 && (
+        <div className="flex flex-col gap-2 rounded-2xl border border-amber-400/30 bg-amber-400/5 p-3">
+          <p className={sectionLabel}>{t('tribe.request.incoming', { n: detail.requests_in.length })}</p>
+          {detail.requests_in.map((r) => (
+            <div key={r.id} className="flex items-center gap-3 rounded-xl bg-night-900/60 px-3 py-2.5">
+              <Avatar config={r.avatar_config} icon={r.avatar_icon} name={r.username} className="h-10 w-10" />
+              <p className="min-w-0 flex-1 truncate text-sm font-semibold text-moon-200">{r.username}</p>
+              <button type="button" disabled={busy === r.id} onClick={() => answer(r.id, true)} className="rounded-lg bg-emerald-600/80 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">
+                {t('tribe.request.accept')}
+              </button>
+              <button type="button" disabled={busy === r.id} onClick={() => answer(r.id, false)} aria-label={t('tribe.request.decline')} className="px-1 text-moon-200/40 hover:text-moon-200">
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`🔍 ${t('tribe.invite.search')}`} className={fieldCls} />
       {left !== null && detail && (
         <p className="text-[11px] text-moon-200/45">

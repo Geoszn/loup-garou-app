@@ -103,7 +103,7 @@ export function AccountMenu({
           <MenuLink to="/compte" onNavigate={() => setOpen(false)} icon="⚙️" label={t('accountMenu.myAccount')} />
           <MenuLink to="/stats" onNavigate={() => setOpen(false)} icon="📊" label={t('accountMenu.stats')} />
           <MenuLink
-            to="/amis"
+            to="/tribu?tab=amis"
             onNavigate={() => setOpen(false)}
             icon="👥"
             label={t('accountMenu.friends')}

@@ -6,16 +6,21 @@ import { cachedRpc } from '../lib/rpcCache'
 import { homeSection } from '../lib/homeBootstrap'
 import { BottomNav } from './BottomNav'
 import { useMyQuests } from '../hooks/useMyQuests'
+import { useTribeSummary } from '../hooks/useTribeSummary'
+import { tribeAlertCount } from '../lib/tribe'
 
-/** Cadre commun des pages principales (Accueil, Récompenses, Jouer, Amis,
- * Profil) : la barre de navigation du bas, avec le nombre de demandes d'amis
- * en attente et l'indicateur « récompense à récupérer ». Les pages gardent leur
+/** Cadre commun des pages principales (Accueil, Récompenses, Jouer, Tribu,
+ * Profil) : la barre de navigation du bas, avec la pastille de la tribu (messages
+ * non lus, invitations, demandes) et l'indicateur « récompense à récupérer ». Les pages gardent leur
  * propre mise en page ; l'espace du bas leur est réservé ici. */
 export function AppShell() {
   const { user } = useAuth()
   const location = useLocation()
   const [pendingFriends, setPendingFriends] = useState(0)
   const { claimableCount, reload: reloadQuests } = useMyQuests()
+  // Pastille « Tribu » : messages non lus, invitations, demandes à traiter (une
+  // lecture légère toutes les 45 s tant que l'appli est visible) + demandes d'amis.
+  const { summary: tribeSummary } = useTribeSummary(true, 45000)
 
   useEffect(() => {
     if (!user) return
@@ -49,7 +54,7 @@ export function AppShell() {
     <>
       <Outlet />
       <div aria-hidden="true" className="h-24" />
-      <BottomNav pendingFriendCount={pendingFriends} claimable={claimableCount > 0} />
+      <BottomNav alertCount={pendingFriends + tribeAlertCount(tribeSummary)} claimable={claimableCount > 0} />
     </>
   )
 }

@@ -25,9 +25,9 @@ function Badge({ count }: { count: number }) {
 }
 
 /** Barre de navigation fixe, dans la zone du pouce : Accueil, Récompenses,
- * Jouer (bouton central), Amis, Profil. Chaque entrée est une page à part
+ * Jouer (bouton central), Tribu (les amis y sont un onglet secondaire), Profil. Chaque entrée est une page à part
  * entière. */
-export function BottomNav({ pendingFriendCount = 0, claimable = false }: { pendingFriendCount?: number; claimable?: boolean }) {
+export function BottomNav({ alertCount = 0, claimable = false }: { alertCount?: number; claimable?: boolean }) {
   const { t } = useLanguage()
   const { profile } = useAuth()
   const myAvatar = useMyAvatarConfig()
@@ -69,14 +69,13 @@ export function BottomNav({ pendingFriendCount = 0, claimable = false }: { pendi
           </NavLink>
         </div>
 
-        <NavLink to="/amis" className={cls}>
+        <NavLink to="/tribu" className={cls}>
           <Icon>
-            <circle cx="9" cy="8" r="3.2" />
-            <path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5" />
-            <path d="M16 5.2a3 3 0 0 1 0 5.6M18 14.4c1.7.6 2.8 2.2 3.2 4.6" />
+            <path d="M12 3l7 2.5v6c0 4.5-3 7.6-7 9.5-4-1.9-7-5-7-9.5v-6z" />
+            <path d="M12 8.5l1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.3-2.4 1.3.5-2.6-1.9-1.8 2.6-.4z" />
           </Icon>
-          {t('nav.friends')}
-          <Badge count={pendingFriendCount} />
+          {t('nav.tribe')}
+          <Badge count={alertCount} />
         </NavLink>
 
         <NavLink to="/profil" className={cls}>

@@ -7,6 +7,7 @@ import { TRIBE_MESSAGE_MAX, type TribeInfo, type TribeMessage } from '../../lib/
 import { Avatar } from '../Avatar'
 import { ErrorText } from '../ui'
 import { RoleBadge } from './TribeBits'
+import { notifyTribeSummaryChanged } from '../../hooks/useTribeSummary'
 
 const POLL_MS = 12000
 
@@ -38,7 +39,8 @@ export function TribeChat({ tribe }: { tribe: TribeInfo }) {
     setMessages(data as TribeMessage[])
     if (Date.now() - lastReadRef.current > 4000) {
       lastReadRef.current = Date.now()
-      void supabase.rpc('mark_tribe_read')
+      // Lu : la pastille « non lus » (barre du bas, accueil) se remet à jour.
+      void Promise.resolve(supabase.rpc('mark_tribe_read')).then(() => notifyTribeSummaryChanged())
     }
   }, [])
 

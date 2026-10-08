@@ -1,12 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { useGoBack } from '../hooks/useGoBack'
-import { useTribeSummary } from '../hooks/useTribeSummary'
-import { TribePanel } from '../components/tribe/TribePanel'
+import { Navigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { notifyFriendRequest } from '../lib/pushSubscription'
-import { Button, Card, ErrorText, Input, Label, Segmented, SuccessText } from '../components/ui'
-import { FullScreenLoader } from '../components/FullScreenLoader'
+import { Button, Card, ErrorText, Input, Label, SuccessText } from '../components/ui'
 import { AvatarIcon } from '../components/AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from '../components/Avatar'
@@ -43,13 +39,14 @@ interface Social {
   outgoing_requests: FriendRequest[]
 }
 
+/** La page Amis a rejoint la page Tribu (onglet « Amis ») : l'ancienne adresse y renvoie. */
 export default function Friends() {
-  const goBack = useGoBack('/dashboard')
+  return <Navigate to="/tribu?tab=amis" replace />
+}
+
+/** Les amis : codes, recherche, demandes et liste. Affiché dans l'onglet « Amis » de la page Tribu. */
+export function FriendsPanel() {
   const { t } = useLanguage()
-  const [params] = useSearchParams()
-  const [tab, setTab] = useState<'friends' | 'tribe'>(params.get('tab') === 'tribu' ? 'tribe' : 'friends')
-  const { summary: tribeSummary } = useTribeSummary()
-  const tribeBadge = (tribeSummary?.invites.length ?? 0) + (tribeSummary?.tribe?.unread ?? 0)
   const [social, setSocial] = useState<Social | null>(null)
   const [loading, setLoading] = useState(true)
   const [code, setCode] = useState('')
@@ -129,38 +126,11 @@ export default function Friends() {
     await load()
   }
 
-  if (loading || !social) return <FullScreenLoader />
+  if (loading || !social) return <div className="h-40 animate-pulse rounded-2xl bg-night-900/40" />
 
   return (
-    <div className="min-h-screen px-4 py-10">
-      <div className="mx-auto flex max-w-2xl flex-col gap-6">
-        <header className="flex items-center gap-3">
-          <Button variant="ghost" onClick={goBack} className="px-3.5 py-2 text-xs">
-            {t('common.back')}
-          </Button>
-          <h1 className="font-display text-2xl text-moon-200">{t('friends.title')}</h1>
-        </header>
-
-        <Segmented<'friends' | 'tribe'>
-          tabs={[
-            { id: 'friends', label: t('friends.title') },
-            {
-              id: 'tribe',
-              label: (
-                <span className="inline-flex items-center justify-center gap-1.5">
-                  🛡️ {t('tribe.tab')}
-                  {tribeBadge > 0 && <span className="rounded-full bg-blood-500 px-1.5 text-[10px] font-bold leading-4 text-[#fdf6e3]">{tribeBadge > 99 ? '99+' : tribeBadge}</span>}
-                </span>
-              ),
-            },
-          ]}
-          active={tab}
-          onChange={setTab}
-        />
-
-        {tab === 'tribe' && <TribePanel />}
-        {tab === 'friends' && (
-          <>
+    <>
+      <div className="flex flex-col gap-6">
 
         <Card>
           <h2 className="mb-1 font-display text-lg text-moon-200">{t('friends.search.title')}</h2>
@@ -308,8 +278,6 @@ export default function Friends() {
             </>
           )}
         </Card>
-          </>
-        )}
       </div>
       {openFriendId && (
         <PlayerProfileModal
@@ -322,7 +290,6 @@ export default function Friends() {
           }}
         />
       )}
-    </div>
+    </>
   )
 }
-

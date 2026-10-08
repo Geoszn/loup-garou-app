@@ -42,6 +42,7 @@ const Play = lazy(() => import('./pages/Play'))
 const Rewards = lazy(() => import('./pages/Rewards'))
 const Profile = lazy(() => import('./pages/Profile'))
 const Friends = lazy(() => import('./pages/Friends'))
+const Tribe = lazy(() => import('./pages/Tribe'))
 const Lobby = lazy(() => import('./pages/Lobby'))
 const SpectateGame = lazy(() => import('./pages/SpectateGame'))
 // GameRoom entraîne avec lui tout le SDK vocal Daily.co/WebRTC (le plus
@@ -151,6 +152,14 @@ export default function App() {
           element={
             <Suspense fallback={<FullScreenLoader />}>
               <Friends />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/tribu"
+          element={
+            <Suspense fallback={<FullScreenLoader />}>
+              <Tribe />
             </Suspense>
           }
         />

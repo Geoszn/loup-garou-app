@@ -33,6 +33,16 @@ export const TRIBE_COLORS = [
 ] as const
 export type TribeColor = (typeof TRIBE_COLORS)[number]['id']
 
+// Teinte du toit des maisons du village (la tribu à ses couleurs).
+export const COLOR_HEX: Record<string, string> = {
+  amber: '#c98a1a',
+  sky: '#3b82c4',
+  emerald: '#2f9e6a',
+  blood: '#b8392e',
+  violet: '#7c5cc4',
+  pink: '#d6458f',
+}
+
 export const emblemIcon = (id: string) => TRIBE_EMBLEMS.find((e) => e.id === id)?.icon ?? '🛡️'
 export const colorGradient = (id: string) => TRIBE_COLORS.find((c) => c.id === id)?.gradient ?? TRIBE_COLORS[0].gradient
 
@@ -44,11 +54,46 @@ export interface TribeInfo {
   motto: string | null
   emblem: TribeEmblem
   color: TribeColor
+  code: string
+  accepting_requests: boolean
   my_role: TribeRole
   muted_until: string | null
   max: number
   member_count: number
   unread: number
+  // Demandes d'adhésion à traiter (0 si je ne suis ni chef ni sous-chef).
+  pending_requests: number
+}
+
+export interface TribeRequestOut {
+  id: string
+  tribe_name: string
+  emblem: TribeEmblem
+  color: TribeColor
+  expires_at: string
+}
+
+export interface TribeRequestIn {
+  id: string
+  user_id: string
+  username: string
+  avatar_icon: string | null
+  avatar_config?: unknown
+  created_at: string
+  expires_at: string
+}
+
+export interface TribeSearchResult {
+  id: string
+  name: string
+  motto: string | null
+  emblem: TribeEmblem
+  color: TribeColor
+  member_count: number
+  full: boolean
+  accepting: boolean
+  requested: boolean
+  request_id: string | null
 }
 
 export interface TribeInviteIn {
@@ -64,6 +109,14 @@ export interface TribeInviteIn {
 export interface TribeSummary {
   tribe: TribeInfo | null
   invites: TribeInviteIn[]
+  my_requests?: TribeRequestOut[]
+}
+
+/** Nombre de « choses à voir » dans la tribu : messages non lus, invitations
+ * reçues, demandes à traiter. Alimente la pastille de la barre du bas. */
+export function tribeAlertCount(summary: TribeSummary | null): number {
+  if (!summary) return 0
+  return (summary.tribe ? summary.tribe.unread + summary.tribe.pending_requests : 0) + summary.invites.length
 }
 
 export interface TribeMember {
@@ -89,6 +142,7 @@ export interface TribeInviteOut {
 export interface TribeDetail {
   members: TribeMember[]
   invites_out: TribeInviteOut[]
+  requests_in: TribeRequestIn[]
   invites_today: number
   invites_limit: number
 }
