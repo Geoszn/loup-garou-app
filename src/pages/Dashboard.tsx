@@ -24,6 +24,7 @@ import { useActiveBanners } from '../hooks/useActiveBanners'
 import { useMySeason } from '../hooks/useMySeason'
 import { SeasonTrack } from '../components/SeasonTrack'
 import { LiveVillage } from '../components/LiveVillage'
+import { TribeCard } from '../components/tribe/TribeCard'
 import { AfterIdle, LazyMount } from '../components/Deferred'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from '../components/Avatar'
@@ -247,6 +248,11 @@ export default function Dashboard() {
             privées), pour montrer d'emblée que le jeu est vivant et qu'on
             peut rejoindre — voir LiveVillage.tsx / migration 0213. */}
         <LiveVillage />
+
+        {/* Ma tribu (migration 0222) : une lecture légère, montée après l'essentiel. */}
+        <AfterIdle delay={1200}>
+          <TribeCard />
+        </AfterIdle>
 
         {/* Espace bannière (événements ET bannières du tableau de bord admin,
             voir migration 0202) : juste sous la carte du joueur, avant les

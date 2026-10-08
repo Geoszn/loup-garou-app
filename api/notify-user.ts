@@ -73,6 +73,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
+
+  // Invitation à une tribu (migration 0222). Même fonction que l'invitation à
+  // une partie : le plafond de fonctions serverless est déjà atteint, on évite
+  // d'en ajouter une. Même garde-fou : la ligne tribe_invites (envoyée PAR
+  // l'appelant, toujours en attente) est revérifiée côté serveur, et le texte
+  // est reconstruit ici à partir de données vérifiées.
+  if (body?.type === 'tribe_invite') {
+    const inviteId = body.inviteId
+    if (typeof inviteId !== 'string') {
+      res.status(400).json({ error: 'Requête invalide.' })
+      return
+    }
+    const service = createClient(supabaseUrl, serviceRoleKey)
+    const { data: invite } = await service
+      .from('tribe_invites')
+      .select('invited_user, tribe_id, expires_at')
+      .eq('id', inviteId)
+      .eq('invited_by', userData.user.id)
+      .eq('status', 'pending')
+      .maybeSingle()
+    if (!invite || new Date(invite.expires_at).getTime() <= Date.now()) {
+      res.status(403).json({ error: 'Invitation introuvable.' })
+      return
+    }
+    const [{ data: tribe }, { data: inviter }, { data: target }] = await Promise.all([
+      service.from('tribes').select('name').eq('id', invite.tribe_id).maybeSingle(),
+      service.from('profiles').select('username').eq('id', userData.user.id).maybeSingle(),
+      service.from('profiles').select('lang').eq('id', invite.invited_user).maybeSingle(),
+    ])
+    if (!tribe) {
+      res.status(404).json({ error: 'Tribu introuvable.' })
+      return
+    }
+    const who = inviter?.username || 'Un joueur'
+    const en = target?.lang === 'en'
+    const { sent, removed } = await sendPushToUser(service, invite.invited_user, {
+      title: en ? '🛡️ Tribe invitation' : '🛡️ Invitation à une tribu',
+      body: en ? `${who} invites you to join the tribe "${tribe.name}".` : `${who} t'invite à rejoindre la tribu « ${tribe.name} ».`,
+      url: '/amis?tab=tribu',
+    })
+    res.status(200).json({ sent, removed })
+    return
+  }
+
   const { gameId, friendId } = body ?? {}
   if (typeof gameId !== 'string' || typeof friendId !== 'string') {
     res.status(400).json({ error: 'Requête invalide.' })

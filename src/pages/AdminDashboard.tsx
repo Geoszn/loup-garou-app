@@ -18,6 +18,7 @@ import { Avatar } from '../components/Avatar'
 import { ACCESSORIES, DEFAULT_AVATAR_CONFIG, FACES, HAIRS, HEADWEAR, OUTFITS, type AvatarConfig } from '../lib/avatarParts'
 import { RARITY_STYLE, SKIN_CATEGORIES, type SkinCategory, type SkinRarity } from '../lib/skins'
 import { DailyUsageCard } from '../components/DailyUsageCard'
+import { AdminTribesTab } from '../components/tribe/AdminTribesTab'
 
 // ============================================================================
 // Dashboard administrateur. Volontairement en français uniquement, pas
@@ -36,7 +37,7 @@ import { DailyUsageCard } from '../components/DailyUsageCard'
 // l'écran "Accès refusé".
 // ============================================================================
 
-type Tab = 'stats' | 'users' | 'games' | 'content' | 'events' | 'seasons' | 'quests' | 'artifacts' | 'skins' | 'messages' | 'notifications' | 'security' | 'settings'
+type Tab = 'stats' | 'users' | 'games' | 'content' | 'events' | 'seasons' | 'quests' | 'artifacts' | 'skins' | 'messages' | 'notifications' | 'tribes' | 'security' | 'settings'
 
 const TAB_ITEMS: { id: Tab; label: string; icon: string; description: string }[] = [
   { id: 'stats', label: 'Vue d’ensemble', icon: '📊', description: 'Chiffres clés et raccourcis vers les autres sections.' },
@@ -101,6 +102,7 @@ const TAB_ITEMS: { id: Tab; label: string; icon: string; description: string }[]
   // automatiques liées à un événement de jeu existaient (invitation, ami,
   // partie lancée...), rien pour une annonce libre côté admin.
   { id: 'notifications', label: 'Notifications', icon: '📣', description: 'Composer et programmer des notifications push.' },
+  { id: 'tribes', label: 'Tribus', icon: '🛡️', description: 'Signalements de messages et liste des tribus.' },
   { id: 'security', label: 'Sécurité', icon: '🔒', description: 'Journal des tentatives d’accès et des actions sensibles.' },
   { id: 'settings', label: 'Réglages', icon: '⚙️', description: 'Réglages globaux de l’application.' },
 ]
@@ -118,7 +120,7 @@ function isTab(value: string | null): value is Tab {
 // titre les afficher.
 const NAV_GROUPS: { title: string; items: Tab[] }[] = [
   { title: 'Aperçu', items: ['stats'] },
-  { title: 'Communauté', items: ['users', 'security'] },
+  { title: 'Communauté', items: ['users', 'tribes', 'security'] },
   { title: 'Jeu', items: ['games', 'content', 'events'] },
   { title: 'Économie', items: ['seasons', 'quests', 'artifacts', 'skins'] },
   { title: 'Communication', items: ['messages', 'notifications'] },
@@ -544,6 +546,7 @@ export default function AdminDashboard() {
             {tab === 'skins' && <StoreSkinsTab />}
             {tab === 'messages' && <MessagesTab />}
             {tab === 'notifications' && <NotificationsTab />}
+            {tab === 'tribes' && <AdminTribesTab />}
             {tab === 'security' && <SecurityTab />}
             {tab === 'settings' && <SettingsTab />}
           </div>

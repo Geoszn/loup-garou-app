@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useGoBack } from '../hooks/useGoBack'
+import { useTribeSummary } from '../hooks/useTribeSummary'
+import { TribePanel } from '../components/tribe/TribePanel'
 import { supabase } from '../lib/supabase'
 import { notifyFriendRequest } from '../lib/pushSubscription'
-import { Button, Card, ErrorText, Input, Label, SuccessText } from '../components/ui'
+import { Button, Card, ErrorText, Input, Label, Segmented, SuccessText } from '../components/ui'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { AvatarIcon } from '../components/AvatarIcon'
 import { useLanguage } from '../i18n/LanguageContext'
@@ -43,6 +46,10 @@ interface Social {
 export default function Friends() {
   const goBack = useGoBack('/dashboard')
   const { t } = useLanguage()
+  const [params] = useSearchParams()
+  const [tab, setTab] = useState<'friends' | 'tribe'>(params.get('tab') === 'tribu' ? 'tribe' : 'friends')
+  const { summary: tribeSummary } = useTribeSummary()
+  const tribeBadge = (tribeSummary?.invites.length ?? 0) + (tribeSummary?.tribe?.unread ?? 0)
   const [social, setSocial] = useState<Social | null>(null)
   const [loading, setLoading] = useState(true)
   const [code, setCode] = useState('')
@@ -133,6 +140,27 @@ export default function Friends() {
           </Button>
           <h1 className="font-display text-2xl text-moon-200">{t('friends.title')}</h1>
         </header>
+
+        <Segmented<'friends' | 'tribe'>
+          tabs={[
+            { id: 'friends', label: t('friends.title') },
+            {
+              id: 'tribe',
+              label: (
+                <span className="inline-flex items-center justify-center gap-1.5">
+                  🛡️ {t('tribe.tab')}
+                  {tribeBadge > 0 && <span className="rounded-full bg-blood-500 px-1.5 text-[10px] font-bold leading-4 text-[#fdf6e3]">{tribeBadge > 99 ? '99+' : tribeBadge}</span>}
+                </span>
+              ),
+            },
+          ]}
+          active={tab}
+          onChange={setTab}
+        />
+
+        {tab === 'tribe' && <TribePanel />}
+        {tab === 'friends' && (
+          <>
 
         <Card>
           <h2 className="mb-1 font-display text-lg text-moon-200">{t('friends.search.title')}</h2>
@@ -280,6 +308,8 @@ export default function Friends() {
             </>
           )}
         </Card>
+          </>
+        )}
       </div>
       {openFriendId && (
         <PlayerProfileModal

@@ -91,6 +91,11 @@ export function notifyGameInvite(gameId: string, friendId: string): Promise<void
   return notifyBestEffort('/api/notify-user', { gameId, friendId })
 }
 
+/** Prévient un joueur qu'il est invité dans une tribu (voir api/notify-user.ts). */
+export function notifyTribeInvite(inviteId: string): Promise<void> {
+  return notifyBestEffort('/api/notify-user', { type: 'tribe_invite', inviteId })
+}
+
 /**
  * Prévient un joueur par notification push qu'il vient de recevoir une
  * demande d'ami (voir api/notify-friend-request.ts). Appelée juste après un
