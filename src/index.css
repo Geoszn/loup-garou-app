@@ -287,6 +287,10 @@ body {
   0%, 100% { box-shadow: 0 0 0 0 rgba(255, 207, 107, 0); }
   50% { box-shadow: 0 0 22px 4px rgba(255, 207, 107, 0.55); }
 }
+@keyframes tribe-cloud {
+  from { transform: translateX(-9px); }
+  to { transform: translateX(9px); }
+}
 @keyframes tribe-hop {
   0%, 100% { transform: translateY(0); }
   40% { transform: translateY(-7%); }
