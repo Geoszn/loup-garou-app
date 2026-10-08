@@ -181,7 +181,7 @@ function TribeLanding({
 
   async function cancelRequest(id: string) {
     setError(null)
-    const { error: rpcError } = await supabase.rpc('cancel_join_request', { p_request_id: id })
+    const { error: rpcError } = await supabase.rpc('cancel_tribe_join_request', { p_request_id: id })
     if (rpcError) setError(rpcError.message)
     await Promise.all([search(debounced), refresh()])
   }
@@ -722,7 +722,7 @@ function ManageView({ detail, reload }: { detail: TribeDetail | null; reload: ()
   async function answer(id: string, accept: boolean) {
     setBusy(id)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('respond_join_request', { p_request_id: id, p_accept: accept })
+    const { error: rpcError } = await supabase.rpc('respond_tribe_join_request', { p_request_id: id, p_accept: accept })
     setBusy(null)
     if (rpcError) setError(rpcError.message)
     await reload()

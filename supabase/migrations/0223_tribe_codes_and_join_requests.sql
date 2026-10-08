@@ -9,6 +9,10 @@
 --  * un joueur : 5 demandes en attente au plus, 10 par jour, valables 7 jours ;
 --  * dès qu'un joueur entre dans une tribu (par n'importe quel chemin), ses autres
 --    invitations et demandes en attente sont annulées (déclencheur).
+-- NB : les fonctions des demandes de tribu s'appellent cancel_tribe_join_request et
+-- respond_tribe_join_request : cancel_join_request / respond_join_request existent
+-- déjà pour les demandes d'entrée dans une PARTIE (migrations 0033/0101) et un
+-- « create or replace » du même nom les aurait écrasées.
 -- Rejouable sans risque.
 set search_path = public;
 
@@ -198,7 +202,7 @@ begin
 end;
 $$;
 
-create or replace function public.cancel_join_request(p_request_id uuid)
+create or replace function public.cancel_tribe_join_request(p_request_id uuid)
 returns void
 language sql
 security definer
@@ -208,7 +212,7 @@ as $$
   where id = p_request_id and user_id = auth.uid() and status = 'pending';
 $$;
 
-create or replace function public.respond_join_request(p_request_id uuid, p_accept boolean)
+create or replace function public.respond_tribe_join_request(p_request_id uuid, p_accept boolean)
 returns void
 language plpgsql
 security definer
@@ -420,9 +424,9 @@ revoke execute on function public.search_tribes(text) from public, anon;
 grant execute on function public.search_tribes(text) to authenticated;
 revoke execute on function public.request_join_tribe(uuid) from public, anon;
 grant execute on function public.request_join_tribe(uuid) to authenticated;
-revoke execute on function public.cancel_join_request(uuid) from public, anon;
-grant execute on function public.cancel_join_request(uuid) to authenticated;
-revoke execute on function public.respond_join_request(uuid, boolean) from public, anon;
-grant execute on function public.respond_join_request(uuid, boolean) to authenticated;
+revoke execute on function public.cancel_tribe_join_request(uuid) from public, anon;
+grant execute on function public.cancel_tribe_join_request(uuid) to authenticated;
+revoke execute on function public.respond_tribe_join_request(uuid, boolean) from public, anon;
+grant execute on function public.respond_tribe_join_request(uuid, boolean) to authenticated;
 revoke execute on function public.update_tribe(text, text, text, boolean) from public, anon;
 grant execute on function public.update_tribe(text, text, text, boolean) to authenticated;
