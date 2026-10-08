@@ -40,9 +40,17 @@ export function PracticeAssistant({ view, gameId }: { view: MyGameView; gameId: 
   const [hidden, setHidden] = useState<Set<string>>(new Set())
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Nuit dont la vision de la Voyante a déjà été lue (le joueur appuie sur « Continuer »).
+  const [seerAcked, setSeerAcked] = useState<number | null>(null)
   const status = view.game.status
   const step = view.game.night_step
   const night = view.game.night_number
+
+  // La Voyante vient de sonder : avec des bots, la nuit passerait en quelques secondes et
+  // le joueur n'aurait pas le temps de lire. On affiche donc le résultat et on met les bots
+  // en pause jusqu'à ce qu'il appuie sur « Continuer ».
+  const reveal = view.seer_reveals?.find((r) => r.night_number === night) ?? null
+  const pendingSeer = practice && reveal && seerAcked !== night && status !== 'ended' ? reveal : null
 
   useEffect(() => {
     let active = true
@@ -57,14 +65,14 @@ export function PracticeAssistant({ view, gameId }: { view: MyGameView; gameId: 
   // Les bots jouent leur étape dès qu'elle change, puis toutes les 2,5 s : ils attendent
   // le joueur quand c'est à lui d'agir, et enchaînent dès qu'il a fini.
   useEffect(() => {
-    if (!practice || status === 'ended' || status === 'lobby') return
+    if (!practice || status === 'ended' || status === 'lobby' || pendingSeer) return
     const tick = () => {
       if (document.visibilityState === 'visible') void supabase.rpc('practice_auto_play', { p_game_id: gameId })
     }
     tick()
     const id = setInterval(tick, 2500)
     return () => clearInterval(id)
-  }, [practice, status, step, night, gameId])
+  }, [practice, status, step, night, gameId, pendingSeer])
 
   if (!practice) return null
 
@@ -102,6 +110,8 @@ export function PracticeAssistant({ view, gameId }: { view: MyGameView; gameId: 
     )
   }
 
+  const seerTarget = pendingSeer ? view.players.find((p) => p.user_id === pendingSeer.target_id) : null
+
   const tip = tipFor(view)
   const tipKey = tip ? `${tip.key}:${night}:${step ?? ''}` : null
   const showTip = tip && tipKey && !hidden.has(tipKey)
@@ -109,7 +119,25 @@ export function PracticeAssistant({ view, gameId }: { view: MyGameView; gameId: 
   return (
     <div className="flex flex-col gap-2">
       <p className="mx-auto w-fit rounded-full border border-moon-400/40 bg-moon-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-moon-300">🎓 {t('practice.badge')}</p>
-      {showTip && (
+      {pendingSeer && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-amber-400/60 bg-night-800/95 p-4 text-center shadow-card" role="status">
+          <p className="text-3xl" aria-hidden="true">🔮</p>
+          <p className="font-display text-lg text-moon-200">
+            {pendingSeer.role === 'loup_garou'
+              ? t('practice.seer.wolf', { name: seerTarget?.display_name ?? '?' })
+              : t('practice.seer.notwolf', { name: seerTarget?.display_name ?? '?' })}
+          </p>
+          <p className="text-sm leading-relaxed text-moon-200/70">{t('practice.seer.hint')}</p>
+          <button
+            type="button"
+            onClick={() => setSeerAcked(night)}
+            className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-b from-blood-500 to-blood-700 px-4 py-3 text-sm font-semibold text-[#fdf6e3] shadow-blood-btn transition-all active:scale-[0.97]"
+          >
+            {t('practice.seer.continue')}
+          </button>
+        </div>
+      )}
+      {showTip && !pendingSeer && (
         <div className="flex items-start gap-3 rounded-2xl border border-moon-400/50 bg-night-800/95 p-3 shadow-card" role="status">
           <span className="text-2xl" aria-hidden="true">💡</span>
           <p className="min-w-0 flex-1 text-sm leading-relaxed text-moon-200/90">{t(tip.text)}</p>
