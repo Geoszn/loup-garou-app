@@ -23,6 +23,9 @@ export default function Privacy() {
           <strong>{t('privacy.s2.games.label')}</strong> {t('privacy.s2.games.text')}
         </p>
         <p>
+          <strong>{t('privacy.s2.tribe.label')}</strong> {t('privacy.s2.tribe.text')}
+        </p>
+        <p>
           <strong>{t('privacy.s2.voice.label')}</strong> {t('privacy.s2.voice.text')}
         </p>
         <p>

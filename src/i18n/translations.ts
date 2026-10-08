@@ -1877,6 +1877,24 @@ export const translations = {
   'tribe.chat.stickersRecent': { fr: 'Récents', en: 'Recent' },
   'tribe.chat.stickersMe': { fr: 'Moi', en: 'Me' },
   'tribe.chat.stickerLabel': { fr: 'Sticker', en: 'Sticker' },
+  'help.landing.tribesLink': { fr: 'Les tribus', en: 'Tribes' },
+  'help.category.tribes.title': { fr: 'Les tribus', en: 'Tribes' },
+  'help.category.tribes.subtitle': { fr: 'Village, chat, niveau, rôles et modération', en: 'Village, chat, level, roles and moderation' },
+  'help.tribes.what.title': { fr: 'Qu\'est-ce qu\'une tribu ?', en: 'What is a tribe?' },
+  'help.tribes.what.text': { fr: 'Une tribu réunit jusqu\'à 30 joueurs. Tu ne peux appartenir qu\'à une seule tribu à la fois. Chaque tribu a un nom, un blason, une devise et un code de 6 caractères à partager. Le chef la dirige, les sous-chefs l\'aident, les autres sont membres.', en: 'A tribe brings together up to 30 players. You can only belong to one tribe at a time. Each tribe has a name, a crest, a motto and a 6-character code to share. The chief leads it, deputies help, everyone else is a member.' },
+  'help.tribes.join.title': { fr: 'Rejoindre ou fonder une tribu', en: 'Joining or founding a tribe' },
+  'help.tribes.join.text': { fr: 'Tu peux être invité par le chef ou un sous-chef, ou chercher une tribu par son nom ou son code et demander à la rejoindre : le chef ou un sous-chef accepte ou refuse. Les invitations et les demandes expirent au bout de quelques jours.', en: 'You can be invited by the chief or a deputy, or search for a tribe by name or code and ask to join: the chief or a deputy accepts or declines. Invitations and requests expire after a few days.' },
+  'help.tribes.found.text': { fr: 'Fonder sa propre tribu demande le rang {{rank}} ({{pts}} points). Rejoindre une tribu est ouvert à tous.', en: 'Founding your own tribe requires the {{rank}} rank ({{pts}} points). Joining a tribe is open to everyone.' },
+  'help.tribes.village.title': { fr: 'Le village', en: 'The village' },
+  'help.tribes.village.text': { fr: 'Le village de la tribu flotte sur une île. Chaque membre y a sa case, dont l\'allure change avec son rang : tente, case de chaume, cabane de bois, maison de pierre, tour du sage, palais doré. Les petits losanges sous la porte indiquent le sous-palier. Une couronne marque le chef, une étoile les sous-chefs, une manette 🎮 ceux qui sont en partie. Touche une case pour voir son propriétaire, ouvrir son profil ou rejoindre sa partie. Fais glisser pour te déplacer, pince ou utilise + et − pour zoomer.', en: 'The tribe\'s village floats on an island. Each member has a hut there whose look changes with their rank: tent, thatched hut, wooden cabin, stone house, sage tower, golden palace. The small diamonds under the door show the sub-tier. A crown marks the chief, a star the deputies, a 🎮 icon those who are in a game. Tap a hut to see its owner, open their profile or join their game. Drag to move around, pinch or use + and − to zoom.' },
+  'help.tribes.level.title': { fr: 'Le niveau de la tribu', en: 'The tribe level' },
+  'help.tribes.level.text': { fr: 'La tribu gagne de l\'expérience quand ses membres jouent ensemble : chaque partie terminée avec au moins 6 joueurs rapporte 10 XP, plus 10 XP par autre membre de la tribu présent dans la partie (jusqu\'à +40), dans la limite de 200 XP par jour. Il y a 10 niveaux.', en: 'The tribe earns experience when its members play together: every finished game with at least 6 players earns 10 XP, plus 10 XP for each other tribe member in the game (up to +40), capped at 200 XP per day. There are 10 levels.' },
+  'help.tribes.chat.title': { fr: 'Le chat', en: 'The chat' },
+  'help.tribes.chat.text': { fr: 'Le chat de la tribu s\'ouvre en plein écran. Appui long sur un message : réagir avec un emoji, répondre, copier ou signaler. Glisse un message vers la droite pour y répondre, et touche la citation pour retrouver le message d\'origine. Le bouton 🎭 ouvre les stickers : ce sont ton propre avatar avec une humeur et une légende. Seuls les 200 derniers messages sont conservés.', en: 'The tribe chat opens full screen. Long-press a message to react with an emoji, reply, copy or report. Swipe a message to the right to reply, and tap the quote to jump back to the original message. The 🎭 button opens stickers: your own avatar with a mood and a caption. Only the last 200 messages are kept.' },
+  'help.tribes.moderation.title': { fr: 'Rôles et modération', en: 'Roles and moderation' },
+  'help.tribes.moderation.text': { fr: 'Le chef et les sous-chefs peuvent inviter, traiter les demandes, rendre un membre muet pendant 24 h ou l\'exclure. Le chef peut aussi nommer des sous-chefs, transmettre la tribu ou la dissoudre. Tout membre peut signaler un message : l\'équipe du jeu l\'examine. Un message, un nom ou une tribu contraire aux règles de bonne conduite peut être supprimé.', en: 'The chief and deputies can invite, handle requests, mute a member for 24 h or remove them. The chief can also appoint deputies, hand over the tribe or dissolve it. Any member can report a message: the game team reviews it. A message, name or tribe that breaks the rules of good conduct may be removed.' },
+  'rules.ghost.title': { fr: 'Pronostic des fantômes', en: 'Ghost predictions' },
+  'rules.ghost.text': { fr: 'Quand tu es mort, tu peux miser des Loup Coins (5, 10, 25 ou 50) sur le camp qui va gagner. La cote est fixe, calculée à partir des informations publiques (joueurs en vie, loups restants) avec une petite marge. La mise est retenue d\'avance, puis remboursée si la partie est annulée ou si tu reviens à la vie. Les pronostics sont désactivés dans les parties avec des bots ou à moins de 6 joueurs, et tes gains nets sont plafonnés à 150 pièces par 24 h.', en: 'Once you are dead, you can stake Loup Coins (5, 10, 25 or 50) on the side that will win. The odds are fixed, computed from public information (players alive, wolves left) with a small margin. Your stake is held in advance, then refunded if the game is cancelled or you come back to life. Predictions are disabled in games with bots or fewer than 6 players, and your net winnings are capped at 150 coins per 24 h.' },
   'tribe.chat.back': { fr: 'Retour', en: 'Back' },
   'tribe.chat.reply': { fr: 'Répondre', en: 'Reply' },
   'tribe.chat.copy': { fr: 'Copier', en: 'Copy' },
@@ -1956,6 +1974,14 @@ export const translations = {
   'tribe.sheet.since': { fr: 'Dans la tribu depuis le {{date}}', en: 'In the tribe since {{date}}' },
   'tribe.sheet.profile': { fr: 'Profil complet', en: 'Full profile' },
   'tribe.sheet.streak': { fr: 'Meilleure série : {{n}}', en: 'Best streak: {{n}}' },
+  'announce.tribes.badge': { fr: 'Nouveauté', en: 'New' },
+  'announce.tribes.title': { fr: 'Les tribus arrivent !', en: 'Tribes are here!' },
+  'announce.tribes.body': { fr: 'Rejoins une tribu de 30 joueurs au plus, discute avec elle et faites grandir votre village ensemble.', en: 'Join a tribe of up to 30 players, chat with it and grow your village together.' },
+  'announce.tribes.b1': { fr: 'Un village sur une île : une case par membre, qui évolue avec le rang', en: 'A village on an island: one hut per member, evolving with rank' },
+  'announce.tribes.b2': { fr: 'Un chat plein écran : réponses, réactions et stickers à ta tête', en: 'A full-screen chat: replies, reactions and stickers with your own face' },
+  'announce.tribes.b3': { fr: 'Un niveau de tribu qui monte quand vous jouez ensemble', en: 'A tribe level that rises when you play together' },
+  'announce.tribes.cta': { fr: 'Découvrir les tribus', en: 'Discover tribes' },
+  'announce.tribes.later': { fr: 'Plus tard', en: 'Later' },
   'announce.store.badge': { fr: 'Nouveau', en: 'New' },
   'announce.store.title': { fr: '18 nouveaux articles à découvrir !', en: '18 new items to discover!' },
   'announce.store.body': {
@@ -2507,7 +2533,7 @@ export const translations = {
   // --- Pages légales : chrome partagé (LegalLayout.tsx) -------------------------
   'legal.backHome': { fr: "← Retour à l'accueil", en: '← Back to home' },
   'legal.updatedAt': { fr: 'Dernière mise à jour : {{date}}', en: 'Last updated: {{date}}' },
-  'legal.updatedAtDate': { fr: '24 juillet 2026', en: 'July 24, 2026' },
+  'legal.updatedAtDate': { fr: '8 octobre 2026', en: 'October 8, 2026' },
 
   // --- CGU (Terms.tsx) ----------------------------------------------------------
   'terms.title': { fr: "📜 Conditions générales d'utilisation", en: '📜 Terms of Use' },
@@ -2522,8 +2548,8 @@ export const translations = {
   },
   'terms.s2.title': { fr: '2. Description du service', en: '2. Description of the service' },
   'terms.s2.p1': {
-    fr: 'L\'application permet de jouer en ligne, entre amis, à une adaptation numérique du jeu de société « Les Loups-Garous de Thiercelieux » : création de salons de partie, distribution automatique des rôles, gestion des phases de jour et de nuit, chat texte par salon et chat vocal en direct.',
-    en: 'The app lets you play online with friends, a digital adaptation of the board game "Les Loups-Garous de Thiercelieux" (Werewolves of Miller\'s Hollow): creating game lobbies, automatic role distribution, managing day and night phases, per-room text chat, and live voice chat.',
+    fr: 'L\'application permet de jouer en ligne, entre amis, à une adaptation numérique du jeu de société « Les Loups-Garous de Thiercelieux » : création de salons de partie, distribution automatique des rôles, gestion des phases de jour et de nuit, chat texte par salon, chat vocal en direct et tribus (village, chat de groupe, niveau de tribu).',
+    en: 'The app lets you play online with friends, a digital adaptation of the board game "Les Loups-Garous de Thiercelieux" (Werewolves of Miller\'s Hollow): creating game lobbies, automatic role distribution, managing day and night phases, per-room text chat, live voice chat, and tribes (village, group chat, tribe level).',
   },
   'terms.s2.p2': {
     fr: "Il s'agit d'une adaptation réalisée par un fan, développée de manière indépendante et sans lien avec les ayants droit du jeu original. Le nom « Loups-Garous de Thiercelieux » et le concept de jeu appartiennent à leurs créateurs et éditeurs respectifs ; en cas de demande de leur part, l'éditeur s'engage à faire évoluer ou retirer l'application. Le code, les textes, l'identité visuelle et les éléments graphiques propres à l'application restent la propriété de l'éditeur.",
@@ -2551,6 +2577,10 @@ export const translations = {
   'terms.s5.p1': {
     fr: "Vous restez seul responsable des messages que vous publiez dans les salons de discussion. L'éditeur ne les modère pas a priori (les échanges font partie du jeu) mais peut les supprimer ou clôturer une partie en cas de signalement fondé ou de contenu manifestement illicite.",
     en: 'You remain solely responsible for the messages you post in chat rooms. The publisher does not moderate them in advance (the exchanges are part of the game) but may delete them or close a game in the event of a substantiated report or clearly unlawful content.',
+  },
+  'terms.s5.p2': {
+    fr: "Tribus : le chef et les sous-chefs d'une tribu peuvent rendre un membre muet ou l'exclure, et tout membre peut signaler un message. L'éditeur peut supprimer un message, retirer un membre, renommer ou dissoudre une tribu dont le nom, la devise, le blason ou les échanges sont contraires aux règles de bonne conduite. Fonder une tribu est réservé aux joueurs ayant atteint un certain rang.",
+    en: 'Tribes: the chief and deputies of a tribe may mute or remove a member, and any member may report a message. The publisher may delete a message, remove a member, rename or dissolve a tribe whose name, motto, crest or exchanges breach the rules of good conduct. Founding a tribe is reserved for players who have reached a certain rank.',
   },
   'terms.s6.title': { fr: '6. Disponibilité et évolutions du service', en: '6. Availability and evolution of the service' },
   'terms.s6.p1': {
@@ -2608,8 +2638,13 @@ export const translations = {
   },
   'privacy.s2.games.label': { fr: 'Parties jouées :', en: 'Games played:' },
   'privacy.s2.games.text': {
-    fr: 'rôles attribués, votes, actions nocturnes, messages échangés dans les salons de discussion (village, loups, cimetière), et un historique de statistiques (parties jouées, victoires, rôles endossés) rattaché à votre compte.',
-    en: 'assigned roles, votes, night actions, messages exchanged in chat rooms (village, wolves, graveyard), and a statistics history (games played, wins, roles played) attached to your account.',
+    fr: 'rôles attribués, votes, actions nocturnes, messages échangés dans les salons de discussion (village, loups, cimetière), pronostics des fantômes (mises en Loup Coins), et un historique de statistiques (parties jouées, victoires, rôles endossés) rattaché à votre compte.',
+    en: 'assigned roles, votes, night actions, messages exchanged in chat rooms (village, wolves, graveyard), ghost predictions (Loup Coins stakes), and a statistics history (games played, wins, roles played) attached to your account.',
+  },
+  'privacy.s2.tribe.label': { fr: 'Tribus :', en: 'Tribes:' },
+  'privacy.s2.tribe.text': {
+    fr: 'appartenance à une tribu et rôle (chef, sous-chef, membre), invitations et demandes d’adhésion, messages, réponses, réactions et stickers échangés dans le chat de la tribu, signalements de messages et expérience cumulée par la tribu. Votre pseudo, votre avatar, votre rang et vos statistiques publiques sont visibles des membres de votre tribu ; les messages du chat ne sont visibles que de ses membres.',
+    en: 'tribe membership and role (chief, deputy, member), invitations and join requests, messages, replies, reactions and stickers exchanged in the tribe chat, message reports and the experience earned by the tribe. Your username, avatar, rank and public statistics are visible to the members of your tribe; chat messages are only visible to its members.',
   },
   'privacy.s2.voice.label': { fr: 'Chat vocal :', en: 'Voice chat:' },
   'privacy.s2.voice.text': {
@@ -2655,8 +2690,8 @@ export const translations = {
   },
   'privacy.s6.title': { fr: '6. Combien de temps vos données sont-elles conservées ?', en: '6. How long is your data kept?' },
   'privacy.s6.p1': {
-    fr: "Les données de votre compte (profil, statistiques, amis) sont conservées tant que votre compte existe. Les données d'une partie (rôles, votes, messages) restent rattachées à cette partie et à votre compte ; il n'existe pas aujourd'hui de purge automatique des anciennes parties. Vous pouvez demander la suppression de votre compte et des données associées à tout moment (voir section 9).",
-    en: 'Your account data (profile, statistics, friends) is kept for as long as your account exists. Data from a game (roles, votes, messages) remains attached to that game and to your account; there is currently no automatic purge of old games. You can request the deletion of your account and associated data at any time (see section 9).',
+    fr: "Les données de votre compte (profil, statistiques, amis) sont conservées tant que votre compte existe. Les données d'une partie (rôles, votes, messages) restent rattachées à cette partie et à votre compte ; il n'existe pas aujourd'hui de purge automatique des anciennes parties. Le chat d'une tribu ne garde que ses 200 derniers messages : les plus anciens sont effacés automatiquement ; un message signalé est conservé avec le signalement tant que l'équipe de modération en a besoin. Vous pouvez demander la suppression de votre compte et des données associées à tout moment (voir section 9).",
+    en: 'Your account data (profile, statistics, friends) is kept for as long as your account exists. Data from a game (roles, votes, messages) remains attached to that game and to your account; there is currently no automatic purge of old games. A tribe chat only keeps its last 200 messages: older ones are erased automatically; a reported message is kept with the report for as long as the moderation team needs it. You can request the deletion of your account and associated data at any time (see section 9).',
   },
   'privacy.s7.title': { fr: '7. Sécurité', en: '7. Security' },
   'privacy.s7.p1': {

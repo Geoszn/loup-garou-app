@@ -28,6 +28,7 @@ export default function Terms() {
 
       <LegalSection title={t('terms.s5.title')}>
         <p>{t('terms.s5.p1')}</p>
+        <p>{t('terms.s5.p2')}</p>
       </LegalSection>
 
       <LegalSection title={t('terms.s6.title')}>

@@ -5,7 +5,8 @@ import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
 import { ROLES, ROLE_ORDER, roleTeamLabel } from '../lib/roles'
-import { RANK_TIERS } from '../lib/ranks'
+import { RANK_TIERS, tierForPoints, tierLabel } from '../lib/ranks'
+import { TRIBE_CREATE_MIN_POINTS } from '../lib/tribe'
 import { Button, Card } from '../components/ui'
 import { RankTierBadge } from '../components/RankTierBadge'
 import { LoupCoinIcon } from '../components/LoupCoinIcon'
@@ -33,10 +34,10 @@ export default function Help() {
   // Quelle catégorie s'ouvre en arrivant sur l'écran Règles — le lien rapide
   // "Classement & Loup Coins" de l'accueil y renvoie directement déplié,
   // plutôt que de forcer un second clic une fois sur place.
-  const [rulesFocus, setRulesFocus] = useState<'rules' | 'ranking'>('rules')
+  const [rulesFocus, setRulesFocus] = useState<'rules' | 'ranking' | 'tribes'>('rules')
   const [tutorialOpen, setTutorialOpen] = useState(false)
 
-  function openRules(focus: 'rules' | 'ranking') {
+  function openRules(focus: 'rules' | 'ranking' | 'tribes') {
     setRulesFocus(focus)
     setScreen('rules')
   }
@@ -96,6 +97,14 @@ export default function Help() {
                 <span className="flex items-center gap-2">🏆 {t('help.landing.rankingLink')}</span>
                 <span className="text-moon-200/30">›</span>
               </button>
+              <button
+                type="button"
+                onClick={() => openRules('tribes')}
+                className="flex items-center justify-between gap-3 py-3.5 text-left text-sm text-moon-200/75 transition-colors hover:text-moon-200"
+              >
+                <span className="flex items-center gap-2">🛡️ {t('help.landing.tribesLink')}</span>
+                <span className="text-moon-200/30">›</span>
+              </button>
               <div className="flex items-center justify-between gap-3 py-3.5 text-sm text-moon-200/75">
                 <span className="flex items-center gap-2">
                   💬 <FeedbackButton />
@@ -121,6 +130,15 @@ export default function Help() {
               defaultOpen={rulesFocus === 'ranking'}
             >
               <RankingContent />
+            </HelpCategory>
+
+            <HelpCategory
+              emoji="🛡️"
+              title={t('help.category.tribes.title')}
+              subtitle={t('help.category.tribes.subtitle')}
+              defaultOpen={rulesFocus === 'tribes'}
+            >
+              <TribesContent />
             </HelpCategory>
           </>
         )}
@@ -232,6 +250,42 @@ function RulesContent() {
         <h3 className="mb-1.5 font-display text-sm text-moon-300">{t('rules.victory.title')}</h3>
         <p>{t('rules.victory.text')}</p>
       </div>
+
+      <div>
+        <h3 className="mb-1.5 font-display text-sm text-moon-300">👻 {t('rules.ghost.title')}</h3>
+        <p>{t('rules.ghost.text')}</p>
+      </div>
+    </>
+  )
+}
+
+/** Les tribus : mêmes chiffres que le serveur (30 membres, 200 messages, niveaux, rang pour fonder). */
+function TribesContent() {
+  const { t } = useLanguage()
+  const sections: { title: TranslationKey; text: ReactNode }[] = [
+    { title: 'help.tribes.what.title', text: t('help.tribes.what.text') },
+    {
+      title: 'help.tribes.join.title',
+      text: (
+        <>
+          <p>{t('help.tribes.join.text')}</p>
+          <p className="mt-2">{t('help.tribes.found.text', { rank: tierLabel(tierForPoints(TRIBE_CREATE_MIN_POINTS).id, t), pts: TRIBE_CREATE_MIN_POINTS })}</p>
+        </>
+      ),
+    },
+    { title: 'help.tribes.village.title', text: t('help.tribes.village.text') },
+    { title: 'help.tribes.level.title', text: t('help.tribes.level.text') },
+    { title: 'help.tribes.chat.title', text: t('help.tribes.chat.text') },
+    { title: 'help.tribes.moderation.title', text: t('help.tribes.moderation.text') },
+  ]
+  return (
+    <>
+      {sections.map((s) => (
+        <div key={s.title}>
+          <h3 className="mb-1.5 font-display text-sm text-moon-300">{t(s.title)}</h3>
+          {typeof s.text === 'string' ? <p>{s.text}</p> : s.text}
+        </div>
+      ))}
     </>
   )
 }

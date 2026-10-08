@@ -8,6 +8,7 @@ import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from './Avatar'
 import { useMyAvatarConfig } from './AvatarEditor'
 import { LoupCoinIcon } from './LoupCoinIcon'
+import { Hut } from './tribe/HutArt'
 import type { AvatarConfig } from '../lib/avatarParts'
 import type { MySeason } from '../types/season'
 
@@ -19,6 +20,9 @@ export const AVATARS_ANNOUNCEMENT_KEY = 'avatars-2026-09'
  * jamais réutilisée d'une saison à l'autre : chaque nouvelle saison doit
  * pouvoir re-déclencher sa propre annonce, contrairement à AVATARS_ANNOUNCEMENT_KEY
  * ci-dessus qui ne concerne qu'un seul évènement figé. */
+/** Annonce de l'arrivée des tribus (octobre 2026) : ne jamais la réutiliser. */
+export const TRIBES_ANNOUNCEMENT_KEY = 'tribes-launch-2026-10'
+
 /** Annonce de la collection boutique Octobre Rose (migration 0218). */
 export const STORE_ANNOUNCEMENT_KEY = 'store-pink-october-2026'
 
@@ -43,7 +47,7 @@ interface Compensation {
   quests_count: number
 }
 
-type Slide = 'avatars' | 'compensation' | 'season' | 'store'
+type Slide = 'avatars' | 'compensation' | 'season' | 'store' | 'tribes'
 
 const SHOWCASE: AvatarConfig[] = [
   { skin: 4, hair: 'afro', outfit: 'cloak', acc: 'glasses', head: 'none', face: 'round', bg: 3 },
@@ -51,6 +55,39 @@ const SHOWCASE: AvatarConfig[] = [
   { skin: 2, hair: 'fade', outfit: 'hunter', acc: 'none', head: 'hat', face: 'square', bg: 1 },
   { skin: 5, hair: 'gele', outfit: 'boubou', acc: 'hoops', head: 'none', face: 'heart', bg: 2 },
 ]
+
+const BANNER_STARS = Array.from({ length: 26 }, (_, i) => ({ x: (i * 37) % 100, y: (i * 53) % 70, s: 1 + (i % 3) * 0.7 }))
+const TRIBE_BAND = '#3b82c4'
+
+/** Une case de l'île de l'annonce : taille et place en pixels dans la bannière. */
+function BannerHut({ level, x, y, w, pips = 0, online = true }: { level: number; x: number; y: number; w: number; pips?: number; online?: boolean }) {
+  return (
+    <div className="absolute -translate-x-1/2" style={{ left: `${x}%`, top: y, width: w }}>
+      <Hut level={level} band={TRIBE_BAND} online={online} role="membre" pips={pips} />
+    </div>
+  )
+}
+
+/** Bannière de l'annonce des tribus : l'île flottante sous les étoiles, avec des cases de plusieurs rangs. */
+function TribesBanner() {
+  return (
+    <div className="relative h-52 w-full overflow-hidden" style={{ background: 'linear-gradient(#0a0922, #181240 55%, #3a2560)' }} aria-hidden="true">
+      {BANNER_STARS.map((s, i) => (
+        <span key={i} className="absolute rounded-full bg-white" style={{ left: `${s.x}%`, top: `${s.y}%`, width: s.s, height: s.s, opacity: 0.7 }} />
+      ))}
+      <div className="absolute right-[26px] top-4 h-[34px] w-[34px] rounded-full" style={{ background: 'radial-gradient(circle at 38% 36%, #fffbe6, #f3e3a8 60%, #d8c27a)', boxShadow: '0 0 24px 6px rgba(255,238,170,.3)' }} />
+      <div className="absolute left-1/2 top-[104px] h-[74px] w-[300px] -translate-x-1/2">
+        <div className="absolute rounded-[50%]" style={{ inset: '14px 0 -14px', background: 'linear-gradient(#6a4a30,#2a1b14)', border: '2px solid #1c110c' }} />
+        <div className="absolute inset-0 rounded-[50%]" style={{ background: 'radial-gradient(circle at 50% 40%, #5a8a4a, #2f5232 75%)', border: '2.5px solid #7fb86a' }} />
+      </div>
+      <BannerHut level={3} x={26} y={56} w={62} pips={2} />
+      <BannerHut level={6} x={50} y={38} w={84} pips={3} />
+      <BannerHut level={4} x={74} y={56} w={62} pips={1} />
+      <BannerHut level={1} x={38} y={86} w={50} online={false} />
+      <BannerHut level={2} x={62} y={86} w={50} />
+    </div>
+  )
+}
 
 /**
  * Popup d'annonces du tableau de bord : une carte par annonce en attente,
@@ -113,6 +150,8 @@ export function AnnouncementsModal() {
     // Annonce de lancement de saison : seulement tant qu'elle est vraiment
     // EN COURS (season.is_active) — jamais rejouée si le joueur ouvre
     // l'appli après coup, une fois la saison déjà bien avancée ou terminée.
+    // Les tribus : une seule fois, pour tout le monde.
+    if (!seen.includes(TRIBES_ANNOUNCEMENT_KEY)) list.push('tribes')
     if (season && season.is_active && !seen.includes(seasonAnnouncementKey(season.slug))) list.push('season')
     if (store) list.push('store')
     if (comp) list.push('compensation')
@@ -157,6 +196,21 @@ export function AnnouncementsModal() {
     markSeasonSeen()
     setSlides([])
     navigate('/recompenses?tab=season')
+  }
+
+  function markTribesSeen() {
+    void supabase.rpc('mark_announcement_seen', { p_key: TRIBES_ANNOUNCEMENT_KEY })
+  }
+
+  function tribesNext() {
+    markTribesSeen()
+    advance()
+  }
+
+  function tribesDiscover() {
+    markTribesSeen()
+    setSlides([])
+    navigate('/tribu')
   }
 
   function markStoreSeen() {
@@ -206,7 +260,7 @@ export function AnnouncementsModal() {
           <div className="flex w-full items-center justify-between text-[11px] text-moon-200/50">
             <span className="font-semibold uppercase tracking-[0.18em]">{t('announce.counter', { n: index + 1, total })}</span>
             {!isLast && (
-              <button type="button" onClick={current === 'avatars' ? avatarsNext : advance} className="transition hover:text-moon-100">
+              <button type="button" onClick={current === 'avatars' ? avatarsNext : current === 'tribes' ? tribesNext : advance} className="transition hover:text-moon-100">
                 {t('announce.skip')}
               </button>
             )}
@@ -250,6 +304,27 @@ export function AnnouncementsModal() {
                 </li>
               </ul>
             )}
+          </>
+        )}
+
+        {current === 'tribes' && (
+          <>
+            <div className={`-mx-6 w-[calc(100%+3rem)] shrink-0 self-stretch ${total > 1 ? '' : '-mt-6'}`}>
+              <TribesBanner />
+            </div>
+            <span className="rounded-full border border-moon-400/40 bg-moon-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-moon-300">
+              {t('announce.tribes.badge')}
+            </span>
+            <h2 className="font-display text-xl leading-tight text-moon-200">{t('announce.tribes.title')}</h2>
+            <p className="text-sm leading-relaxed text-moon-200/80">{t('announce.tribes.body')}</p>
+            <ul className="flex w-full flex-col gap-1.5 text-left text-xs text-moon-200/70">
+              {([['🏝️', 'announce.tribes.b1'], ['💬', 'announce.tribes.b2'], ['⭐', 'announce.tribes.b3']] as const).map(([icon, key]) => (
+                <li key={key} className="flex items-center gap-2 rounded-xl border border-night-600/60 bg-night-900/50 px-3 py-2">
+                  <span aria-hidden="true">{icon}</span>
+                  {t(key)}
+                </li>
+              ))}
+            </ul>
           </>
         )}
 
@@ -336,6 +411,16 @@ export function AnnouncementsModal() {
                   </button>
                 </>
               )}
+            </>
+          )}
+          {current === 'tribes' && (
+            <>
+              <button type="button" onClick={tribesDiscover} className={primaryButton}>
+                {t('announce.tribes.cta')}
+              </button>
+              <button type="button" onClick={tribesNext} className={linkButton}>
+                {t('announce.tribes.later')}
+              </button>
             </>
           )}
           {current === 'season' && (
