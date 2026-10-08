@@ -1904,6 +1904,8 @@ export const translations = {
   'tribe.request.decline': { fr: 'Refuser', en: 'Decline' },
   'tribe.edit.accepting': { fr: 'Accepter les demandes d\'adhésion', en: 'Accept join requests' },
   'tribe.edit.acceptingHint': { fr: 'Désactivé : la tribu n\'apparaît plus dans la recherche par nom (le code reste valable).', en: 'Off: the tribe no longer shows up in name search (the code still works).' },
+  'tribe.create.locked': { fr: 'Fonder une tribu demande le rang {{rank}} ({{pts}} points).', en: 'Founding a tribe requires the {{rank}} rank ({{pts}} points).' },
+  'tribe.create.lockedHint': { fr: 'Tu as {{have}} points : joue des parties classées pour monter. Tu peux déjà rejoindre une tribu.', en: 'You have {{have}} points: play ranked games to level up. You can already join a tribe.' },
   'tribe.level.short': { fr: 'Niv. {{n}}', en: 'Lv. {{n}}' },
   'tribe.level.max': { fr: 'Niveau max', en: 'Max level' },
   'tribe.level.title': { fr: 'Niveau de la tribu', en: 'Tribe level' },

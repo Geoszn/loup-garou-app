@@ -8,6 +8,9 @@ export const TRIBE_NAME_MIN = 3
 export const TRIBE_NAME_MAX = 24
 export const TRIBE_MOTTO_MAX = 80
 export const TRIBE_MESSAGE_MAX = 500
+// Points de rang minimum pour fonder une tribu (Apprenti III). Même valeur que
+// tribe_create_min_points() dans la migration 0226 : le serveur fait foi.
+export const TRIBE_CREATE_MIN_POINTS = 100
 
 export const TRIBE_EMBLEMS = [
   { id: 'wolf', icon: '🐺' },

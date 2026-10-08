@@ -9,6 +9,7 @@ import { notifyTribeInvite } from '../../lib/pushSubscription'
 import { cachedRpc } from '../../lib/rpcCache'
 import {
   TRIBE_COLORS,
+  TRIBE_CREATE_MIN_POINTS,
   TRIBE_EMBLEMS,
   TRIBE_MOTTO_MAX,
   TRIBE_NAME_MAX,
@@ -26,7 +27,7 @@ import {
 import { FriendsPanel } from '../../pages/Friends'
 import { PlayerProfileModal } from '../PlayerProfileModal'
 import { RankTierBadge } from '../RankTierBadge'
-import { tierLabel, type RankTier } from '../../lib/ranks'
+import { tierForPoints, tierLabel, type RankTier } from '../../lib/ranks'
 import { continentName } from '../../lib/continents'
 import { Avatar } from '../Avatar'
 import { Button, Card, ConfirmDialog, ErrorText, Modal, Segmented } from '../ui'
@@ -145,6 +146,9 @@ function TribeLanding({
   pendingFriends: number
 }) {
   const { t } = useLanguage()
+  const { profile } = useAuth()
+  const myPoints = profile?.rank_points ?? 0
+  const canCreate = myPoints >= TRIBE_CREATE_MIN_POINTS
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [query, setQuery] = useState('')
@@ -282,9 +286,22 @@ function TribeLanding({
             <span className="text-3xl" aria-hidden="true">🛡️</span>
             <h2 className="font-display text-lg text-moon-200">{t('tribe.empty.title')}</h2>
             <p className="text-xs leading-relaxed text-moon-200/60">{t('tribe.empty.body')}</p>
-            <button type="button" onClick={onCreate} className={`${primaryBtn} mt-1`}>
-              {t('tribe.create.cta')}
-            </button>
+            {canCreate ? (
+              <button type="button" onClick={onCreate} className={`${primaryBtn} mt-1`}>
+                {t('tribe.create.cta')}
+              </button>
+            ) : (
+              <div className="mt-1 flex w-full flex-col items-center gap-2">
+                <button type="button" disabled className={`${primaryBtn} cursor-not-allowed opacity-45`}>
+                  🔒 {t('tribe.create.cta')}
+                </button>
+                <p className="text-xs font-semibold text-amber-300">{t('tribe.create.locked', { rank: tierLabel(tierForPoints(TRIBE_CREATE_MIN_POINTS).id, t), pts: TRIBE_CREATE_MIN_POINTS })}</p>
+                <span className="h-1.5 w-full max-w-[220px] overflow-hidden rounded-full bg-night-800">
+                  <span className="block h-full rounded-full bg-amber-400" style={{ width: `${Math.min(100, (myPoints / TRIBE_CREATE_MIN_POINTS) * 100)}%` }} />
+                </span>
+                <p className="text-[11px] text-moon-200/55">{t('tribe.create.lockedHint', { have: myPoints })}</p>
+              </div>
+            )}
           </Card>
           <ErrorText>{error}</ErrorText>
         </>
