@@ -143,6 +143,48 @@ function along(p0: [number, number], p1: [number, number], p2: [number, number],
   })
 }
 
+
+export interface DecorSprite {
+  key: string
+  /** Point d'appui au sol, en coordonnées de la scène. */
+  x: number
+  y: number
+  /** Boîte du dessin autour de (0,0) : décalages gauche/haut et taille. */
+  ox: number
+  oy: number
+  w: number
+  h: number
+  node: React.ReactNode
+}
+
+/** Les décors posés sur le sol (lanternes, bancs, étendard/totem, braseros) : chacun est un petit
+ * dessin à part, trié par profondeur avec les arbres et les cases (voir VillageScene). */
+export function decorSprites({ level, cx, cy, emblem, color }: { level: number; cx: number; cy: number; emblem: string; color: string }): DecorSprite[] {
+  const lv = Math.max(1, Math.min(10, level))
+  const out: DecorSprite[] = []
+  if (lv >= 2) {
+    ;([[cx - 40, cy - 22], [cx + 40, cy - 22], [cx - 48, cy + 30], [cx + 48, cy + 30]] as [number, number][]).forEach(([x, y], i) =>
+      out.push({ key: `lamp${i}`, x, y, ox: 8, oy: 30, w: 16, h: 36, node: <LanternPost x={0} y={0} /> }),
+    )
+  }
+  if (lv >= 3) {
+    out.push({ key: 'bench0', x: cx - 34, y: cy + 36, ox: 14, oy: 10, w: 28, h: 16, node: <Bench x={0} y={0} /> })
+    out.push({ key: 'bench1', x: cx + 34, y: cy + 36, ox: 14, oy: 10, w: 28, h: 16, node: <Bench x={0} y={0} w={16} /> })
+  }
+  if (lv >= 9) {
+    out.push({ key: 'br0', x: cx - 56, y: cy + 6, ox: 10, oy: 28, w: 20, h: 36, node: <Brazier x={0} y={0} /> })
+    out.push({ key: 'br1', x: cx + 56, y: cy + 6, ox: 10, oy: 28, w: 20, h: 36, node: <Brazier x={0} y={0} /> })
+  }
+  const fx = cx + 38
+  const fy = cy + 42
+  out.push(
+    lv < 4
+      ? { key: 'flag', x: fx, y: fy, ox: 10, oy: 40, w: 30, h: 46, node: <Flag x={0} y={0} emblem={emblem} color={color} /> }
+      : { key: 'totem', x: fx, y: fy, ox: 14, oy: 44, w: 28, h: 50, node: <Totem x={0} y={0} emblem={emblem} color={color} gold={lv >= 8} /> },
+  )
+  return out
+}
+
 /** Les décors de la tribu, en trois couches : sol (dallage, pont), devant (étendard ou totem,
  * lanternes, bancs, braseros, guirlandes, halo) et lumières (halos chauds par-dessus la nuit). */
 export function TribeDecor({ level, cx, cy, emblem, color, pond, layer }: DecorProps) {
@@ -151,8 +193,6 @@ export function TribeDecor({ level, cx, cy, emblem, color, pond, layer }: DecorP
   const py = cy + 6
   // Les quatre lanternes autour de la place.
   const lamps: [number, number][] = [[cx - 40, cy - 22], [cx + 40, cy - 22], [cx - 48, cy + 30], [cx + 48, cy + 30]]
-  const flagX = cx + 38
-  const flagY = cy + 42
 
   if (layer === 'ground') {
     return (
@@ -181,30 +221,17 @@ export function TribeDecor({ level, cx, cy, emblem, color, pond, layer }: DecorP
   }
 
   if (layer === 'front') {
+    // Dessus de tout : halo doré et guirlande (les objets posés au sol sont dans decorSprites).
     const bunting = lv >= 7 ? along([cx - 54, cy - 4], [cx, cy + 74], [cx + 54, cy - 4], 11) : []
     return (
       <g>
         {lv >= 10 && (
           <ellipse cx={px} cy={cy + 4} rx="58" ry="49" fill="none" stroke="#ffe08a" strokeWidth="1.6" strokeDasharray="3 4" opacity=".85" className="tribe-anim" style={{ animation: 'tribe-glow 3s ease-in-out infinite' }} />
         )}
-        {lv >= 3 && (
-          <>
-            <Bench x={cx - 34} y={cy + 36} />
-            <Bench x={cx + 34} y={cy + 36} w={16} />
-          </>
-        )}
-        {lv >= 9 && (
-          <>
-            <Brazier x={cx - 56} y={cy + 6} />
-            <Brazier x={cx + 56} y={cy + 6} />
-          </>
-        )}
-        {lv >= 2 && lamps.map(([x, y], i) => <LanternPost key={i} x={x} y={y} />)}
         {bunting.map((p, i) => (
           <path key={i} d={`M${p.x - 2.6} ${p.y - 1}h5.2l-2.6 5.4z`} fill={['#fff4d6', color, '#f0c75a'][i % 3]} stroke={OUT} strokeWidth=".5" strokeLinejoin="round" />
         ))}
         {bunting.length > 0 && <path d={`M${cx - 54} ${cy - 4}Q${cx} ${cy + 74} ${cx + 54} ${cy - 4}`} fill="none" stroke="#3a2a1c" strokeWidth=".7" opacity=".8" />}
-        {lv < 4 ? <Flag x={flagX} y={flagY} emblem={emblem} color={color} /> : <Totem x={flagX} y={flagY} emblem={emblem} color={color} gold={lv >= 8} />}
       </g>
     )
   }

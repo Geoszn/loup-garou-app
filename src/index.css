@@ -314,6 +314,10 @@ body {
   0%, 100% { transform: skewY(0deg) scaleX(1); }
   50% { transform: skewY(-3deg) scaleX(0.94); }
 }
+@keyframes tribe-blink {
+  0%, 44%, 50%, 100% { opacity: 1; }
+  47% { opacity: 0.05; }
+}
 @keyframes tribe-hop {
   0%, 100% { transform: translateY(0); }
   40% { transform: translateY(-7%); }
