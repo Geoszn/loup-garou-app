@@ -1,6 +1,8 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLanguage } from '../../i18n/LanguageContext'
-import { COLOR_HEX, type TribeInfo, type TribeMember } from '../../lib/tribe'
+import { COLOR_HEX, hutLevel, type TribeInfo, type TribeMember, type TribeMessage } from '../../lib/tribe'
+import { tierForPoints, tierLabel } from '../../lib/ranks'
+import { supabase } from '../../lib/supabase'
 import { Avatar } from '../Avatar'
 
 // ---------------------------------------------------------------------------
@@ -219,22 +221,43 @@ const Scenery = memo(function Scenery({ layout }: { layout: Layout }) {
   )
 })
 
-/** Une case : mur d'argile, toit de chaume ceint aux couleurs de la tribu, porte
- * éclairée quand le membre est en ligne ; drapeau pour le chef, étoile pour un
- * sous-chef. */
-function Hut({ band, online, role }: { band: string; online: boolean; role: TribeMember['role'] }) {
+// Le style de la case suit le niveau du propriétaire : chaume (niv. 1-2), bois
+// peint (3), pierre et tuiles (4-5), pierre claire et toit doré (6).
+const HUT_STYLES = [
+  { wall: '#a8744a', shade: '#6a4529', roof: '#cfa650', roofShade: '#9b7a32', rib: '#7a5a22', stroke: '#3b2616' },
+  { wall: '#8a5a36', shade: '#5a3a22', roof: '#b8914a', roofShade: '#8a6a2c', rib: '#6a4a1c', stroke: '#3b2616' },
+  { wall: '#9a9690', shade: '#6e6a66', roof: '#b5573a', roofShade: '#8c3f28', rib: '#6e2f1d', stroke: '#35302c' },
+  { wall: '#e8dcc0', shade: '#c4b48e', roof: '#e2b13c', roofShade: '#b8872a', rib: '#8a6416', stroke: '#5a4a2a' },
+] as const
+
+/** Une case : mur, toit aux couleurs de la tribu, porte éclairée quand le membre est
+ * en ligne ; drapeau pour le chef, étoile pour un sous-chef ; l'allure change avec
+ * le niveau (rang) du propriétaire. */
+function Hut({ band, online, role, level }: { band: string; online: boolean; role: TribeMember['role']; level: number }) {
+  const style = level >= 6 ? 3 : level >= 4 ? 2 : level === 3 ? 1 : 0
+  const c = HUT_STYLES[style]
   return (
     <svg viewBox="0 0 50 58" className="block h-auto w-full overflow-visible" aria-hidden="true">
       <ellipse cx="25" cy="52" rx="19" ry="4.5" fill="#000" opacity=".35" />
       {online && <ellipse cx="25" cy="49" rx="22" ry="9" fill="#ffcf6b" opacity=".35" className="tribe-anim" style={{ animation: 'tribe-glow 2.6s ease-in-out infinite' }} />}
-      <path d="M8 31v16c0 3.4 7.2 6 17 6s17-2.6 17-6V31z" fill="#a8744a" stroke="#3b2616" strokeWidth="1.2" strokeLinejoin="round" />
-      <path d="M31 31v21c6-.6 11-2.4 11-5.2V31z" fill="#6a4529" opacity=".55" />
+      {style === 3 && <ellipse cx="25" cy="22" rx="26" ry="20" fill="#ffe08a" opacity=".22" className="tribe-anim" style={{ animation: 'tribe-glow 3s ease-in-out infinite' }} />}
+      <path d="M8 31v16c0 3.4 7.2 6 17 6s17-2.6 17-6V31z" fill={c.wall} stroke={c.stroke} strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M31 31v21c6-.6 11-2.4 11-5.2V31z" fill={c.shade} opacity=".55" />
+      {style === 1 && (
+        <g fill="none" strokeLinecap="round">
+          <path d="M14 32v19M20 32v21M30 32v21M36 32v19" stroke="#4a2f1a" strokeWidth=".8" opacity=".7" />
+          <path d="M8.6 37l3 3 3-3 3 3 3-3M31.6 37l3 3 3-3 3 3 2-2" stroke="#f0d27a" strokeWidth="1.2" />
+        </g>
+      )}
+      {(style === 2 || style === 3) && (
+        <path d="M8 38h34M8 45h34M16 31v7M28 31v7M22 38v7M35 38v7M16 45v7M30 45v7" fill="none" stroke={style === 2 ? '#5e5a56' : '#b9a77f'} strokeWidth=".8" opacity=".8" />
+      )}
       <path d="M19.5 51.4V41a5.5 5.5 0 0 1 11 0v10.4z" fill={online ? '#ffcf6b' : '#1a1020'} stroke="#2a1a0e" strokeWidth="1" />
-      <path d="M1.5 32C10 28 40 28 48.5 32 40 21 31 9 25 3 19 9 10 21 1.5 32Z" fill="#cfa650" stroke="#6a4a1c" strokeWidth="1.3" strokeLinejoin="round" />
-      <path d="M25 3C27 12 36 24 48.5 32 38 29 31 29 25 29z" fill="#9b7a32" opacity=".55" />
-      <path d="M6 28c6-2 12-3 19-3s13 1 19 3M10 22c5-1.6 10-2.4 15-2.4s10 .8 15 2.4M15 16c3.4-1 6.6-1.4 10-1.4s6.6.4 10 1.4" fill="none" stroke="#7a5a22" strokeWidth=".9" strokeLinecap="round" opacity=".75" />
+      <path d="M1.5 32C10 28 40 28 48.5 32 40 21 31 9 25 3 19 9 10 21 1.5 32Z" fill={c.roof} stroke={c.rib} strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M25 3C27 12 36 24 48.5 32 38 29 31 29 25 29z" fill={c.roofShade} opacity=".55" />
+      <path d="M6 28c6-2 12-3 19-3s13 1 19 3M10 22c5-1.6 10-2.4 15-2.4s10 .8 15 2.4M15 16c3.4-1 6.6-1.4 10-1.4s6.6.4 10 1.4" fill="none" stroke={c.rib} strokeWidth=".9" strokeLinecap="round" opacity=".75" />
       <path d="M2.4 31.4C11 28 39 28 47.6 31.4" fill="none" stroke={band} strokeWidth="3.4" strokeLinecap="round" />
-      <circle cx="25" cy="3" r="2.2" fill="#6a4a1c" />
+      <circle cx="25" cy="3" r={style === 3 ? 3.4 : 2.2} fill={style === 3 ? '#ffe08a' : c.rib} stroke={style === 3 ? c.rib : 'none'} strokeWidth=".8" />
       {role === 'chef' && (
         <g>
           <path d="M25 3V-9" stroke="#e8dcc4" strokeWidth="1.3" strokeLinecap="round" />
@@ -246,30 +269,79 @@ function Hut({ band, online, role }: { band: string; online: boolean; role: Trib
   )
 }
 
+const BUBBLE_MS = 75_000
+const BUBBLE_POLL_MS = 15_000
+
+/** Dernier message de chaque membre, pour les bulles au-dessus des cases. Lecture
+ * légère (12 messages) toutes les 15 s tant que le village est visible : pas de
+ * canal Realtime ouvert pour ça. */
+function useVillageBubbles(tribeId: string): Record<string, { body: string; at: number }> {
+  const [latest, setLatest] = useState<Record<string, { body: string; at: number }>>({})
+  const [, setTick] = useState(0)
+  const load = useCallback(async () => {
+    const { data, error } = await supabase.rpc('get_tribe_messages', { p_before: null, p_limit: 12 })
+    if (error || !Array.isArray(data)) return
+    const next: Record<string, { body: string; at: number }> = {}
+    for (const m of data as TribeMessage[]) {
+      if (m.kind !== 'user' || !m.user_id || !m.body) continue
+      const at = new Date(m.created_at).getTime()
+      if (!next[m.user_id] || at > next[m.user_id].at) next[m.user_id] = { body: m.body, at }
+    }
+    setLatest(next)
+  }, [])
+  useEffect(() => {
+    void load()
+    const poll = setInterval(() => {
+      if (document.visibilityState === 'visible') void load()
+    }, BUBBLE_POLL_MS)
+    // Les bulles s'effacent d'elles-mêmes quand le message vieillit.
+    const tick = setInterval(() => setTick((n) => n + 1), 10_000)
+    return () => {
+      clearInterval(poll)
+      clearInterval(tick)
+    }
+  }, [tribeId, load])
+  const now = Date.now()
+  return Object.fromEntries(Object.entries(latest).filter(([, v]) => now - v.at < BUBBLE_MS))
+}
+
 /**
  * Le village de la tribu vu en plan : chaque membre a sa case, rangée autour du
  * baobab et du feu de camp. Les cases apparaissent l'une après l'autre à
  * l'ouverture ; un nouveau membre voit sa case surgir avec des étincelles et son
- * nom brille un moment. Toucher une case ouvre la fiche de son propriétaire.
+ * nom brille un moment. Toucher une case la fait sauter, affiche une étiquette
+ * flottante (nom, niveau, rang) et ouvre une barre d'actions sous le village ; la
+ * dernière phrase écrite par un membre flotte au-dessus de sa case.
  */
 export function VillageView({
   tribe,
   members,
   onlineIds,
+  gameCodes,
   selfId,
-  onSelect,
+  onProfile,
+  onChat,
+  onManage,
+  onJoinGame,
 }: {
   tribe: TribeInfo
   members: TribeMember[]
   onlineIds: Set<string>
+  /** Membres actuellement en partie : id → code de la partie. */
+  gameCodes: Record<string, string>
   selfId: string | undefined
-  onSelect: (m: TribeMember) => void
+  onProfile: (m: TribeMember) => void
+  onChat: () => void
+  onManage: (m: TribeMember) => void
+  onJoinGame: (code: string) => void
 }) {
   const { t } = useLanguage()
   const band = COLOR_HEX[tribe.color] ?? COLOR_HEX.amber
   const layout = useMemo(() => layoutFor(members.length), [members.length])
   const known = useRef<Set<string> | null>(null)
   const [fresh, setFresh] = useState<Set<string>>(new Set())
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const bubbles = useVillageBubbles(tribe.id)
 
   // Arrivées : au premier affichage tout le monde apparaît en cascade ; ensuite,
   // seuls les nouveaux venus reçoivent l'effet « bienvenue ».
@@ -288,12 +360,25 @@ export function VillageView({
   }, [members])
 
   const onlineCount = members.filter((m) => onlineIds.has(m.user_id)).length
+  const selectedIndex = members.findIndex((m) => m.user_id === selectedId)
+  const selected = selectedIndex >= 0 ? members[selectedIndex] : null
+  const canManage = !!selected && selected.user_id !== selfId && (tribe.my_role === 'chef' || (tribe.my_role === 'sous_chef' && selected.role === 'membre'))
+  const selectedGame = selected ? gameCodes[selected.user_id] : undefined
+
+  /** Position (en %) du haut d'une case, pour y accrocher bulle ou étiquette. */
+  const hutTop = (i: number) => {
+    const m = members[i]
+    const h = layout.hutW * (m.role === 'chef' ? 1.2 : 1) * 1.16 * (W / layout.H)
+    return { top: (layout.spots[i].y / layout.H) * 100 - 0.58 * h - (m.role === 'membre' ? 0 : 0.14 * h), bottom: (layout.spots[i].y / layout.H) * 100 + 0.42 * h, h }
+  }
+  const clampX = (x: number) => Math.min(80, Math.max(20, (x / W) * 100))
 
   return (
     <div className="flex flex-col gap-2">
       <div
         className="relative isolate mx-auto w-full max-w-[560px] overflow-hidden rounded-3xl border border-white/10 shadow-card"
         style={{ aspectRatio: `${W} / ${layout.H}` }}
+        onClick={() => setSelectedId(null)}
       >
         <Scenery layout={layout} />
 
@@ -313,34 +398,48 @@ export function VillageView({
           const online = onlineIds.has(m.user_id)
           const isNew = fresh.has(m.user_id)
           const chef = m.role === 'chef'
+          const isSelected = m.user_id === selectedId
+          const inGame = !!gameCodes[m.user_id]
           return (
             <button
               key={m.user_id}
               type="button"
-              onClick={() => onSelect(m)}
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelectedId(isSelected ? null : m.user_id)
+              }}
               aria-label={m.username}
+              aria-pressed={isSelected}
               className="group absolute flex -translate-x-1/2 -translate-y-[58%] flex-col items-center focus:outline-none"
               style={{ left: `${(spot.x / W) * 100}%`, top: `${(spot.y / layout.H) * 100}%`, width: `${chef ? layout.hutW * 1.2 : layout.hutW}%`, zIndex: Math.round(spot.y) }}
             >
               <div className="tribe-house-in relative w-full transition-transform group-active:scale-95 group-focus-visible:ring-2 group-focus-visible:ring-moon-400" style={{ animationDelay: `${Math.min(i, 29) * 55}ms` }}>
-                {isNew &&
-                  [0, 1, 2, 3, 4].map((s) => (
-                    <span key={s} aria-hidden="true" className="tribe-anim pointer-events-none absolute top-1/3 text-xs" style={{ left: `${10 + s * 18}%`, animation: `tribe-spark 1.6s ease-out ${s * 0.18}s infinite` }}>
-                      ✨
+                {isSelected && <span aria-hidden="true" className="absolute inset-x-[-6%] bottom-[2%] h-[12%] rounded-[50%] border-2 border-amber-300/90 bg-amber-300/20" />}
+                <div className={isSelected ? 'tribe-anim' : undefined} style={isSelected ? { animation: 'tribe-hop 0.9s ease-in-out infinite' } : undefined}>
+                  {isNew &&
+                    [0, 1, 2, 3, 4].map((s) => (
+                      <span key={s} aria-hidden="true" className="tribe-anim pointer-events-none absolute top-1/3 text-xs" style={{ left: `${10 + s * 18}%`, animation: `tribe-spark 1.6s ease-out ${s * 0.18}s infinite` }}>
+                        ✨
+                      </span>
+                    ))}
+                  <Hut band={band} online={online} role={m.role} level={hutLevel(m.rank_points)} />
+                  <Avatar
+                    config={m.avatar_config}
+                    icon={m.avatar_icon}
+                    name={m.username}
+                    className={`absolute left-1/2 top-[63%] h-[34%] w-[34%] -translate-x-1/2 -translate-y-1/2 ring-[1.5px] ${online ? 'ring-emerald-400' : 'ring-night-950'}`}
+                  />
+                  {m.muted && (
+                    <span className="absolute right-0 top-[42%] text-[9px]" aria-hidden="true">
+                      🔇
                     </span>
-                  ))}
-                <Hut band={band} online={online} role={m.role} />
-                <Avatar
-                  config={m.avatar_config}
-                  icon={m.avatar_icon}
-                  name={m.username}
-                  className={`absolute left-1/2 top-[63%] h-[34%] w-[34%] -translate-x-1/2 -translate-y-1/2 ring-[1.5px] ${online ? 'ring-emerald-400' : 'ring-night-950'}`}
-                />
-                {m.muted && (
-                  <span className="absolute right-0 top-[42%] text-[9px]" aria-hidden="true">
-                    🔇
-                  </span>
-                )}
+                  )}
+                  {inGame && (
+                    <span className="absolute -right-[10%] top-[18%] flex h-[26%] w-[26%] min-h-3.5 min-w-3.5 items-center justify-center rounded-full bg-night-950/85 text-[9px] ring-1 ring-moon-300/60" aria-hidden="true">
+                      🎮
+                    </span>
+                  )}
+                </div>
               </div>
             </button>
           )
@@ -368,8 +467,82 @@ export function VillageView({
             </span>
           )
         })}
+
+        {/* bulles : la dernière phrase d'un membre flotte au-dessus de sa case */}
+        {members.map((m, i) => {
+          const bubble = bubbles[m.user_id]
+          const spot = layout.spots[i]
+          if (!bubble || !spot || m.user_id === selectedId) return null
+          const { top } = hutTop(i)
+          const text = bubble.body.length > 28 ? `${bubble.body.slice(0, 27)}…` : bubble.body
+          return (
+            <span
+              key={m.user_id}
+              className="pointer-events-none absolute w-max max-w-[118px]"
+              style={{ left: `${clampX(spot.x)}%`, top: `${Math.max(top - 1.5, 2)}%`, zIndex: 1100, transform: 'translate(-50%, -100%)' }}
+            >
+              <span className="tribe-anim block rounded-lg bg-[#fdf6e3] px-1.5 py-1 text-[10px] font-medium leading-3 text-[#1a1020] shadow-md" style={{ animation: 'tribe-pop 0.35s ease-out both' }}>{text}</span>
+              <span aria-hidden="true" className="mx-auto block h-0 w-0 border-x-4 border-t-4 border-x-transparent border-t-[#fdf6e3]" />
+            </span>
+          )
+        })}
+
+        {/* étiquette de la case touchée : nom, niveau et rang */}
+        {selected &&
+          (() => {
+            const spot = layout.spots[selectedIndex]
+            const { top, bottom } = hutTop(selectedIndex)
+            const below = top < 14
+            const tier = tierForPoints(selected.rank_points ?? 0)
+            return (
+              <span
+                className="pointer-events-none absolute w-max max-w-[220px]"
+                style={{ left: `${clampX(spot.x)}%`, top: `${below ? bottom + 4 : top}%`, zIndex: 1200, transform: below ? 'translate(-50%, 0)' : 'translate(-50%, -100%)' }}
+              >
+                <span className="tribe-anim flex items-center gap-1.5 rounded-full border border-amber-300/60 bg-night-950/90 px-2.5 py-1 text-[11px] font-semibold text-moon-200 shadow-lg" style={{ animation: 'tribe-pop 0.25s ease-out both' }}>
+                  <span className="max-w-[90px] truncate">{selected.user_id === selfId ? t('tribe.village.you') : selected.username}</span>
+                  <span className="text-amber-300">{t('tribe.village.level', { n: hutLevel(selected.rank_points) })}</span>
+                  <span className="text-moon-200/60">{tierLabel(tier.id, t)}</span>
+                </span>
+              </span>
+            )
+          })()}
       </div>
-      <p className="text-center text-[11px] text-moon-200/50">{t('tribe.village.counter', { online: onlineCount, total: members.length })} · {t('tribe.village.hint')}</p>
+
+      {selected ? (
+        <div className="flex min-h-11 flex-wrap items-center justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+          {selected.user_id !== selfId && (
+            <ActionButton onClick={() => onProfile(selected)}>👤 {t('tribe.village.profile')}</ActionButton>
+          )}
+          <ActionButton onClick={onChat}>💬 {t('tribe.village.write')}</ActionButton>
+          {selectedGame && selected.user_id !== selfId && (
+            <ActionButton tone="go" onClick={() => onJoinGame(selectedGame)}>
+              🎮 {t('tribe.village.joinGame')}
+            </ActionButton>
+          )}
+          {canManage && <ActionButton onClick={() => onManage(selected)}>⚙️ {t('tribe.village.manage')}</ActionButton>}
+          <ActionButton onClick={() => setSelectedId(null)} aria-label={t('tribe.village.close')}>
+            ✕
+          </ActionButton>
+        </div>
+      ) : (
+        <p className="flex min-h-11 items-center justify-center text-center text-[11px] text-moon-200/50">
+          {t('tribe.village.counter', { online: onlineCount, total: members.length })} · {t('tribe.village.hint')}
+        </p>
+      )}
     </div>
+  )
+}
+
+function ActionButton({ children, onClick, tone, ...rest }: { children: React.ReactNode; onClick: () => void; tone?: 'go'; 'aria-label'?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      {...rest}
+      className={`rounded-xl px-3 py-2 text-xs font-semibold transition-colors active:scale-95 ${tone === 'go' ? 'bg-emerald-600 text-white hover:bg-emerald-500' : 'border border-night-500 bg-night-900/60 text-moon-200 hover:bg-night-800'}`}
+    >
+      {children}
+    </button>
   )
 }

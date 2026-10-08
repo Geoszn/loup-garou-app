@@ -1,6 +1,8 @@
 // Les tribus (migration 0222) : types renvoyés par les fonctions du serveur et
 // constantes d'affichage (blasons, couleurs). Toutes les règles (30 membres,
 // invitations, rôles, 200 messages) sont appliquées par le serveur.
+import { tierForPoints, tierGroup } from './ranks'
+
 export const TRIBE_MAX_MEMBERS = 30
 export const TRIBE_NAME_MIN = 3
 export const TRIBE_NAME_MAX = 24
@@ -127,6 +129,8 @@ export interface TribeMember {
   role: TribeRole
   joined_at: string
   muted: boolean
+  // Points de rang (migration 0224) : absents tant qu'elle n'est pas appliquée.
+  rank_points?: number
 }
 
 export interface TribeInviteOut {
@@ -169,4 +173,11 @@ export interface TribeMessage {
   avatar_icon: string | null
   avatar_config?: unknown
   role: TribeRole | null
+}
+
+/** Niveau de la case (1 à 6) : suit le groupe de rang du propriétaire
+ * (nouveau venu, villageois, chasseur, ancien, sage, légende). */
+export function hutLevel(rankPoints: number | undefined): number {
+  const group = tierGroup(tierForPoints(rankPoints ?? 0).id)
+  return Math.max(1, ['nouveau_venu', 'villageois', 'chasseur', 'ancien', 'sage', 'legende'].indexOf(group) + 1)
 }

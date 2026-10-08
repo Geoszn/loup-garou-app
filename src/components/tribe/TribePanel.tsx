@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { usePresence } from '../../context/PresenceContext'
 import { useAuth } from '../../context/AuthContext'
@@ -403,6 +403,8 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
   const [confirm, setConfirm] = useState<'leave' | 'disband' | null>(null)
   const [editing, setEditing] = useState(false)
   const [selected, setSelected] = useState<TribeMember | null>(null)
+  const [profileId, setProfileId] = useState<string | null>(null)
+  const navigate = useNavigate()
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const isManager = tribe.my_role === 'chef' || tribe.my_role === 'sous_chef'
@@ -430,6 +432,11 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
     if (user) ids.add(user.id)
     return ids
   }, [onlineStatus, user])
+  const gameCodes = useMemo(() => {
+    const out: Record<string, string> = {}
+    for (const [id, p] of Object.entries(onlineStatus)) if (p.status === 'in_game' && p.game_code) out[id] = p.game_code
+    return out
+  }, [onlineStatus])
   const onlineCount = detail ? detail.members.filter((m) => onlineIds.has(m.user_id)).length : 0
   const reloadAll = useCallback(async () => {
     await loadDetail()
@@ -517,7 +524,17 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
 
       {activeTab === 'village' && (
         detail ? (
-          <VillageView tribe={tribe} members={detail.members} onlineIds={onlineIds} selfId={user?.id} onSelect={setSelected} />
+          <VillageView
+            tribe={tribe}
+            members={detail.members}
+            onlineIds={onlineIds}
+            gameCodes={gameCodes}
+            selfId={user?.id}
+            onProfile={(m) => setProfileId(m.user_id)}
+            onChat={() => setTab('chat')}
+            onManage={setSelected}
+            onJoinGame={(code) => navigate(`/rejoindre/${code}`)}
+          />
         ) : (
           <div className="h-72 animate-pulse rounded-3xl bg-night-900/40" />
         )
@@ -528,6 +545,7 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
       {activeTab === 'friends' && <FriendsPanel />}
       <ErrorText>{error}</ErrorText>
 
+      {profileId && <PlayerProfileModal userId={profileId} onClose={() => setProfileId(null)} />}
       <MemberSheet tribe={tribe} member={selected} onlineIds={onlineIds} onClose={() => setSelected(null)} reload={reloadAll} />
 
       <Modal open={menuOpen} onClose={() => setMenuOpen(false)} title={tribe.name}>
