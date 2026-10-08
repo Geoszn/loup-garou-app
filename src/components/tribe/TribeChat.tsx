@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -329,7 +330,9 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
     [messages, dayOf],
   )
 
-  return (
+  // Posé à la racine du document : la page « Tribu » a son propre empilement, qui laisserait
+  // la barre du bas passer par-dessus le champ de saisie.
+  return createPortal(
     <div className="fixed inset-x-0 z-[45] flex flex-col bg-night-950" style={{ top: vv.top, height: vv.height }}>
       {/* en-tête */}
       <div className="flex shrink-0 items-center gap-2 border-b border-night-600/60 bg-night-900 px-2 pb-2" style={{ paddingTop: 'max(env(safe-area-inset-top), 0.5rem)' }}>
@@ -497,7 +500,8 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
           </div>
         </div>
       )}
-    </div>
+    </div>,
+    document.body,
   )
 }
 
