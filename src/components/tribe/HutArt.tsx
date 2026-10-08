@@ -112,7 +112,7 @@ function Door({ id, online, w = 10, frame = '#6a4224', arch = true, y = 53 }: { 
 
 const Shadow = ({ rx = 21, online }: { rx?: number; online: boolean }) => (
   <>
-    <ellipse cx="25" cy="53" rx={rx} ry="5.5" fill="#000" opacity=".38" />
+    <ellipse cx="22.5" cy="53" rx={rx + 1.5} ry="5.5" fill="#000" opacity=".4" />
     {online && <ellipse cx="25" cy="50" rx={rx + 3} ry="10" fill="#ffcf6b" opacity=".3" />}
   </>
 )

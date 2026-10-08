@@ -6,6 +6,8 @@ import { tierForPoints, tierLabel } from '../../lib/ranks'
 import { supabase } from '../../lib/supabase'
 import { Avatar } from '../Avatar'
 import { Hut } from './HutArt'
+import { TribeDecor } from './VillageDecor'
+import { emblemIcon } from '../../lib/tribe'
 
 // ---------------------------------------------------------------------------
 // Le plan du village : un baobab et un feu de camp au centre, des cases rondes
@@ -113,7 +115,7 @@ function blobPath(pts: Spot[], dy: number): string {
 
 /** Le décor : ciel, île et falaise, chemins, place, mare, forêt, baobab et feu de
  * camp. Mémoïsé : il ne se redessine que si le plan change (nouveau membre). */
-const Scenery = memo(function Scenery({ layout }: { layout: Layout }) {
+const Scenery = memo(function Scenery({ layout, level, emblem, color }: { layout: Layout; level: number; emblem: string; color: string }) {
   const { H, cx, cy, rings, spots } = layout
   const HT = worldHeight(H)
   const A = W / 2 + PX - 10
@@ -250,6 +252,7 @@ const Scenery = memo(function Scenery({ layout }: { layout: Layout }) {
           <ellipse cx={cx} cy={cy + 6} rx="50" ry="42" fill="#6a4f2f" />
           <ellipse cx={cx} cy={cy + 4} rx="46" ry="38" fill="#8a6a43" />
           <ellipse cx={cx} cy={cy + 4} rx="46" ry="38" fill="none" stroke="#c9a56a" strokeWidth="1" strokeDasharray="2 3" opacity=".6" />
+          <TribeDecor layer="ground" level={level} cx={cx} cy={cy} emblem={emblem} color={color} pond={pond} />
 
           {flowers.map((f, i) => (
             <circle key={i} cx={f.x} cy={f.y} r="1.5" fill={f.c} opacity=".85" />
@@ -294,7 +297,10 @@ const Scenery = memo(function Scenery({ layout }: { layout: Layout }) {
             ))}
           </g>
 
+          <TribeDecor layer="front" level={level} cx={cx} cy={cy} emblem={emblem} color={color} pond={pond} />
+
           <rect x="-40" y="-40" width={W + 80} height={H + 80} fill="url(#vgDusk)" />
+          <TribeDecor layer="lights" level={level} cx={cx} cy={cy} emblem={emblem} color={color} pond={pond} />
         </g>
         {/* lisière d'herbe claire au bord de l'île */}
         <path d={blobPath(island, 0)} fill="none" stroke="#7fb86a" strokeWidth="2.2" opacity=".8" />
@@ -420,6 +426,14 @@ export function VillageView({
   const [vw, setVw] = useState(360)
   // Le village prend la hauteur de l'écran (moins l'en-tête, les onglets et la barre du bas).
   const [maxH, setMaxH] = useState(() => Math.min(660, Math.max(380, (typeof window === 'undefined' ? 800 : window.innerHeight) - 300)))
+  /** Hauteur disponible : sur grand écran (village à côté du menu) tout ce qui reste sous l'en-tête ; sur téléphone, l'écran moins l'en-tête. */
+  const computeMaxH = (el: HTMLElement) => {
+    if (window.matchMedia('(min-width: 1024px)').matches) {
+      const top = el.getBoundingClientRect().top + window.scrollY
+      return Math.min(1000, Math.max(460, window.innerHeight - top - 120))
+    }
+    return Math.min(660, Math.max(380, window.innerHeight - 300))
+  }
   const [view, setView] = useState({ z: 1, x: 0, y: 0 })
   const movedRef = useRef(false)
   const pointers = useRef(new Map<number, { x: number; y: number }>())
@@ -454,7 +468,7 @@ export function VillageView({
     if (!el) return
     const measure = () => {
       setVw(el.clientWidth || 360)
-      setMaxH(Math.min(660, Math.max(380, window.innerHeight - 300)))
+      setMaxH(computeMaxH(el))
     }
     measure()
     const ro = new ResizeObserver(measure)
@@ -546,7 +560,29 @@ export function VillageView({
         }}
       >
         <div className="absolute left-0 top-0" style={{ width: vw * view.z, height: ((vw * HT) / WT) * view.z, transform: `translate3d(${view.x}px, ${view.y}px, 0)` }}>
-          <Scenery layout={layout} />
+          <Scenery layout={layout} level={tribe.level ?? 1} emblem={emblemIcon(tribe.emblem)} color={band} />
+
+          {/* lumière des portes : une flaque chaude sur le sol sous chaque case en ligne */}
+          {members.map((m, i) => {
+            const spot = layout.spots[i]
+            if (!spot || !onlineIds.has(m.user_id)) return null
+            return (
+              <span
+                key={m.user_id}
+                aria-hidden="true"
+                className="pointer-events-none absolute"
+                style={{
+                  left: `${fx(spot.x)}%`,
+                  top: `${fy(spot.y) + hutHeight(m) * 0.2}%`,
+                  width: `${hutWidth(m) * 2.5}%`,
+                  aspectRatio: '2.2 / 1',
+                  transform: 'translate(-50%, -50%)',
+                  background: 'radial-gradient(ellipse at center, rgba(255,196,96,0.5), rgba(255,160,60,0) 68%)',
+                  mixBlendMode: 'screen',
+                }}
+              />
+            )
+          })}
 
           {/* lucioles */}
           {Array.from({ length: 9 }).map((_, k) => (

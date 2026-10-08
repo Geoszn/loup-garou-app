@@ -34,6 +34,7 @@ import { Button, Card, ConfirmDialog, ErrorText, Modal, Segmented } from '../ui'
 import { TribeShield } from './TribeShield'
 import { TribeChat } from './TribeChat'
 import { VillageSky, VillageView } from './VillageView'
+import { DECOR_UNLOCKS } from './VillageDecor'
 import { OnlineDot, RoleBadge } from './TribeBits'
 
 const primaryBtn =
@@ -506,10 +507,12 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
     { id: 'friends', icon: '🤝', label: t('tribe.tabs.friends'), badge: pendingFriends },
   ]
 
+  // Sur grand écran, le village prend la page : menu à gauche, grande île à droite.
+  const wide = activeTab === 'village'
   return (
-    <div className="flex flex-col gap-3">
+    <div className={`flex flex-col gap-3 ${wide ? 'lg:relative lg:left-1/2 lg:grid lg:w-[min(calc(100vw-4rem),72rem)] lg:-translate-x-1/2 lg:grid-cols-[19rem_minmax(0,1fr)] lg:content-start lg:items-start lg:gap-x-6' : ''}`}>
       {activeTab === 'village' && <VillageSky />}
-      <div className="flex items-center gap-3">
+      <div className={`flex items-center gap-3 ${wide ? 'lg:col-start-1' : ''}`}>
         <TribeShield emblem={tribe.emblem} color={tribe.color} className="h-14 w-14 text-2xl" />
         <div className="min-w-0 flex-1">
           <h2 className="truncate font-display text-xl leading-tight text-moon-200">{tribe.name}</h2>
@@ -541,19 +544,19 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
       </div>
 
       {/* tous les onglets visibles d'un coup : une colonne chacun, icône au-dessus du nom */}
-      <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
+      <div className={`grid grid-cols-[repeat(var(--cols),minmax(0,1fr))] gap-1 ${wide ? 'lg:col-start-1 lg:grid-cols-1' : ''}`} style={{ ['--cols' as string]: tabs.length }}>
         {tabs.map((x) => (
           <button
             key={x.id}
             type="button"
             onClick={() => setTab(x.id)}
             aria-pressed={activeTab === x.id}
-            className={`relative flex min-w-0 flex-col items-center gap-0.5 rounded-xl px-0.5 py-1.5 transition-colors ${activeTab === x.id ? 'bg-blood-600 text-[#fdf6e3]' : 'border border-night-600/60 bg-night-900/70 text-moon-200/70'}`}
+            className={`relative flex min-w-0 flex-col items-center gap-0.5 rounded-xl px-0.5 py-1.5 transition-colors ${wide ? 'lg:flex-row lg:justify-start lg:gap-3 lg:px-4 lg:py-2.5' : ''} ${activeTab === x.id ? 'bg-blood-600 text-[#fdf6e3]' : 'border border-night-600/60 bg-night-900/70 text-moon-200/70'}`}
           >
             <span className="text-lg leading-none" aria-hidden="true">{x.icon}</span>
-            <span className="w-full truncate text-center text-[10px] font-semibold leading-3">{x.label}</span>
+            <span className={`w-full truncate text-center text-[10px] font-semibold leading-3 ${wide ? 'lg:text-left lg:text-sm' : ''}`}>{x.label}</span>
             {x.badge !== undefined && x.badge > 0 && (
-              <span className="absolute right-1 top-0.5 flex min-w-4 items-center justify-center rounded-full bg-blood-500 px-1 text-[10px] font-bold leading-4 text-[#fdf6e3] ring-2 ring-night-950">
+              <span className={`absolute right-1 top-0.5 flex min-w-4 items-center justify-center rounded-full bg-blood-500 px-1 text-[10px] font-bold leading-4 text-[#fdf6e3] ring-2 ring-night-950 ${wide ? 'lg:right-3 lg:top-1/2 lg:-translate-y-1/2' : ''}`}>
                 {x.badge > 99 ? '99+' : x.badge}
               </span>
             )}
@@ -562,7 +565,8 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
       </div>
 
       {activeTab === 'village' && (
-        detail ? (
+        <div className="min-w-0 lg:col-start-2 lg:row-span-3 lg:row-start-1">
+        {detail ? (
           <VillageView
             tribe={tribe}
             members={detail.members}
@@ -576,7 +580,8 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
           />
         ) : (
           <div className="h-72 animate-pulse rounded-3xl bg-night-900/40" />
-        )
+        )}
+        </div>
       )}
       {activeTab === 'chat' && <TribeChat tribe={tribe} onBack={() => setTab('village')} onlineCount={detail ? onlineCount : null} memberCount={detail?.members.length ?? tribe.member_count} />}
       {activeTab === 'members' && <MembersView tribe={tribe} detail={detail} onlineIds={onlineIds} onSelect={setSelected} goInvite={() => setTab('manage')} />}
@@ -601,6 +606,21 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
             <li>{t('tribe.level.rule2')}</li>
             <li>{t('tribe.level.rule3')}</li>
           </ul>
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-moon-200/50">{t('tribe.level.unlocks')}</p>
+            <ul className="flex flex-col gap-1.5">
+              {DECOR_UNLOCKS.map((d) => {
+                const reached = (tribe.level ?? 1) >= d.level
+                return (
+                  <li key={d.level} className={`flex items-center gap-2.5 rounded-xl border px-3 py-2 text-xs ${reached ? 'border-amber-400/40 bg-amber-400/10 text-moon-200' : 'border-night-600/60 bg-night-900/50 text-moon-200/50'}`}>
+                    <span className={`text-lg ${reached ? '' : 'grayscale'}`} aria-hidden="true">{d.icon}</span>
+                    <span className="min-w-0 flex-1">{t(d.label)}</span>
+                    <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${reached ? 'bg-amber-400 text-night-950' : 'bg-night-800 text-moon-200/60'}`}>{reached ? '✓' : t('tribe.level.unlockedAt', { n: d.level })}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
           <Button variant="ghost" onClick={() => setLevelOpen(false)}>
             {t('common.close')}
           </Button>

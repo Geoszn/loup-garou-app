@@ -310,6 +310,10 @@ body {
   0%, 100% { background-color: transparent; }
   20%, 65% { background-color: rgba(255, 207, 107, 0.24); }
 }
+@keyframes tribe-wave {
+  0%, 100% { transform: skewY(0deg) scaleX(1); }
+  50% { transform: skewY(-3deg) scaleX(0.94); }
+}
 @keyframes tribe-hop {
   0%, 100% { transform: translateY(0); }
   40% { transform: translateY(-7%); }
