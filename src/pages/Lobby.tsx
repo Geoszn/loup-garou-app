@@ -553,16 +553,16 @@ export default function Lobby() {
         style={{ animationDuration: '8s' }}
       />
       <div className="relative mx-auto flex max-w-3xl flex-col gap-4">
-        <header className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <header className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             {/* Même logo, même respiration que Login/Landing/FullScreenLoader
                 (voir ces fichiers) — jusqu'ici absent du salon d'attente,
                 seul écran majeur du parcours sans cette signature de
                 marque. */}
             <img src="/logo.png" alt="" className="animate-breathe h-10 w-10 shrink-0 rounded-full sm:h-11 sm:w-11" />
-            <div>
-              <p className="text-xs uppercase tracking-widest text-moon-200/40">{t('lobby.waitingRoom')}</p>
-              <h1 className="font-display text-2xl text-moon-200">{t('lobby.gameTitle', { code: code ?? '' })}</h1>
+            <div className="min-w-0">
+              <p className="truncate text-[11px] uppercase tracking-widest text-moon-200/40 sm:text-xs">{t('lobby.waitingRoom')}</p>
+              <h1 className="truncate font-display text-xl text-moon-200 sm:text-2xl">{t('lobby.gameTitle', { code: code ?? '' })}</h1>
             </div>
           </div>
           {/* Icônes seules, sans libellé (retour utilisateur : le texte
@@ -574,8 +574,8 @@ export default function Lobby() {
               second bouton est une action destructrice (quitte la partie),
               un écart plus large réduit le risque de mistap sur un
               téléphone tenu à une main. */}
-          <div className="flex items-center gap-4">
-            <HowToPlayButton />
+          <div className="flex shrink-0 items-center gap-2.5">
+            <HowToPlayButton compact stayHere />
             {/* Plus de bouton ⚙️ ici : les réglages de l'hôte sont
                 maintenant un onglet directement sur la page (voir la barre
                 Segmented sous le vocal, plus bas) — retour utilisateur :
@@ -587,7 +587,7 @@ export default function Lobby() {
               variant="danger"
               onClick={() => setConfirmLeaveOpen(true)}
               aria-label={t('lobby.leaveButton')}
-              className="px-3 py-2.5 text-base"
+              className="flex h-11 w-11 shrink-0 items-center justify-center !px-0 !py-0 text-xl"
             >
               🚪
             </Button>

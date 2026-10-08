@@ -16,6 +16,7 @@ export const translations = {
   'common.back': { fr: '← Retour', en: '← Back' },
   'common.showPassword': { fr: 'Afficher le mot de passe', en: 'Show password' },
   'common.hidePassword': { fr: 'Masquer le mot de passe', en: 'Hide password' },
+  'tuto.backToPage': { fr: 'Retour au salon', en: 'Back to the lobby' },
   'play.howTo': { fr: 'Comment jouer ?', en: 'How to play?' },
   'practice.badge': { fr: 'Entraînement · rien n\'est comptabilisé', en: 'Practice · nothing is counted' },
   'practice.gotIt': { fr: 'Compris', en: 'Got it' },

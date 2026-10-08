@@ -27,13 +27,22 @@ const NIGHT_EMOJIS = ['🧑‍🌾', '👩‍🍳', '🧙']
  * Suivant/Retour "c'est ennuyeux" — chaque étape doit se mériter. */
 const INITIAL_UNLOCKED = [true, false, false, false, false, false, false, true]
 
-export function TutorialFlow({ onClose, onPlay }: { onClose: () => void; onPlay: () => void }) {
+export function TutorialFlow({ onClose, onPlay, playLabel }: { onClose: () => void; onPlay: () => void; playLabel?: string }) {
   const { t } = useLanguage()
   const [step, setStep] = useState(0)
   const [unlocked, setUnlocked] = useState(INITIAL_UNLOCKED)
   const [shaking, setShaking] = useState(false)
   const wellRef = useRef<HTMLDivElement>(null)
   const dragState = useRef<{ el: HTMLElement | null; startX: number; dx: number }>({ el: null, startX: 0, dx: 0 })
+
+  // Échap ferme le tutoriel (ordinateur).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   function unlockStep(i: number) {
     setUnlocked((u) => (u[i] ? u : u.map((v, idx) => (idx === i ? true : v))))
@@ -95,7 +104,7 @@ export function TutorialFlow({ onClose, onPlay }: { onClose: () => void; onPlay:
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-night-950 px-4 py-4 text-moon-200 sm:px-6" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-50 flex flex-col bg-night-950 px-4 pb-4 text-moon-200 sm:px-6" style={{ paddingTop: 'max(env(safe-area-inset-top), 1rem)', paddingBottom: 'max(env(safe-area-inset-bottom), 1rem)' }} role="dialog" aria-modal="true">
       <div className="texture-noise" />
       <div className="relative mx-auto flex w-full max-w-md flex-1 flex-col">
         <div className="mb-1.5 flex items-center gap-2.5">
@@ -103,7 +112,7 @@ export function TutorialFlow({ onClose, onPlay }: { onClose: () => void; onPlay:
             type="button"
             onClick={onClose}
             aria-label={t('common.close')}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-night-600/70 bg-night-800/60 text-sm text-moon-200 transition-colors hover:border-moon-400/40"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-night-500 bg-night-800 text-base text-moon-200 transition-colors hover:border-moon-400/40"
           >
             ✕
           </button>
@@ -155,7 +164,7 @@ export function TutorialFlow({ onClose, onPlay }: { onClose: () => void; onPlay:
               step < TOTAL - 1 && !unlocked[step] ? 'opacity-40' : 'opacity-100'
             }`}
           >
-            {step === TOTAL - 1 ? t('tuto.play') : t('tuto.next')}
+            {step === TOTAL - 1 ? (playLabel ?? t('tuto.play')) : t('tuto.next')}
           </button>
         </div>
       </div>
