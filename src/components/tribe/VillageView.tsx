@@ -50,10 +50,10 @@ function layoutFor(n: number): Layout {
   const cy = H / 2
   const rings =
     ringCount === 1
-      ? [{ rx: 90, ry: 102 }]
+      ? [{ rx: 90, ry: 108 }]
       : ringCount === 2
-        ? [{ rx: 84, ry: 102 }, { rx: 126, ry: cy - 60 }]
-        : [{ rx: 78, ry: 96 }, { rx: 116, ry: 172 }, { rx: 152, ry: cy - 56 }]
+        ? [{ rx: 86, ry: 110 }, { rx: 128, ry: cy - 58 }]
+        : [{ rx: 86, ry: 116 }, { rx: 122, ry: 178 }, { rx: 156, ry: cy - 52 }]
   const counts = ringCount === 1 ? [n] : ringCount === 2 ? [6, n - 6] : [6, 12, n - 18]
   const jitter = rng(n * 7 + 3)
   const spots: Spot[] = []
@@ -264,7 +264,7 @@ const Scenery = memo(function Scenery({ layout, level, emblem, color }: { layout
           ))}
 
           {/* le grand baobab */}
-          <g transform={`translate(${cx} ${cy - 4}) scale(1.14)`}>
+          <g transform={`translate(${cx} ${cy + 3}) scale(1)`}>
             <ellipse cx="0" cy="24" rx="26" ry="7" fill="#000" opacity=".32" />
             <path d="M-21 24C-12 20-15 4-12 -8-10 -16-8 -22-6.5 -24h13C8 -22 10 -16 12 -8 15 4 12 20 21 24 10 30-10 30-21 24Z" fill="url(#vgTrunk)" stroke="#3a2614" strokeWidth="1.3" strokeLinejoin="round" />
             <path d="M-8 -6C-10 4-7 14-9 22M0 -12C1 0 0 12 1 23M8 -4C10 6 8 15 10 22" stroke="#5c4129" strokeWidth="1" fill="none" opacity=".7" />
