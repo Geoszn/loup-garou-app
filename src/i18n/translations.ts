@@ -1803,7 +1803,7 @@ export const translations = {
   'announce.season.later': { fr: 'Plus tard', en: 'Later' },
   'tribe.tab': { fr: 'Tribu', en: 'Tribe' },
   'tribe.empty.title': { fr: 'Tu n\'as pas de tribu', en: 'You don\'t have a tribe' },
-  'tribe.empty.body': { fr: 'Une tribu, c\'est jusqu\'à 30 joueurs, un chat privé et un chef. On y entre uniquement sur invitation.', en: 'A tribe is up to 30 players, a private chat and a chief. You can only join by invitation.' },
+  'tribe.empty.body': { fr: 'Une tribu, c\'est jusqu\'à 30 joueurs, un village, un chat privé et un chef. Rejoins-en une sur invitation ou sur demande, ou fonde la tienne.', en: 'A tribe is up to 30 players, a village, a private chat and a chief. Join one by invitation or request, or found your own.' },
   'tribe.create.cta': { fr: 'Créer ma tribu', en: 'Create my tribe' },
   'tribe.invites.received': { fr: 'Invitations reçues · {{n}}', en: 'Invitations received · {{n}}' },
   'tribe.invite.by': { fr: '{{count}} membres · invité par {{by}}', en: '{{count}} members · invited by {{by}}' },
