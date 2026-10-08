@@ -12,6 +12,7 @@ import { useMyAvatarConfig } from '../AvatarEditor'
 import { STICKER_PACK_ME, stickerById } from '../../lib/stickers'
 import { TribeShield } from './TribeShield'
 import { notifyTribeSummaryChanged } from '../../hooks/useTribeSummary'
+import { useNoPinchZoom } from '../../hooks/useNoPinchZoom'
 
 const POLL_MS = 12000
 const PAGE = 100
@@ -113,25 +114,17 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
   }, [])
 
   // Le chat occupe tout l'écran, FIXE comme une messagerie : la page derrière ne défile pas et
-  // le pincement ne zoome pas (Safari iOS ignore le réglage du viewport, d'où ces écouteurs).
+  // le pincement ne zoome pas.
+  useNoPinchZoom()
   useEffect(() => {
     const html = document.documentElement
     const prevHtml = html.style.overflow
     const prevBody = document.body.style.overflow
     html.style.overflow = 'hidden'
     document.body.style.overflow = 'hidden'
-    const stop = (e: Event) => e.preventDefault()
-    const stopMulti = (e: TouchEvent) => {
-      if (e.touches.length > 1) e.preventDefault()
-    }
-    const types = ['gesturestart', 'gesturechange', 'gestureend']
-    types.forEach((t) => document.addEventListener(t, stop, { passive: false }))
-    document.addEventListener('touchmove', stopMulti, { passive: false })
     return () => {
       html.style.overflow = prevHtml
       document.body.style.overflow = prevBody
-      types.forEach((t) => document.removeEventListener(t, stop))
-      document.removeEventListener('touchmove', stopMulti)
     }
   }, [])
 

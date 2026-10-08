@@ -34,8 +34,11 @@ import { useLanguage } from '../i18n/LanguageContext'
 import type { MyGameView, PublicPlayer } from '../types/game'
 import type { VoiceChannel } from '../hooks/useVoiceChat'
 import { Avatar } from '../components/Avatar'
+import { useNoPinchZoom } from '../hooks/useNoPinchZoom'
 
 export default function GameRoom() {
+  // Partie en cours : écran fixe, le pincement ne zoome pas (un zoom accidentel décalerait tout le jeu).
+  useNoPinchZoom()
   const { code } = useParams()
   const { user, profile } = useAuth()
   const { setMyStatus } = usePresence()
