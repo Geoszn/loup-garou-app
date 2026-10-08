@@ -406,6 +406,7 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
   const [profileId, setProfileId] = useState<string | null>(null)
   const navigate = useNavigate()
   const [copied, setCopied] = useState(false)
+  const [levelOpen, setLevelOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const isManager = tribe.my_role === 'chef' || tribe.my_role === 'sous_chef'
   const activeTab: RoomTab = tab === 'manage' && !isManager ? 'village' : tab
@@ -499,6 +500,20 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
             {detail && <span className="text-emerald-400">● {t('tribe.online', { n: onlineCount })}</span>} {detail && '· '}
             {t('tribe.members.count', { n: detail?.members.length ?? tribe.member_count, max: tribe.max })}
           </p>
+          {tribe.level !== undefined && (
+            <button type="button" onClick={() => setLevelOpen(true)} aria-label={t('tribe.level.title')} className="mt-1 flex w-full max-w-[230px] items-center gap-2 text-left">
+              <span className="shrink-0 rounded-md bg-amber-400 px-1.5 text-[10px] font-extrabold leading-4 text-night-950">{t('tribe.level.short', { n: tribe.level })}</span>
+              <span className="h-2 flex-1 overflow-hidden rounded-full bg-night-800 ring-1 ring-white/10">
+                <span
+                  className="block h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-300"
+                  style={{ width: `${tribe.xp_next == null ? 100 : Math.max(4, Math.min(100, (((tribe.xp ?? 0) - (tribe.xp_floor ?? 0)) / (tribe.xp_next - (tribe.xp_floor ?? 0))) * 100))}%` }}
+                />
+              </span>
+              <span className="shrink-0 text-[10px] tabular-nums text-moon-200/60">
+                {tribe.xp_next == null ? t('tribe.level.max') : `${(tribe.xp ?? 0) - (tribe.xp_floor ?? 0)}/${tribe.xp_next - (tribe.xp_floor ?? 0)}`}
+              </span>
+            </button>
+          )}
           <button type="button" onClick={copyCode} className="text-[11px] text-moon-200/45 hover:text-moon-200/80">
             {t('tribe.code')} <b className="font-mono tracking-widest text-amber-300">{tribe.code}</b> {copied ? `✓ ${t('common.copied')}` : '📋'}
           </button>
@@ -555,6 +570,25 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
       {profileId && <PlayerProfileModal userId={profileId} onClose={() => setProfileId(null)} />}
       <MemberSheet tribe={tribe} member={selected} onlineIds={onlineIds} onClose={() => setSelected(null)} reload={reloadAll} />
 
+      <Modal open={levelOpen} onClose={() => setLevelOpen(false)} title={t('tribe.level.title')}>
+        <div className="flex flex-col gap-3 text-sm text-moon-200/85">
+          <div className="flex items-center gap-3 rounded-xl border border-night-600/60 bg-night-900/50 px-3 py-2.5">
+            <span className="rounded-md bg-amber-400 px-2 py-0.5 text-sm font-extrabold text-night-950">{t('tribe.level.short', { n: tribe.level ?? 1 })}</span>
+            <span className="text-xs text-moon-200/70">
+              {tribe.xp_next == null ? t('tribe.level.max') : t('tribe.level.progress', { xp: tribe.xp ?? 0, next: tribe.xp_next, n: (tribe.level ?? 1) + 1 })}
+            </span>
+          </div>
+          <p>{t('tribe.level.intro')}</p>
+          <ul className="flex list-disc flex-col gap-1.5 pl-5 text-moon-200/75">
+            <li>{t('tribe.level.rule1')}</li>
+            <li>{t('tribe.level.rule2')}</li>
+            <li>{t('tribe.level.rule3')}</li>
+          </ul>
+          <Button variant="ghost" onClick={() => setLevelOpen(false)}>
+            {t('common.close')}
+          </Button>
+        </div>
+      </Modal>
       <Modal open={menuOpen} onClose={() => setMenuOpen(false)} title={tribe.name}>
         <div className="flex flex-col gap-2">
           {tribe.my_role === 'chef' && (

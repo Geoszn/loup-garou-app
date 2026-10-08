@@ -65,6 +65,11 @@ export interface TribeInfo {
   unread: number
   // Demandes d'adhésion à traiter (0 si je ne suis ni chef ni sous-chef).
   pending_requests: number
+  // Niveau de la tribu (migration 0225) : absents tant qu'elle n'est pas appliquée.
+  xp?: number
+  level?: number
+  xp_floor?: number
+  xp_next?: number | null
 }
 
 export interface TribeRequestOut {
