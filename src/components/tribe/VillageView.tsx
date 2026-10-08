@@ -1,9 +1,10 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLanguage } from '../../i18n/LanguageContext'
-import { COLOR_HEX, hutLevel, type TribeInfo, type TribeMember, type TribeMessage } from '../../lib/tribe'
+import { COLOR_HEX, hutLevel, hutPips, type TribeInfo, type TribeMember, type TribeMessage } from '../../lib/tribe'
 import { tierForPoints, tierLabel } from '../../lib/ranks'
 import { supabase } from '../../lib/supabase'
 import { Avatar } from '../Avatar'
+import { Hut } from './HutArt'
 
 // ---------------------------------------------------------------------------
 // Le plan du village : un baobab et un feu de camp au centre, des cases rondes
@@ -314,54 +315,6 @@ const Scenery = memo(function Scenery({ layout }: { layout: Layout }) {
   )
 })
 
-// Le style de la case suit le niveau du propriétaire : chaume (niv. 1-2), bois
-// peint (3), pierre et tuiles (4-5), pierre claire et toit doré (6).
-const HUT_STYLES = [
-  { wall: '#a8744a', shade: '#6a4529', roof: '#cfa650', roofShade: '#9b7a32', rib: '#7a5a22', stroke: '#3b2616' },
-  { wall: '#8a5a36', shade: '#5a3a22', roof: '#b8914a', roofShade: '#8a6a2c', rib: '#6a4a1c', stroke: '#3b2616' },
-  { wall: '#9a9690', shade: '#6e6a66', roof: '#b5573a', roofShade: '#8c3f28', rib: '#6e2f1d', stroke: '#35302c' },
-  { wall: '#e8dcc0', shade: '#c4b48e', roof: '#e2b13c', roofShade: '#b8872a', rib: '#8a6416', stroke: '#5a4a2a' },
-] as const
-
-/** Une case : mur, toit aux couleurs de la tribu, porte éclairée quand le membre est
- * en ligne ; drapeau pour le chef, étoile pour un sous-chef ; l'allure change avec
- * le niveau (rang) du propriétaire. */
-function Hut({ band, online, role, level }: { band: string; online: boolean; role: TribeMember['role']; level: number }) {
-  const style = level >= 6 ? 3 : level >= 4 ? 2 : level === 3 ? 1 : 0
-  const c = HUT_STYLES[style]
-  return (
-    <svg viewBox="0 0 50 58" className="block h-auto w-full overflow-visible" aria-hidden="true">
-      <ellipse cx="25" cy="52" rx="19" ry="4.5" fill="#000" opacity=".35" />
-      {online && <ellipse cx="25" cy="49" rx="22" ry="9" fill="#ffcf6b" opacity=".35" className="tribe-anim" style={{ animation: 'tribe-glow 2.6s ease-in-out infinite' }} />}
-      {style === 3 && <ellipse cx="25" cy="22" rx="26" ry="20" fill="#ffe08a" opacity=".22" className="tribe-anim" style={{ animation: 'tribe-glow 3s ease-in-out infinite' }} />}
-      <path d="M8 31v16c0 3.4 7.2 6 17 6s17-2.6 17-6V31z" fill={c.wall} stroke={c.stroke} strokeWidth="1.2" strokeLinejoin="round" />
-      <path d="M31 31v21c6-.6 11-2.4 11-5.2V31z" fill={c.shade} opacity=".55" />
-      {style === 1 && (
-        <g fill="none" strokeLinecap="round">
-          <path d="M14 32v19M20 32v21M30 32v21M36 32v19" stroke="#4a2f1a" strokeWidth=".8" opacity=".7" />
-          <path d="M8.6 37l3 3 3-3 3 3 3-3M31.6 37l3 3 3-3 3 3 2-2" stroke="#f0d27a" strokeWidth="1.2" />
-        </g>
-      )}
-      {(style === 2 || style === 3) && (
-        <path d="M8 38h34M8 45h34M16 31v7M28 31v7M22 38v7M35 38v7M16 45v7M30 45v7" fill="none" stroke={style === 2 ? '#5e5a56' : '#b9a77f'} strokeWidth=".8" opacity=".8" />
-      )}
-      <path d="M19.5 51.4V41a5.5 5.5 0 0 1 11 0v10.4z" fill={online ? '#ffcf6b' : '#1a1020'} stroke="#2a1a0e" strokeWidth="1" />
-      <path d="M1.5 32C10 28 40 28 48.5 32 40 21 31 9 25 3 19 9 10 21 1.5 32Z" fill={c.roof} stroke={c.rib} strokeWidth="1.3" strokeLinejoin="round" />
-      <path d="M25 3C27 12 36 24 48.5 32 38 29 31 29 25 29z" fill={c.roofShade} opacity=".55" />
-      <path d="M6 28c6-2 12-3 19-3s13 1 19 3M10 22c5-1.6 10-2.4 15-2.4s10 .8 15 2.4M15 16c3.4-1 6.6-1.4 10-1.4s6.6.4 10 1.4" fill="none" stroke={c.rib} strokeWidth=".9" strokeLinecap="round" opacity=".75" />
-      <path d="M2.4 31.4C11 28 39 28 47.6 31.4" fill="none" stroke={band} strokeWidth="3.4" strokeLinecap="round" />
-      <circle cx="25" cy="3" r={style === 3 ? 3.4 : 2.2} fill={style === 3 ? '#ffe08a' : c.rib} stroke={style === 3 ? c.rib : 'none'} strokeWidth=".8" />
-      {role === 'chef' && (
-        <g>
-          <path d="M25 3V-9" stroke="#e8dcc4" strokeWidth="1.3" strokeLinecap="round" />
-          <path d="M25.6 -9h13l-3.4 4.2 3.4 4.2h-13z" fill="#f0c75a" stroke="#0a0817" strokeWidth=".7" strokeLinejoin="round" />
-        </g>
-      )}
-      {role === 'sous_chef' && <path d="M25 -7l2 4.2 4.6.6-3.4 3.2.9 4.6L25 2.3l-4.1 2.3.9-4.6-3.4-3.2 4.6-.6z" fill="#7ec8ff" stroke="#0a0817" strokeWidth=".6" strokeLinejoin="round" />}
-    </svg>
-  )
-}
-
 const BUBBLE_MS = 75_000
 const BUBBLE_POLL_MS = 15_000
 
@@ -638,7 +591,7 @@ export function VillageView({
                           ✨
                         </span>
                       ))}
-                    <Hut band={band} online={online} role={m.role} level={hutLevel(m.rank_points)} />
+                    <Hut band={band} online={online} role={m.role} level={hutLevel(m.rank_points)} pips={hutPips(m.rank_points)} />
                     <Avatar
                       config={m.avatar_config}
                       icon={m.avatar_icon}

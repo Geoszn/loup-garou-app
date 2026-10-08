@@ -181,3 +181,11 @@ export function hutLevel(rankPoints: number | undefined): number {
   const group = tierGroup(tierForPoints(rankPoints ?? 0).id)
   return Math.max(1, ['nouveau_venu', 'villageois', 'chasseur', 'ancien', 'sage', 'legende'].indexOf(group) + 1)
 }
+
+/** Sous-palier dans le groupe de rang, en losanges sous la porte : III → 1, II → 2, I → 3
+ * (0 pour un nouveau venu). */
+export function hutPips(rankPoints: number | undefined): number {
+  const id = tierForPoints(rankPoints ?? 0).id
+  const m = /_([123])$/.exec(id)
+  return m ? 4 - Number(m[1]) : 0
+}
