@@ -23,6 +23,16 @@ if (Capacitor.isNativePlatform()) {
   // son comportement de navigateur normal (sélection de texte, zoom...).
   document.documentElement.classList.add('capacitor-native')
 
+  // Écran fixe : pas de zoom au pincement ni au double-tap dans l'appli installée (comme
+  // une vraie appli de messagerie). Le site web, lui, garde le zoom du navigateur.
+  const viewport = document.querySelector('meta[name="viewport"]')
+  if (viewport && !viewport.getAttribute('content')?.includes('user-scalable')) {
+    viewport.setAttribute('content', `${viewport.getAttribute('content')}, maximum-scale=1, user-scalable=no`)
+  }
+  for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
+    document.addEventListener(type, (e) => e.preventDefault(), { passive: false })
+  }
+
   // Icônes claires (texte/heure blancs) sur notre thème sombre — sans ça la
   // barre de statut système reste au réglage par défaut (souvent des icônes
   // noires invisibles sur fond sombre), un des détails qui trahit le plus

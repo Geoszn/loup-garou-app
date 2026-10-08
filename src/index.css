@@ -57,6 +57,17 @@ html, body {
    classique — là où la sélection de texte, le zoom, le clic droit etc.
    restent des attentes normales d'un navigateur desktop/mobile. */
 
+/* iPhone / iPad : Safari zoome la page dès qu'on touche un champ dont le texte fait moins de
+   16 px, puis ne la dézoome pas — d'où des écrans « agrandis » et décalés après une saisie.
+   On force donc 16 px minimum sur les champs, uniquement sur iOS. */
+@supports (-webkit-touch-callout: none) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
 html.capacitor-native, html.capacitor-native body {
   /* Supprime le rebond élastique (rubber-banding) qui découvre un aplat
      gris/blanc derrière le contenu en tirant au-delà des bords — le

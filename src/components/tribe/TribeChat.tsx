@@ -112,16 +112,26 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
     toastTimer.current = setTimeout(() => setToast(null), 2200)
   }, [])
 
-  // Le chat occupe tout l'écran : la page derrière ne doit pas défiler.
+  // Le chat occupe tout l'écran, FIXE comme une messagerie : la page derrière ne défile pas et
+  // le pincement ne zoome pas (Safari iOS ignore le réglage du viewport, d'où ces écouteurs).
   useEffect(() => {
     const html = document.documentElement
     const prevHtml = html.style.overflow
     const prevBody = document.body.style.overflow
     html.style.overflow = 'hidden'
     document.body.style.overflow = 'hidden'
+    const stop = (e: Event) => e.preventDefault()
+    const stopMulti = (e: TouchEvent) => {
+      if (e.touches.length > 1) e.preventDefault()
+    }
+    const types = ['gesturestart', 'gesturechange', 'gestureend']
+    types.forEach((t) => document.addEventListener(t, stop, { passive: false }))
+    document.addEventListener('touchmove', stopMulti, { passive: false })
     return () => {
       html.style.overflow = prevHtml
       document.body.style.overflow = prevBody
+      types.forEach((t) => document.removeEventListener(t, stop))
+      document.removeEventListener('touchmove', stopMulti)
     }
   }, [])
 
@@ -370,7 +380,7 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
   // Posé à la racine du document : la page « Tribu » a son propre empilement, qui laisserait
   // la barre du bas passer par-dessus le champ de saisie.
   return createPortal(
-    <div className="fixed inset-x-0 z-[45] flex flex-col bg-night-950" style={{ top: vv.top, height: vv.height }}>
+    <div className="fixed inset-x-0 z-[45] flex flex-col bg-night-950" style={{ top: vv.top, height: vv.height, touchAction: 'pan-x pan-y' }}>
       {/* en-tête */}
       <div className="flex shrink-0 items-center gap-2 border-b border-night-600/60 bg-night-900 px-2 pb-2" style={{ paddingTop: 'max(env(safe-area-inset-top), 0.5rem)' }}>
         <button type="button" onClick={onBack} aria-label={t('tribe.chat.back')} className="flex h-10 w-10 items-center justify-center rounded-full text-2xl text-moon-200 active:bg-night-800">
@@ -906,7 +916,7 @@ function Composer({
           }}
           placeholder={t('tribe.chat.placeholder')}
           maxLength={TRIBE_MESSAGE_MAX}
-          className="max-h-[120px] min-h-[42px] min-w-0 flex-1 resize-none rounded-3xl border border-night-600/60 bg-night-800 px-4 py-2.5 text-[15px] leading-5 text-moon-200 outline-none placeholder:text-moon-200/35 focus:border-moon-400/50"
+          className="max-h-[120px] min-h-[42px] min-w-0 flex-1 resize-none rounded-3xl border border-night-600/60 bg-night-800 px-4 py-2.5 text-base leading-5 text-moon-200 outline-none placeholder:text-moon-200/35 focus:border-moon-400/50"
         />
         <button type="submit" disabled={sending || !text.trim()} aria-label={t('tribe.chat.send')} className="mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blood-600 text-lg text-[#fdf6e3] transition-opacity disabled:opacity-40">
           ➤
