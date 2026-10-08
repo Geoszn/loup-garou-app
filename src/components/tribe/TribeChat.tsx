@@ -7,6 +7,9 @@ import type { TranslationKey } from '../../i18n/translations'
 import { TRIBE_MESSAGE_MAX, TRIBE_REACTIONS, type TribeInfo, type TribeMessage, type TribeMessageReaction } from '../../lib/tribe'
 import { Avatar } from '../Avatar'
 import { RoleBadge } from './TribeBits'
+import { Sticker } from './Sticker'
+import { useMyAvatarConfig } from '../AvatarEditor'
+import { STICKER_PACK_ME, stickerById } from '../../lib/stickers'
 import { TribeShield } from './TribeShield'
 import { notifyTribeSummaryChanged } from '../../hooks/useTribeSummary'
 
@@ -75,6 +78,16 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
   const [loaded, setLoaded] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [replyTo, setReplyTo] = useState<TribeMessage | null>(null)
+  const [stickersOpen, setStickersOpen] = useState(false)
+  const [recents, setRecents] = useState<string[]>(() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem('lg-tribe-sticker-recents') ?? '[]')
+      return Array.isArray(raw) ? raw.filter((id): id is string => typeof id === 'string' && !!stickerById(id)).slice(0, 8) : []
+    } catch {
+      return []
+    }
+  })
+  const myAvatar = useMyAvatarConfig()
   const [menuFor, setMenuFor] = useState<string | null>(null)
   const [namesFor, setNamesFor] = useState<{ id: string; emoji: string } | null>(null)
   const [highlight, setHighlight] = useState<string | null>(null)
@@ -303,6 +316,30 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
     setReplyTo(m)
   }, [])
 
+  const sendSticker = useCallback(
+    async (id: string) => {
+      setStickersOpen(false)
+      const { error: rpcError } = await supabase.rpc('send_tribe_sticker', { p_sticker: id, p_reply_to: replyTo?.id ?? null })
+      if (rpcError) {
+        showToast(rpcError.message)
+        return
+      }
+      setReplyTo(null)
+      stickRef.current = true
+      setRecents((list) => {
+        const next = [id, ...list.filter((x) => x !== id)].slice(0, 8)
+        try {
+          localStorage.setItem('lg-tribe-sticker-recents', JSON.stringify(next))
+        } catch {
+          // Stockage indisponible : les récents ne seront simplement pas gardés.
+        }
+        return next
+      })
+      void load()
+    },
+    [replyTo?.id, showToast, load],
+  )
+
   const locale = lang === 'en' ? 'en-GB' : 'fr-FR'
   const timeOf = (iso: string) => new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
   const dayOf = useCallback((iso: string) => new Date(iso).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' }), [locale])
@@ -423,17 +460,30 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
         {muted ? (
           <p className="px-3 py-3 text-center text-xs text-moon-200/60">{t('tribe.chat.muted')}</p>
         ) : (
-          <Composer
-            replyTo={replyTo}
-            onCancelReply={() => setReplyTo(null)}
-            onJump={jumpTo}
-            onSent={() => {
-              setReplyTo(null)
-              stickRef.current = true
-              void load()
-            }}
-            onError={showToast}
-          />
+          <>
+            {stickersOpen && (
+              <StickerPanel
+                recents={recents}
+                avatarConfig={myAvatar.config}
+                avatarIcon={profile?.avatar_icon}
+                name={profile?.username}
+                onPick={(id) => void sendSticker(id)}
+              />
+            )}
+            <Composer
+              replyTo={replyTo}
+              stickersOpen={stickersOpen}
+              onToggleStickers={() => setStickersOpen((o) => !o)}
+              onCancelReply={() => setReplyTo(null)}
+              onJump={jumpTo}
+              onSent={() => {
+                setReplyTo(null)
+                stickRef.current = true
+                void load()
+              }}
+              onError={showToast}
+            />
+          </>
         )}
       </div>
 
@@ -460,7 +510,7 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
             })}
           </div>
           <div className="max-h-28 w-full max-w-sm overflow-hidden rounded-2xl bg-night-800/90 px-3 py-2 text-sm text-moon-200/80" onClick={(e) => e.stopPropagation()}>
-            <p className="line-clamp-4 whitespace-pre-wrap break-words">{menuMessage.body}</p>
+            {menuMessage.sticker ? <p>🎭 {t('tribe.chat.stickerLabel')}</p> : <p className="line-clamp-4 whitespace-pre-wrap break-words">{menuMessage.body}</p>}
           </div>
           <div className="w-full max-w-sm divide-y divide-night-600/60 overflow-hidden rounded-2xl border border-night-600 bg-night-800 shadow-card" onClick={(e) => e.stopPropagation()}>
             {!muted && (
@@ -468,14 +518,16 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
                 <span aria-hidden="true">↩</span> {t('tribe.chat.reply')}
               </MenuItem>
             )}
-            <MenuItem
-              onClick={() => {
-                setMenuFor(null)
-                void copy(menuMessage)
-              }}
-            >
-              <span aria-hidden="true">📋</span> {t('tribe.chat.copy')}
-            </MenuItem>
+            {!menuMessage.sticker && (
+              <MenuItem
+                onClick={() => {
+                  setMenuFor(null)
+                  void copy(menuMessage)
+                }}
+              >
+                <span aria-hidden="true">📋</span> {t('tribe.chat.copy')}
+              </MenuItem>
+            )}
             {menuMessage.user_id !== user?.id && !reported.has(menuMessage.id) && (
               <MenuItem
                 onClick={() => {
@@ -502,6 +554,34 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
       )}
     </div>,
     document.body,
+  )
+}
+
+/** Panneau des stickers, au-dessus du champ de saisie : « Récents » puis le pack « Moi ». Un
+ * toucher envoie le sticker tout de suite. */
+function StickerPanel({ recents, avatarConfig, avatarIcon, name, onPick }: { recents: string[]; avatarConfig: unknown; avatarIcon?: string | null; name?: string; onPick: (id: string) => void }) {
+  const { t } = useLanguage()
+  const recentDefs = recents.map((id) => stickerById(id)).filter((d): d is NonNullable<typeof d> => !!d)
+  const grid = (defs: typeof STICKER_PACK_ME) => (
+    <div className="grid grid-cols-4 justify-items-center gap-x-1 gap-y-3">
+      {defs.map((d) => (
+        <button key={d.id} type="button" onClick={() => onPick(d.id)} className="rounded-xl p-0.5 transition-transform active:scale-90">
+          <Sticker def={d} avatarConfig={avatarConfig} avatarIcon={avatarIcon} name={name} size={72} />
+        </button>
+      ))}
+    </div>
+  )
+  return (
+    <div className="max-h-[42vh] overflow-y-auto overscroll-contain border-b border-night-600/60 bg-night-900 px-3 py-3">
+      {recentDefs.length > 0 && (
+        <div className="mb-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-moon-200/50">{t('tribe.chat.stickersRecent')}</p>
+          {grid(recentDefs)}
+        </div>
+      )}
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-moon-200/50">{t('tribe.chat.stickersMe')}</p>
+      {grid(STICKER_PACK_ME)}
+    </div>
   )
 }
 
@@ -577,6 +657,21 @@ const Message = memo(function Message({
 
   const hasQuote = !!m.reply_snippet || !!m.reply_name
   const gone = hasQuote && !m.reply_to
+  const stickerDef = stickerById(m.sticker)
+  const quoteEl = hasQuote ? (
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onJump(m.reply_to)
+                }}
+                className={`mb-1 block w-full min-w-[9rem] max-w-full overflow-hidden rounded-lg border-l-4 px-2 py-1 text-left ${mine ? 'border-amber-300 bg-black/20' : 'border-sky-400 bg-black/25'}`}
+              >
+                <span className={`block truncate text-[11px] font-semibold ${mine ? 'text-amber-200' : 'text-sky-300'}`}>{m.reply_name ?? formerLabel}</span>
+                <span className={`line-clamp-2 break-words text-xs ${gone ? 'italic opacity-60' : 'opacity-80'}`}>{gone ? goneLabel : m.reply_snippet}</span>
+              </button>
+  ) : null
 
   return (
     <div className={`flex items-end gap-1.5 ${mine ? 'flex-row-reverse' : ''}`}>
@@ -639,32 +734,33 @@ const Message = memo(function Message({
             if (!swiping.current) cancelTimer()
           }}
         >
+          {stickerDef ? (
+            <div className="flex max-w-full flex-col gap-1">
+              {!mine && groupStart && (
+                <div className="flex items-center gap-1.5 px-1">
+                  <span className={`truncate text-[12px] font-semibold ${colorOf(m.user_id)}`}>{m.username ?? formerLabel}</span>
+                  {m.role && m.role !== 'membre' && <RoleBadge role={m.role} />}
+                </div>
+              )}
+              {quoteEl && <div className={`rounded-xl p-1 ${mine ? 'bg-blood-700/85' : 'bg-night-800'}`}>{quoteEl}</div>}
+              <Sticker def={stickerDef} avatarConfig={m.avatar_config} avatarIcon={m.avatar_icon} name={m.username ?? undefined} size={124} />
+              <span className="self-end rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] leading-none text-moon-200/85">{time}</span>
+            </div>
+          ) : (
           <div className={`flow-root max-w-full rounded-2xl px-2.5 py-1.5 shadow-sm ${mine ? 'bg-blood-700/85 text-[#fdf6e3]' : 'bg-night-800 text-moon-200'} ${groupStart ? (mine ? 'rounded-tr-sm' : 'rounded-tl-sm') : ''}`}>
-            {!mine && groupStart && (
-              <div className="mb-0.5 flex items-center gap-1.5">
-                <span className={`truncate text-[12px] font-semibold ${colorOf(m.user_id)}`}>{m.username ?? formerLabel}</span>
-                {m.role && m.role !== 'membre' && <RoleBadge role={m.role} />}
-              </div>
-            )}
-            {hasQuote && (
-              <button
-                type="button"
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onJump(m.reply_to)
-                }}
-                className={`mb-1 block w-full min-w-[9rem] max-w-full overflow-hidden rounded-lg border-l-4 px-2 py-1 text-left ${mine ? 'border-amber-300 bg-black/20' : 'border-sky-400 bg-black/25'}`}
-              >
-                <span className={`block truncate text-[11px] font-semibold ${mine ? 'text-amber-200' : 'text-sky-300'}`}>{m.reply_name ?? formerLabel}</span>
-                <span className={`line-clamp-2 break-words text-xs ${gone ? 'italic opacity-60' : 'opacity-80'}`}>{gone ? goneLabel : m.reply_snippet}</span>
-              </button>
-            )}
-            <p className="whitespace-pre-wrap break-words text-[14.5px] leading-5">
-              {m.body}
-              <span className="float-right ml-3 mt-1.5 text-[10px] leading-none opacity-55">{time}</span>
-            </p>
-          </div>
+              {!mine && groupStart && (
+                <div className="mb-0.5 flex items-center gap-1.5">
+                  <span className={`truncate text-[12px] font-semibold ${colorOf(m.user_id)}`}>{m.username ?? formerLabel}</span>
+                  {m.role && m.role !== 'membre' && <RoleBadge role={m.role} />}
+                </div>
+              )}
+              {quoteEl}
+              <p className="whitespace-pre-wrap break-words text-[14.5px] leading-5">
+                {m.body}
+                <span className="float-right ml-3 mt-1.5 text-[10px] leading-none opacity-55">{time}</span>
+              </p>
+            </div>
+          )}
         </div>
 
         {grouped.length > 0 && (
@@ -725,12 +821,16 @@ const Message = memo(function Message({
 /** Zone de saisie isolée : sa propre frappe ne redessine pas la liste des messages. */
 function Composer({
   replyTo,
+  stickersOpen,
+  onToggleStickers,
   onCancelReply,
   onJump,
   onSent,
   onError,
 }: {
   replyTo: TribeMessage | null
+  stickersOpen: boolean
+  onToggleStickers: () => void
   onCancelReply: () => void
   onJump: (id: string | null | undefined) => void
   onSent: () => void
@@ -775,7 +875,7 @@ function Composer({
         <div className="mx-2.5 mt-2 flex items-stretch gap-2 rounded-xl bg-night-800 p-1.5">
           <button type="button" onClick={() => onJump(replyTo.id)} className="min-w-0 flex-1 rounded-lg border-l-4 border-sky-400 bg-black/20 px-2 py-1 text-left">
             <span className="block truncate text-[11px] font-semibold text-sky-300">{t('tribe.chat.replyingTo', { name: replyTo.username ?? t('tribe.formerMember') })}</span>
-            <span className="block truncate text-xs text-moon-200/70">{replyTo.body}</span>
+            <span className="block truncate text-xs text-moon-200/70">{replyTo.sticker ? `🎭 ${t('tribe.chat.stickerLabel')}` : replyTo.body}</span>
           </button>
           <button type="button" onClick={onCancelReply} aria-label={t('common.cancel')} className="flex w-8 shrink-0 items-center justify-center rounded-full text-moon-200/60 active:bg-night-700">
             ✕
@@ -783,6 +883,15 @@ function Composer({
         </div>
       )}
       <div className="flex items-end gap-2 px-2.5 pt-2">
+        <button
+          type="button"
+          onClick={onToggleStickers}
+          aria-label={t('tribe.chat.stickers')}
+          aria-pressed={stickersOpen}
+          className={`mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-xl transition-colors ${stickersOpen ? 'bg-moon-400/25' : 'bg-night-800'}`}
+        >
+          🎭
+        </button>
         <textarea
           ref={areaRef}
           value={text}

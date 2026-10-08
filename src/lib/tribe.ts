@@ -196,6 +196,8 @@ export interface TribeMessage {
   reply_name?: string | null
   reply_snippet?: string | null
   reactions?: TribeMessageReaction[]
+  // Identifiant de sticker (migration 0228) : le message n'a alors pas de texte.
+  sticker?: string | null
 }
 
 /** Niveau de la case (1 à 6) : suit le groupe de rang du propriétaire
