@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { Button, Card, ErrorText, Input, Label, SuccessText } from '../components/ui'
+import { Button, Card, ErrorText, Input, Label, SuccessText, PasswordInput } from '../components/ui'
 import { useLanguage } from '../i18n/LanguageContext'
 import { isAdminApp } from '../lib/adminApp'
 import { safeRedirect } from '../lib/safeRedirect'
@@ -92,9 +92,8 @@ export default function Login() {
                   {t('login.forgotPassword')}
                 </Link>
               </div>
-              <Input
+              <PasswordInput
                 id="login-password"
-                type="password"
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

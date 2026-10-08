@@ -24,6 +24,7 @@ import { useActiveBanners } from '../hooks/useActiveBanners'
 import { useMySeason } from '../hooks/useMySeason'
 import { SeasonTrack } from '../components/SeasonTrack'
 import { LiveVillage } from '../components/LiveVillage'
+import { GettingStartedCard } from '../components/GettingStartedCard'
 import { TribeCard } from '../components/tribe/TribeCard'
 import { AfterIdle, LazyMount } from '../components/Deferred'
 import { useLanguage } from '../i18n/LanguageContext'
@@ -243,6 +244,9 @@ export default function Dashboard() {
           </div>
           <RankProgress points={profile?.rank_points ?? 0} />
         </div>
+
+        {/* Nouveau joueur sans vraie partie : par où commencer (voir GettingStartedCard). */}
+        <GettingStartedCard />
 
         {/* « Le village veille » : une maison par partie en cours (publiques et
             privées), pour montrer d'emblée que le jeu est vivant et qu'on

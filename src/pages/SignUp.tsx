@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { Button, Card, ErrorText, Input, Label } from '../components/ui'
+import { Button, Card, ErrorText, Input, Label, PasswordInput } from '../components/ui'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { CONTINENTS } from '../lib/continents'
 import { useLanguage } from '../i18n/LanguageContext'
@@ -105,9 +105,8 @@ export default function SignUp() {
           </div>
           <div>
             <Label htmlFor="signup-password">{t('signup.password')}</Label>
-            <Input
+            <PasswordInput
               id="signup-password"
-              type="password"
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

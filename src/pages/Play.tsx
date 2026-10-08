@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { notifyJoinRequest } from '../lib/pushSubscription'
 import { Button, ErrorText, Input, Label, Modal } from '../components/ui'
 import { PublicGamesList } from '../components/PublicGamesBrowser'
+import { HowToPlayButton } from '../components/HowToPlayButton'
 import { useLanguage } from '../i18n/LanguageContext'
 
 type JoinStep = 'closed' | 'choose' | 'public' | 'code'
@@ -78,9 +79,12 @@ export default function Play() {
   return (
     <div className="min-h-screen px-4 pt-8">
       <div className="mx-auto flex max-w-3xl flex-col gap-4">
-        <header>
-          <h1 className="font-display text-2xl text-moon-200">{t('play.title')}</h1>
-          <p className="mt-0.5 text-sm text-moon-200/60">{t('play.subtitle')}</p>
+        <header className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="font-display text-2xl text-moon-200">{t('play.title')}</h1>
+            <p className="mt-0.5 text-sm text-moon-200/60">{t('play.subtitle')}</p>
+          </div>
+          <HowToPlayButton className="shrink-0" />
         </header>
 
         {!newGamesEnabled && (

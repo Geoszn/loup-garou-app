@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useGoBack } from '../hooks/useGoBack'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { Button, Card, ConfirmDialog, ErrorText, Input, Label, Modal, SuccessText } from '../components/ui'
+import { Button, Card, ConfirmDialog, ErrorText, Input, Label, Modal, SuccessText, PasswordInput } from '../components/ui'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { ContinentSelect } from '../components/ContinentSelect'
 import { useLanguage } from '../i18n/LanguageContext'
@@ -317,9 +317,8 @@ function PasswordModal({ open, onClose, onSaved }: { open: boolean; onClose: () 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div>
           <Label htmlFor="account-current-password">{t('account.password.current')}</Label>
-          <Input
+          <PasswordInput
             id="account-current-password"
-            type="password"
             autoComplete="current-password"
             value={current}
             onChange={(e) => setCurrent(e.target.value)}
@@ -329,9 +328,8 @@ function PasswordModal({ open, onClose, onSaved }: { open: boolean; onClose: () 
         </div>
         <div>
           <Label htmlFor="account-new-password">{t('account.password.new')}</Label>
-          <Input
+          <PasswordInput
             id="account-new-password"
-            type="password"
             autoComplete="new-password"
             value={next}
             onChange={(e) => setNext(e.target.value)}
@@ -341,9 +339,8 @@ function PasswordModal({ open, onClose, onSaved }: { open: boolean; onClose: () 
         </div>
         <div>
           <Label htmlFor="account-confirm-password">{t('account.password.confirm')}</Label>
-          <Input
+          <PasswordInput
             id="account-confirm-password"
-            type="password"
             autoComplete="new-password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}

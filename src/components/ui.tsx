@@ -102,6 +102,30 @@ export function CopyButton({
   )
 }
 
+/** Champ de mot de passe avec un œil pour voir ce qu'on tape (beaucoup d'erreurs de saisie sur mobile). */
+export function PasswordInput(props: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>) {
+  const { t } = useLanguage()
+  const [shown, setShown] = useState(false)
+  return (
+    <div className="relative">
+      <Input {...props} type={shown ? 'text' : 'password'} className={`pr-12 ${props.className ?? ''}`} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
+      <button
+        type="button"
+        onClick={() => setShown((v) => !v)}
+        aria-label={shown ? t('common.hidePassword') : t('common.showPassword')}
+        aria-pressed={shown}
+        className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-moon-200/50 transition-colors hover:text-moon-200"
+      >
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+          <circle cx="12" cy="12" r="3" />
+          {shown && <path d="M4 4l16 16" />}
+        </svg>
+      </button>
+    </div>
+  )
+}
+
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input

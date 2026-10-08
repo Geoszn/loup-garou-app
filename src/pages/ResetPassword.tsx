@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { Button, Card, ErrorText, Input, Label } from '../components/ui'
+import { Button, Card, ErrorText, Input, Label, PasswordInput } from '../components/ui'
 import { useLanguage } from '../i18n/LanguageContext'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 
@@ -100,9 +100,8 @@ export default function ResetPassword() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
               <Label htmlFor="reset-password">{t('resetPassword.new')}</Label>
-              <Input
+              <PasswordInput
                 id="reset-password"
-                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -111,9 +110,8 @@ export default function ResetPassword() {
             </div>
             <div>
               <Label htmlFor="reset-confirm">{t('resetPassword.confirm')}</Label>
-              <Input
+              <PasswordInput
                 id="reset-confirm"
-                type="password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 placeholder="••••••••"

@@ -35,6 +35,7 @@ import type { MyGameView, PublicPlayer } from '../types/game'
 import type { VoiceChannel } from '../hooks/useVoiceChat'
 import { Avatar } from '../components/Avatar'
 import { useNoPinchZoom } from '../hooks/useNoPinchZoom'
+import { PracticeAssistant } from '../components/PracticeAssistant'
 
 export default function GameRoom() {
   // Partie en cours : écran fixe, le pincement ne zoome pas (un zoom accidentel décalerait tout le jeu).
@@ -405,6 +406,8 @@ export default function GameRoom() {
         )}
 
       <div className={`mx-auto flex max-w-3xl flex-col gap-4 px-4 pt-4 ${view.game.status === 'role_reveal' ? 'pb-28' : 'pb-4'}`}>
+        {/* Partie d'entraînement : bots, conseils par étape et bilan (rien si partie normale). */}
+        <PracticeAssistant view={view} gameId={gameId!} />
         {/* Boussole du Village (artefact du Loup Store, migration 0152) :
             en dehors de tout statut/alive comme le panneau de succession
             juste en dessous — le propriétaire doit pouvoir consulter

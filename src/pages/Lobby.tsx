@@ -6,6 +6,7 @@ import { useNotificationSound } from '../hooks/useNotificationSound'
 import { supabase } from '../lib/supabase'
 import { notifyGameInvite, notifyGameStarted, isStandaloneDisplay } from '../lib/pushSubscription'
 import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, Segmented } from '../components/ui'
+import { HowToPlayButton } from '../components/HowToPlayButton'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { PlayerProfileModal } from '../components/PlayerProfileModal'
 import { ModerationPanel } from '../components/ModerationPanel'
@@ -574,6 +575,7 @@ export default function Lobby() {
               un écart plus large réduit le risque de mistap sur un
               téléphone tenu à une main. */}
           <div className="flex items-center gap-4">
+            <HowToPlayButton />
             {/* Plus de bouton ⚙️ ici : les réglages de l'hôte sont
                 maintenant un onglet directement sur la page (voir la barre
                 Segmented sous le vocal, plus bas) — retour utilisateur :
