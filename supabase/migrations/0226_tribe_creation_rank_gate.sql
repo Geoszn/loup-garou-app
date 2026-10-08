@@ -1,4 +1,4 @@
--- Fonder une tribu demande un minimum de points de rang : Apprenti III (100 points).
+-- Fonder une tribu demande un minimum de points de rang : Doyen III (1 500 points).
 -- Rejoindre une tribu (invitation ou demande) reste ouvert à tous. Les tribus déjà
 -- fondées ne sont pas touchées. Pour changer le seuil, modifier tribe_create_min_points()
 -- ici ET TRIBE_CREATE_MIN_POINTS dans src/lib/tribe.ts. Rejouable sans risque.
@@ -8,7 +8,7 @@ create or replace function public.tribe_create_min_points()
 returns int
 language sql
 immutable
-as $$ select 100 $$;
+as $$ select 1500 $$;
 
 create or replace function public.create_tribe(p_name text, p_motto text, p_emblem text, p_color text)
 returns jsonb
@@ -35,7 +35,7 @@ begin
     raise exception 'Tu fais déjà partie d''une tribu.';
   end if;
   if coalesce((select rank_points from public.profiles where id = v_user), 0) < public.tribe_create_min_points() then
-    raise exception '%', format('Il faut atteindre le rang « Apprenti III » (%s points) pour fonder une tribu.', public.tribe_create_min_points());
+    raise exception '%', format('Il faut atteindre le rang « Doyen III » (%s points) pour fonder une tribu.', public.tribe_create_min_points());
   end if;
 
   begin
