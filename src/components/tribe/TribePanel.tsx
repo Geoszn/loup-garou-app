@@ -480,12 +480,12 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
   }
 
   const unreadForTab = activeTab === 'chat' ? 0 : tribe.unread
-  const tabs: { id: RoomTab; label: string; badge?: number }[] = [
-    { id: 'village', label: `🏘️ ${t('tribe.tabs.village')}` },
-    { id: 'chat', label: `💬 ${t('tribe.tabs.chat')}`, badge: unreadForTab },
-    { id: 'members', label: `👥 ${t('tribe.tabs.members')}` },
-    ...(isManager ? [{ id: 'manage' as const, label: `✉️ ${t('tribe.tabs.invites')}`, badge: tribe.pending_requests }] : []),
-    { id: 'friends', label: `🤝 ${t('tribe.tabs.friends')}`, badge: pendingFriends },
+  const tabs: { id: RoomTab; icon: string; label: string; badge?: number }[] = [
+    { id: 'village', icon: '🏘️', label: t('tribe.tabs.village') },
+    { id: 'chat', icon: '💬', label: t('tribe.tabs.chat'), badge: unreadForTab },
+    { id: 'members', icon: '👥', label: t('tribe.tabs.members') },
+    ...(isManager ? [{ id: 'manage' as const, icon: '✉️', label: t('tribe.tabs.invites'), badge: tribe.pending_requests }] : []),
+    { id: 'friends', icon: '🤝', label: t('tribe.tabs.friends'), badge: pendingFriends },
   ]
 
   return (
@@ -503,22 +503,28 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
             {t('tribe.code')} <b className="font-mono tracking-widest text-amber-300">{tribe.code}</b> {copied ? `✓ ${t('common.copied')}` : '📋'}
           </button>
         </div>
-        <button type="button" onClick={() => setMenuOpen(true)} aria-label={t('tribe.menu.title')} className="rounded-lg border border-night-500 px-2.5 py-1 text-moon-200/70">
+        <button type="button" onClick={() => setMenuOpen(true)} aria-label={t('tribe.menu.title')} className="rounded-lg border border-night-500 bg-night-800 px-2.5 py-1 text-moon-200/80 shadow-md">
           ⋯
         </button>
       </div>
 
-      <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]">
+      {/* tous les onglets visibles d'un coup : une colonne chacun, icône au-dessus du nom */}
+      <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
         {tabs.map((x) => (
           <button
             key={x.id}
             type="button"
             onClick={() => setTab(x.id)}
             aria-pressed={activeTab === x.id}
-            className={`flex shrink-0 items-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${activeTab === x.id ? 'bg-blood-600 text-[#fdf6e3]' : 'border border-night-600/60 bg-night-900/40 text-moon-200/65'}`}
+            className={`relative flex min-w-0 flex-col items-center gap-0.5 rounded-xl px-0.5 py-1.5 transition-colors ${activeTab === x.id ? 'bg-blood-600 text-[#fdf6e3]' : 'border border-night-600/60 bg-night-900/70 text-moon-200/70'}`}
           >
-            {x.label}
-            {x.badge !== undefined && <Dot n={x.badge} />}
+            <span className="text-lg leading-none" aria-hidden="true">{x.icon}</span>
+            <span className="w-full truncate text-center text-[10px] font-semibold leading-3">{x.label}</span>
+            {x.badge !== undefined && x.badge > 0 && (
+              <span className="absolute right-1 top-0.5 flex min-w-4 items-center justify-center rounded-full bg-blood-500 px-1 text-[10px] font-bold leading-4 text-[#fdf6e3] ring-2 ring-night-950">
+                {x.badge > 99 ? '99+' : x.badge}
+              </span>
+            )}
           </button>
         ))}
       </div>

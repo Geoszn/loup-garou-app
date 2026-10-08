@@ -751,7 +751,7 @@ export function VillageSky() {
       {stars.map((st, i) => (
         <span key={i} className="tribe-anim absolute rounded-full bg-white" style={{ left: `${st.x}%`, top: `${st.y}%`, width: st.s, height: st.s, opacity: st.o, boxShadow: st.big ? '0 0 6px 1px rgba(255,255,255,0.7)' : undefined, animation: `tribe-twinkle ${3 + (i % 4)}s ease-in-out ${st.d}s infinite` }} />
       ))}
-      <div className="absolute right-[8%] top-[9%] h-14 w-14 rounded-full" style={{ background: 'radial-gradient(circle at 38% 36%, #fffbe6, #f3e3a8 60%, #d8c27a)', boxShadow: '0 0 40px 10px rgba(255, 238, 170, 0.28)' }} />
+      <div className="absolute right-[7%] h-11 w-11 rounded-full" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 10px)', background: 'radial-gradient(circle at 38% 36%, #fffbe6, #f3e3a8 60%, #d8c27a)', boxShadow: '0 0 30px 8px rgba(255, 238, 170, 0.26)' }} />
     </div>,
     document.body,
   )
