@@ -578,7 +578,7 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
           <div className="h-72 animate-pulse rounded-3xl bg-night-900/40" />
         )
       )}
-      {activeTab === 'chat' && <TribeChat tribe={tribe} />}
+      {activeTab === 'chat' && <TribeChat tribe={tribe} onBack={() => setTab('village')} onlineCount={detail ? onlineCount : null} memberCount={detail?.members.length ?? tribe.member_count} />}
       {activeTab === 'members' && <MembersView tribe={tribe} detail={detail} onlineIds={onlineIds} onSelect={setSelected} goInvite={() => setTab('manage')} />}
       {activeTab === 'manage' && isManager && <ManageView detail={detail} reload={reloadAll} />}
       {activeTab === 'friends' && <FriendsPanel />}

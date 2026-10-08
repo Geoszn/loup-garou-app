@@ -168,6 +168,16 @@ export interface TribeCandidate {
   invited: boolean
 }
 
+/** Les mêmes 6 réactions que le chat des parties. */
+export const TRIBE_REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🔥'] as const
+export type TribeReaction = (typeof TRIBE_REACTIONS)[number]
+
+export interface TribeMessageReaction {
+  emoji: string
+  user_id: string
+  username: string | null
+}
+
 export interface TribeMessage {
   id: string
   kind: 'user' | 'system'
@@ -181,6 +191,11 @@ export interface TribeMessage {
   avatar_icon: string | null
   avatar_config?: unknown
   role: TribeRole | null
+  // Réponse et réactions (migration 0227) : absentes tant qu'elle n'est pas appliquée.
+  reply_to?: string | null
+  reply_name?: string | null
+  reply_snippet?: string | null
+  reactions?: TribeMessageReaction[]
 }
 
 /** Niveau de la case (1 à 6) : suit le groupe de rang du propriétaire

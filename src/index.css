@@ -295,6 +295,10 @@ body {
   from { transform: translateX(-9px); }
   to { transform: translateX(9px); }
 }
+@keyframes tribe-flash {
+  0%, 100% { background-color: transparent; }
+  20%, 65% { background-color: rgba(255, 207, 107, 0.24); }
+}
 @keyframes tribe-hop {
   0%, 100% { transform: translateY(0); }
   40% { transform: translateY(-7%); }
