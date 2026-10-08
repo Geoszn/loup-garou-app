@@ -291,3 +291,9 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .tribe-house-in, .tribe-anim { animation: none !important; }
 }
+@keyframes tribe-firefly {
+  0%, 100% { opacity: 0; transform: translate(0, 0); }
+  30% { opacity: 0.95; }
+  50% { transform: translate(10px, -14px); }
+  70% { opacity: 0.8; }
+}

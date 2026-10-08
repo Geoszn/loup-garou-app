@@ -24,6 +24,10 @@ import {
   type TribeInviteIn,
 } from '../../lib/tribe'
 import { FriendsPanel } from '../../pages/Friends'
+import { PlayerProfileModal } from '../PlayerProfileModal'
+import { RankTierBadge } from '../RankTierBadge'
+import { tierLabel, type RankTier } from '../../lib/ranks'
+import { continentName } from '../../lib/continents'
 import { Avatar } from '../Avatar'
 import { Button, Card, ConfirmDialog, ErrorText, Modal, Segmented } from '../ui'
 import { TribeShield } from './TribeShield'
@@ -559,12 +563,38 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
 // ---------------------------------------------------------------------------
 // Fiche d'un membre (touche une maison du village ou une ligne de la liste)
 // ---------------------------------------------------------------------------
+interface PublicProfile {
+  username: string
+  continent: string | null
+  rank_points: number
+  tier: string
+  best_streak: number
+  rank_wins: number
+  rank_games_played: number
+}
+
 function MemberSheet({ tribe, member, onlineIds, onClose, reload }: { tribe: TribeInfo; member: TribeMember | null; onlineIds: Set<string>; onClose: () => void; reload: () => Promise<void> }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const { user } = useAuth()
   const [confirm, setConfirm] = useState<'kick' | 'transfer' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [profile, setProfile] = useState<PublicProfile | null>(null)
+  const [fullProfile, setFullProfile] = useState<string | null>(null)
   const isChef = tribe.my_role === 'chef'
+  const memberId = member?.user_id
+
+  // Les informations du propriétaire de la case : rang, victoires, continent…
+  useEffect(() => {
+    setProfile(null)
+    if (!memberId) return
+    let active = true
+    supabase.rpc('get_player_public_profile', { p_user_id: memberId }).then(({ data }) => {
+      if (active && data) setProfile(data as PublicProfile)
+    })
+    return () => {
+      active = false
+    }
+  }, [memberId])
 
   if (!member) return null
   const manage = member.user_id !== user?.id && (isChef || (tribe.my_role === 'sous_chef' && member.role === 'membre'))
@@ -581,20 +611,44 @@ function MemberSheet({ tribe, member, onlineIds, onClose, reload }: { tribe: Tri
     await reload()
   }
 
+  const since = new Date(member.joined_at).toLocaleDateString(lang === 'en' ? 'en-GB' : 'fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+  const continent = profile ? continentName(profile.continent, lang) : null
+
   return (
     <>
-      <Modal open={confirm === null} onClose={onClose} title={member.username}>
+      <Modal open={confirm === null && !fullProfile} onClose={onClose} title={member.username}>
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <Avatar config={member.avatar_config} icon={member.avatar_icon} name={member.username} className="h-16 w-16" />
-            <div>
+            <div className="min-w-0">
               <RoleBadge role={member.role} />
               <p className="mt-1 flex items-center gap-1.5 text-xs text-moon-200/60">
                 <OnlineDot online={onlineIds.has(member.user_id)} /> {onlineIds.has(member.user_id) ? t('tribe.status.online') : t('tribe.status.offline')}
                 {member.muted && <span> · 🔇 {t('tribe.member.muted')}</span>}
               </p>
+              <p className="mt-0.5 text-[11px] text-moon-200/45">{t('tribe.sheet.since', { date: since })}</p>
             </div>
           </div>
+          {profile && (
+            <div className="flex items-center gap-3 rounded-xl border border-night-600/60 bg-night-900/50 px-3 py-2.5">
+              <RankTierBadge tier={profile.tier as RankTier} size={34} />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-moon-200">
+                  {tierLabel(profile.tier, t)} <span className="text-xs font-normal text-moon-200/50">· {profile.rank_points} pts</span>
+                </p>
+                <p className="text-[11px] text-moon-200/55">
+                  {t('tribe.sheet.stats', { wins: profile.rank_wins, games: profile.rank_games_played })}
+                  {profile.best_streak > 0 && ` · ${t('tribe.sheet.streak', { n: profile.best_streak })}`}
+                  {continent && ` · ${continent}`}
+                </p>
+              </div>
+            </div>
+          )}
+          {member.user_id !== user?.id && (
+            <Button variant="ghost" onClick={() => setFullProfile(member.user_id)}>
+              👤 {t('tribe.sheet.profile')}
+            </Button>
+          )}
           {manage && (
             <div className="flex flex-col gap-2">
               {isChef && member.role !== 'sous_chef' && (
@@ -632,6 +686,7 @@ function MemberSheet({ tribe, member, onlineIds, onClose, reload }: { tribe: Tri
         onCancel={() => setConfirm(null)}
         onConfirm={() => run(confirm === 'transfer' ? 'transfer_tribe_chief' : 'kick_tribe_member', { p_user_id: member.user_id })}
       />
+      {fullProfile && <PlayerProfileModal userId={fullProfile} onClose={() => setFullProfile(null)} />}
     </>
   )
 }

@@ -1904,6 +1904,12 @@ export const translations = {
   'tribe.request.decline': { fr: 'Refuser', en: 'Decline' },
   'tribe.edit.accepting': { fr: 'Accepter les demandes d\'adhésion', en: 'Accept join requests' },
   'tribe.edit.acceptingHint': { fr: 'Désactivé : la tribu n\'apparaît plus dans la recherche par nom (le code reste valable).', en: 'Off: the tribe no longer shows up in name search (the code still works).' },
+  'tribe.village.hint': { fr: 'touche une case pour voir son propriétaire', en: 'tap a hut to see its owner' },
+  'tribe.sheet.rank': { fr: 'Rang', en: 'Rank' },
+  'tribe.sheet.stats': { fr: '{{wins}} victoires · {{games}} parties', en: '{{wins}} wins · {{games}} games' },
+  'tribe.sheet.since': { fr: 'Dans la tribu depuis le {{date}}', en: 'In the tribe since {{date}}' },
+  'tribe.sheet.profile': { fr: 'Profil complet', en: 'Full profile' },
+  'tribe.sheet.streak': { fr: 'Meilleure série : {{n}}', en: 'Best streak: {{n}}' },
   'announce.store.badge': { fr: 'Nouveau', en: 'New' },
   'announce.store.title': { fr: '18 nouveaux articles à découvrir !', en: '18 new items to discover!' },
   'announce.store.body': {
