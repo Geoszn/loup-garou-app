@@ -92,6 +92,9 @@ export const REASON_LABELS: Record<string, TranslationKey> = {
   quest_reward: 'loupStore.reason.quest_reward',
   store_purchase: 'loupStore.reason.store_purchase',
   streak_reward: 'loupStore.reason.streak_reward',
+  ghost_bet_stake: 'loupStore.reason.ghost_bet_stake',
+  ghost_bet_win: 'loupStore.reason.ghost_bet_win',
+  ghost_bet_refund: 'loupStore.reason.ghost_bet_refund',
 }
 
 /**

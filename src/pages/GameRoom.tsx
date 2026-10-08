@@ -1,3 +1,4 @@
+import { GhostBetPanel, GhostBetResult } from '../components/GhostBetPanel'
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -477,6 +478,9 @@ export default function GameRoom() {
               ownsDernierSouffle={view.my_owns_dernier_souffle}
               dernierSouffleUsed={view.my_dernier_souffle_used}
             />
+            {/* Pronostic des fantômes (migration 0221) : facultatif, replié ;
+                disparaît tout seul quand il est impossible (bots, < 6 humains…). */}
+            <GhostBetPanel gameId={gameId!} players={view.players} />
           </div>
         )}
 
@@ -2065,6 +2069,8 @@ export function EndScreen({
       {/* Coffre de fin de partie (voir RewardChest.tsx) : bonus de points
           aléatoire, indépendant du résultat ci-dessus — affiché même en cas
           de défaite. */}
+      <GhostBetResult gameId={gameId} enabled={!view.my_alive} players={view.players} />
+
       <RewardChest gameId={gameId} />
 
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
