@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLanguage } from '../../i18n/LanguageContext'
 import { COLOR_HEX, hutLevel, hutPips, type TribeInfo, type TribeMember, type TribeMessage } from '../../lib/tribe'
@@ -161,10 +162,6 @@ const Scenery = memo(function Scenery({ layout }: { layout: Layout }) {
     return Array.from({ length: 34 }, () => ({ x: 6 + r() * (W - 12), y: 6 + r() * (H - 12), c: ['#f6e27a', '#f2a6c4', '#fff', '#ffb27a'][Math.floor(r() * 4)] }))
       .filter((f) => !spots.some((s) => Math.hypot(s.x - f.x, s.y - f.y) < 26) && Math.hypot(f.x - cx, f.y - cy) > 56)
   }, [H, spots, cx, cy])
-  const stars = useMemo(() => {
-    const r = rng(H + 3)
-    return Array.from({ length: 46 }, () => ({ x: r() * WT, y: r() * HT, r: 0.5 + r() * 1.1, o: 0.35 + r() * 0.5 }))
-  }, [HT])
   // Quelques roches qui pendent sous l'île.
   const rocks = useMemo(() => {
     const r = rng(H + 41)
@@ -177,11 +174,6 @@ const Scenery = memo(function Scenery({ layout }: { layout: Layout }) {
   return (
     <svg viewBox={`0 0 ${WT} ${HT}`} className="absolute inset-0 h-full w-full" preserveAspectRatio="none" aria-hidden="true">
       <defs>
-        <linearGradient id="vgSky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#0a0922" />
-          <stop offset=".6" stopColor="#1a1446" />
-          <stop offset="1" stopColor="#2c1d52" />
-        </linearGradient>
         <radialGradient id="vgGround" cx="50%" cy="50%" r="75%">
           <stop offset="0" stopColor="#4d7c43" />
           <stop offset=".7" stopColor="#33582f" />
@@ -210,10 +202,6 @@ const Scenery = memo(function Scenery({ layout }: { layout: Layout }) {
         </clipPath>
       </defs>
 
-      <rect width={WT} height={HT} fill="url(#vgSky)" />
-      {stars.map((st, i) => (
-        <circle key={i} cx={st.x} cy={st.y} r={st.r} fill="#fff" opacity={st.o} />
-      ))}
       {/* nuages sous l'île */}
       {[[40, 0.88, 0], [WT - 50, 0.78, 1], [WT / 2, 0.95, 2]].map(([x, k, i]) => (
         <g key={i} className="tribe-anim" style={{ animation: `tribe-cloud ${14 + i * 3}s ease-in-out ${i}s infinite alternate` }} opacity=".5">
@@ -430,12 +418,14 @@ export function VillageView({
   // --- déplacement et zoom (un doigt fait glisser, deux doigts zooment) -----
   const viewportRef = useRef<HTMLDivElement>(null)
   const [vw, setVw] = useState(360)
+  // Le village prend la hauteur de l'écran (moins l'en-tête, les onglets et la barre du bas).
+  const [maxH, setMaxH] = useState(() => Math.min(660, Math.max(380, (typeof window === 'undefined' ? 800 : window.innerHeight) - 300)))
   const [view, setView] = useState({ z: 1, x: 0, y: 0 })
   const movedRef = useRef(false)
   const pointers = useRef(new Map<number, { x: number; y: number }>())
   const gesture = useRef<{ view: typeof view; x: number; y: number; dist: number } | null>(null)
 
-  const vh = Math.min((vw * HT) / WT, 520)
+  const vh = Math.min((vw * HT) / WT, maxH)
   const fitZoom = Math.min(1, vh / ((vw * HT) / WT))
   const MAX_ZOOM = 2.6
   const clampView = useCallback(
@@ -462,16 +452,23 @@ export function VillageView({
   useLayoutEffect(() => {
     const el = viewportRef.current
     if (!el) return
-    const measure = () => setVw(el.clientWidth || 360)
+    const measure = () => {
+      setVw(el.clientWidth || 360)
+      setMaxH(Math.min(660, Math.max(380, window.innerHeight - 300)))
+    }
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
-    return () => ro.disconnect()
+    window.addEventListener('resize', measure)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', measure)
+    }
   }, [])
   // Le village a changé de taille (nouveau palier d'anneaux) ou le cadre aussi : retour à la vue d'ensemble.
   useEffect(() => {
     setView(clampView({ z: fitZoom, x: 0, y: 0 }))
-  }, [layout.H, vw, clampView, fitZoom])
+  }, [layout.H, vw, maxH, clampView, fitZoom])
 
   const zoomed = view.z > fitZoom + 0.01
   const canPan = view.z > 1.001 || (((vw * HT) / WT) * view.z > vh + 1)
@@ -538,8 +535,8 @@ export function VillageView({
     <div className="flex flex-col gap-2">
       <div
         ref={viewportRef}
-        className="relative isolate mx-auto w-full max-w-[560px] select-none overflow-hidden rounded-3xl border border-white/10 shadow-card"
-        style={{ height: vh, touchAction: canPan ? 'none' : 'pan-y', background: 'linear-gradient(#0a0922, #1a1446 60%, #2c1d52)' }}
+        className="relative isolate -mx-4 select-none overflow-hidden sm:mx-0"
+        style={{ height: vh, touchAction: canPan ? 'none' : 'pan-y' }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -737,5 +734,25 @@ function ActionButton({ children, onClick, tone, ...rest }: { children: React.Re
     >
       {children}
     </button>
+  )
+}
+
+/** Le ciel de nuit du village : il remplit TOUTE la page (derrière l'en-tête, les
+ * onglets et le village), pour que l'île flotte dans la page et non dans un cadre.
+ * Posé à la racine du document pour ne dépendre d'aucun conteneur. */
+export function VillageSky() {
+  const stars = useMemo(() => {
+    const r = rng(77)
+    return Array.from({ length: 90 }, () => ({ x: r() * 100, y: r() * 100, s: 1 + r() * 1.8, o: 0.3 + r() * 0.6, d: r() * 5, big: r() > 0.9 }))
+  }, [])
+  if (typeof document === 'undefined') return null
+  return createPortal(
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden" style={{ background: 'linear-gradient(180deg, #0a0922 0%, #181240 45%, #2a1c52 80%, #3a2560 100%)' }}>
+      {stars.map((st, i) => (
+        <span key={i} className="tribe-anim absolute rounded-full bg-white" style={{ left: `${st.x}%`, top: `${st.y}%`, width: st.s, height: st.s, opacity: st.o, boxShadow: st.big ? '0 0 6px 1px rgba(255,255,255,0.7)' : undefined, animation: `tribe-twinkle ${3 + (i % 4)}s ease-in-out ${st.d}s infinite` }} />
+      ))}
+      <div className="absolute right-[8%] top-[9%] h-14 w-14 rounded-full" style={{ background: 'radial-gradient(circle at 38% 36%, #fffbe6, #f3e3a8 60%, #d8c27a)', boxShadow: '0 0 40px 10px rgba(255, 238, 170, 0.28)' }} />
+    </div>,
+    document.body,
   )
 }

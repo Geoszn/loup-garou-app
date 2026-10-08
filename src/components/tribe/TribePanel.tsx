@@ -32,7 +32,7 @@ import { Avatar } from '../Avatar'
 import { Button, Card, ConfirmDialog, ErrorText, Modal, Segmented } from '../ui'
 import { TribeShield } from './TribeShield'
 import { TribeChat } from './TribeChat'
-import { VillageView } from './VillageView'
+import { VillageSky, VillageView } from './VillageView'
 import { OnlineDot, RoleBadge } from './TribeBits'
 
 const primaryBtn =
@@ -490,6 +490,7 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
 
   return (
     <div className="flex flex-col gap-3">
+      {activeTab === 'village' && <VillageSky />}
       <div className="flex items-center gap-3">
         <TribeShield emblem={tribe.emblem} color={tribe.color} className="h-14 w-14 text-2xl" />
         <div className="min-w-0 flex-1">
