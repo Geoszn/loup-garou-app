@@ -375,17 +375,19 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
   return createPortal(
     <div className="fixed inset-x-0 z-[45] flex flex-col bg-night-950" style={{ top: vv.top, height: vv.height, touchAction: 'pan-x pan-y' }}>
       {/* en-tête */}
-      <div className="flex shrink-0 items-center gap-2 border-b border-night-600/60 bg-night-900 px-2 pb-2" style={{ paddingTop: 'max(env(safe-area-inset-top), 0.5rem)' }}>
-        <button type="button" onClick={onBack} aria-label={t('tribe.chat.back')} className="flex h-10 w-10 items-center justify-center rounded-full text-2xl text-moon-200 active:bg-night-800">
-          ‹
-        </button>
-        <TribeShield emblem={tribe.emblem} color={tribe.color} className="h-9 w-9 text-base" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-display text-base leading-tight text-moon-200">{tribe.name}</p>
-          <p className="truncate text-[11px] text-moon-200/55">
-            {onlineCount !== null && <span className="text-emerald-400">● {t('tribe.online', { n: onlineCount })} · </span>}
-            {t('tribe.members.count', { n: memberCount, max: tribe.max })}
-          </p>
+      <div className="shrink-0 border-b border-night-600/60 bg-night-900 px-2 pb-2" style={{ paddingTop: 'max(env(safe-area-inset-top), 0.5rem)' }}>
+        <div className="mx-auto flex w-full max-w-3xl items-center gap-2">
+          <button type="button" onClick={onBack} aria-label={t('tribe.chat.back')} className="flex h-10 w-10 items-center justify-center rounded-full text-2xl text-moon-200 active:bg-night-800">
+            ‹
+          </button>
+          <TribeShield emblem={tribe.emblem} color={tribe.color} className="h-9 w-9 text-base" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-display text-base leading-tight text-moon-200">{tribe.name}</p>
+            <p className="truncate text-[11px] text-moon-200/55">
+              {onlineCount !== null && <span className="text-emerald-400">● {t('tribe.online', { n: onlineCount })} · </span>}
+              {t('tribe.members.count', { n: memberCount, max: tribe.max })}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -400,7 +402,7 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
             setAtBottom(near)
             if (near) setNewCount(0)
           }}
-          className="flex h-full flex-col overflow-y-auto overscroll-contain px-2.5 py-3 [-webkit-overflow-scrolling:touch]"
+          className="flex h-full flex-col overflow-y-auto overscroll-contain px-2.5 py-3 [-webkit-overflow-scrolling:touch] md:px-[max(0.625rem,calc((100%_-_48rem)/2))]"
           style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px)', backgroundSize: '18px 18px' }}
         >
           {hasMore && messages.length >= PAGE && (
@@ -460,6 +462,7 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
 
       {/* saisie */}
       <div className="shrink-0 border-t border-night-600/60 bg-night-900" style={{ paddingBottom: keyboardOpen ? 6 : 'max(env(safe-area-inset-bottom), 6px)' }}>
+       <div className="mx-auto w-full max-w-3xl">
         {muted ? (
           <p className="px-3 py-3 text-center text-xs text-moon-200/60">{t('tribe.chat.muted')}</p>
         ) : (
@@ -488,6 +491,7 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
             />
           </>
         )}
+       </div>
       </div>
 
       {/* menu d'un message (appui long) */}
@@ -679,7 +683,7 @@ const Message = memo(function Message({
   return (
     <div className={`flex items-end gap-1.5 ${mine ? 'flex-row-reverse' : ''}`}>
       {!mine && <span className="w-8 shrink-0">{groupEnd && <Avatar config={m.avatar_config} icon={m.avatar_icon} name={m.username ?? '?'} className="h-8 w-8" />}</span>}
-      <div className={`relative flex min-w-0 max-w-[82%] flex-col ${mine ? 'items-end' : 'items-start'}`}>
+      <div className={`relative flex min-w-0 max-w-[82%] flex-col md:max-w-[34rem] ${mine ? 'items-end' : 'items-start'}`}>
         {/* flèche de réponse qui apparaît pendant le glissement */}
         {offset > 6 && (
           <span
