@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useLanguage } from '../../i18n/LanguageContext'
 import type { TranslationKey } from '../../i18n/translations'
-import { TRIBE_MESSAGE_MAX, TRIBE_REACTIONS, type TribeInfo, type TribeMessage, type TribeMessageReaction } from '../../lib/tribe'
+import { TRIBE_MESSAGE_MAX, TRIBE_REACTIONS, isChatMuted, type TribeInfo, type TribeMessage, type TribeMessageReaction } from '../../lib/tribe'
 import { Avatar } from '../Avatar'
 import { RoleBadge } from './TribeBits'
 import { Sticker } from './Sticker'
@@ -13,6 +13,7 @@ import { STICKER_PACK_ME, stickerById } from '../../lib/stickers'
 import { TribeShield } from './TribeShield'
 import { notifyTribeSummaryChanged } from '../../hooks/useTribeSummary'
 import { useNoPinchZoom } from '../../hooks/useNoPinchZoom'
+import { notifyTribeMessage } from '../../lib/pushSubscription'
 
 const POLL_MS = 12000
 const PAGE = 100
@@ -80,6 +81,7 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
   const [hasMore, setHasMore] = useState(true)
   const [replyTo, setReplyTo] = useState<TribeMessage | null>(null)
   const [stickersOpen, setStickersOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
   const [recents, setRecents] = useState<string[]>(() => {
     try {
       const raw = JSON.parse(localStorage.getItem('lg-tribe-sticker-recents') ?? '[]')
@@ -329,6 +331,7 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
       }
       setReplyTo(null)
       stickRef.current = true
+      void notifyTribeMessage()
       setRecents((list) => {
         const next = [id, ...list.filter((x) => x !== id)].slice(0, 8)
         try {
@@ -388,7 +391,31 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
               {t('tribe.members.count', { n: memberCount, max: tribe.max })}
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => setNotifOpen(true)}
+            aria-label={t('tribe.notif.title')}
+            title={t('tribe.notif.title')}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg active:bg-night-800 ${tribe.archived ? 'text-amber-300' : isChatMuted(tribe) ? 'text-moon-200/50' : 'text-moon-200'}`}
+          >
+            <span aria-hidden="true">{tribe.archived ? '📦' : isChatMuted(tribe) ? '🔕' : '🔔'}</span>
+          </button>
         </div>
+        {tribe.archived && (
+          <div className="mx-auto mt-2 flex w-full max-w-3xl items-center justify-between gap-2 rounded-xl bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
+            <span>📦 {t('tribe.notif.archived')}</span>
+            <button
+              type="button"
+              onClick={async () => {
+                await supabase.rpc('set_tribe_chat_prefs', { p_mute: 'keep', p_replies: tribe.notif_replies ?? true, p_archived: false })
+                notifyTribeSummaryChanged()
+              }}
+              className="shrink-0 rounded-lg border border-amber-300/40 px-2.5 py-1 font-semibold"
+            >
+              {t('tribe.notif.unarchive')}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* messages */}
@@ -485,6 +512,7 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
               onSent={() => {
                 setReplyTo(null)
                 stickRef.current = true
+                void notifyTribeMessage()
                 void load()
               }}
               onError={showToast}
@@ -493,6 +521,8 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
         )}
        </div>
       </div>
+
+      {notifOpen && <NotifSheet tribe={tribe} onClose={() => setNotifOpen(false)} />}
 
       {/* menu d'un message (appui long) */}
       {menuMessage && (
@@ -589,6 +619,116 @@ function StickerPanel({ recents, avatarConfig, avatarIcon, name, onPick }: { rec
       <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-moon-200/50">{t('tribe.chat.stickersMe')}</p>
       {grid(STICKER_PACK_ME)}
     </div>
+  )
+}
+
+/** Réglages du chat : notifications activées ou silencieuses (1 h, 8 h, 1 semaine, toujours), alerte
+ * pour les réponses malgré le silence, et archivage. Chaque choix s'enregistre tout de suite. */
+function NotifSheet({ tribe, onClose }: { tribe: TribeInfo; onClose: () => void }) {
+  const { t, lang } = useLanguage()
+  const [mutedUntil, setMutedUntil] = useState<string | null>(tribe.notif_muted_until ?? null)
+  const [replies, setReplies] = useState(tribe.notif_replies ?? true)
+  const [archived, setArchived] = useState(!!tribe.archived)
+  const [error, setError] = useState<string | null>(null)
+  const muted = isChatMuted({ notif_muted_until: mutedUntil })
+  const devicePrompt = typeof Notification !== 'undefined' && Notification.permission !== 'granted'
+
+  async function save(mute: 'keep' | 'off' | '1h' | '8h' | '1w' | 'always', nextReplies = replies, nextArchived = archived) {
+    setError(null)
+    const { data, error: rpcError } = await supabase.rpc('set_tribe_chat_prefs', { p_mute: mute, p_replies: nextReplies, p_archived: nextArchived })
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    const result = data as { notif_muted_until: string | null } | null
+    if (result) setMutedUntil(result.notif_muted_until ?? null)
+    notifyTribeSummaryChanged()
+  }
+
+  const options: { id: 'off' | '1h' | '8h' | '1w' | 'always'; label: string; active: boolean }[] = [
+    { id: 'off', label: t('tribe.notif.on'), active: !muted },
+    { id: '1h', label: t('tribe.notif.m1h'), active: false },
+    { id: '8h', label: t('tribe.notif.m8h'), active: false },
+    { id: '1w', label: t('tribe.notif.m1w'), active: false },
+    { id: 'always', label: t('tribe.notif.always'), active: muted && mutedUntil === 'infinity' },
+  ]
+  const until = muted && mutedUntil && mutedUntil !== 'infinity' ? new Date(mutedUntil).toLocaleString(lang === 'en' ? 'en-GB' : 'fr-FR', { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : null
+
+  return (
+    <div className="absolute inset-0 z-30 flex items-end justify-center bg-black/60 backdrop-blur-[2px] md:items-center" onClick={onClose}>
+      <div className="max-h-full w-full max-w-md overflow-y-auto rounded-t-3xl border border-night-600 bg-night-900 p-4 shadow-card md:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="font-display text-lg text-moon-200">🔔 {t('tribe.notif.title')}</p>
+          <button type="button" onClick={onClose} aria-label={t('common.close')} className="flex h-9 w-9 items-center justify-center rounded-full text-moon-200/60 active:bg-night-800">
+            ✕
+          </button>
+        </div>
+        {muted && <p className="mb-2 rounded-xl bg-night-800 px-3 py-2 text-xs text-amber-200">🔕 {until ? t('tribe.notif.mutedUntil', { time: until }) : t('tribe.notif.mutedAlways')}</p>}
+        <div className="flex flex-col gap-1.5">
+          {options.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              onClick={() => void save(o.id)}
+              className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm transition-colors ${o.active ? 'border-moon-400/60 bg-moon-400/10 text-moon-200' : 'border-night-600/60 bg-night-800/60 text-moon-200/80'}`}
+            >
+              <span>{o.label}</span>
+              {o.active && <span aria-hidden="true">✓</span>}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-3 flex flex-col gap-3">
+          {muted && (
+            <div className="flex items-start justify-between gap-3 rounded-xl border border-night-600/60 bg-night-800/60 px-3 py-2.5">
+              <span className="min-w-0 text-sm text-moon-200/85">
+                {t('tribe.notif.replies')}
+                <span className="mt-0.5 block text-[11px] text-moon-200/50">{t('tribe.notif.repliesHint')}</span>
+              </span>
+              <Switch
+                checked={replies}
+                label={t('tribe.notif.replies')}
+                onChange={(v) => {
+                  setReplies(v)
+                  void save('keep', v, archived)
+                }}
+              />
+            </div>
+          )}
+          <div className="flex items-start justify-between gap-3 rounded-xl border border-night-600/60 bg-night-800/60 px-3 py-2.5">
+            <span className="min-w-0 text-sm text-moon-200/85">
+              📦 {t('tribe.notif.archive')}
+              <span className="mt-0.5 block text-[11px] text-moon-200/50">{t('tribe.notif.archiveHint')}</span>
+            </span>
+            <Switch
+              checked={archived}
+              label={t('tribe.notif.archive')}
+              onChange={(v) => {
+                setArchived(v)
+                void save('keep', replies, v)
+              }}
+            />
+          </div>
+        </div>
+        {devicePrompt && <p className="mt-3 text-[11px] text-moon-200/55">ℹ️ {t('tribe.notif.devicePrompt')}</p>}
+        {error && <p className="mt-2 text-xs text-blood-400">{error}</p>}
+      </div>
+    </div>
+  )
+}
+
+function Switch({ checked, onChange, label }: { checked: boolean; onChange: (next: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full border transition-colors ${checked ? 'border-moon-400 bg-moon-400/80' : 'border-night-500 bg-night-800'}`}
+    >
+      <span className={`absolute top-0.5 rounded-full transition-all ${checked ? 'left-[1.375rem] bg-night-950' : 'left-0.5 bg-moon-200/60'}`} style={{ height: '1.125rem', width: '1.125rem' }} />
+    </button>
   )
 }
 

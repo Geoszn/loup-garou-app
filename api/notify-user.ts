@@ -74,6 +74,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
 
+  // Nouveau message dans le chat d'une tribu (migration 0233). Même fonction que les autres
+  // notifications (plafond de fonctions atteint). L'appelant ne choisit NI le message NI les
+  // destinataires : pick_tribe_chat_push prend SON dernier message récent, jamais notifié, puis
+  // décide qui prévenir (pas lui, pas un lecteur actif, pas un silence/archive — sauf réponse à
+  // son message —, un push par membre toutes les 2 minutes au plus).
+  if (body?.type === 'tribe_message') {
+    const service = createClient(supabaseUrl, serviceRoleKey)
+    const { data: pick } = await service.rpc('pick_tribe_chat_push', { p_sender: userData.user.id })
+    const info = pick as {
+      tribe_id: string
+      tribe_name: string
+      sender_name: string
+      is_sticker: boolean
+      preview: string
+      recipients: { user_id: string; lang: string | null; is_reply: boolean; unread: number }[]
+    } | null
+    if (!info || !Array.isArray(info.recipients) || info.recipients.length === 0) {
+      res.status(200).json({ sent: 0, removed: 0 })
+      return
+    }
+    const clip = (text: string) => (text.length > 90 ? `${text.slice(0, 89)}…` : text)
+    let sent = 0
+    let removed = 0
+    await Promise.all(
+      info.recipients.map(async (r) => {
+        const en = r.lang === 'en'
+        const preview = info.is_sticker ? '🎭 Sticker' : clip(info.preview)
+        let text: string
+        if (r.is_reply) text = en ? `${info.sender_name} replied to you: ${preview}` : `${info.sender_name} t'a répondu : ${preview}`
+        else if (r.unread > 1) text = en ? `${r.unread} new messages · ${info.sender_name}: ${preview}` : `${r.unread} nouveaux messages · ${info.sender_name} : ${preview}`
+        else text = en ? `${info.sender_name}: ${preview}` : `${info.sender_name} : ${preview}`
+        const out = await sendPushToUser(service, r.user_id, { title: `🛡️ ${info.tribe_name}`, body: text, url: '/tribu?tab=chat', tag: `tribe-chat-${info.tribe_id}` })
+        sent += out.sent
+        removed += out.removed
+      }),
+    )
+    res.status(200).json({ sent, removed })
+    return
+  }
+
   // Invitation à une tribu (migration 0222). Même fonction que l'invitation à
   // une partie : le plafond de fonctions serverless est déjà atteint, on évite
   // d'en ajouter une. Même garde-fou : la ligne tribe_invites (envoyée PAR

@@ -10,6 +10,7 @@ import { cachedRpc } from '../../lib/rpcCache'
 import {
   TRIBE_COLORS,
   TRIBE_CREATE_MIN_POINTS,
+  isChatQuiet,
   TRIBE_EMBLEMS,
   TRIBE_MOTTO_MAX,
   TRIBE_NAME_MAX,
@@ -498,7 +499,7 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
     )
   }
 
-  const unreadForTab = activeTab === 'chat' ? 0 : tribe.unread
+  const unreadForTab = activeTab === 'chat' || isChatQuiet(tribe) ? 0 : tribe.unread
   const tabs: { id: RoomTab; icon: string; label: string; badge?: number }[] = [
     { id: 'village', icon: '🏘️', label: t('tribe.tabs.village') },
     { id: 'chat', icon: '💬', label: t('tribe.tabs.chat'), badge: unreadForTab },

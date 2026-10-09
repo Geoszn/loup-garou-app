@@ -73,6 +73,10 @@ export interface TribeInfo {
   level?: number
   xp_floor?: number
   xp_next?: number | null
+  // Notifications du chat (migration 0233) : absents tant qu'elle n'est pas appliquée. 'infinity' = silencieux pour toujours.
+  notif_muted_until?: string | null
+  notif_replies?: boolean
+  archived?: boolean
 }
 
 export interface TribeRequestOut {
@@ -126,7 +130,24 @@ export interface TribeSummary {
  * reçues, demandes à traiter. Alimente la pastille de la barre du bas. */
 export function tribeAlertCount(summary: TribeSummary | null): number {
   if (!summary) return 0
-  return (summary.tribe ? summary.tribe.unread + summary.tribe.pending_requests : 0) + summary.invites.length
+  const tribe = summary.tribe
+  // Une discussion archivée ou en silence n'allume pas la pastille (les invitations et les demandes, si).
+  const unread = tribe && !isChatQuiet(tribe) ? tribe.unread : 0
+  return (tribe ? unread + tribe.pending_requests : 0) + summary.invites.length
+}
+
+/** Silencieux en ce moment (jusqu'à une date, ou pour toujours). */
+export function isChatMuted(tribe: Pick<TribeInfo, 'notif_muted_until'>): boolean {
+  const v = tribe.notif_muted_until
+  if (!v) return false
+  if (v === 'infinity') return true
+  const t = new Date(v).getTime()
+  return Number.isFinite(t) && t > Date.now()
+}
+
+/** Discussion archivée ou silencieuse : pas de pastille rouge. */
+export function isChatQuiet(tribe: Pick<TribeInfo, 'notif_muted_until' | 'archived'>): boolean {
+  return !!tribe.archived || isChatMuted(tribe)
 }
 
 export interface TribeMember {

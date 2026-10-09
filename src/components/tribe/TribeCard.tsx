@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useLanguage } from '../../i18n/LanguageContext'
 import { useTribeSummary } from '../../hooks/useTribeSummary'
 import { TribeShield } from './TribeShield'
+import { isChatQuiet } from '../../lib/tribe'
 
 /**
  * Carte « Ma tribu » de l'accueil : sa tribu (avec les messages non lus), une
@@ -25,7 +26,7 @@ export function TribeCard() {
           <p className="truncate text-sm font-semibold text-moon-200">{tribe.name}</p>
           <p className="truncate text-[11px] text-moon-200/50">
             {t('tribe.members.count', { n: tribe.member_count, max: tribe.max })}
-            {tribe.unread > 0 && <span className="font-semibold text-amber-300"> · 💬 {t('tribe.card.unread', { n: tribe.unread >= 99 ? '99+' : tribe.unread })}</span>}
+            {tribe.unread > 0 && !isChatQuiet(tribe) && <span className="font-semibold text-amber-300"> · 💬 {t('tribe.card.unread', { n: tribe.unread >= 99 ? '99+' : tribe.unread })}</span>}
           </p>
         </div>
         <span className="text-moon-200/40" aria-hidden="true">›</span>

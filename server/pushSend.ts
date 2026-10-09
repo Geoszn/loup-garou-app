@@ -29,6 +29,8 @@ export interface PushPayload {
   title: string
   body: string
   url?: string
+  /** Remplace la notification précédente portant la même étiquette (ex. les messages d'une tribu). */
+  tag?: string
 }
 
 /**

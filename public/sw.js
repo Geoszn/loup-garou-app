@@ -43,6 +43,9 @@ self.addEventListener('push', (event) => {
       // champ, l'OS retombe sur `icon` ou une icône par défaut, jamais
       // pire que ce carré.
       data: { url: payload.url || '/dashboard' },
+      // Même étiquette = la nouvelle notification REMPLACE l'ancienne (les messages d'une tribu
+      // ne s'empilent pas) ; renotify la fait quand même sonner.
+      ...(payload.tag ? { tag: payload.tag, renotify: true } : {}),
     })
   )
 })

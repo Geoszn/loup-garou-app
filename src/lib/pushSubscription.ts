@@ -91,6 +91,12 @@ export function notifyGameInvite(gameId: string, friendId: string): Promise<void
   return notifyBestEffort('/api/notify-user', { gameId, friendId })
 }
 
+/** Prévient les membres de la tribu qu'un message vient d'arriver : le serveur choisit lui-même
+ * les destinataires et le message (voir api/notify-user.ts, migration 0233). */
+export function notifyTribeMessage(): Promise<void> {
+  return notifyBestEffort('/api/notify-user', { type: 'tribe_message' })
+}
+
 /** Prévient un joueur qu'il est invité dans une tribu (voir api/notify-user.ts). */
 export function notifyTribeInvite(inviteId: string): Promise<void> {
   return notifyBestEffort('/api/notify-user', { type: 'tribe_invite', inviteId })
