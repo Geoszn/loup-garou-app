@@ -45,6 +45,78 @@ function useVillageBubbles(tribeId: string): Record<string, { body: string; at: 
   return Object.fromEntries(Object.entries(latest).filter(([, v]) => now - v.at < BUBBLE_MS))
 }
 
+/** La case d'un membre. Mémoïsée : un déplacement ou un zoom du village ne la redessine pas. */
+const HutButton = memo(function HutButton({
+  m,
+  index,
+  left,
+  top,
+  width,
+  z,
+  band,
+  online,
+  isNew,
+  isSelected,
+  inGame,
+  onToggle,
+}: {
+  m: TribeMember
+  index: number
+  left: string
+  top: string
+  width: string
+  z: number
+  band: string
+  online: boolean
+  isNew: boolean
+  isSelected: boolean
+  inGame: boolean
+  onToggle: (id: string) => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation()
+        onToggle(m.user_id)
+      }}
+      aria-label={m.username}
+      aria-pressed={isSelected}
+      className="group absolute flex -translate-x-1/2 -translate-y-[58%] flex-col items-center focus:outline-none"
+      style={{ left, top, width, zIndex: z }}
+    >
+      <div className="tribe-house-in relative w-full transition-transform group-active:scale-95 group-focus-visible:ring-2 group-focus-visible:ring-moon-400" style={{ animationDelay: `${Math.min(index, 29) * 55}ms` }}>
+        {isSelected && <span aria-hidden="true" className="absolute inset-x-[-6%] bottom-[2%] h-[12%] rounded-[50%] border-2 border-amber-300/90 bg-amber-300/20" />}
+        <div className={isSelected ? 'tribe-anim' : undefined} style={isSelected ? { animation: 'tribe-hop 0.9s ease-in-out infinite' } : undefined}>
+          {isNew &&
+            [0, 1, 2, 3, 4].map((sp) => (
+              <span key={sp} aria-hidden="true" className="tribe-anim pointer-events-none absolute top-1/3 text-xs" style={{ left: `${10 + sp * 18}%`, animation: `tribe-spark 1.6s ease-out ${sp * 0.18}s infinite` }}>
+                ✨
+              </span>
+            ))}
+          <Hut band={band} online={online} role={m.role} level={hutLevel(m.rank_points)} pips={hutPips(m.rank_points)} />
+          <Avatar
+            config={m.avatar_config}
+            icon={m.avatar_icon}
+            name={m.username}
+            className={`absolute left-1/2 top-[63%] h-[34%] w-[34%] -translate-x-1/2 -translate-y-1/2 ring-[1.5px] ${online ? 'ring-emerald-400' : 'ring-night-950'}`}
+          />
+          {m.muted && (
+            <span className="absolute right-0 top-[42%] text-[9px]" aria-hidden="true">
+              🔇
+            </span>
+          )}
+          {inGame && (
+            <span className="absolute -right-[10%] top-[18%] flex h-[26%] w-[26%] min-h-3.5 min-w-3.5 items-center justify-center rounded-full bg-night-950/85 text-[9px] ring-1 ring-moon-300/60" aria-hidden="true">
+              🎮
+            </span>
+          )}
+        </div>
+      </div>
+    </button>
+  )
+})
+
 /**
  * Le village de la tribu vu en plan : chaque membre a sa case, rangée autour du
  * baobab et du feu de camp. Les cases apparaissent l'une après l'autre à
@@ -82,6 +154,10 @@ export function VillageView({
   const [fresh, setFresh] = useState<Set<string>>(new Set())
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const bubbles = useVillageBubbles(tribe.id)
+  const toggleSelected = useCallback((id: string) => {
+    if (movedRef.current) return
+    setSelectedId((cur) => (cur === id ? null : id))
+  }, [])
 
   // Arrivées : au premier affichage tout le monde apparaît en cascade ; ensuite,
   // seuls les nouveaux venus reçoivent l'effet « bienvenue ».
@@ -305,48 +381,21 @@ export function VillageView({
             const isSelected = m.user_id === selectedId
             const inGame = !!gameCodes[m.user_id]
             return (
-              <button
+              <HutButton
                 key={m.user_id}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  if (movedRef.current) return
-                  setSelectedId(isSelected ? null : m.user_id)
-                }}
-                aria-label={m.username}
-                aria-pressed={isSelected}
-                className="group absolute flex -translate-x-1/2 -translate-y-[58%] flex-col items-center focus:outline-none"
-                style={{ left: `${fx(spot.x)}%`, top: `${fy(spot.y)}%`, width: `${hutWidth(m)}%`, zIndex: Math.round(spot.y + 0.42 * (layout.hutW / 100) * W * (m.role === 'chef' ? 1.2 : 1) * 1.16) }}
-              >
-                <div className="tribe-house-in relative w-full transition-transform group-active:scale-95 group-focus-visible:ring-2 group-focus-visible:ring-moon-400" style={{ animationDelay: `${Math.min(i, 29) * 55}ms` }}>
-                  {isSelected && <span aria-hidden="true" className="absolute inset-x-[-6%] bottom-[2%] h-[12%] rounded-[50%] border-2 border-amber-300/90 bg-amber-300/20" />}
-                  <div className={isSelected ? 'tribe-anim' : undefined} style={isSelected ? { animation: 'tribe-hop 0.9s ease-in-out infinite' } : undefined}>
-                    {isNew &&
-                      [0, 1, 2, 3, 4].map((sp) => (
-                        <span key={sp} aria-hidden="true" className="tribe-anim pointer-events-none absolute top-1/3 text-xs" style={{ left: `${10 + sp * 18}%`, animation: `tribe-spark 1.6s ease-out ${sp * 0.18}s infinite` }}>
-                          ✨
-                        </span>
-                      ))}
-                    <Hut band={band} online={online} role={m.role} level={hutLevel(m.rank_points)} pips={hutPips(m.rank_points)} />
-                    <Avatar
-                      config={m.avatar_config}
-                      icon={m.avatar_icon}
-                      name={m.username}
-                      className={`absolute left-1/2 top-[63%] h-[34%] w-[34%] -translate-x-1/2 -translate-y-1/2 ring-[1.5px] ${online ? 'ring-emerald-400' : 'ring-night-950'}`}
-                    />
-                    {m.muted && (
-                      <span className="absolute right-0 top-[42%] text-[9px]" aria-hidden="true">
-                        🔇
-                      </span>
-                    )}
-                    {inGame && (
-                      <span className="absolute -right-[10%] top-[18%] flex h-[26%] w-[26%] min-h-3.5 min-w-3.5 items-center justify-center rounded-full bg-night-950/85 text-[9px] ring-1 ring-moon-300/60" aria-hidden="true">
-                        🎮
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </button>
+                m={m}
+                index={i}
+                left={`${fx(spot.x)}%`}
+                top={`${fy(spot.y)}%`}
+                width={`${hutWidth(m)}%`}
+                z={Math.round(spot.y + 0.42 * (layout.hutW / 100) * W * (m.role === 'chef' ? 1.2 : 1) * 1.16)}
+                band={band}
+                online={online}
+                isNew={isNew}
+                isSelected={isSelected}
+                inGame={inGame}
+                onToggle={toggleSelected}
+              />
             )
           })}
 
