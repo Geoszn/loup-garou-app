@@ -88,7 +88,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       sender_name: string
       is_sticker: boolean
       preview: string
-      recipients: { user_id: string; lang: string | null; is_reply: boolean; unread: number }[]
+      recipients: { user_id: string; lang: string | null; is_reply: boolean; is_mention?: boolean; unread: number }[]
     } | null
     if (!info || !Array.isArray(info.recipients) || info.recipients.length === 0) {
       res.status(200).json({ sent: 0, removed: 0 })
@@ -102,7 +102,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const en = r.lang === 'en'
         const preview = info.is_sticker ? '🎭 Sticker' : clip(info.preview)
         let text: string
-        if (r.is_reply) text = en ? `${info.sender_name} replied to you: ${preview}` : `${info.sender_name} t'a répondu : ${preview}`
+        if (r.is_mention) text = en ? `${info.sender_name} mentioned you: ${preview}` : `${info.sender_name} t'a mentionné : ${preview}`
+        else if (r.is_reply) text = en ? `${info.sender_name} replied to you: ${preview}` : `${info.sender_name} t'a répondu : ${preview}`
         else if (r.unread > 1) text = en ? `${r.unread} new messages · ${info.sender_name}: ${preview}` : `${r.unread} nouveaux messages · ${info.sender_name} : ${preview}`
         else text = en ? `${info.sender_name}: ${preview}` : `${info.sender_name} : ${preview}`
         const out = await sendPushToUser(service, r.user_id, { title: `🛡️ ${info.tribe_name}`, body: text, url: '/tribu?tab=chat', tag: `tribe-chat-${info.tribe_id}` })
@@ -111,6 +112,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }),
     )
     res.status(200).json({ sent, removed })
+    return
+  }
+
+  // Quelqu'un a réagi à un message de la tribu (migration 0234) : prévenir l'AUTEUR du message.
+  // Même principe : le serveur retrouve lui-même la dernière réaction de l'appelant.
+  if (body?.type === 'tribe_reaction') {
+    const service = createClient(supabaseUrl, serviceRoleKey)
+    const { data: pick } = await service.rpc('pick_tribe_reaction_push', { p_reactor: userData.user.id })
+    const info = pick as { user_id: string; lang: string | null; tribe_id: string; tribe_name: string; reactor_name: string; emoji: string; is_sticker: boolean; preview: string } | null
+    if (!info) {
+      res.status(200).json({ sent: 0, removed: 0 })
+      return
+    }
+    const en = info.lang === 'en'
+    const what = info.is_sticker ? '🎭 Sticker' : `« ${info.preview} »`
+    const out = await sendPushToUser(service, info.user_id, {
+      title: `🛡️ ${info.tribe_name}`,
+      body: en ? `${info.reactor_name} reacted ${info.emoji} to your message: ${what}` : `${info.reactor_name} a réagi ${info.emoji} à ton message : ${what}`,
+      url: '/tribu?tab=chat',
+      tag: `tribe-react-${info.tribe_id}`,
+    })
+    res.status(200).json({ sent: out.sent, removed: out.removed })
     return
   }
 

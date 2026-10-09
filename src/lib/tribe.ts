@@ -77,6 +77,10 @@ export interface TribeInfo {
   notif_muted_until?: string | null
   notif_replies?: boolean
   archived?: boolean
+  // Heures calmes (migration 0234), heure locale.
+  quiet_enabled?: boolean
+  quiet_start?: number
+  quiet_end?: number
 }
 
 export interface TribeRequestOut {
@@ -219,6 +223,8 @@ export interface TribeMessage {
   reactions?: TribeMessageReaction[]
   // Identifiant de sticker (migration 0228) : le message n'a alors pas de texte.
   sticker?: string | null
+  // Membres cités avec @pseudo (migration 0234).
+  mentions?: string[]
 }
 
 /** Niveau de la case (1 à 6) : suit le groupe de rang du propriétaire

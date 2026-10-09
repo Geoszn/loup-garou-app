@@ -1,10 +1,10 @@
 import { createPortal } from 'react-dom'
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useLanguage } from '../../i18n/LanguageContext'
 import type { TranslationKey } from '../../i18n/translations'
-import { TRIBE_MESSAGE_MAX, TRIBE_REACTIONS, isChatMuted, type TribeInfo, type TribeMessage, type TribeMessageReaction } from '../../lib/tribe'
+import { TRIBE_MESSAGE_MAX, TRIBE_REACTIONS, isChatMuted, type TribeInfo, type TribeMember, type TribeMessage, type TribeMessageReaction } from '../../lib/tribe'
 import { Avatar } from '../Avatar'
 import { RoleBadge } from './TribeBits'
 import { Sticker } from './Sticker'
@@ -13,7 +13,7 @@ import { STICKER_PACK_ME, stickerById } from '../../lib/stickers'
 import { TribeShield } from './TribeShield'
 import { notifyTribeSummaryChanged } from '../../hooks/useTribeSummary'
 import { useNoPinchZoom } from '../../hooks/useNoPinchZoom'
-import { notifyTribeMessage } from '../../lib/pushSubscription'
+import { notifyTribeMessage, notifyTribeReaction } from '../../lib/pushSubscription'
 
 const POLL_MS = 12000
 const PAGE = 100
@@ -26,6 +26,31 @@ const colorOf = (id: string | null) => {
   let h = 0
   for (const ch of id ?? '') h = (h * 31 + ch.charCodeAt(0)) >>> 0
   return NAME_COLORS[h % NAME_COLORS.length]
+}
+
+const escapeRe = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/** Le texte d'un message, avec les @pseudo des membres mis en évidence (doré pour moi). */
+function renderBody(body: string, names: string[], me: string | undefined): ReactNode {
+  if (names.length === 0 || !body.includes('@')) return body
+  const re = new RegExp(`(^|[^\\p{L}\\p{N}_])@(${names.map(escapeRe).join('|')})(?![\\p{L}\\p{N}_])`, 'giu')
+  const out: ReactNode[] = []
+  let last = 0
+  let match: RegExpExecArray | null
+  while ((match = re.exec(body))) {
+    const start = match.index + match[1].length
+    if (start > last) out.push(body.slice(last, start))
+    const mine = !!me && match[2].toLowerCase() === me.toLowerCase()
+    out.push(
+      <span key={start} className={`rounded px-1 font-semibold ${mine ? 'bg-amber-300/25 text-amber-200' : 'bg-sky-400/20 text-sky-200'}`}>
+        @{match[2]}
+      </span>,
+    )
+    last = start + 1 + match[2].length
+  }
+  if (last === 0) return body
+  if (last < body.length) out.push(body.slice(last))
+  return out
 }
 
 /** Hauteur réellement visible : elle rétrécit quand le clavier s'ouvre, ce qui permet de
@@ -72,7 +97,7 @@ function mergeLatest(prev: TribeMessage[], fresh: TribeMessage[]): TribeMessage[
  * tribu, fermé en quittant), avec une relecture de sécurité toutes les 12 s tant que
  * l'écran est visible. Le serveur ne garde que les 200 derniers messages.
  */
-export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: TribeInfo; onBack: () => void; onlineCount: number | null; memberCount: number }) {
+export function TribeChat({ tribe, members, onBack, onlineCount, memberCount }: { tribe: TribeInfo; members: TribeMember[]; onBack: () => void; onlineCount: number | null; memberCount: number }) {
   const { t, lang } = useLanguage()
   const { user, profile } = useAuth()
   const vv = useVisualViewport()
@@ -82,6 +107,9 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
   const [replyTo, setReplyTo] = useState<TribeMessage | null>(null)
   const [stickersOpen, setStickersOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
+  // Pseudos des membres (les plus longs d'abord) pour reconnaître les @mentions dans un message.
+  const mentionNames = useMemo(() => members.map((x) => x.username).filter(Boolean).sort((a, b) => b.length - a.length), [members])
+  const messagesRef = useRef<TribeMessage[]>([])
   const [recents, setRecents] = useState<string[]>(() => {
     try {
       const raw = JSON.parse(localStorage.getItem('lg-tribe-sticker-recents') ?? '[]')
@@ -143,6 +171,8 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
       void Promise.resolve(supabase.rpc('mark_tribe_read')).then(() => notifyTribeSummaryChanged())
     }
   }, [])
+
+  messagesRef.current = messages
 
   const loadOlder = useCallback(async (): Promise<boolean> => {
     const oldest = messages[0]
@@ -266,6 +296,7 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
     async (messageId: string, emoji: string) => {
       const me = user?.id
       if (!me) return
+      const wasMine = (messagesRef.current.find((x) => x.id === messageId)?.reactions ?? []).some((r) => r.user_id === me && r.emoji === emoji)
       // Affichage immédiat, puis relecture pour se recaler sur le serveur.
       setMessages((list) =>
         list.map((m) => {
@@ -278,6 +309,7 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
       )
       const { error: rpcError } = await supabase.rpc('toggle_tribe_reaction', { p_message_id: messageId, p_emoji: emoji })
       if (rpcError) showToast(rpcError.message)
+      else if (!wasMine) void notifyTribeReaction()
       void load()
     },
     [user?.id, profile?.username, load, showToast],
@@ -467,6 +499,8 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
                   formerLabel={t('tribe.formerMember')}
                   youLabel={t('tribe.chat.you')}
                   goneLabel={t('tribe.chat.originalGone')}
+                  mentionNames={mentionNames}
+                  myName={profile?.username}
                 />
               )}
             </div>
@@ -504,6 +538,8 @@ export function TribeChat({ tribe, onBack, onlineCount, memberCount }: { tribe: 
               />
             )}
             <Composer
+              members={members}
+              selfId={user?.id}
               replyTo={replyTo}
               stickersOpen={stickersOpen}
               onToggleStickers={() => setStickersOpen((o) => !o)}
@@ -629,6 +665,9 @@ function NotifSheet({ tribe, onClose }: { tribe: TribeInfo; onClose: () => void 
   const [mutedUntil, setMutedUntil] = useState<string | null>(tribe.notif_muted_until ?? null)
   const [replies, setReplies] = useState(tribe.notif_replies ?? true)
   const [archived, setArchived] = useState(!!tribe.archived)
+  const [quietOn, setQuietOn] = useState(tribe.quiet_enabled ?? true)
+  const [quietStart, setQuietStart] = useState(tribe.quiet_start ?? 22)
+  const [quietEnd, setQuietEnd] = useState(tribe.quiet_end ?? 8)
   const [error, setError] = useState<string | null>(null)
   const muted = isChatMuted({ notif_muted_until: mutedUntil })
   const devicePrompt = typeof Notification !== 'undefined' && Notification.permission !== 'granted'
@@ -643,6 +682,16 @@ function NotifSheet({ tribe, onClose }: { tribe: TribeInfo; onClose: () => void 
     const result = data as { notif_muted_until: string | null } | null
     if (result) setMutedUntil(result.notif_muted_until ?? null)
     notifyTribeSummaryChanged()
+  }
+
+  async function saveQuiet(enabled: boolean, start: number, end: number) {
+    setError(null)
+    setQuietOn(enabled)
+    setQuietStart(start)
+    setQuietEnd(end)
+    const { error: rpcError } = await supabase.rpc('set_chat_quiet_hours', { p_enabled: enabled, p_start: start, p_end: end, p_tz: -new Date().getTimezoneOffset() })
+    if (rpcError) setError(rpcError.message)
+    else notifyTribeSummaryChanged()
   }
 
   const options: { id: 'off' | '1h' | '8h' | '1w' | 'always'; label: string; active: boolean }[] = [
@@ -710,6 +759,35 @@ function NotifSheet({ tribe, onClose }: { tribe: TribeInfo; onClose: () => void 
             />
           </div>
         </div>
+        <div className="mt-3 rounded-xl border border-night-600/60 bg-night-800/60 px-3 py-2.5">
+          <div className="flex items-start justify-between gap-3">
+            <span className="min-w-0 text-sm text-moon-200/85">
+              🌙 {t('tribe.notif.quiet')}
+              <span className="mt-0.5 block text-[11px] text-moon-200/50">{t('tribe.notif.quietHint', { start: `${quietStart} h`, end: `${quietEnd} h` })}</span>
+            </span>
+            <Switch checked={quietOn} label={t('tribe.notif.quiet')} onChange={(v) => void saveQuiet(v, quietStart, quietEnd)} />
+          </div>
+          {quietOn && (
+            <div className="mt-2 flex items-center gap-2 text-xs text-moon-200/70">
+              <label className="flex items-center gap-1.5">
+                {t('tribe.notif.quietFrom')}
+                <select value={quietStart} onChange={(e) => void saveQuiet(true, Number(e.target.value), quietEnd)} className="rounded-lg border border-night-600 bg-night-900 px-2 py-1 text-sm text-moon-200">
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <option key={h} value={h}>{`${h} h`}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex items-center gap-1.5">
+                {t('tribe.notif.quietTo')}
+                <select value={quietEnd} onChange={(e) => void saveQuiet(true, quietStart, Number(e.target.value))} className="rounded-lg border border-night-600 bg-night-900 px-2 py-1 text-sm text-moon-200">
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <option key={h} value={h}>{`${h} h`}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+        </div>
         {devicePrompt && <p className="mt-3 text-[11px] text-moon-200/55">ℹ️ {t('tribe.notif.devicePrompt')}</p>}
         {error && <p className="mt-2 text-xs text-blood-400">{error}</p>}
       </div>
@@ -757,6 +835,8 @@ const Message = memo(function Message({
   formerLabel,
   youLabel,
   goneLabel,
+  mentionNames,
+  myName,
 }: {
   m: TribeMessage
   mine: boolean
@@ -773,6 +853,8 @@ const Message = memo(function Message({
   formerLabel: string
   youLabel: string
   goneLabel: string
+  mentionNames: string[]
+  myName: string | undefined
 }) {
   const [offset, setOffset] = useState(0)
   const start = useRef<{ x: number; y: number } | null>(null)
@@ -894,7 +976,7 @@ const Message = memo(function Message({
               <span className="self-end rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] leading-none text-moon-200/85">{time}</span>
             </div>
           ) : (
-          <div className={`flow-root max-w-full rounded-2xl px-2.5 py-1.5 shadow-sm ${mine ? 'bg-blood-700/85 text-[#fdf6e3]' : 'bg-night-800 text-moon-200'} ${groupStart ? (mine ? 'rounded-tr-sm' : 'rounded-tl-sm') : ''}`}>
+          <div className={`flow-root max-w-full rounded-2xl px-2.5 py-1.5 shadow-sm ${!mine && selfId && m.mentions?.includes(selfId) ? 'ring-1 ring-amber-300/70' : ''} ${mine ? 'bg-blood-700/85 text-[#fdf6e3]' : 'bg-night-800 text-moon-200'} ${groupStart ? (mine ? 'rounded-tr-sm' : 'rounded-tl-sm') : ''}`}>
               {!mine && groupStart && (
                 <div className="mb-0.5 flex items-center gap-1.5">
                   <span className={`truncate text-[12px] font-semibold ${colorOf(m.user_id)}`}>{m.username ?? formerLabel}</span>
@@ -903,7 +985,7 @@ const Message = memo(function Message({
               )}
               {quoteEl}
               <p className="whitespace-pre-wrap break-words text-[14.5px] leading-5">
-                {m.body}
+                {renderBody(m.body ?? '', mentionNames, myName)}
                 <span className="float-right ml-3 mt-1.5 text-[10px] leading-none opacity-55">{time}</span>
               </p>
             </div>
@@ -967,6 +1049,8 @@ const Message = memo(function Message({
 
 /** Zone de saisie isolée : sa propre frappe ne redessine pas la liste des messages. */
 function Composer({
+  members,
+  selfId,
   replyTo,
   stickersOpen,
   onToggleStickers,
@@ -975,6 +1059,8 @@ function Composer({
   onSent,
   onError,
 }: {
+  members: TribeMember[]
+  selfId: string | undefined
   replyTo: TribeMessage | null
   stickersOpen: boolean
   onToggleStickers: () => void
@@ -987,6 +1073,33 @@ function Composer({
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const areaRef = useRef<HTMLTextAreaElement>(null)
+  const [caret, setCaret] = useState(0)
+  const [pick, setPick] = useState(0)
+
+  // @pseudo en cours de frappe : suggère les membres dont le pseudo commence (puis contient) ce qui est tapé.
+  const mention = /(^|\s)@([^\s@]*)$/.exec(text.slice(0, caret))
+  const query = mention ? mention[2].toLowerCase() : null
+  const suggestions =
+    query === null
+      ? []
+      : members
+          .filter((x) => x.user_id !== selfId && x.username.toLowerCase().includes(query))
+          .sort((a, b) => Number(b.username.toLowerCase().startsWith(query)) - Number(a.username.toLowerCase().startsWith(query)))
+          .slice(0, 5)
+
+  function insertMention(name: string) {
+    if (!mention) return
+    const tokenStart = caret - mention[2].length - 1
+    const next = `${text.slice(0, tokenStart)}@${name} ${text.slice(caret)}`.slice(0, TRIBE_MESSAGE_MAX)
+    const pos = Math.min(tokenStart + name.length + 2, next.length)
+    setText(next)
+    setCaret(pos)
+    setPick(0)
+    requestAnimationFrame(() => {
+      areaRef.current?.focus()
+      areaRef.current?.setSelectionRange(pos, pos)
+    })
+  }
 
   // Le champ grandit avec le texte (jusqu'à 5 lignes), puis défile.
   useLayoutEffect(() => {
@@ -1017,7 +1130,27 @@ function Composer({
   }
 
   return (
-    <form onSubmit={send} className="flex flex-col">
+    <form onSubmit={send} className="relative flex flex-col">
+      {suggestions.length > 0 && (
+        <ul className="absolute inset-x-2.5 bottom-full z-10 mb-1 overflow-hidden rounded-xl border border-night-600 bg-night-800 shadow-card" role="listbox">
+          {suggestions.map((x, i) => (
+            <li key={x.user_id}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={i === pick}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => insertMention(x.username)}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${i === pick ? 'bg-night-700' : ''}`}
+              >
+                <Avatar config={x.avatar_config} icon={x.avatar_icon} name={x.username} className="h-6 w-6" />
+                <span className="min-w-0 flex-1 truncate text-moon-200">{x.username}</span>
+                {x.role !== 'membre' && <RoleBadge role={x.role} />}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       {replyTo && (
         <div className="mx-2.5 mt-2 flex items-stretch gap-2 rounded-xl bg-night-800 p-1.5">
           <button type="button" onClick={() => onJump(replyTo.id)} className="min-w-0 flex-1 rounded-lg border-l-4 border-sky-400 bg-black/20 px-2 py-1 text-left">
@@ -1043,8 +1176,25 @@ function Composer({
           ref={areaRef}
           value={text}
           rows={1}
-          onChange={(e) => setText(e.target.value.slice(0, TRIBE_MESSAGE_MAX))}
+          onChange={(e) => {
+            setText(e.target.value.slice(0, TRIBE_MESSAGE_MAX))
+            setCaret(e.target.selectionStart ?? e.target.value.length)
+            setPick(0)
+          }}
+          onSelect={(e) => setCaret(e.currentTarget.selectionStart ?? 0)}
           onKeyDown={(e) => {
+            if (suggestions.length > 0) {
+              if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault()
+                setPick((p) => (p + (e.key === 'ArrowDown' ? 1 : suggestions.length - 1)) % suggestions.length)
+                return
+              }
+              if (e.key === 'Enter' || e.key === 'Tab') {
+                e.preventDefault()
+                insertMention(suggestions[Math.min(pick, suggestions.length - 1)].username)
+                return
+              }
+            }
             // Ordinateur : Entrée envoie, Maj+Entrée saute une ligne. Mobile : Entrée saute une ligne.
             if (e.key === 'Enter' && !e.shiftKey && window.matchMedia('(pointer: fine)').matches) {
               e.preventDefault()

@@ -48,5 +48,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  res.status(200).json({ picked: rows.length, sent })
+  // Résumé du matin du chat de tribu (migration 0234) : à la fin des heures calmes de chacun.
+  let digestSent = 0
+  const { data: digest } = await serviceClient.rpc('pick_tribe_chat_digest')
+  const digestRows = (Array.isArray(digest) ? digest : []) as { user_id: string; lang: string | null; tribe_id: string; tribe_name: string; total: number; mentions: number }[]
+  for (const d of digestRows) {
+    const en = d.lang === 'en'
+    const base = en ? `Overnight: ${d.total} message${d.total > 1 ? 's' : ''}` : `Pendant la nuit : ${d.total} message${d.total > 1 ? 's' : ''}`
+    const extra = d.mentions > 0 ? (en ? ` · ${d.mentions} for you` : ` · ${d.mentions} pour toi`) : ''
+    try {
+      const result = await sendPushToUser(serviceClient, d.user_id, { title: `🌅 ${d.tribe_name}`, body: base + extra, url: '/tribu?tab=chat', tag: `tribe-chat-${d.tribe_id}` })
+      digestSent += result.sent
+    } catch {
+      // Même principe : un échec ne bloque pas les autres.
+    }
+  }
+
+  res.status(200).json({ picked: rows.length, sent, digest: digestRows.length, digestSent })
 }

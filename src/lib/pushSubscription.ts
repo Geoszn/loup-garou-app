@@ -97,6 +97,11 @@ export function notifyTribeMessage(): Promise<void> {
   return notifyBestEffort('/api/notify-user', { type: 'tribe_message' })
 }
 
+/** Prévient l'auteur d'un message qu'on y a réagi (le serveur retrouve lui-même la dernière réaction). */
+export function notifyTribeReaction(): Promise<void> {
+  return notifyBestEffort('/api/notify-user', { type: 'tribe_reaction' })
+}
+
 /** Prévient un joueur qu'il est invité dans une tribu (voir api/notify-user.ts). */
 export function notifyTribeInvite(inviteId: string): Promise<void> {
   return notifyBestEffort('/api/notify-user', { type: 'tribe_invite', inviteId })
