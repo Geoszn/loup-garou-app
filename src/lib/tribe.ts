@@ -225,6 +225,7 @@ export interface TribeMessage {
   sticker?: string | null
   // Membres cités avec @pseudo (migration 0234).
   mentions?: string[]
+  mention_all?: boolean
 }
 
 /** Niveau de la case (1 à 6) : suit le groupe de rang du propriétaire

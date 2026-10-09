@@ -28,19 +28,22 @@ const colorOf = (id: string | null) => {
   return NAME_COLORS[h % NAME_COLORS.length]
 }
 
+/** Mots qui préviennent toute la tribu (chef et sous-chefs seulement, vérifié côté serveur). */
+const EVERYONE_TAGS = ['everyone', 'tous']
+
 const escapeRe = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 /** Le texte d'un message, avec les @pseudo des membres mis en évidence (doré pour moi). */
 function renderBody(body: string, names: string[], me: string | undefined): ReactNode {
-  if (names.length === 0 || !body.includes('@')) return body
-  const re = new RegExp(`(^|[^\\p{L}\\p{N}_])@(${names.map(escapeRe).join('|')})(?![\\p{L}\\p{N}_])`, 'giu')
+  if (!body.includes('@')) return body
+  const re = new RegExp(`(^|[^\\p{L}\\p{N}_])@(${[...names, ...EVERYONE_TAGS].map(escapeRe).join('|')})(?![\\p{L}\\p{N}_])`, 'giu')
   const out: ReactNode[] = []
   let last = 0
   let match: RegExpExecArray | null
   while ((match = re.exec(body))) {
     const start = match.index + match[1].length
     if (start > last) out.push(body.slice(last, start))
-    const mine = !!me && match[2].toLowerCase() === me.toLowerCase()
+    const mine = (!!me && match[2].toLowerCase() === me.toLowerCase()) || EVERYONE_TAGS.includes(match[2].toLowerCase())
     out.push(
       <span key={start} className={`rounded px-1 font-semibold ${mine ? 'bg-amber-300/25 text-amber-200' : 'bg-sky-400/20 text-sky-200'}`}>
         @{match[2]}
@@ -976,7 +979,7 @@ const Message = memo(function Message({
               <span className="self-end rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] leading-none text-moon-200/85">{time}</span>
             </div>
           ) : (
-          <div className={`flow-root max-w-full rounded-2xl px-2.5 py-1.5 shadow-sm ${!mine && selfId && m.mentions?.includes(selfId) ? 'ring-1 ring-amber-300/70' : ''} ${mine ? 'bg-blood-700/85 text-[#fdf6e3]' : 'bg-night-800 text-moon-200'} ${groupStart ? (mine ? 'rounded-tr-sm' : 'rounded-tl-sm') : ''}`}>
+          <div className={`flow-root max-w-full rounded-2xl px-2.5 py-1.5 shadow-sm ${!mine && (m.mention_all || (selfId && m.mentions?.includes(selfId))) ? 'ring-1 ring-amber-300/70' : ''} ${mine ? 'bg-blood-700/85 text-[#fdf6e3]' : 'bg-night-800 text-moon-200'} ${groupStart ? (mine ? 'rounded-tr-sm' : 'rounded-tl-sm') : ''}`}>
               {!mine && groupStart && (
                 <div className="mb-0.5 flex items-center gap-1.5">
                   <span className={`truncate text-[12px] font-semibold ${colorOf(m.user_id)}`}>{m.username ?? formerLabel}</span>
@@ -1079,13 +1082,20 @@ function Composer({
   // @pseudo en cours de frappe : suggère les membres dont le pseudo commence (puis contient) ce qui est tapé.
   const mention = /(^|\s)@([^\s@]*)$/.exec(text.slice(0, caret))
   const query = mention ? mention[2].toLowerCase() : null
-  const suggestions =
+  // Le chef et les sous-chefs peuvent aussi proposer @everyone (ou @tous) : toute la tribu est prévenue.
+  const selfRole = members.find((x) => x.user_id === selfId)?.role
+  const everyoneWord = query !== null && (selfRole === 'chef' || selfRole === 'sous_chef') ? EVERYONE_TAGS.find((w) => w.startsWith(query)) : undefined
+  const suggestions: { key: string; name: string; member?: TribeMember }[] =
     query === null
       ? []
-      : members
-          .filter((x) => x.user_id !== selfId && x.username.toLowerCase().includes(query))
-          .sort((a, b) => Number(b.username.toLowerCase().startsWith(query)) - Number(a.username.toLowerCase().startsWith(query)))
-          .slice(0, 5)
+      : [
+          ...(everyoneWord ? [{ key: '@everyone', name: everyoneWord }] : []),
+          ...members
+            .filter((x) => x.user_id !== selfId && x.username.toLowerCase().includes(query))
+            .sort((x, y) => Number(y.username.toLowerCase().startsWith(query)) - Number(x.username.toLowerCase().startsWith(query)))
+            .slice(0, 5)
+            .map((x) => ({ key: x.user_id, name: x.username, member: x })),
+        ].slice(0, 5)
 
   function insertMention(name: string) {
     if (!mention) return
@@ -1134,18 +1144,22 @@ function Composer({
       {suggestions.length > 0 && (
         <ul className="absolute inset-x-2.5 bottom-full z-10 mb-1 overflow-hidden rounded-xl border border-night-600 bg-night-800 shadow-card" role="listbox">
           {suggestions.map((x, i) => (
-            <li key={x.user_id}>
+            <li key={x.key}>
               <button
                 type="button"
                 role="option"
                 aria-selected={i === pick}
                 onMouseDown={(e) => e.preventDefault()}
-                onClick={() => insertMention(x.username)}
+                onClick={() => insertMention(x.name)}
                 className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${i === pick ? 'bg-night-700' : ''}`}
               >
-                <Avatar config={x.avatar_config} icon={x.avatar_icon} name={x.username} className="h-6 w-6" />
-                <span className="min-w-0 flex-1 truncate text-moon-200">{x.username}</span>
-                {x.role !== 'membre' && <RoleBadge role={x.role} />}
+                {x.member ? (
+                  <Avatar config={x.member.avatar_config} icon={x.member.avatar_icon} name={x.name} className="h-6 w-6" />
+                ) : (
+                  <span aria-hidden="true" className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-300/20 text-sm">📣</span>
+                )}
+                <span className="min-w-0 flex-1 truncate text-moon-200">{x.member ? x.name : `@${x.name}`}</span>
+                {x.member ? x.member.role !== 'membre' && <RoleBadge role={x.member.role} /> : <span className="shrink-0 text-[11px] text-amber-200/80">{t('tribe.chat.everyoneHint')}</span>}
               </button>
             </li>
           ))}
@@ -1191,7 +1205,7 @@ function Composer({
               }
               if (e.key === 'Enter' || e.key === 'Tab') {
                 e.preventDefault()
-                insertMention(suggestions[Math.min(pick, suggestions.length - 1)].username)
+                insertMention(suggestions[Math.min(pick, suggestions.length - 1)].name)
                 return
               }
             }
