@@ -76,6 +76,8 @@ self.addEventListener('fetch', (event) => {
   // ElevenLabs...) : ce sont des données vivantes, les servir depuis un
   // cache casserait le temps réel du jeu.
   if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return
+  // Les longs morceaux de musique d'ambiance : le navigateur les gère (requêtes par morceaux), jamais dans notre cache.
+  if (url.pathname.startsWith('/sounds/ambiance')) return
 
   event.respondWith(
     fetch(request)

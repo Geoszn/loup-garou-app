@@ -3,6 +3,7 @@ import { Suspense, lazy, useEffect, useRef, type ReactNode } from 'react'
 import { useAuth } from './context/AuthContext'
 import { useLanguage } from './i18n/LanguageContext'
 import { useUiClickSound } from './hooks/useUiClickSound'
+import { AmbientMusicController } from './components/AmbientMusicController'
 import Landing from './pages/Landing'
 import SignUp from './pages/SignUp'
 import Login from './pages/Login'
@@ -83,6 +84,7 @@ export default function App() {
     <>
       <UpdateBanner />
       <LanguageProfileSync />
+      <AmbientMusicController />
       <SeoManager />
       <Routes>
       <Route path="/" element={<Landing />} />

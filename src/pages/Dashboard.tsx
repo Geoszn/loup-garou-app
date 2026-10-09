@@ -25,6 +25,7 @@ import { useMySeason } from '../hooks/useMySeason'
 import { SeasonTrack } from '../components/SeasonTrack'
 import { LiveVillage } from '../components/LiveVillage'
 import { GettingStartedCard } from '../components/GettingStartedCard'
+import { MusicToggle } from '../components/MusicToggle'
 import { TribeCard } from '../components/tribe/TribeCard'
 import { AfterIdle, LazyMount } from '../components/Deferred'
 import { useLanguage } from '../i18n/LanguageContext'
@@ -241,6 +242,7 @@ export default function Dashboard() {
               <p>🔥 {profile?.current_streak ?? 0}</p>
               <p>📅 {profile?.login_streak ?? 0} {t('dailyStreak.days')}</p>
             </div>
+            <MusicToggle />
           </div>
           <RankProgress points={profile?.rank_points ?? 0} />
         </div>

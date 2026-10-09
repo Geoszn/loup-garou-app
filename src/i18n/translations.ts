@@ -17,6 +17,8 @@ export const translations = {
   'common.showPassword': { fr: 'Afficher le mot de passe', en: 'Show password' },
   'common.hidePassword': { fr: 'Masquer le mot de passe', en: 'Hide password' },
   'tuto.backToPage': { fr: 'Retour au salon', en: 'Back to the lobby' },
+  'music.turnOff': { fr: 'Couper la musique d\'ambiance', en: 'Turn the ambient music off' },
+  'music.turnOn': { fr: 'Remettre la musique d\'ambiance', en: 'Turn the ambient music on' },
   'play.howTo': { fr: 'Comment jouer ?', en: 'How to play?' },
   'practice.badge': { fr: 'Entraînement · rien n\'est comptabilisé', en: 'Practice · nothing is counted' },
   'practice.gotIt': { fr: 'Compris', en: 'Got it' },

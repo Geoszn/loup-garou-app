@@ -1,3 +1,4 @@
+import { MusicToggle } from '../components/MusicToggle'
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -56,8 +57,9 @@ export default function Profile() {
   return (
     <div className="min-h-screen px-4 pt-8">
       <div className="mx-auto flex max-w-3xl flex-col gap-4">
-        <header>
+        <header className="flex items-center justify-between gap-3">
           <h1 className="font-display text-2xl text-moon-200">{t('nav.profile')}</h1>
+          <MusicToggle />
         </header>
 
         <div className={`${box} flex flex-col items-center gap-3 p-5 text-center`}>

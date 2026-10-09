@@ -37,3 +37,7 @@ Si un son ne te convient pas, n'importe quel autre son de la même page (ou d'ai
 ## Pour aller plus loin
 
 Une fois ces 5 sons en place, si tu veux des effets plus travaillés/uniques (ambiance spécifique, voix, sons plus "African-thème"), Suno AI ou un autre générateur peut les remplacer un par un — même noms de fichiers, aucun changement de code nécessaire.
+
+## Musique d'ambiance
+
+`ambiance-1.mp3` et `ambiance-2.mp3` : deux morceaux (MP3 64 kbit/s, ~4 Mo en tout) joués en boucle, en fondu, hors salons et parties — voir `src/lib/ambientMusic.ts`. Les originaux Suno (Opus dans un conteneur MP4, illisibles sur iPhone) ont été réencodés en vrai MP3 ; pour les remplacer, garder ces noms et ce format (MP3 ou AAC, pas d'Opus).
