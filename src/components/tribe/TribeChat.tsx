@@ -477,7 +477,7 @@ export function TribeChat({ tribe, members, onBack, onlineCount, memberCount }: 
             <div
               key={m.id}
               id={`tm-${m.id}`}
-              className={`shrink-0 rounded-xl ${groupStart ? 'mt-2.5' : 'mt-0.5'} ${highlight === m.id ? 'tribe-anim' : ''}`}
+              className={`shrink-0 rounded-xl ${groupStart ? 'mt-2.5' : 'mt-1'} ${highlight === m.id ? 'tribe-anim' : ''}`}
               style={highlight === m.id ? { animation: 'tribe-flash 1.8s ease-in-out' } : undefined}
             >
               {showDay && <p className="mx-auto mb-2 w-fit rounded-full bg-night-800/80 px-3 py-1 text-[10px] capitalize text-moon-200/50">{dayOf(m.created_at)}</p>}
@@ -996,7 +996,7 @@ const Message = memo(function Message({
         </div>
 
         {grouped.length > 0 && (
-          <div className={`relative z-10 -mt-1.5 flex flex-wrap gap-1 px-1 ${mine ? 'justify-end' : ''}`}>
+          <div className={`relative z-10 -mt-1.5 mb-1.5 flex flex-wrap gap-1 px-1 ${mine ? 'justify-end' : ''}`}>
             {grouped.map((g) => {
               const mineReacted = g.entries.some((r) => r.user_id === selfId)
               return (
