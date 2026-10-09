@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { translations, type Lang, type TranslationKey } from './translations'
+import type { Lang, TranslationKey } from './translations'
 import { supabase } from '../lib/supabase'
 
 const STORAGE_KEY = 'lg-lang'
@@ -31,6 +31,25 @@ function detectInitialLang(): Lang {
   return navigator.language?.toLowerCase().startsWith('fr') ? 'fr' : navigator.language ? 'en' : 'fr'
 }
 
+// Un module par langue (voir i18nSplit dans vite.config.ts) : on ne charge que celle du joueur, et
+// l'autre seulement s'il bascule. Les promesses sont mises en cache.
+type Dictionary = Record<string, string>
+const loaders: Record<Lang, () => Promise<{ default: Dictionary }>> = {
+  fr: () => import('virtual:i18n-fr'),
+  en: () => import('virtual:i18n-en'),
+}
+const loaded = new Map<Lang, Promise<Dictionary>>()
+function loadDictionary(lang: Lang): Promise<Dictionary> {
+  let promise = loaded.get(lang)
+  if (!promise) {
+    promise = loaders[lang]().then((m) => m.default)
+    // En cas d'échec réseau, on oublie la promesse pour pouvoir réessayer.
+    promise.catch(() => loaded.delete(lang))
+    loaded.set(lang, promise)
+  }
+  return promise
+}
+
 interface LanguageContextValue {
   lang: Lang
   setLang: (lang: Lang) => void
@@ -39,8 +58,13 @@ interface LanguageContextValue {
 
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined)
 
+// Le téléchargement démarre dès l'évaluation du module, sans attendre le premier rendu.
+const initialLang = detectInitialLang()
+void loadDictionary(initialLang).catch(() => undefined)
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>(detectInitialLang)
+  const [lang, setLangState] = useState<Lang>(initialLang)
+  const [dictionary, setDictionary] = useState<Dictionary | null>(null)
   const [overrides, setOverrides] = useState<ContentOverrides>({})
 
   useEffect(() => {
@@ -63,8 +87,29 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // Premier chargement : le dictionnaire de la langue détectée.
+  useEffect(() => {
+    let cancelled = false
+    loadDictionary(initialLang)
+      .then((d) => {
+        if (!cancelled) setDictionary((current) => current ?? d)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   function setLang(next: Lang) {
-    setLangState(next)
+    if (next === lang) return
+    // On attend le dictionnaire avant de basculer, et on change les deux d'un coup : jamais d'écran
+    // avec des clés brutes ni un mélange de langues.
+    loadDictionary(next)
+      .then((d) => {
+        setDictionary(d)
+        setLangState(next)
+      })
+      .catch(() => undefined)
   }
 
   function t(key: TranslationKey, vars?: Record<string, string | number>): string {
@@ -73,8 +118,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     // CETTE langue (une override FR sans EN ne doit pas faire disparaître
     // le texte anglais par défaut).
     const override = overrides[key]?.[lang]
-    const entry = translations[key]
-    let text: string = override || (entry ? entry[lang] : key)
+    let text: string = override || dictionary?.[key] || key
     if (vars) {
       for (const [k, v] of Object.entries(vars)) {
         text = text.replace(new RegExp(`{{${k}}}`, 'g'), String(v))
@@ -82,6 +126,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
     return text
   }
+
+  // Premier affichage : on attend le dictionnaire (quelques dizaines de ms) plutôt que d'afficher des clés.
+  if (!dictionary) return null
 
   return <LanguageContext.Provider value={{ lang, setLang, t }}>{children}</LanguageContext.Provider>
 }

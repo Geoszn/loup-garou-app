@@ -5,6 +5,7 @@ import './index.css'
 import AdminApp from './AdminApp'
 import { AuthProvider } from './context/AuthContext'
 import { LanguageProvider } from './i18n/LanguageContext'
+import { MotionProvider } from './components/MotionProvider'
 
 // Ce sous-domaine servait auparavant l'appli publique, qui y avait enregistré
 // son service worker : le retirer évite qu'un ancien cache du navigateur
@@ -21,7 +22,9 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <LanguageProvider>
         <AuthProvider>
-          <AdminApp />
+          <MotionProvider>
+            <AdminApp />
+          </MotionProvider>
         </AuthProvider>
       </LanguageProvider>
     </BrowserRouter>

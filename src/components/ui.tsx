@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
 import { Link, type LinkProps } from 'react-router-dom'
-import { motion, useDragControls, type PanInfo } from 'framer-motion'
+import { m, useDragControls, type PanInfo } from 'framer-motion'
 import { useLanguage } from '../i18n/LanguageContext'
 
 type ButtonVariant = 'primary' | 'ghost' | 'danger'
@@ -482,7 +482,7 @@ export function Modal({
       className="fixed inset-0 z-50 flex animate-overlay-in items-center justify-center bg-black/60 px-4 py-8 backdrop-blur-sm"
       onClick={onClose}
     >
-      <motion.div
+      <m.div
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -535,7 +535,7 @@ export function Modal({
           </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin px-6 pb-6">{children}</div>
-      </motion.div>
+      </m.div>
     </div>
   )
 }

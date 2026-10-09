@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useLanguage } from '../i18n/LanguageContext'
@@ -58,18 +58,18 @@ export function RewardChest({ gameId }: { gameId: string }) {
 
       <AnimatePresence mode="wait">
         {state === 'idle' && (
-          <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <m.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div className="mb-3 text-4xl" aria-hidden="true">
               🎁
             </div>
             <Button onClick={open} className="w-full">
               {t('reward.open')}
             </Button>
-          </motion.div>
+          </m.div>
         )}
 
         {state === 'opening' && (
-          <motion.div
+          <m.div
             key="opening"
             className="mb-1 text-4xl"
             aria-hidden="true"
@@ -77,11 +77,11 @@ export function RewardChest({ gameId }: { gameId: string }) {
             transition={{ duration: 0.7 }}
           >
             🎁
-          </motion.div>
+          </m.div>
         )}
 
         {state === 'revealed' && result && (
-          <motion.div
+          <m.div
             key="revealed"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -107,7 +107,7 @@ export function RewardChest({ gameId }: { gameId: string }) {
             {result.already_claimed && (
               <p className="mt-1.5 text-[11px] text-moon-200/35">{t('reward.alreadyClaimed')}</p>
             )}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

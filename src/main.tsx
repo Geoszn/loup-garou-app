@@ -11,6 +11,7 @@ import App from './App'
 import { AuthProvider } from './context/AuthContext'
 import { PresenceProvider } from './context/PresenceContext'
 import { LanguageProvider } from './i18n/LanguageContext'
+import { MotionProvider } from './components/MotionProvider'
 
 // Coquille native (Android/iOS) uniquement : sur le web classique, ces
 // appels seraient soit inutiles (pas de barre de statut) soit no-op (le
@@ -70,7 +71,9 @@ createRoot(document.getElementById('root')!).render(
         <LanguageProvider>
           <AuthProvider>
             <PresenceProvider>
-              <App />
+              <MotionProvider>
+                <App />
+              </MotionProvider>
             </PresenceProvider>
           </AuthProvider>
         </LanguageProvider>

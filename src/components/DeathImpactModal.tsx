@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { motion, type PanInfo } from 'framer-motion'
+import { m, type PanInfo } from 'framer-motion'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
 import { roleLabel, ROLES, type RoleId } from '../lib/roles'
@@ -82,7 +82,7 @@ export function DeathImpactModal({
 
   return (
     <div className="fixed inset-0 z-50 flex animate-overlay-in items-center justify-center bg-black/60 px-4 py-8 backdrop-blur-sm">
-      <motion.div
+      <m.div
         role="dialog"
         aria-modal="true"
         aria-labelledby="death-impact-title"
@@ -141,7 +141,7 @@ export function DeathImpactModal({
             {t('deathImpact.continue')}
           </button>
         </div>
-      </motion.div>
+      </m.div>
     </div>
   )
 }
