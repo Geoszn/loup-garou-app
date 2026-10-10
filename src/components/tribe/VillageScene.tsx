@@ -1,5 +1,6 @@
 import { memo, useMemo, type ReactNode } from 'react'
 import { TribeDecor, decorSprites } from './VillageDecor'
+import { BaobabArt } from './BaobabArt'
 
 // ---------------------------------------------------------------------------
 // La scène de l'île : le terrain (sol, chemins, mare, forêt des loups…) est un seul dessin
@@ -200,34 +201,6 @@ function Sign() {
   )
 }
 
-function Baobab() {
-  return (
-    <g>
-      <defs>
-        <linearGradient id="vsTrunk" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#7a5a3a" />
-          <stop offset=".5" stopColor="#9c7a52" />
-          <stop offset="1" stopColor="#5c4129" />
-        </linearGradient>
-      </defs>
-      <ellipse cx="-3" cy="24" rx="27" ry="7" fill="#000" opacity=".34" />
-      <path d="M-21 24C-12 20-15 4-12 -8-10 -16-8 -22-6.5 -24h13C8 -22 10 -16 12 -8 15 4 12 20 21 24 10 30-10 30-21 24Z" fill="url(#vsTrunk)" stroke="#3a2614" strokeWidth="1.3" strokeLinejoin="round" />
-      <path d="M-8 -6C-10 4-7 14-9 22M0 -12C1 0 0 12 1 23M8 -4C10 6 8 15 10 22" stroke="#5c4129" strokeWidth="1" fill="none" opacity=".7" />
-      <path d="M-3 -24L-24 -36M0 -26L0 -42M3 -24L24 -36" stroke="#6a4c30" strokeWidth="3.6" strokeLinecap="round" />
-      {[[-26, -40, 11], [-13, -50, 13], [7, -52, 14], [25, -41, 12], [0, -40, 11]].map(([x, y, r], i) => (
-        <g key={i}>
-          <circle cx={x} cy={y} r={r} fill="#174c30" />
-          <circle cx={x - 2} cy={y - 2} r={r - 3} fill="#27703f" />
-          <circle cx={x - 4} cy={y - 4} r={r / 3} fill="#4fa266" opacity=".8" />
-        </g>
-      ))}
-      {[[-18, -30], [12, -32], [-4, -30]].map(([x, y], i) => (
-        <ellipse key={i} cx={x} cy={y} rx="1.8" ry="3.4" fill="#7a5a34" />
-      ))}
-    </g>
-  )
-}
-
 function Fire() {
   return (
     <g transform="scale(.8)">
@@ -330,7 +303,7 @@ function buildSprites(layout: Layout, level: number, emblem: string, color: stri
 
   out.push({ key: 'cave', x: cave.x, y: cave.y, ox: 40, oy: 42, w: 80, h: 48, node: <Cave /> })
   out.push({ key: 'sign', x: cx + 6, y: FOREST + 26, ox: 14, oy: 30, w: 28, h: 36, node: <Sign /> })
-  out.push({ key: 'baobab', x: cx, y: cy + 3 + 24, ox: 56, oy: 108, w: 112, h: 118, node: <g transform="translate(0 -24)"><Baobab /></g> })
+  out.push({ key: 'baobab', x: cx, y: cy + 3 + 24, ox: 84, oy: 134, w: 168, h: 146, node: <g transform="translate(0 -24)"><BaobabArt level={level} color={color} emblem={emblem} /></g> })
   out.push({ key: 'fire', x: cx, y: cy + 28, ox: 30, oy: 26, w: 60, h: 42, node: <Fire /> })
   decorSprites({ level, cx, cy, emblem, color }).forEach((d) => out.push({ key: d.key, x: d.x, y: d.y, ox: d.ox, oy: d.oy, w: d.w, h: d.h, node: d.node }))
   return out
