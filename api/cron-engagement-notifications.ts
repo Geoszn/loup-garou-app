@@ -31,6 +31,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const serviceClient = createClient(supabaseUrl, serviceRoleKey)
+
+  // Ménage : ferme les salons et parties inactifs depuis plus de 2 h, même sans aucun joueur dessus
+  // (migration 0237). Une erreur ici ne doit pas bloquer les notifications.
+  const { data: closedGames } = await serviceClient.rpc('close_inactive_games')
+
   const { data, error } = await serviceClient.rpc('pick_engagement_notifications')
   if (error) {
     res.status(500).json({ error: error.message })
@@ -64,5 +69,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  res.status(200).json({ picked: rows.length, sent, digest: digestRows.length, digestSent })
+  res.status(200).json({ picked: rows.length, sent, digest: digestRows.length, digestSent, closedGames: typeof closedGames === 'number' ? closedGames : 0 })
 }
