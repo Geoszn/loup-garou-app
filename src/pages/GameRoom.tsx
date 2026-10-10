@@ -77,7 +77,10 @@ export default function GameRoom() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code])
 
-  const { view, error: gameError, onlineUserIds } = useGame(gameId, user?.id ?? null)
+  const { view, error: gameError, onlineUserIds: lobbyOnlineIds } = useGame(gameId, user?.id ?? null)
+  // Voyant « en ligne » : uniquement dans le salon d'attente. Dès que la partie démarre, plus aucun indicateur
+  // de présence n'est affiché (voir useGame) — il aidait à deviner les rôles et les actions de nuit.
+  const onlineUserIds = view?.game.status === 'lobby' ? lobbyOnlineIds : undefined
   const sfx = useSoundEffects(view)
   const notifications = useTurnNotifications(
     view?.pending_action_required ?? null,
@@ -1072,7 +1075,7 @@ const CollapsiblePlayerGrid = memo(function CollapsiblePlayerGrid({
 }: {
   players: PublicPlayer[]
   selfId: string
-  onlineUserIds: Set<string>
+  onlineUserIds?: Set<string>
 }) {
   const { t } = useLanguage()
   const [open, setOpen] = useState(false)

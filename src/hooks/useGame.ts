@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { onGameAction } from '../lib/gameRpc'
 import type { MyGameView } from '../types/game'
@@ -172,5 +172,8 @@ export function useGame(gameId: string | null, userId: string | null = null) {
     return () => clearInterval(interval)
   }, [gameId, view?.game.status, amHost])
 
-  return { view, loading, error, refresh, onlineUserIds }
+  // La présence n'est exposée que dans le salon d'attente : une fois la partie lancée (et après), savoir qui est
+  // connecté permettrait de deviner les rôles ou les actions de nuit — on ne renvoie plus rien.
+  const visibleOnlineUserIds = useMemo(() => (view?.game.status === 'lobby' ? onlineUserIds : new Set<string>()), [view?.game.status, onlineUserIds])
+  return { view, loading, error, refresh, onlineUserIds: visibleOnlineUserIds }
 }
