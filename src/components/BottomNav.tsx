@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { NavLink } from 'react-router-dom'
+import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from './Avatar'
 import { useMyAvatarConfig } from './AvatarEditor'
+import { ConfirmDialog } from './ui'
 
 const itemBase = 'relative flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[10px] font-semibold transition-colors'
 
@@ -89,11 +90,24 @@ export function BottomNav({ alertCount = 0, claimable = false }: { alertCount?: 
     }
   }, [keyboardOpen])
 
+  const location = useLocation()
+  const navigate = useNavigate()
+  // Dans le salon ou une partie, toucher la barre quitte l'écran de jeu : on demande confirmation
+  // (la partie continue sans toi, tu la retrouves avec « Reprendre » sur l'accueil).
+  const inGame = location.pathname.startsWith('/partie/')
+  const [leaveTo, setLeaveTo] = useState<string | null>(null)
+  const guard = (to: string) => (e: MouseEvent) => {
+    if (!inGame) return
+    e.preventDefault()
+    setLeaveTo(to)
+  }
+
   const cls = ({ isActive }: { isActive: boolean }) => `${itemBase} ${isActive ? 'text-moon-300' : 'text-moon-200/50 hover:text-moon-200'}`
 
   if (keyboardOpen) return null
 
   return (
+    <>
     <nav
       ref={navRef}
       aria-label="Navigation principale"
@@ -101,7 +115,7 @@ export function BottomNav({ alertCount = 0, claimable = false }: { alertCount?: 
       style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.25rem)' }}
     >
       <div className="mx-auto flex max-w-3xl items-end px-2">
-        <NavLink to="/dashboard" className={cls}>
+        <NavLink to="/dashboard" className={cls} onClick={guard('/dashboard')}>
           <Icon>
             <path d="M4 11l8-7 8 7" />
             <path d="M6 10v9h12v-9" />
@@ -109,7 +123,7 @@ export function BottomNav({ alertCount = 0, claimable = false }: { alertCount?: 
           {t('nav.home')}
         </NavLink>
 
-        <NavLink to="/recompenses" className={cls}>
+        <NavLink to="/recompenses" className={cls} onClick={guard('/recompenses')}>
           <Icon>
             <rect x="4" y="9" width="16" height="11" rx="1.5" />
             <path d="M12 9v11M3 9h18M12 9c-2.5 0-4.5-1-4.5-2.8S9.5 4 12 9c2.5-5 4.5-3.8 4.5-2.8S14.5 9 12 9z" />
@@ -119,7 +133,7 @@ export function BottomNav({ alertCount = 0, claimable = false }: { alertCount?: 
         </NavLink>
 
         <div className="flex flex-1 justify-center">
-          <NavLink to="/jouer" aria-label={t('nav.play')} className="-mt-5 flex flex-col items-center gap-0.5 text-[10px] font-semibold text-moon-300">
+          <NavLink to="/jouer" onClick={guard('/jouer')} aria-label={t('nav.play')} className="-mt-5 flex flex-col items-center gap-0.5 text-[10px] font-semibold text-moon-300">
             <span className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-night-900 bg-gradient-to-b from-blood-500 to-blood-700 text-[#fdf6e3] shadow-blood-btn transition-transform active:scale-95">
               <svg viewBox="0 0 24 24" className="h-7 w-7" fill="currentColor" aria-hidden="true">
                 <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10-6.5a1 1 0 0 0 0-1.72l-10-6.5A1 1 0 0 0 8 5.5z" />
@@ -129,7 +143,7 @@ export function BottomNav({ alertCount = 0, claimable = false }: { alertCount?: 
           </NavLink>
         </div>
 
-        <NavLink to="/tribu" className={cls}>
+        <NavLink to="/tribu" className={cls} onClick={guard('/tribu')}>
           <Icon>
             <path d="M12 3l7 2.5v6c0 4.5-3 7.6-7 9.5-4-1.9-7-5-7-9.5v-6z" />
             <path d="M12 8.5l1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.3-2.4 1.3.5-2.6-1.9-1.8 2.6-.4z" />
@@ -138,11 +152,25 @@ export function BottomNav({ alertCount = 0, claimable = false }: { alertCount?: 
           <Badge count={alertCount} />
         </NavLink>
 
-        <NavLink to="/profil" className={cls}>
+        <NavLink to="/profil" className={cls} onClick={guard('/profil')}>
           <Avatar config={myAvatar.config} icon={profile?.avatar_icon} name={profile?.username} className="h-6 w-6 ring-1 ring-night-600" />
           {t('nav.profile')}
         </NavLink>
       </div>
     </nav>
+      <ConfirmDialog
+        open={leaveTo !== null}
+        title={t('nav.leaveGame.title')}
+        message={t('nav.leaveGame.message')}
+        confirmLabel={t('nav.leaveGame.confirm')}
+        cancelLabel={t('nav.leaveGame.stay')}
+        onConfirm={() => {
+          const to = leaveTo
+          setLeaveTo(null)
+          if (to) navigate(to)
+        }}
+        onCancel={() => setLeaveTo(null)}
+      />
+    </>
   )
 }
