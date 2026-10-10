@@ -89,6 +89,7 @@ const EXACT_MATCHES: Record<string, TranslationKey> = {
   '🎭 Les rôles ont été distribués en secret. Regardez votre carte...': 'gameLog.rolesDistributed',
   '💘 Cupidon a décoché ses flèches...': 'gameLog.cupidonArrows',
   '🐾 L’Enfant Sauvage a choisi son mentor en secret.': 'gameLog.wildChildChoseMentor',
+  '🐾 Le sort a désigné le mentor de l’Enfant Sauvage en secret.': 'gameLog.wildChildRandomMentor',
   '🧪 La Sorcière a fait son choix en secret.': 'gameLog.witchChoseSecret',
   '🃏 Le Voleur a fait son choix en secret.': 'gameLog.thiefChoseSecret',
   '🔮 La Voyante a sondé un joueur en secret.': 'gameLog.seerScried',

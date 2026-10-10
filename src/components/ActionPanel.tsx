@@ -636,16 +636,13 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
     if (!selected) return
     setLoading(true)
     setError(null)
-    const { error: voteErr } = await gameRpc('submit_wolf_vote', { p_game_id: gameId, p_target: selected })
-    if (voteErr) {
-      setLoading(false)
-      setError(voteErr.message)
-      return
-    }
-    // Efface un éventuel accord d'infection donné plus tôt dans le tour
-    // (le loup a changé d'avis pour "Éliminer") — jamais pour l'Alpha, qui
-    // ne participe pas à ce vote (voir submit_alpha_infect_agreement,
-    // migration 0108 : rejette désormais explicitement son rôle).
+    // ORDRE IMPORTANT : les décisions d'infection d'abord, le vote en DERNIER. Dès que le dernier loup
+    // vivant a voté, le serveur termine l'étape (submit_wolf_vote) — un accord ou une confirmation
+    // envoyé après serait refusé (« pas le moment »), et l'infection échouerait en silence.
+    //
+    // Efface un éventuel accord d'infection donné plus tôt dans le tour (le loup a changé d'avis pour
+    // « Éliminer ») — jamais pour l'Alpha, qui ne participe pas à ce vote (voir
+    // submit_alpha_infect_agreement, migration 0108 : rejette désormais explicitement son rôle).
     if (infectPossible && !isAlpha) {
       const { error: agreeErr } = await gameRpc('submit_alpha_infect_agreement', {
         p_game_id: gameId,
@@ -657,15 +654,10 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
         return
       }
     }
-    // BUG CORRIGÉ (retour utilisateur, second test) : si l'Alpha avait déjà
-    // confirmé l'infection plus tôt dans son tour puis revenait ici choisir
-    // "Éliminer" (via le pop-up à double choix ci-dessous), la victime était
-    // quand même infectée à la résolution — parce que rien n'annulait son
-    // propre alpha_infect_confirmed, resté vrai en arrière-plan. Ce cas
-    // n'existait pas pour un loup simple (le bloc juste au-dessus le gère
-    // déjà, via SON accord à lui) : seul l'Alpha peut avoir confirmé
-    // l'infection lui-même. Choisir "Éliminer" doit toujours vouloir dire
-    // éliminer, même après une confirmation d'infection déjà donnée.
+    // Si l'Alpha avait déjà confirmé l'infection plus tôt dans son tour puis revient choisir
+    // « Éliminer », il faut annuler SA confirmation (seul l'Alpha peut en avoir donné une) : sinon la
+    // victime serait quand même infectée à la résolution. Choisir « Éliminer » doit toujours vouloir
+    // dire éliminer.
     if (isAlpha && view.alpha_infect_confirmed) {
       const { error: confirmErr } = await gameRpc('submit_loup_alpha_confirm_infect', {
         p_game_id: gameId,
@@ -677,7 +669,12 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
         return
       }
     }
+    const { error: voteErr } = await gameRpc('submit_wolf_vote', { p_game_id: gameId, p_target: selected })
     setLoading(false)
+    if (voteErr) {
+      setError(voteErr.message)
+      return
+    }
     setConfirmOpen(false)
     setEditing(false)
   }
@@ -697,19 +694,22 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
     if (!selected) return
     setLoading(true)
     setError(null)
-    const { error: voteErr } = await gameRpc('submit_wolf_vote', { p_game_id: gameId, p_target: selected })
-    if (voteErr) {
-      setLoading(false)
-      setError(voteErr.message)
-      return
-    }
+    // Confirmation d'infection d'abord, vote ensuite : le vote de l'Alpha est souvent le dernier, et il
+    // termine l'étape — une confirmation envoyée après serait refusée et la victime serait tuée au lieu
+    // d'être infectée.
     const { error: confirmErr } = await gameRpc('submit_loup_alpha_confirm_infect', {
       p_game_id: gameId,
       p_confirm: true,
     })
-    setLoading(false)
     if (confirmErr) {
+      setLoading(false)
       setError(confirmErr.message)
+      return
+    }
+    const { error: voteErr } = await gameRpc('submit_wolf_vote', { p_game_id: gameId, p_target: selected })
+    setLoading(false)
+    if (voteErr) {
+      setError(voteErr.message)
       return
     }
     setConfirmOpen(false)
@@ -728,16 +728,18 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
     setIntent('infect')
     setLoading(true)
     setError(null)
-    const { error: voteErr } = await gameRpc('submit_wolf_vote', { p_game_id: gameId, p_target: null })
-    if (voteErr) {
+    // Accord d'abord, vote (abstention) ensuite : voter en dernier termine l'étape côté serveur, et un
+    // accord envoyé après serait refusé — l'infection ne pourrait alors jamais avoir lieu.
+    const { error: agreeErr } = await gameRpc('submit_alpha_infect_agreement', { p_game_id: gameId, p_agree: true })
+    if (agreeErr) {
       setLoading(false)
-      setError(voteErr.message)
+      setError(agreeErr.message)
       return
     }
-    const { error: agreeErr } = await gameRpc('submit_alpha_infect_agreement', { p_game_id: gameId, p_agree: true })
+    const { error: voteErr } = await gameRpc('submit_wolf_vote', { p_game_id: gameId, p_target: null })
     setLoading(false)
-    if (agreeErr) {
-      setError(agreeErr.message)
+    if (voteErr) {
+      setError(voteErr.message)
       return
     }
     setEditing(false)
@@ -752,10 +754,11 @@ export function WolfPanel({ view, gameId, selfId }: { view: MyGameView; gameId: 
   async function submitAbstain() {
     setLoading(true)
     setError(null)
-    const { error: voteErr } = await gameRpc('submit_wolf_vote', { p_game_id: gameId, p_target: null })
-    if (!voteErr && infectPossible && !isAlpha) {
+    // Retrait de l'accord d'infection d'abord (voir chooseInfect : le vote termine l'étape).
+    if (infectPossible && !isAlpha) {
       await gameRpc('submit_alpha_infect_agreement', { p_game_id: gameId, p_agree: false })
     }
+    const { error: voteErr } = await gameRpc('submit_wolf_vote', { p_game_id: gameId, p_target: null })
     setLoading(false)
     setConfirmAbstainOpen(false)
     if (voteErr) {
@@ -1037,6 +1040,7 @@ function SorcierePanel({ view, gameId }: { view: MyGameView; gameId: string; sel
   const [loading, setLoading] = useState(false)
   const alive = view.players.filter((p) => p.is_alive)
   const victim = view.players.find((p) => p.user_id === view.wolf_target_visible_to_witch)
+  const infected = view.players.find((p) => p.user_id === view.wolf_infect_target_visible_to_witch)
   const poisonTargetPlayer = view.players.find((p) => p.user_id === poisonTarget)
   const healAvailable = !view.witch_heal_used && !!victim
   const poisonAvailable = !view.witch_poison_used
@@ -1078,7 +1082,9 @@ function SorcierePanel({ view, gameId }: { view: MyGameView; gameId: string; sel
   return (
     <PanelShell emoji="🧪" title={t('action.witch.title')}>
       <div className="mb-4 rounded-xl border border-night-600/60 bg-night-900/50 p-3 text-sm">
-        {victim ? (
+        {infected ? (
+          <p className="text-moon-200/80">{t('action.witch.infectKnown', { name: infected.display_name })}</p>
+        ) : victim ? (
           <p className="text-moon-200/80">{t('action.witch.victimKnown', { name: victim.display_name })}</p>
         ) : (
           <p className="text-moon-200/50">{t('action.witch.victimUnknown')}</p>

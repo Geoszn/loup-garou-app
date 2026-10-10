@@ -421,6 +421,10 @@ export interface MyGameView {
     | 'revival_choice'
     | null
   wolf_target_visible_to_witch: string | null
+  // Infection décidée par les loups cette nuit (null sinon) : montrée à la Sorcière à part, jamais comme une victime à guérir.
+  wolf_infect_target_visible_to_witch: string | null
+  // Au lever du jour, pour la Sorcière : le joueur réellement infecté cette nuit.
+  witch_infected_notice_id: string | null
   wolf_current_votes: { actor_id: string; target_id: string | null }[]
   // Qui a voté pour qui cette nuit (une fois résolue) — réservé aux Loups
   // eux-mêmes (jamais aux villageois), rempli uniquement pendant
