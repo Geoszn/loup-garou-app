@@ -5,7 +5,7 @@ import { usePresence } from '../../context/PresenceContext'
 import { useAuth } from '../../context/AuthContext'
 import { useLanguage } from '../../i18n/LanguageContext'
 import { useTribeSummary, notifyTribeSummaryChanged } from '../../hooks/useTribeSummary'
-import { notifyTribeInvite } from '../../lib/pushSubscription'
+import { notifyTribeInvite, notifyTribeMessage } from '../../lib/pushSubscription'
 import { cachedRpc } from '../../lib/rpcCache'
 import {
   TRIBE_COLORS,
@@ -415,7 +415,8 @@ function TribeForm({ mode, tribe, onCancel, onDone }: { mode: 'create' | 'edit';
 // ---------------------------------------------------------------------------
 function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: TribeInfo; refresh: () => Promise<void>; tab: RoomTab; setTab: (t: RoomTab) => void; pendingFriends: number }) {
   const { t } = useLanguage()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
+  const [partyBusy, setPartyBusy] = useState(false)
   const { onlineStatus } = usePresence()
   const [detail, setDetail] = useState<TribeDetail | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -429,6 +430,29 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
   const [error, setError] = useState<string | null>(null)
   const isManager = tribe.my_role === 'chef' || tribe.my_role === 'sous_chef'
   const activeTab: RoomTab = tab === 'manage' && !isManager ? 'village' : tab
+
+  // Partie de tribu : crée un salon, le poste dans le chat de la tribu (marqué « partie de tribu », bonus d'XP) puis y entre.
+  async function startParty() {
+    setError(null)
+    setPartyBusy(true)
+    const { data, error: createError } = await supabase.rpc('create_game', { p_display_name: profile?.username ?? t('common.playerFallback'), p_settings: null, p_is_public: false })
+    if (createError || !data) {
+      setPartyBusy(false)
+      setError(createError?.message ?? t('tribe.party.error'))
+      return
+    }
+    const game = data as { game_id: string; code: string }
+    const { error: inviteError } = await supabase.rpc('invite_tribe_to_game', { p_game_id: game.game_id, p_party: true })
+    if (inviteError) {
+      // Le salon existe déjà : on y entre quand même, l'invitation pourra être renvoyée depuis le salon.
+      setError(inviteError.message)
+    } else {
+      void notifyTribeMessage()
+      notifyTribeSummaryChanged()
+    }
+    setPartyBusy(false)
+    navigate(`/partie/${game.code}/lobby`)
+  }
 
   const loadDetail = useCallback(async () => {
     const { data, error: rpcError } = await supabase.rpc('get_tribe_detail')
@@ -566,6 +590,21 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
       </div>
 
       {activeTab === 'village' && (
+        <button
+          type="button"
+          disabled={partyBusy}
+          onClick={() => void startParty()}
+          className="flex items-center gap-3 rounded-2xl border border-amber-300/40 bg-gradient-to-b from-amber-400/20 to-amber-500/5 px-3.5 py-2.5 text-left transition-opacity active:opacity-80 disabled:opacity-60 lg:col-start-1"
+        >
+          <span aria-hidden="true" className="text-2xl">🏆</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-amber-200">{t('tribe.party.button')}</span>
+            <span className="block text-[11px] leading-snug text-moon-200/60">{t('tribe.party.hint')}</span>
+          </span>
+        </button>
+      )}
+
+      {activeTab === 'village' && (
         <div className="min-w-0 lg:col-start-2 lg:row-span-3 lg:row-start-1">
         {detail ? (
           <VillageView
@@ -606,6 +645,7 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
             <li>{t('tribe.level.rule1')}</li>
             <li>{t('tribe.level.rule2')}</li>
             <li>{t('tribe.level.rule3')}</li>
+            <li>{t('tribe.level.rule4')}</li>
           </ul>
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-moon-200/50">{t('tribe.level.unlocks')}</p>

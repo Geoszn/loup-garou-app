@@ -208,7 +208,7 @@ export interface TribeMessage {
   kind: 'user' | 'system' | 'invite'
   /** Pour une invitation : code du salon et son état au moment de la lecture. */
   game_code?: string | null
-  game?: { status: string; players: number } | null
+  game?: { status: string; players: number; party?: boolean } | null
   body: string | null
   event: 'created' | 'joined' | 'left' | 'kicked' | 'promoted' | 'demoted' | 'chief' | null
   actor_name: string | null

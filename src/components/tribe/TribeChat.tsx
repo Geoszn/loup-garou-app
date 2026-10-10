@@ -823,13 +823,14 @@ function InviteCard({ m, mine, time }: { m: TribeMessage; mine: boolean; time: s
   const status = m.game?.status ?? null
   const open = status === 'lobby'
   const over = status === null || status === 'ended'
+  const party = !!m.game?.party
   const name = m.username ?? t('tribe.formerMember')
   return (
     <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
       <div className="w-full max-w-[19rem] overflow-hidden rounded-2xl border border-amber-300/40 bg-gradient-to-b from-night-700 to-night-800 shadow-card md:max-w-[22rem]">
         <div className="flex items-center gap-2.5 bg-amber-300/10 px-3 py-2.5">
           {m.username ? <Avatar config={m.avatar_config} icon={m.avatar_icon} name={m.username} className="h-9 w-9" /> : <span className="flex h-9 w-9 items-center justify-center rounded-full bg-night-900 text-lg">🎮</span>}
-          <p className="min-w-0 flex-1 text-sm font-semibold leading-tight text-moon-200">🎮 {t('tribe.game.title', { name })}</p>
+          <p className="min-w-0 flex-1 text-sm font-semibold leading-tight text-moon-200">{party ? '🏆' : '🎮'} {t(party ? 'tribe.game.partyTitle' : 'tribe.game.title', { name })}</p>
         </div>
         <div className="flex flex-col gap-2.5 px-3 pb-3 pt-2.5">
           <div className="flex items-center justify-between gap-2 text-xs text-moon-200/70">
@@ -838,6 +839,7 @@ function InviteCard({ m, mine, time }: { m: TribeMessage; mine: boolean; time: s
               {open ? t('tribe.game.players', { count: m.game?.players ?? 0 }) : over ? t('tribe.game.ended') : t('tribe.game.started')}
             </span>
           </div>
+          {party && !over && <p className="rounded-lg bg-amber-300/10 px-2 py-1.5 text-[11px] leading-snug text-amber-200">{t('tribe.game.partyBonus')}</p>}
           <button
             type="button"
             disabled={over}
