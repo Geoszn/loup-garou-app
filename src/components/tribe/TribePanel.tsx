@@ -410,6 +410,23 @@ function TribeForm({ mode, tribe, onCancel, onDone }: { mode: 'create' | 'edit';
   )
 }
 
+function PartyChoice({ emoji, title, subtitle, disabled, onClick }: { emoji: string; title: string; subtitle: string; disabled?: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="flex items-center gap-3 rounded-xl border border-night-600/60 bg-night-900/50 p-4 text-left transition-colors hover:border-moon-400/50 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <span className="shrink-0 text-2xl">{emoji}</span>
+      <span>
+        <span className="block text-sm font-semibold text-moon-200">{title}</span>
+        <span className="block text-xs text-moon-200/50">{subtitle}</span>
+      </span>
+    </button>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Ma tribu : village, chat, membres, invitations et demandes, amis
 // ---------------------------------------------------------------------------
@@ -417,6 +434,7 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
   const { t } = useLanguage()
   const { user, profile } = useAuth()
   const [partyBusy, setPartyBusy] = useState(false)
+  const [partyOpen, setPartyOpen] = useState(false)
   const { onlineStatus } = usePresence()
   const [detail, setDetail] = useState<TribeDetail | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -432,12 +450,13 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
   const activeTab: RoomTab = tab === 'manage' && !isManager ? 'village' : tab
 
   // Partie de tribu : crée un salon, le poste dans le chat de la tribu (marqué « partie de tribu », bonus d'XP) puis y entre.
-  async function startParty() {
+  async function startParty(isPublic: boolean) {
     setError(null)
     setPartyBusy(true)
-    const { data, error: createError } = await supabase.rpc('create_game', { p_display_name: profile?.username ?? t('common.playerFallback'), p_settings: null, p_is_public: false })
+    const { data, error: createError } = await supabase.rpc('create_game', { p_display_name: profile?.username ?? t('common.playerFallback'), p_settings: null, p_is_public: isPublic })
     if (createError || !data) {
       setPartyBusy(false)
+      setPartyOpen(false)
       setError(createError?.message ?? t('tribe.party.error'))
       return
     }
@@ -451,6 +470,7 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
       notifyTribeSummaryChanged()
     }
     setPartyBusy(false)
+    setPartyOpen(false)
     navigate(`/partie/${game.code}/lobby`)
   }
 
@@ -592,9 +612,8 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
       {activeTab === 'village' && (
         <button
           type="button"
-          disabled={partyBusy}
-          onClick={() => void startParty()}
-          className="flex items-center gap-3 rounded-2xl border border-amber-300/40 bg-gradient-to-b from-amber-400/20 to-amber-500/5 px-3.5 py-2.5 text-left transition-opacity active:opacity-80 disabled:opacity-60 lg:col-start-1"
+          onClick={() => setPartyOpen(true)}
+          className="flex items-center gap-3 rounded-2xl border border-amber-300/40 bg-gradient-to-b from-amber-400/20 to-amber-500/5 px-3.5 py-2.5 text-left transition-opacity active:opacity-80 lg:col-start-1"
         >
           <span aria-hidden="true" className="text-2xl">🏆</span>
           <span className="min-w-0 flex-1">
@@ -627,6 +646,15 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
       {activeTab === 'members' && <MembersView tribe={tribe} detail={detail} onlineIds={onlineIds} onSelect={setSelected} goInvite={() => setTab('manage')} />}
       {activeTab === 'manage' && isManager && <ManageView detail={detail} reload={reloadAll} />}
       {activeTab === 'friends' && <FriendsPanel />}
+
+      <Modal open={partyOpen} onClose={() => !partyBusy && setPartyOpen(false)} title={`🏆 ${t('tribe.party.button')}`}>
+        <p className="mb-3 text-xs text-moon-200/60">{t('tribe.party.hint')}</p>
+        <div className="flex flex-col gap-3">
+          <PartyChoice emoji="🔒" title={t('dashboard.create.private.title')} subtitle={t('tribe.party.privateHint')} disabled={partyBusy} onClick={() => void startParty(false)} />
+          <PartyChoice emoji="🌍" title={t('dashboard.create.public.title')} subtitle={t('tribe.party.publicHint')} disabled={partyBusy} onClick={() => void startParty(true)} />
+        </div>
+        {partyBusy && <p className="mt-3 text-center text-xs text-moon-200/40">{t('dashboard.create.creating')}</p>}
+      </Modal>
       <ErrorText>{error}</ErrorText>
 
       {profileId && <PlayerProfileModal userId={profileId} onClose={() => setProfileId(null)} />}

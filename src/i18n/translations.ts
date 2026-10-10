@@ -1962,6 +1962,8 @@ export const translations = {
   'tribe.party.button': { fr: 'Lancer une partie de tribu', en: 'Start a tribe game' },
   'tribe.party.error': { fr: 'Impossible de créer le salon pour l\'instant.', en: 'Could not create the lobby right now.' },
   'tribe.party.hint': { fr: 'Crée un salon, prévient toute la tribu et rapporte +20 XP bonus à 4 membres.', en: 'Creates a lobby, alerts the whole tribe and earns +20 bonus XP with 4 members.' },
+  'tribe.party.privateHint': { fr: 'Seule ta tribu (et ceux qui ont le code) peut rejoindre.', en: 'Only your tribe (and anyone with the code) can join.' },
+  'tribe.party.publicHint': { fr: 'Ta tribu est prévenue, et le salon apparaît aussi dans la recherche de parties.', en: 'Your tribe is notified, and the lobby also shows up in game search.' },
   'tribe.game.preview': { fr: '🎮 Invitation à une partie', en: '🎮 Game invitation' },
   'tribe.chat.everyoneHint': { fr: 'Prévenir toute la tribu', en: 'Notify the whole tribe' },
   'tribe.notif.quiet': { fr: 'Heures calmes', en: 'Quiet hours' },
