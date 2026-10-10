@@ -592,7 +592,7 @@ export default function GameRoom() {
               // bandeau, vocal replié, chat (qui prend tout le reste) et une
               // ligne de vote. Le champ de saisie reste toujours visible ;
               // le rappel de rôle et le reste se trouvent plus bas sur la page.
-              <div className="flex h-[calc(100dvh-6rem)] min-h-[26rem] flex-col gap-2">
+              <div className="flex h-[calc(100dvh-6rem-var(--nav-h,0px))] min-h-[26rem] flex-col gap-2">
                 <DayTabs
                   fill
                   dayTab={dayTab}

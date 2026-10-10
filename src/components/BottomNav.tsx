@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLanguage } from '../i18n/LanguageContext'
@@ -24,6 +24,35 @@ function Badge({ count }: { count: number }) {
   )
 }
 
+/** Vrai quand un clavier virtuel est ouvert : un champ de texte a le focus et la zone visible a rétréci. */
+function useKeyboardOpen(): boolean {
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    let baseline = Math.max(window.innerHeight, vv.height)
+    const typing = () => {
+      const el = document.activeElement
+      return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || (el as HTMLElement).isContentEditable)
+    }
+    const update = () => {
+      if (!typing()) baseline = Math.max(window.innerHeight, vv.height)
+      setOpen(typing() && vv.height < baseline - 120)
+    }
+    update()
+    vv.addEventListener('resize', update)
+    window.addEventListener('focusin', update)
+    window.addEventListener('focusout', update)
+    window.addEventListener('orientationchange', () => (baseline = 0))
+    return () => {
+      vv.removeEventListener('resize', update)
+      window.removeEventListener('focusin', update)
+      window.removeEventListener('focusout', update)
+    }
+  }, [])
+  return open
+}
+
 /** Barre de navigation fixe, dans la zone du pouce : Accueil, Récompenses,
  * Jouer (bouton central), Tribu (les amis y sont un onglet secondaire), Profil. Chaque entrée est une page à part
  * entière. */
@@ -32,10 +61,41 @@ export function BottomNav({ alertCount = 0, claimable = false }: { alertCount?: 
   const { profile } = useAuth()
   const myAvatar = useMyAvatarConfig()
 
+  const keyboardOpen = useKeyboardOpen()
+  const navRef = useRef<HTMLElement>(null)
+
+  // La barre publie sa hauteur (--nav-h) : les pages qui doivent la contourner (barre d'action du salon,
+  // chat de la partie, hauteur minimale des écrans) s'en servent au lieu de supposer une taille.
+  useEffect(() => {
+    const root = document.documentElement
+    const el = navRef.current
+    if (!el || keyboardOpen) {
+      root.style.setProperty('--nav-h', '0px')
+      root.style.setProperty('--safe-mult', '1')
+      return
+    }
+    const publish = () => {
+      root.style.setProperty('--nav-h', `${el.offsetHeight}px`)
+      // La zone de sécurité du bas est déjà absorbée par la barre : les éléments posés au-dessus ne la comptent plus.
+      root.style.setProperty('--safe-mult', '0')
+    }
+    publish()
+    const observer = new ResizeObserver(publish)
+    observer.observe(el)
+    return () => {
+      observer.disconnect()
+      root.style.setProperty('--nav-h', '0px')
+      root.style.setProperty('--safe-mult', '1')
+    }
+  }, [keyboardOpen])
+
   const cls = ({ isActive }: { isActive: boolean }) => `${itemBase} ${isActive ? 'text-moon-300' : 'text-moon-200/50 hover:text-moon-200'}`
+
+  if (keyboardOpen) return null
 
   return (
     <nav
+      ref={navRef}
       aria-label="Navigation principale"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-night-600/70 bg-night-900/95 shadow-[0_-8px_24px_-6px_rgba(0,0,0,0.55)]"
       style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.25rem)' }}

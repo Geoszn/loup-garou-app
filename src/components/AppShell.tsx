@@ -12,8 +12,8 @@ import { tribeAlertCount } from '../lib/tribe'
 /** Cadre commun des pages principales (Accueil, Récompenses, Jouer, Tribu,
  * Profil) : la barre de navigation du bas, avec la pastille de la tribu (messages
  * non lus, invitations, demandes) et l'indicateur « récompense à récupérer ». Les pages gardent leur
- * propre mise en page ; l'espace du bas leur est réservé ici. */
-export function AppShell() {
+ * propre mise en page ; l'espace du bas leur est réservé ici. `compact` : même barre autour d'un écran de jeu. */
+export function AppShell({ compact = false }: { compact?: boolean }) {
   const { user } = useAuth()
   const location = useLocation()
   const [pendingFriends, setPendingFriends] = useState(0)
@@ -52,8 +52,21 @@ export function AppShell() {
 
   return (
     <>
-      <Outlet />
-      <div aria-hidden="true" className="h-24" />
+      {/* Écrans de jeu (salon, partie) : la barre reste visible et la page se redimensionne autour d'elle
+          (voir `.app-compact` dans index.css et --nav-h publiée par BottomNav). */}
+      {compact ? (
+        <>
+          <div className="app-compact">
+            <Outlet />
+          </div>
+          <div aria-hidden="true" style={{ height: 'calc(var(--nav-h, 0px) + 1.25rem)' }} />
+        </>
+      ) : (
+        <>
+          <Outlet />
+          <div aria-hidden="true" className="h-24" />
+        </>
+      )}
       <BottomNav alertCount={pendingFriends + tribeAlertCount(tribeSummary)} claimable={claimableCount > 0} />
     </>
   )

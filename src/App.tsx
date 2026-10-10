@@ -199,44 +199,45 @@ export default function App() {
         path="/rejoindre/:code"
         element={<JoinByLink />}
       />
+      {/* Salon, attente et partie : la barre de navigation reste affichée (AppShell compact). */}
       <Route
-        path="/attente/:gameId"
         element={
           <ProtectedRoute>
-            <PendingApproval />
+            <AppShell compact />
           </ProtectedRoute>
         }
-      />
-      <Route
-        path="/attente/:gameId/observer"
-        element={
-          <ProtectedRoute>
-            <Suspense fallback={<FullScreenLoader />}>
-              <SpectateGame />
-            </Suspense>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/partie/:code/lobby"
-        element={
-          <ProtectedRoute>
-            <Suspense fallback={<FullScreenLoader />}>
-              <Lobby />
-            </Suspense>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/partie/:code"
-        element={
-          <ProtectedRoute>
-            <Suspense fallback={<FullScreenLoader />}>
-              <GameRoom />
-            </Suspense>
-          </ProtectedRoute>
-        }
-      />
+      >
+        <Route
+          path="/attente/:gameId"
+          element={
+              <PendingApproval />
+          }
+        />
+        <Route
+          path="/attente/:gameId/observer"
+          element={
+              <Suspense fallback={<FullScreenLoader />}>
+                <SpectateGame />
+              </Suspense>
+          }
+        />
+        <Route
+          path="/partie/:code/lobby"
+          element={
+              <Suspense fallback={<FullScreenLoader />}>
+                <Lobby />
+              </Suspense>
+          }
+        />
+        <Route
+          path="/partie/:code"
+          element={
+              <Suspense fallback={<FullScreenLoader />}>
+                <GameRoom />
+              </Suspense>
+          }
+        />
+      </Route>
       <Route path="*" element={<NotFound />} />
       </Routes>
     </>

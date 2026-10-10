@@ -213,7 +213,11 @@ export function BottomActionBar({ children }: { children: ReactNode }) {
     // (coûteux à recalculer à chaque frame de scroll sur WKWebView iOS
     // puisque le contenu derrière une barre `fixed` change en continu) —
     // fond quasi opaque à la place, rendu visuel quasi identique.
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-night-700/60 bg-night-900/95 px-4 pt-3 shadow-[0_-8px_24px_-4px_rgba(0,0,0,0.5)] sm:px-6" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.75rem)' }}>
+    <div
+      className="fixed inset-x-0 z-30 border-t border-night-700/60 bg-night-900/95 px-4 pt-3 shadow-[0_-8px_24px_-4px_rgba(0,0,0,0.5)] sm:px-6"
+      // Au-dessus de la barre de navigation quand elle est affichée (--nav-h), qui absorbe alors la zone de sécurité.
+      style={{ bottom: 'var(--nav-h, 0px)', paddingBottom: 'max(calc(env(safe-area-inset-bottom) * var(--safe-mult, 1)), 0.75rem)' }}
+    >
       <div className="mx-auto max-w-3xl">{children}</div>
     </div>
   )

@@ -337,3 +337,11 @@ body {
   50% { transform: translate(10px, -14px); }
   70% { opacity: 0.8; }
 }
+
+/* Écrans de jeu avec la barre de navigation : les pages qui visent « tout l'écran » visent ce qui reste
+   au-dessus de la barre (--nav-h est publiée par BottomNav, 0 sans barre). */
+.app-compact .min-h-screen {
+  /* 1.25rem : l'espace réservé sous la page pour le bouton central qui dépasse de la barre. */
+  min-height: calc(100vh - var(--nav-h, 0px) - 1.25rem);
+  min-height: calc(100dvh - var(--nav-h, 0px) - 1.25rem);
+}
