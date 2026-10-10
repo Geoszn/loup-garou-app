@@ -2123,6 +2123,8 @@ export const translations = {
   'nav.home': { fr: 'Accueil', en: 'Home' },
   'nav.rewards': { fr: 'Récompenses', en: 'Rewards' },
   'nav.play': { fr: 'Jouer', en: 'Play' },
+  'nav.lobby': { fr: 'Salon', en: 'Lobby' },
+  'nav.game': { fr: 'Partie', en: 'Game' },
   'nav.friends': { fr: 'Amis', en: 'Friends' },
   'nav.profile': { fr: 'Profil', en: 'Profile' },
   'play.quick': { fr: 'Partie rapide', en: 'Quick game' },

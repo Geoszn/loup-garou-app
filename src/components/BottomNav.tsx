@@ -95,6 +95,8 @@ export function BottomNav({ alertCount = 0, claimable = false }: { alertCount?: 
   // Dans le salon ou une partie, toucher la barre quitte l'écran de jeu : on demande confirmation
   // (la partie continue sans toi, tu la retrouves avec « Reprendre » sur l'accueil).
   const inGame = location.pathname.startsWith('/partie/')
+  const inLobby = location.pathname.endsWith('/lobby')
+  const here = inLobby ? t('nav.lobby') : t('nav.game')
   const [leaveTo, setLeaveTo] = useState<string | null>(null)
   const guard = (to: string) => (e: MouseEvent) => {
     if (!inGame) return
@@ -133,14 +135,41 @@ export function BottomNav({ alertCount = 0, claimable = false }: { alertCount?: 
         </NavLink>
 
         <div className="flex flex-1 justify-center">
-          <NavLink to="/jouer" onClick={guard('/jouer')} aria-label={t('nav.play')} className="-mt-5 flex flex-col items-center gap-0.5 text-[10px] font-semibold text-moon-300">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-night-900 bg-gradient-to-b from-blood-500 to-blood-700 text-[#fdf6e3] shadow-blood-btn transition-transform active:scale-95">
-              <svg viewBox="0 0 24 24" className="h-7 w-7" fill="currentColor" aria-hidden="true">
-                <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10-6.5a1 1 0 0 0 0-1.72l-10-6.5A1 1 0 0 0 8 5.5z" />
-              </svg>
-            </span>
-            {t('nav.play')}
-          </NavLink>
+          {/* Dans le salon ou la partie, le bouton central n'est plus « Jouer » (qu'on confondait avec « Lancer la
+              partie ») : il indique où l'on est, en doré. Le toucher remonte en haut de l'écran. */}
+          {inGame ? (
+            <button
+              type="button"
+              aria-label={here}
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="-mt-5 flex flex-col items-center gap-0.5 text-[10px] font-semibold text-moon-300"
+            >
+              <span className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-night-900 bg-gradient-to-b from-moon-300 to-moon-400 text-night-950 shadow-[0_0_18px_rgba(217,154,63,0.35)] transition-transform active:scale-95">
+                {inLobby ? (
+                  <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="9" cy="8" r="3.2" />
+                    <path d="M3 19c0-3.2 2.7-5.2 6-5.2s6 2 6 5.2" />
+                    <circle cx="17" cy="9" r="2.4" />
+                    <path d="M17.5 14c2.4.2 4 1.8 4 4.6" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" className="h-7 w-7" fill="currentColor" aria-hidden="true">
+                    <path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z" />
+                  </svg>
+                )}
+              </span>
+              {here}
+            </button>
+          ) : (
+            <NavLink to="/jouer" onClick={guard('/jouer')} aria-label={t('nav.play')} className="-mt-5 flex flex-col items-center gap-0.5 text-[10px] font-semibold text-moon-300">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-night-900 bg-gradient-to-b from-blood-500 to-blood-700 text-[#fdf6e3] shadow-blood-btn transition-transform active:scale-95">
+                <svg viewBox="0 0 24 24" className="h-7 w-7" fill="currentColor" aria-hidden="true">
+                  <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10-6.5a1 1 0 0 0 0-1.72l-10-6.5A1 1 0 0 0 8 5.5z" />
+                </svg>
+              </span>
+              {t('nav.play')}
+            </NavLink>
+          )}
         </div>
 
         <NavLink to="/tribu" className={cls} onClick={guard('/tribu')}>
