@@ -88,6 +88,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       sender_name: string
       is_sticker: boolean
       mention_all?: boolean
+      is_invite?: boolean
       preview: string
       recipients: { user_id: string; lang: string | null; is_reply: boolean; is_mention?: boolean; unread: number }[]
     } | null
@@ -103,7 +104,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const en = r.lang === 'en'
         const preview = info.is_sticker ? '🎭 Sticker' : clip(info.preview)
         let text: string
-        if (info.mention_all) text = en ? `${info.sender_name} to everyone: ${preview}` : `${info.sender_name} à toute la tribu : ${preview}`
+        if (info.is_invite) text = en ? `${info.sender_name} invites the tribe to a game 🎮` : `${info.sender_name} invite la tribu à une partie 🎮`
+        else if (info.mention_all) text = en ? `${info.sender_name} to everyone: ${preview}` : `${info.sender_name} à toute la tribu : ${preview}`
         else if (r.is_mention) text = en ? `${info.sender_name} mentioned you: ${preview}` : `${info.sender_name} t'a mentionné : ${preview}`
         else if (r.is_reply) text = en ? `${info.sender_name} replied to you: ${preview}` : `${info.sender_name} t'a répondu : ${preview}`
         else if (r.unread > 1) text = en ? `${r.unread} new messages · ${info.sender_name}: ${preview}` : `${r.unread} nouveaux messages · ${info.sender_name} : ${preview}`

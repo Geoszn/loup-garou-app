@@ -1,4 +1,5 @@
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
@@ -481,7 +482,9 @@ export function TribeChat({ tribe, members, onBack, onlineCount, memberCount }: 
               style={highlight === m.id ? { animation: 'tribe-flash 1.8s ease-in-out' } : undefined}
             >
               {showDay && <p className="mx-auto mb-2 w-fit rounded-full bg-night-800/80 px-3 py-1 text-[10px] capitalize text-moon-200/50">{dayOf(m.created_at)}</p>}
-              {m.kind === 'system' ? (
+              {m.kind === 'invite' ? (
+                <InviteCard m={m} mine={m.user_id === user?.id} time={timeOf(m.created_at)} />
+              ) : m.kind === 'system' ? (
                 <p className="mx-auto w-fit max-w-[90%] rounded-full bg-night-800/60 px-3 py-1 text-center text-[11px] text-moon-200/55">
                   {t(`tribe.event.${m.event}` as TranslationKey, { actor: m.actor_name ?? '?', target: m.target_name ?? '?' })}
                 </p>
@@ -810,6 +813,43 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange: (nex
     >
       <span className={`absolute top-0.5 rounded-full transition-all ${checked ? 'left-[1.375rem] bg-night-950' : 'left-0.5 bg-moon-200/60'}`} style={{ height: '1.125rem', width: '1.125rem' }} />
     </button>
+  )
+}
+
+/** Invitation à un salon, postée par son hôte : état en direct et bouton pour rejoindre sans quitter le chat. */
+function InviteCard({ m, mine, time }: { m: TribeMessage; mine: boolean; time: string }) {
+  const { t } = useLanguage()
+  const navigate = useNavigate()
+  const status = m.game?.status ?? null
+  const open = status === 'lobby'
+  const over = status === null || status === 'ended'
+  const name = m.username ?? t('tribe.formerMember')
+  return (
+    <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+      <div className="w-full max-w-[19rem] overflow-hidden rounded-2xl border border-amber-300/40 bg-gradient-to-b from-night-700 to-night-800 shadow-card md:max-w-[22rem]">
+        <div className="flex items-center gap-2.5 bg-amber-300/10 px-3 py-2.5">
+          {m.username ? <Avatar config={m.avatar_config} icon={m.avatar_icon} name={m.username} className="h-9 w-9" /> : <span className="flex h-9 w-9 items-center justify-center rounded-full bg-night-900 text-lg">🎮</span>}
+          <p className="min-w-0 flex-1 text-sm font-semibold leading-tight text-moon-200">🎮 {t('tribe.game.title', { name })}</p>
+        </div>
+        <div className="flex flex-col gap-2.5 px-3 pb-3 pt-2.5">
+          <div className="flex items-center justify-between gap-2 text-xs text-moon-200/70">
+            <span className="rounded-md bg-night-900/70 px-2 py-1 font-display text-sm tracking-[0.25em] text-moon-300">{m.game_code}</span>
+            <span>
+              {open ? t('tribe.game.players', { count: m.game?.players ?? 0 }) : over ? t('tribe.game.ended') : t('tribe.game.started')}
+            </span>
+          </div>
+          <button
+            type="button"
+            disabled={over}
+            onClick={() => navigate(`/rejoindre/${m.game_code}`)}
+            className="rounded-xl bg-blood-600 px-3 py-2.5 text-sm font-semibold text-[#fdf6e3] transition-opacity active:opacity-80 disabled:bg-night-700 disabled:text-moon-200/40"
+          >
+            {open ? t('tribe.game.join') : over ? t('tribe.game.ended') : t('tribe.game.watch')}
+          </button>
+          <span className="self-end text-[10px] leading-none text-moon-200/45">{time}</span>
+        </div>
+      </div>
+    </div>
   )
 }
 

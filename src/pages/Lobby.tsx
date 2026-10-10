@@ -4,7 +4,8 @@ import { useAuth } from '../context/AuthContext'
 import { useGame } from '../hooks/useGame'
 import { useNotificationSound } from '../hooks/useNotificationSound'
 import { supabase } from '../lib/supabase'
-import { notifyGameInvite, notifyGameStarted, isStandaloneDisplay } from '../lib/pushSubscription'
+import { notifyGameInvite, notifyGameStarted, notifyTribeMessage, isStandaloneDisplay } from '../lib/pushSubscription'
+import { useTribeSummary, notifyTribeSummaryChanged } from '../hooks/useTribeSummary'
 import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, Segmented } from '../components/ui'
 import { HowToPlayButton } from '../components/HowToPlayButton'
 import { FullScreenLoader } from '../components/FullScreenLoader'
@@ -200,6 +201,10 @@ export default function Lobby() {
   const [friends, setFriends] = useState<{ user_id: string; username: string; avatar_icon: string }[]>([])
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set())
   const [inviteError, setInviteError] = useState<string | null>(null)
+  // Invitation de la tribu : l'hôte la poste dans le chat de sa tribu (voir invite_tribe_to_game, migration 0236).
+  const { summary: tribeSummary } = useTribeSummary()
+  const [tribeInvite, setTribeInvite] = useState<'idle' | 'sending' | 'sent'>('idle')
+  const [tribeInviteError, setTribeInviteError] = useState<string | null>(null)
   // Mode de test solo (voir migration 0127) : réservé à l'admin, jamais
   // affiché pour un autre compte. addingBot évite un double-clic pendant
   // l'aller-retour réseau (chaque bot ajouté déclenche un re-fetch de la
@@ -426,6 +431,21 @@ export default function Lobby() {
     // notifyGameStarted.
     const offlineIds = (view?.players ?? []).map((p) => p.user_id).filter((id) => !onlineUserIds.has(id))
     void notifyGameStarted(gameId, offlineIds)
+  }
+
+  async function inviteTribe() {
+    if (!gameId) return
+    setTribeInviteError(null)
+    setTribeInvite('sending')
+    const { error } = await supabase.rpc('invite_tribe_to_game', { p_game_id: gameId })
+    if (error) {
+      setTribeInvite('idle')
+      setTribeInviteError(error.message)
+      return
+    }
+    setTribeInvite('sent')
+    notifyTribeSummaryChanged()
+    void notifyTribeMessage()
   }
 
   async function inviteFriend(friendId: string) {
@@ -672,8 +692,16 @@ export default function Lobby() {
                 {code}
               </p>
             </div>
-            <CopyButton value={inviteMessage} label={t('lobby.copyInviteLink')} />
+            <div className="flex flex-col gap-2 sm:items-end">
+              <CopyButton value={inviteMessage} label={t('lobby.copyInviteLink')} />
+              {isHost && tribeSummary?.tribe && (
+                <Button type="button" variant="ghost" disabled={tribeInvite !== 'idle'} onClick={() => void inviteTribe()}>
+                  {tribeInvite === 'sent' ? t('lobby.tribeInvited') : `🛡️ ${t('lobby.inviteTribe')}`}
+                </Button>
+              )}
+            </div>
           </div>
+          {tribeInviteError && <ErrorText>{tribeInviteError}</ErrorText>}
         </Card>
 
         {/* Vocal du salon : ouvert à tous les joueurs déjà présents, avant

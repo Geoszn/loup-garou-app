@@ -205,7 +205,10 @@ export interface TribeMessageReaction {
 
 export interface TribeMessage {
   id: string
-  kind: 'user' | 'system'
+  kind: 'user' | 'system' | 'invite'
+  /** Pour une invitation : code du salon et son état au moment de la lecture. */
+  game_code?: string | null
+  game?: { status: string; players: number } | null
   body: string | null
   event: 'created' | 'joined' | 'left' | 'kicked' | 'promoted' | 'demoted' | 'chief' | null
   actor_name: string | null
