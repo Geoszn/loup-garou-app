@@ -692,10 +692,10 @@ export default function Lobby() {
                 {code}
               </p>
             </div>
-            <div className="flex flex-col gap-2 sm:items-end">
-              <CopyButton value={inviteMessage} label={t('lobby.copyInviteLink')} />
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[16rem]">
+              <CopyButton value={inviteMessage} label={t('lobby.copyInviteLink')} className="w-full" />
               {isHost && tribeSummary?.tribe && (
-                <Button type="button" variant="ghost" disabled={tribeInvite !== 'idle'} onClick={() => void inviteTribe()}>
+                <Button type="button" variant="ghost" className="w-full" disabled={tribeInvite !== 'idle'} onClick={() => void inviteTribe()}>
                   {tribeInvite === 'sent' ? t('lobby.tribeInvited') : `🛡️ ${t('lobby.inviteTribe')}`}
                 </Button>
               )}
