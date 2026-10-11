@@ -6,8 +6,8 @@ import type { MyGameView, PublicPlayer } from '../types/game'
 import { Avatar } from './Avatar'
 import { ChatPanel } from './ChatPanel'
 
-// Écran de débat (jour) : une carte vocale arrondie, fixe, posée en haut du chat écrit (même cadre) ; seuls les messages
-// défilent en dessous. Le micro et « Voter » sont dans la barre d'écriture. Palette du jeu : or, terre cuite, brun savane.
+// Écran de débat (jour) : une carte vocale arrondie, fixe, au-dessus du cadre du chat écrit (deux blocs distincts) ; seuls
+// les messages défilent. Le micro et « Voter » sont dans la barre d'écriture. Palette du jeu : or, terre cuite, brun savane.
 
 /** Bandeau tissé (esprit kente) au sommet de la carte vocale. */
 const WOVEN_BAND = 'repeating-linear-gradient(90deg, #e0a84a 0 14px, #9c331f 14px 28px, #3a2a1c 28px 42px, #c98a1a 42px 56px)'
@@ -96,7 +96,7 @@ function VoiceBand({ session, players, selfId, listenOnly }: { session: VoiceSes
   }
 
   return (
-    <div className="mx-2.5 mb-1 mt-2.5 shrink-0 overflow-hidden rounded-2xl bg-night-900 shadow-md ring-1 ring-moon-400/45">
+    <div className="shrink-0 overflow-hidden rounded-2xl bg-night-900 shadow-md ring-1 ring-moon-400/45">
       <div aria-hidden="true" className="h-1.5" style={{ background: WOVEN_BAND }} />
       <div className="bg-gradient-to-b from-moon-400/20 to-blood-600/10 px-2.5 pb-1.5 pt-2">
       <div className="flex items-center justify-between gap-2 px-0.5 text-[11px] font-semibold text-moon-300">
@@ -203,11 +203,11 @@ export function DayDiscussion({ view, gameId, code, selfId, me, voiceChannel, vo
   }, [view.lover_id])
 
   return (
-    <div className="flex h-[calc(100dvh-6rem-var(--nav-h,0px))] min-h-[26rem] flex-col">
+    <div className="flex h-[calc(100dvh-6rem-var(--nav-h,0px))] min-h-[26rem] flex-col gap-2">
+      <VoiceBand session={session} players={view.players} selfId={selfId} listenOnly={listenOnly} />
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-night-600/60 bg-night-900/50 shadow-card">
-        <VoiceBand session={session} players={view.players} selfId={selfId} listenOnly={listenOnly} />
         {view.lover_id && (
-          <div className="flex shrink-0 justify-end px-3 pb-1">
+          <div className="flex shrink-0 justify-end px-3 pt-2">
             <ChannelToggle channel={channel} onChange={setChannel} unreadAmoureux={unreadAmoureux} />
           </div>
         )}
