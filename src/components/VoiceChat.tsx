@@ -7,6 +7,81 @@ import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from './Avatar'
 import type { PublicPlayer } from '../types/game'
 
+/** Toute la logique vocale d'un salon (opt-in, mise en veille en arrière-plan, présence, connexion Daily) sans
+ * aucun affichage : partagée par le panneau historique {@link VoiceChat} et par les nouvelles dispositions de
+ * l'écran de jour (bandeau de visages, bouton micro — voir DayDiscussionLayouts.tsx). */
+export function useVoiceSession({
+  gameId,
+  code,
+  channel,
+  displayName,
+  selfUserId,
+  listenOnly = false,
+  suspendAfterMs,
+}: {
+  gameId: string
+  code: string
+  channel: VoiceChannel
+  displayName: string
+  selfUserId: string | null
+  listenOnly?: boolean
+  suspendAfterMs?: number
+}) {
+  // Connexion à la demande (voir useVoiceOptIn.ts) : tant que le joueur n'a pas
+  // appuyé sur « Rejoindre », le hook reçoit un canal `null` et ne se connecte
+  // pas à Daily — donc aucune minute facturée.
+  const [joined, setJoined] = useVoiceOptIn(gameId)
+  // Arrière-plan prolongé : on coupe la connexion Daily (donc la facturation)
+  // sans toucher au choix « j'ai rejoint » — retour au premier plan = reconnexion.
+  const suspended = useIdleWhenHidden(joined && !!channel, suspendAfterMs)
+  const connectChannel = joined && !suspended ? channel : null
+  // Qui est dans le vocal, vu SANS être connecté (présence Supabase, voir
+  // voicePresence.ts) : permet à un joueur qui n'a pas rejoint de savoir que
+  // ça parle, et de décider d'y entrer. Un fantôme en écoute n'est pas annoncé
+  // (comme dans la liste Daily, voir `ghost` dans useVoiceChat.ts).
+  const voiceIds = useVoicePresence(gameId, selfUserId, joined && !suspended && !listenOnly)
+  const othersInVoice = useMemo(() => voiceIds.filter((id) => id !== selfUserId), [voiceIds, selfUserId])
+  const {
+    connected,
+    connecting,
+    muted,
+    participants,
+    error,
+    toggleMute,
+    canModerate,
+    muteParticipant,
+    retry,
+    speakingIds,
+    selfSpeaking,
+    deafened,
+    toggleSound,
+    forcedMuteNotice,
+  } = useVoiceChat(gameId, code, connectChannel, displayName, selfUserId, listenOnly)
+  return {
+    channel,
+    joined,
+    setJoined,
+    suspended,
+    othersInVoice,
+    connected,
+    connecting,
+    muted,
+    participants,
+    error,
+    toggleMute,
+    canModerate,
+    muteParticipant,
+    retry,
+    speakingIds,
+    selfSpeaking,
+    deafened,
+    toggleSound,
+    forcedMuteNotice,
+  }
+}
+
+export type VoiceSession = ReturnType<typeof useVoiceSession>
+
 export function VoiceChat({
   gameId,
   code,
@@ -44,21 +119,11 @@ export function VoiceChat({
   players?: PublicPlayer[]
   suspendAfterMs?: number
 }) {
-  // Connexion à la demande (voir useVoiceOptIn.ts) : tant que le joueur n'a pas
-  // appuyé sur « Rejoindre », le hook reçoit un canal `null` et ne se connecte
-  // pas à Daily — donc aucune minute facturée.
-  const [joined, setJoined] = useVoiceOptIn(gameId)
-  // Arrière-plan prolongé : on coupe la connexion Daily (donc la facturation)
-  // sans toucher au choix « j'ai rejoint » — retour au premier plan = reconnexion.
-  const suspended = useIdleWhenHidden(joined && !!channel, suspendAfterMs)
-  const connectChannel = joined && !suspended ? channel : null
-  // Qui est dans le vocal, vu SANS être connecté (présence Supabase, voir
-  // voicePresence.ts) : permet à un joueur qui n'a pas rejoint de savoir que
-  // ça parle, et de décider d'y entrer. Un fantôme en écoute n'est pas annoncé
-  // (comme dans la liste Daily, voir `ghost` dans useVoiceChat.ts).
-  const voiceIds = useVoicePresence(gameId, selfUserId, joined && !suspended && !listenOnly)
-  const othersInVoice = useMemo(() => voiceIds.filter((id) => id !== selfUserId), [voiceIds, selfUserId])
+  const session = useVoiceSession({ gameId, code, channel, displayName, selfUserId, listenOnly, suspendAfterMs })
   const {
+    joined,
+    setJoined,
+    othersInVoice,
     connected,
     connecting,
     muted,
@@ -73,7 +138,7 @@ export function VoiceChat({
     deafened,
     toggleSound,
     forcedMuteNotice,
-  } = useVoiceChat(gameId, code, connectChannel, displayName, selfUserId, listenOnly)
+  } = session
   const { t } = useLanguage()
   // Grille de participants repliée par défaut (demande utilisateur, suite à
   // la maquette comparative validée : "le bloc vocal doit économiser encore

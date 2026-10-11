@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type MutableRefObject } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type MutableRefObject, type ReactNode } from 'react'
 import { useChat, type RevealedIdentity } from '../hooks/useChat'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
@@ -43,6 +43,10 @@ export const ChatPanel = memo(function ChatPanel({
   note,
   fill = false,
   players,
+  hideHeader = false,
+  embedded = false,
+  composerLead,
+  composerTrail,
 }: {
   gameId: string
   channel: ChatChannel
@@ -70,6 +74,13 @@ export const ChatPanel = memo(function ChatPanel({
   /** Joueurs de la partie : sert à afficher l'avatar de chaque auteur à côté
    * de ses messages. Sans lui, les bulles restent sans avatar. */
   players?: PublicPlayer[]
+  /** Masque l'en-tête (titre + « en direct ») pour gagner une ligne — utilisé par les nouvelles dispositions de jour. */
+  hideHeader?: boolean
+  /** Le chat est une partie d'un bloc plus grand (ex. sous le vocal) : pas de cadre ni de fond propres. */
+  embedded?: boolean
+  /** Éléments placés avant le champ d'écriture (ex. le bouton micro) et après le bouton d'envoi (ex. « Voter »). */
+  composerLead?: ReactNode
+  composerTrail?: ReactNode
 }) {
   const { t } = useLanguage()
   const { messages, identities, reactions, send, sending, toggleReaction } = useChat(gameId, channel)
@@ -336,12 +347,13 @@ export const ChatPanel = memo(function ChatPanel({
       // responsable des ralentissements ressentis "en utilisant beaucoup le
       // clavier" sur iPhone : coût de repaint répété pour une transition qui
       // n'apportait de toute façon aucun bénéfice visuel perceptible ici.
-      className={`flex flex-col border border-night-600/60 ${
+      className={`flex flex-col ${embedded && !expanded ? '' : 'border border-night-600/60'} ${
         expanded
-          ? 'rounded-none bg-night-900/95'
-          : `rounded-2xl bg-night-900/50 ${fill ? 'min-h-0 flex-1' : compact ? compactHeightClassName : 'h-[65vh] max-h-[30rem]'}`
+          ? `rounded-none ${embedded ? 'bg-night-900' : 'bg-night-900/95'}`
+          : `${embedded ? '' : 'rounded-2xl bg-night-900/50'} ${fill ? 'min-h-0 flex-1' : compact ? compactHeightClassName : 'h-[65vh] max-h-[30rem]'}`
       }`}
     >
+      {!hideHeader && (
       <div className="flex items-center gap-2 border-b border-night-600/50 px-4 py-2.5">
         <span>{info.emoji}</span>
         <span className="text-sm font-semibold text-moon-200">{t(info.titleKey)}</span>
@@ -355,6 +367,7 @@ export const ChatPanel = memo(function ChatPanel({
           {readOnly ? t('chat.readOnly') : t('chat.live')}
         </span>
       </div>
+      )}
       {note && <p className="border-b border-night-600/40 px-4 py-1.5 text-[11px] text-moon-200/40">{note}</p>}
 
       {/* Tapoter le fond vide de la liste (pas un message ni un bouton —
@@ -364,7 +377,7 @@ export const ChatPanel = memo(function ChatPanel({
       <div
         ref={listRef}
         onScroll={handleListScroll}
-        className="h-full space-y-2 overflow-y-auto overscroll-contain scrollbar-thin px-4 py-3"
+        className="h-full overflow-y-auto overscroll-contain scrollbar-thin px-3 py-3"
         onClick={(e) => {
           if (expanded && e.target === e.currentTarget) (document.activeElement as HTMLElement | null)?.blur()
         }}
@@ -385,12 +398,16 @@ export const ChatPanel = memo(function ChatPanel({
           const authorId = authorIdOf(m, identities)
           const next = shownMessages[i + 1]
           const showAvatar = !!players && (!next || authorIdOf(next, identities) !== authorId)
+          const prev = shownMessages[i - 1]
+          const startsGroup =
+            !prev || !authorId || authorIdOf(prev, identities) !== authorId || new Date(m.created_at).getTime() - new Date(prev.created_at).getTime() > GROUP_GAP_MS
           return (
           <MessageRow
             key={m.id}
             message={m}
             author={authorId ? playersById.get(authorId) : undefined}
             showAvatar={showAvatar}
+            startsGroup={startsGroup}
             withAvatars={!!players}
             selfId={selfId}
             identities={identities}
@@ -443,6 +460,8 @@ export const ChatPanel = memo(function ChatPanel({
           onSent={() => setReplyTarget(null)}
           send={send}
           onFocusChange={setInputFocused}
+          lead={composerLead}
+          trail={composerTrail}
         />
       )}
     </div>
@@ -454,6 +473,21 @@ export const ChatPanel = memo(function ChatPanel({
  * message, ou on est la Petite Fille vivante) — factorisée en dehors du
  * composant (pas de dépendance sur des hooks) pour être appelable aussi bien
  * depuis ChatPanel (aperçu de citation) que depuis MessageRow (bulle citée). */
+/** Couleur stable par auteur (lisible en thème jour comme en thème nuit) : on suit qui parle d'un coup d'œil. */
+const NAME_COLORS = ['#ea580c', '#0d9488', '#8b5cf6', '#db2777', '#d97706', '#3b82f6', '#16a34a', '#c026d3']
+function nameColor(key: string | null | undefined): string {
+  let h = 0
+  for (const ch of key ?? '') h = (h * 31 + ch.charCodeAt(0)) >>> 0
+  return NAME_COLORS[h % NAME_COLORS.length]
+}
+
+/** Au-delà de ce délai, un message du même auteur ouvre un nouveau groupe (avec son nom). */
+const GROUP_GAP_MS = 3 * 60 * 1000
+
+function timeOf(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
 function authorIdOf(m: ChatMessage, identities: Record<string, RevealedIdentity>): string | null {
   return m.is_anonymous ? identities[m.id]?.user_id ?? null : m.user_id
 }
@@ -481,6 +515,7 @@ const MessageRow = memo(function MessageRow({
   message: m,
   author,
   showAvatar,
+  startsGroup,
   withAvatars,
   selfId,
   identities,
@@ -498,6 +533,7 @@ const MessageRow = memo(function MessageRow({
   message: ChatMessage
   author: PublicPlayer | undefined
   showAvatar: boolean
+  startsGroup: boolean
   withAvatars: boolean
   selfId: string
   identities: Record<string, RevealedIdentity>
@@ -566,7 +602,7 @@ const MessageRow = memo(function MessageRow({
   }
 
   return (
-    <div className="flex items-end gap-2">
+    <div className={`flex items-end gap-2 ${startsGroup ? 'mt-3 first:mt-0' : 'mt-0.5'}`}>
       {withAvatars && !isMine && (
         <span className="w-8 shrink-0">
           {showAvatar &&
@@ -619,14 +655,16 @@ const MessageRow = memo(function MessageRow({
         onMouseLeave={onCancelLongPress}
         onContextMenu={(e) => e.preventDefault()}
         onClick={() => onBubbleClick(m.id)}
-        className={`animate-bubble-in inline-block max-w-[85%] select-none break-words rounded-2xl border px-3 py-1.5 text-left ${
+        className={`animate-bubble-in inline-block max-w-[82%] select-none break-words rounded-2xl border px-3 py-1.5 text-left shadow-sm ${
+          isMine ? (startsGroup ? 'rounded-tr-md' : '') : startsGroup ? 'rounded-tl-md' : ''
+        } ${
           m.is_last_words
             ? 'border-amber-400/40 bg-amber-400/10 text-amber-100'
             : isMine
-              ? 'border-transparent bg-blood-700/30 text-moon-200'
+              ? 'border-transparent bg-gradient-to-br from-blood-600 to-blood-700 text-[#fdf6e3]'
               : m.is_anonymous
                 ? 'border-transparent bg-night-800/70 text-moon-200/80'
-                : 'border-transparent bg-night-700/60 text-moon-200/90'
+                : 'border-night-600/30 bg-night-700/60 text-moon-200/90'
         }`}
       >
         {m.is_last_words && (
@@ -634,8 +672,8 @@ const MessageRow = memo(function MessageRow({
             🕯️ {t('chat.lastWords')}
           </span>
         )}
-        {!isMine && (
-          <span className="mr-1.5 text-xs font-semibold text-moon-300">
+        {!isMine && startsGroup && (
+          <span className="mb-0.5 block text-[11px] font-bold leading-tight" style={{ color: nameColor(m.is_anonymous ? label : m.user_id) }}>
             {m.is_anonymous ? (label ? `🕵️ ${label}` : t('chat.anonymous')) : label}
           </span>
         )}
@@ -645,6 +683,7 @@ const MessageRow = memo(function MessageRow({
           </span>
         )}
         {m.content}
+        <span className="float-right ml-3 mt-1.5 text-[10px] leading-none opacity-50">{timeOf(m.created_at)}</span>
       </span>
 
       {(groupedReactions.length > 0 || menuOpen) && (
@@ -755,6 +794,8 @@ function Composer({
   onSent,
   send,
   onFocusChange,
+  lead,
+  trail,
 }: {
   placeholder: string
   sending: boolean
@@ -762,6 +803,8 @@ function Composer({
   onSent: () => void
   send: (content: string, replyTo?: string | null) => Promise<unknown>
   onFocusChange: (focused: boolean) => void
+  lead?: ReactNode
+  trail?: ReactNode
 }) {
   const [text, setText] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -793,7 +836,8 @@ function Composer({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2 border-t border-night-600/50 p-2.5">
+    <form onSubmit={handleSubmit} className={`flex gap-2 border-t border-night-600/50 bg-night-900/60 p-2.5 ${lead || trail ? 'items-center' : ''}`}>
+      {lead}
       <input
         ref={inputRef}
         value={text}
@@ -802,17 +846,18 @@ function Composer({
         onBlur={handleInputBlur}
         placeholder={placeholder}
         maxLength={500}
-        className="min-w-0 flex-1 rounded-xl border border-night-600 bg-night-800/70 px-3 py-2 text-[16px] text-moon-200 outline-none placeholder:text-moon-200/30 focus:border-moon-400/50 sm:text-sm"
+        className="min-w-0 flex-1 rounded-full border border-night-600 bg-night-800/70 px-4 py-3 text-[16px] text-moon-200 outline-none placeholder:text-moon-200/30 focus:border-moon-400/50 sm:text-sm"
       />
       <button
         type="submit"
         disabled={!text.trim() || sending}
         // Fond rouge fixe, non lié au thème jour/nuit : texte clair fixe
         // aussi (voir la même correction sur VoteRecapModal).
-        className="rounded-xl bg-blood-600 px-3 py-2 text-sm font-semibold text-[#fdf6e3] disabled:opacity-30"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-blood-500 to-blood-700 text-sm font-semibold text-[#fdf6e3] shadow-md transition-opacity active:scale-95 disabled:opacity-30"
       >
         ➤
       </button>
+      {trail}
     </form>
   )
 }

@@ -25,6 +25,7 @@ import { TierUpModal } from '../components/TierUpModal'
 import { RewardChest } from '../components/RewardChest'
 import { ModerationPanel } from '../components/ModerationPanel'
 import { VoiceChat } from '../components/VoiceChat'
+import { DayDiscussion } from '../components/DayDiscussion'
 import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, Modal, Segmented } from '../components/ui'
 import { ROLES, roleLabel, isWolfTeam, type RoleId } from '../lib/roles'
 import { RankTierBadge } from '../components/RankTierBadge'
@@ -591,48 +592,16 @@ export default function GameRoom() {
         {view.game.status === 'day_discussion' && (
           <div className="flex animate-fade-in flex-col gap-4">
             {alive ? (
-              // Écran calé à la hauteur de la fenêtre, comme une messagerie :
-              // bandeau, vocal replié, chat (qui prend tout le reste) et une
-              // ligne de vote. Le champ de saisie reste toujours visible ;
-              // le rappel de rôle et le reste se trouvent plus bas sur la page.
-              <div className="flex h-[calc(100dvh-6rem-var(--nav-h,0px))] min-h-[26rem] flex-col gap-2">
-                <DayTabs
-                  fill
-                  dayTab={dayTab}
-                  setDayTab={setDayTab}
-                  voice={
-                    <VoiceChat
-                      gameId={gameId!}
-                      code={code!}
-                      channel={voiceChannel}
-                      displayName={me?.display_name ?? t('common.playerFallback')}
-                      selfUserId={user.id}
-                      listenOnly={view.village_muted}
-                      players={view.players}
-                    />
-                  }
-                  chat={
-                    <ChatPanel
-                      fill
-                      players={view.players}
-                      gameId={gameId!}
-                      channel="village"
-                      selfId={user.id}
-                      readOnly={view.village_muted}
-                      note={view.village_muted ? t('game.villageMutedNote') : undefined}
-                    />
-                  }
-                  grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} moodContext={moodContext} />}
-                  loversChat={
-                    view.lover_id ? (
-                      <ChatPanel fill players={view.players} gameId={gameId!} channel="amoureux" selfId={user.id} />
-                    ) : undefined
-                  }
-                  unreadAmoureux={unreadAmoureux}
-                  unreadVillage={unreadVillage}
-                />
-                <CallVotePanel compact view={view} gameId={gameId!} selfId={user.id} me={me} isHost={isHost} />
-              </div>
+              <DayDiscussion
+                view={view}
+                gameId={gameId!}
+                code={code!}
+                selfId={user.id}
+                me={me}
+                voiceChannel={voiceChannel}
+                vote={<CallVotePanel chip view={view} gameId={gameId!} selfId={user.id} me={me} isHost={isHost} />}
+                unreadAmoureux={unreadAmoureux}
+              />
             ) : (
               <>
                 <CollapsiblePlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
@@ -1344,14 +1313,15 @@ const CallVotePanel = memo(function CallVotePanel({
   selfId,
   me,
   isHost,
-  compact = false,
+  chip = false,
 }: {
   view: MyGameView
   gameId: string
   selfId: string
   me: PublicPlayer | undefined
   isHost: boolean
-  compact?: boolean
+  /** Pastille « Voter » des nouvelles dispositions du débat (un seul bouton, avec le compte d'accords). */
+  chip?: boolean
 }) {
   const { t } = useLanguage()
   const [loading, setLoading] = useState(false)
@@ -1423,41 +1393,24 @@ const CallVotePanel = memo(function CallVotePanel({
       ? t('game.cancelAgreement')
       : t('game.agree')
 
-  // Version d'une seule ligne, pour laisser le maximum de place au chat.
-  if (compact) {
+  if (chip) {
+    const chipLabel = isActor ? (majorityAgreed ? t('game.voteChip.go') : t('game.voteChip.wait')) : agreed ? t('game.voteChip.ready') : t('game.voteChip.go')
     return (
-      <div className="flex flex-col gap-1">
-        <div
-          className={`flex animate-fade-in items-center gap-2.5 rounded-xl border px-3 py-2 transition-colors ${
-            majorityAgreed ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-night-600/60 bg-night-900/40'
-          }`}
-        >
-          <span className="shrink-0 text-base">🗳️</span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-semibold text-moon-200">
-              {t('game.callVoteHeading')}{' '}
-              <span className="font-normal tabular-nums text-moon-200/60">
-                {relevantAgreedCount}/{others.length}
-              </span>
-            </p>
-            <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-night-700/50">
-              <div
-                className="h-full rounded-full bg-moon-400/70 transition-all duration-300"
-                style={{ width: `${Math.round(progress * 100)}%` }}
-              />
-            </div>
-          </div>
-          <Button
-            variant={!isActor && agreed ? 'ghost' : 'primary'}
-            className="shrink-0 !px-3 !py-1.5 !text-xs"
-            disabled={loading || (isActor && !majorityAgreed)}
-            onClick={isActor ? callVote : toggleAgree}
-          >
-            {actionLabel}
-          </Button>
-        </div>
-        <ErrorText>{error}</ErrorText>
-      </div>
+      <button
+        type="button"
+        disabled={loading || (isActor && !majorityAgreed)}
+        onClick={isActor ? callVote : toggleAgree}
+        aria-label={`${chipLabel} · ${actionLabel}`}
+        title={`${actionLabel} (${relevantAgreedCount}/${others.length})`}
+        className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl shadow-md transition-opacity active:scale-95 disabled:opacity-50 ${
+          !isActor && agreed ? 'bg-emerald-500 text-night-950' : 'bg-amber-400 text-night-950'
+        }`}
+      >
+        <span aria-hidden="true">{!isActor && agreed ? '✓' : '🗳️'}</span>
+        <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-night-950 px-1 text-center text-[10px] font-bold leading-5 tabular-nums text-moon-200 ring-1 ring-night-600">
+          {relevantAgreedCount}/{others.length}
+        </span>
+      </button>
     )
   }
 
