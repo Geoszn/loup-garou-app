@@ -1908,7 +1908,8 @@ export function EndScreen({
     if (winner === 'ange') return role === 'ange'
     if (winner === 'chasseuse') return role === 'chasseuse'
     const team = ROLES[role as RoleId]?.team
-    return winner === 'loups' ? team === 'loups' : team === 'village'
+    // Un Ange qui a survécu au premier cycle est redevenu simple villageois : il gagne avec le village.
+    return winner === 'loups' ? team === 'loups' : team === 'village' || role === 'ange'
   }
 
   // Détail personnel de mon résultat pour cette partie (voir game_results,

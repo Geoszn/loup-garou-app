@@ -249,7 +249,7 @@ export function AnnouncementsModal() {
   function queenDiscover() {
     markQueenSeen()
     setSlides([])
-    navigate('/aide')
+    navigate('/aide?role=reine_louve')
   }
 
   function markStoreSeen() {

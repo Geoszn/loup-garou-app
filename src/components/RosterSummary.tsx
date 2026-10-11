@@ -57,7 +57,7 @@ const SPECIAL_ROLE_KEYS: RoleId[] = [
 // Même découpage que les totaux plus bas : loups d'un côté, solitaires (camp
 // neutre, voir totalNeutral) de l'autre, tout le reste = village.
 const WOLF_SPECIAL_KEYS: RoleId[] = ['loup_alpha', 'sans_visage', 'grand_mechant_loup', 'reine_louve']
-const NEUTRAL_SPECIAL_KEYS: RoleId[] = ['anancy', 'chasseuse']
+const NEUTRAL_SPECIAL_KEYS: RoleId[] = ['anancy', 'ange', 'chasseuse']
 
 const CAMP_STYLE = {
   wolves: { box: 'border-blood-500/40 bg-blood-600/[0.08]', title: 'text-blood-400', rule: 'border-blood-500/20' },
@@ -202,9 +202,9 @@ export function RosterSummary({
   // reste néanmoins comptée ici tant qu'elle est vivante — staleness
   // mineure déjà documentée plus haut, comme totalWolves avant l'ajout de
   // alpha_infection_occurred/etc.
-  const totalNeutral = (roleCounts?.anancy ? 1 : 0) + (roleCounts?.chasseuse ? 1 : 0)
+  const totalNeutral = (roleCounts?.anancy ? 1 : 0) + (roleCounts?.ange ? 1 : 0) + (roleCounts?.chasseuse ? 1 : 0)
   const deadNeutral = players.filter(
-    (p) => !p.is_alive && (p.revealed_role === 'anancy' || p.revealed_role === 'chasseuse')
+    (p) => !p.is_alive && (p.revealed_role === 'anancy' || p.revealed_role === 'ange' || p.revealed_role === 'chasseuse')
   ).length
   const remainingNeutral = Math.max(totalNeutral - deadNeutral, 0)
   const remainingVillage = Math.max(alive.length - remainingWolves - remainingNeutral, 0)

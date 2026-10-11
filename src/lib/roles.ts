@@ -179,9 +179,13 @@ export const ROLES: Record<RoleId, RoleInfo> = {
   // cause que ce soit, pendant le tout premier cycle nuit 1 + jour 1 —
   // variante maison, plus généreuse que la règle officielle (qui exige un
   // vote du village), demande explicite de l'utilisateur.
+  // Camp affiché : neutre (objectif personnel, il gagne seul) — passé de
+  // 'village' à 'neutre' côté client uniquement, les règles serveur ne
+  // changent pas : s'il survit au premier cycle il devient un simple
+  // villageois et gagne avec le village (voir isWinningEntry, GameRoom.tsx).
   ange: {
     id: 'ange',
-    team: 'village',
+    team: 'neutre',
     emoji: '👼',
     color: '#a8c8e8',
     nameKey: 'role.ange.name',

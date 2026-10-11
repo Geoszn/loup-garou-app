@@ -30,7 +30,7 @@ export const DEFAULT_ROLE_IMAGES: Partial<Record<RoleId, string>> = {
 // — c'est juste la construction déterministe de l'URL ; c'est le <img> qui
 // tente réellement de charger, et son onError qui fait passer au candidat
 // suivant (voir cascade plus bas).
-function roleCardImageCandidates(roleId: RoleId): string[] {
+export function roleCardImageCandidates(roleId: RoleId): string[] {
   const candidates: string[] = []
   const { data } = supabase.storage.from('role-cards').getPublicUrl(`${roleId}.jpg`)
   if (data?.publicUrl) candidates.push(data.publicUrl)

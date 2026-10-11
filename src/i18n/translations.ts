@@ -1571,8 +1571,8 @@ export const translations = {
   'help.landing.tuto.title': { fr: 'Tutoriel interactif', en: 'Interactive tutorial' },
   'help.landing.tuto.desc': { fr: '8 étapes courtes, à ton rythme — tu touches, tu essaies, tu comprends. Pas de pavé à lire.', en: '8 short steps, at your pace — you tap, you try, you understand. No wall of text.' },
   'help.landing.tuto.cta': { fr: 'Commencer →', en: 'Start →' },
-  'help.landing.rules.title': { fr: 'Règles du jeu', en: 'Game rules' },
-  'help.landing.rules.desc': { fr: 'Le déroulé complet, les rôles, le capitaine, les conditions de victoire — pour tout relire en détail.', en: 'The full flow, the roles, the captain, victory conditions — to read it all in detail.' },
+  'help.landing.rules.title': { fr: "Règles de base", en: "Basic rules" },
+  'help.landing.rules.desc': { fr: "Le but du jeu, une partie, le capitaine et la victoire — en quelques lignes.", en: "The goal, how a game flows, the captain and victory — in a few lines." },
   'help.landing.rules.cta': { fr: 'Consulter →', en: 'Read →' },
   'help.landing.rankingLink': { fr: 'Classement & Loup Coins', en: 'Leaderboard & Loup Coins' },
   'help.landing.feedbackLink': { fr: 'Envoyer un avis', en: 'Send feedback' },
@@ -1954,6 +1954,262 @@ export const translations = {
   'tribe.chat.stickersRecent': { fr: 'Récents', en: 'Recent' },
   'tribe.chat.stickersMe': { fr: 'Moi', en: 'Me' },
   'tribe.chat.stickerLabel': { fr: 'Sticker', en: 'Sticker' },
+  // --- Aide : règles de base + galerie des rôles (Help.tsx) -----------------
+  'help.landing.roles.title': { fr: "Les rôles", en: "The roles" },
+  'help.landing.roles.desc': { fr: "Chaque carte, son camp, ses forces et ses faiblesses.", en: "Every card, its side, strengths and weaknesses." },
+  'help.landing.roles.cta': { fr: "Explorer →", en: "Explore →" },
+  'help.tab.bases': { fr: "Bases", en: "Basics" },
+  'help.tab.ranking': { fr: "Classement", en: "Ranking" },
+  'help.tab.tribes': { fr: "Tribus", en: "Tribes" },
+  'help.bases.camps.title': { fr: "Les trois camps", en: "The three sides" },
+  'help.bases.camps.hint': { fr: "Touche un camp pour voir ses cartes.", en: "Tap a side to see its cards." },
+  'help.bases.rolesCta.title': { fr: "Découvrir les rôles", en: "Discover the roles" },
+  'help.bases.rolesCta.desc': { fr: "{n} cartes, leurs pouvoirs et leurs failles.", en: "{n} cards, their powers and their flaws." },
+  'help.roles.title': { fr: "Les rôles", en: "The roles" },
+  'help.roles.subtitle': { fr: "Touche une carte pour voir sa fiche complète.", en: "Tap a card to see its full sheet." },
+  'help.roles.camp.village': { fr: "Village", en: "Village" },
+  'help.roles.camp.loups': { fr: "Loups", en: "Wolves" },
+  'help.roles.camp.neutre': { fr: "Neutres", en: "Neutral" },
+  'help.roles.goal.village': { fr: "Éliminer tous les Loups-Garous par le vote.", en: "Eliminate every Werewolf by vote." },
+  'help.roles.goal.loups': { fr: "Dévorer les villageois jusqu'à les égaler en nombre.", en: "Devour villagers until you equal their number." },
+  'help.roles.goal.neutre': { fr: "Aucun camp : chaque rôle neutre a son propre objectif et gagne seul.", en: "No side: each neutral role has its own goal and wins alone." },
+  'help.roles.sheet.goal': { fr: "Objectif", en: "Goal" },
+  'help.roles.sheet.how': { fr: "Fonctionnement", en: "How it works" },
+  'help.roles.sheet.strengths': { fr: "Forces", en: "Strengths" },
+  'help.roles.sheet.weaknesses': { fr: "Faiblesses", en: "Weaknesses" },
+  'help.roles.sheet.prev': { fr: "Rôle précédent", en: "Previous role" },
+  'help.roles.sheet.next': { fr: "Rôle suivant", en: "Next role" },
+  'roleGuide.villageois.how': {
+    fr: "Pas de pouvoir : tu écoutes, tu observes et tu votes. Chaque jour, le village élimine un suspect par vote — c'est l'arme de tous les villageois ordinaires.",
+    en: "No power: you listen, you observe and you vote. Each day the village eliminates a suspect by vote — it is the weapon of every ordinary villager.",
+  },
+  'roleGuide.villageois.strengths': {
+    fr: "Aucun secret à protéger : tu peux être franc | Le nombre est ta force : les villageois sont majoritaires",
+    en: "No secret to protect: you can be upfront | Numbers are your strength: villagers are the majority",
+  },
+  'roleGuide.villageois.weaknesses': {
+    fr: "Aucune information ni protection | Facile à accuser à tort quand on reste silencieux",
+    en: "No information or protection | Easy to accuse unfairly when you stay silent",
+  },
+  'roleGuide.loup_garou.how': {
+    fr: "La nuit, la meute se réveille et choisit ensemble une victime dans le chat des loups. Le jour, tu te fonds dans le village et tu votes comme un innocent.",
+    en: "At night the pack wakes up and picks a victim together in the wolves' chat. By day you blend into the village and vote like an innocent.",
+  },
+  'roleGuide.loup_garou.strengths': {
+    fr: "Tu connais tes coéquipiers | Le chat privé de la meute permet de coordonner mensonges et accusations",
+    en: "You know your teammates | The pack's private chat lets you coordinate lies and accusations",
+  },
+  'roleGuide.loup_garou.weaknesses': {
+    fr: "Chaque faux pas te désigne comme suspect | Voyante, Sorcière et vote peuvent t'éliminer",
+    en: "Every slip makes you a suspect | The Seer, the Witch and the vote can all take you out",
+  },
+  'roleGuide.loup_alpha.how': {
+    fr: "Ton vote compte double dans la meute. Si la majorité des loups est d'accord, tu peux infecter la victime au lieu de l'éliminer : elle devient Loup-Garou. Une seule infection par partie, et jamais seul.",
+    en: "Your vote counts double in the pack. If the majority of wolves agree, you may infect the victim instead of eliminating them: they become a Werewolf. One infection per game, never alone.",
+  },
+  'roleGuide.loup_alpha.strengths': {
+    fr: "Ton vote pèse double | Une victime infectée ne meurt pas : la meute grossit sans bruit",
+    en: "Your vote counts double | An infected victim doesn't die: the pack grows quietly",
+  },
+  'roleGuide.loup_alpha.weaknesses': {
+    fr: "L'infection exige l'accord de la majorité des loups | Un seul usage par partie",
+    en: "Infection needs the majority of wolves to agree | One use per game",
+  },
+  'roleGuide.sans_visage.how': {
+    fr: "Loup-Garou à part entière, mais la Voyante te voit toujours comme un simple villageois. Pour le reste, tu joues et tu votes avec la meute.",
+    en: "A full Werewolf, but the Seer always sees you as an ordinary villager. Otherwise you play and vote with the pack.",
+  },
+  'roleGuide.sans_visage.strengths': {
+    fr: "Invisible au pouvoir de la Voyante | Tu peux te faire passer pour un villageois sûr de lui",
+    en: "Invisible to the Seer's power | You can pose as a confident villager",
+  },
+  'roleGuide.sans_visage.weaknesses': {
+    fr: "Aucun autre pouvoir que cette invisibilité | Vote, Sorcière et Chasseur peuvent t'éliminer",
+    en: "No power other than that invisibility | The vote, the Witch and the Hunter can still take you out",
+  },
+  'roleGuide.grand_mechant_loup.how': {
+    fr: "Tu votes avec la meute comme un loup simple. Tant qu'aucun loup n'est mort dans la partie, tu dévores en plus seul une seconde victime : différente de celle de la meute, jamais un coéquipier, et la Sorcière ne peut pas la sauver.",
+    en: "You vote with the pack like a simple wolf. As long as no wolf has died in the game, you also devour a second victim alone: different from the pack's, never a teammate, and the Witch cannot save them.",
+  },
+  'roleGuide.grand_mechant_loup.strengths': {
+    fr: "Deux victimes par nuit en début de partie | Frappe invisible pour la Sorcière",
+    en: "Two victims a night early on | A strike the Witch cannot see",
+  },
+  'roleGuide.grand_mechant_loup.weaknesses': {
+    fr: "Le pouvoir disparaît dès qu'un loup meurt, toi compris | Deux morts en une nuit éveillent les soupçons",
+    en: "The power vanishes as soon as any wolf dies, you included | Two deaths in one night raise suspicion",
+  },
+  'roleGuide.reine_louve.how': {
+    fr: "Tu votes avec la meute. Avant la Voyante, tu peux couvrir un loup vivant (toi comprise) : si elle le sonde cette nuit-là, elle voit un villageois. Chaque loup n'est couvrable qu'une fois par partie, même si la Voyante ne sonde personne. Au matin, tu sais si elle est tombée dans le piège.",
+    en: "You vote with the pack. Before the Seer, you may cloak a living wolf (yourself included): if she inspects them that night, she sees a villager. Each wolf can be cloaked only once per game, even if the Seer inspects nobody. At dawn you learn whether she fell for it.",
+  },
+  'roleGuide.reine_louve.strengths': {
+    fr: "Neutralise la Voyante au bon moment | Tu sais si la Voyante a visé un loup",
+    en: "Neutralises the Seer at the right moment | You learn whether the Seer targeted a wolf",
+  },
+  'roleGuide.reine_louve.weaknesses': {
+    fr: "Protection perdue si la Voyante sonde quelqu'un d'autre | Une seule couverture par loup et par partie",
+    en: "Protection wasted if the Seer inspects someone else | One cloak per wolf per game",
+  },
+  'roleGuide.voyante.how': {
+    fr: "Chaque nuit, tu sondes un joueur et tu apprends son camp : Loup-Garou ou Villageois. Jamais son rôle précis.",
+    en: "Each night you probe a player and learn their side: Werewolf or Villager. Never their exact role.",
+  },
+  'roleGuide.voyante.strengths': {
+    fr: "La meilleure source d'information du village | Tu orientes le vote sans te dévoiler tout de suite",
+    en: "The village's best source of information | You steer the vote without revealing yourself right away",
+  },
+  'roleGuide.voyante.weaknesses': {
+    fr: "Cible prioritaire des loups dès que tu te dévoiles | Sans-Visage et Reine Louve peuvent te tromper",
+    en: "Prime target for the wolves once you reveal yourself | The Faceless and the Wolf Queen can fool you",
+  },
+  'roleGuide.sorciere.how': {
+    fr: "Tu as deux potions à usage unique : une de guérison pour sauver la victime des loups, une de poison pour éliminer le joueur de ton choix. Chaque nuit, tu décides de les utiliser ou non.",
+    en: "You have two single-use potions: a healing one to save the wolves' victim, a poison one to eliminate the player of your choice. Each night you decide whether to use them.",
+  },
+  'roleGuide.sorciere.strengths': {
+    fr: "Annule une attaque ou frappe un suspect | Tu sais qui les loups visent avant le matin",
+    en: "Cancel an attack or strike a suspect | You know who the wolves target before dawn",
+  },
+  'roleGuide.sorciere.weaknesses': {
+    fr: "Potions uniques : une fois utilisées, plus rien | Un poison mal placé élimine un innocent",
+    en: "One-shot potions: once used, nothing left | A misplaced poison kills an innocent",
+  },
+  'roleGuide.chasseur.how': {
+    fr: "Rôle passif. Si tu es éliminé — de nuit comme de jour — tu emportes immédiatement un autre joueur de ton choix avec toi.",
+    en: "Passive role. If you are eliminated — at night or by day — you immediately take another player of your choice down with you.",
+  },
+  'roleGuide.chasseur.strengths': {
+    fr: "Ta mort frappe aussi les loups | Dissuade les accusations à la légère",
+    en: "Your death hits the wolves too | Discourages careless accusations",
+  },
+  'roleGuide.chasseur.weaknesses': {
+    fr: "Tu ne tires qu'en mourant : aucune action avant | Un tir sur un innocent affaiblit le village",
+    en: "You only shoot when you die: no action before that | A shot at an innocent weakens the village",
+  },
+  'roleGuide.petite_fille.how': {
+    fr: "Rôle passif. Pendant la nuit, le chat du village est anonyme pour tous, sauf pour toi : tu vois qui écrit quoi, tant que tu es en vie.",
+    en: "Passive role. During the night the village chat is anonymous to everyone but you: you see who writes what, as long as you are alive.",
+  },
+  'roleGuide.petite_fille.strengths': {
+    fr: "Tu démasques ceux qui parlent la nuit | Aucune action à jouer : aucun risque de te tromper",
+    en: "You expose who speaks at night | No action to play: no way to get it wrong",
+  },
+  'roleGuide.petite_fille.weaknesses': {
+    fr: "Si tu révèles ce que tu sais, tu deviens une cible | Une information, mais aucune protection",
+    en: "Reveal what you know and you become a target | Information, but no protection",
+  },
+  'roleGuide.cupidon.how': {
+    fr: "La première nuit seulement, tu touches deux cartes mystères : les deux joueurs cachés derrière tombent amoureux pour toujours. Tu ne sauras jamais qui ils sont — eux seuls sont prévenus. Si l'un meurt, l'autre meurt de chagrin.",
+    en: "On the first night only, you tap two mystery cards: the two players hidden behind them fall in love forever. You will never know who they are — only they are told. If one dies, the other dies of grief.",
+  },
+  'roleGuide.cupidon.strengths': {
+    fr: "Crée un couple secret qui peut changer la partie | +30 points si les amoureux survivent jusqu'à la fin",
+    en: "Creates a secret couple that can swing the game | +30 points if the lovers survive to the end",
+  },
+  'roleGuide.cupidon.weaknesses': {
+    fr: "Tu ne sais pas qui sont les amoureux | Un couple tiré au hasard peut mêler les camps",
+    en: "You don't know who the lovers are | A random couple can mix the sides",
+  },
+  'roleGuide.ancien.how': {
+    fr: "Rôle passif. Tu survis à la première attaque des loups, mais ni à la Sorcière ni au vote. Si le village t'élimine par erreur, tous ses pouvoirs spéciaux s'éteignent aussitôt.",
+    en: "Passive role. You survive the wolves' first attack, but not the Witch nor the vote. If the village eliminates you by mistake, all its special powers are extinguished at once.",
+  },
+  'roleGuide.ancien.strengths': {
+    fr: "Une vie de plus face aux loups | Les loups gaspillent leur première attaque",
+    en: "An extra life against the wolves | The wolves waste their first attack",
+  },
+  'roleGuide.ancien.weaknesses': {
+    fr: "Te voter désactive les pouvoirs du village | Aucune parade contre le poison ni le vote",
+    en: "Voting you out shuts down the village's powers | No defence against poison or the vote",
+  },
+  'roleGuide.voleur.how': {
+    fr: "Dès la première nuit, avant tout le monde, tu voles la carte d'un joueur tiré au hasard, sans savoir laquelle. Tu hérites de son rôle et de son camp — et lui hérite du tien.",
+    en: "On the very first night, before anyone else, you steal the card of a randomly chosen player without knowing which one. You inherit their role and side — and they inherit yours.",
+  },
+  'roleGuide.voleur.strengths': {
+    fr: "Peut te donner un rôle puissant | Tu changes de camp sans que personne le sache",
+    en: "Can land you a powerful role | You switch sides without anyone knowing",
+  },
+  'roleGuide.voleur.weaknesses': {
+    fr: "Tu ne choisis ni le rôle ni le camp | Tu peux hériter d'un rôle sans pouvoir",
+    en: "You choose neither the role nor the side | You may inherit a role with no power",
+  },
+  'roleGuide.enfant_sauvage.how': {
+    fr: "Au début de la partie, tu choisis secrètement un mentor (sinon il t'est attribué). Tant qu'il vit, tu joues avec le village. Dès qu'il meurt, quelle qu'en soit la cause, tu deviens Loup-Garou et tu rejoins la meute.",
+    en: "At the start of the game you secretly choose a mentor (otherwise one is assigned). While they live, you play with the village. The moment they die, whatever the cause, you become a Werewolf and join the pack.",
+  },
+  'roleGuide.enfant_sauvage.strengths': {
+    fr: "Utile aux deux camps tour à tour | Conversion surprise pour le village",
+    en: "Useful to both sides in turn | A surprise conversion for the village",
+  },
+  'roleGuide.enfant_sauvage.weaknesses': {
+    fr: "Ton destin dépend de la survie d'un autre | Tu peux basculer contre le village sans l'avoir voulu",
+    en: "Your fate depends on someone else's survival | You can turn on the village without wanting to",
+  },
+  'roleGuide.griot.how': {
+    fr: "À partir de la deuxième nuit, tu désignes un joueur et tu apprends une trace de ce qu'il a fait la nuit précédente — une description vague, jamais son rôle ni son camp.",
+    en: "From the second night on, you designate a player and learn a trace of what they did the night before — a vague description, never their role or side.",
+  },
+  'roleGuide.griot.strengths': {
+    fr: "Repère les rôles actifs de la nuit | Se recoupe très bien avec la Voyante",
+    en: "Spots the roles that act at night | Cross-checks well with the Seer",
+  },
+  'roleGuide.griot.weaknesses': {
+    fr: "Indice vague, parfois difficile à interpréter | Rien à apprendre la première nuit",
+    en: "Vague clue, sometimes hard to interpret | Nothing to learn on the first night",
+  },
+  'roleGuide.daron.how': {
+    fr: "Chaque nuit, tu protèges un joueur contre l'attaque des loups ET le poison de la Sorcière. Jamais la même personne deux nuits de suite ; tu peux te protéger toi-même.",
+    en: "Each night you protect a player against the wolves' attack AND the Witch's poison. Never the same person two nights in a row; you may protect yourself.",
+  },
+  'roleGuide.daron.strengths': {
+    fr: "Annule la mort de la nuit | Couvre aussi le poison de la Sorcière",
+    en: "Cancels the night's death | Also covers the Witch's poison",
+  },
+  'roleGuide.daron.weaknesses': {
+    fr: "Jamais la même personne deux nuits de suite | Tu protèges à l'aveugle : les loups peuvent viser ailleurs",
+    en: "Never the same person two nights running | You protect blind: the wolves may strike elsewhere",
+  },
+  'roleGuide.ange.goal': { fr: "Mourir pendant la première nuit ou le premier jour.", en: "Die during the first night or the first day." },
+  'roleGuide.ange.how': {
+    fr: "Tu n'as aucun pouvoir. Si tu meurs, de n'importe quelle façon, pendant la toute première nuit ou le tout premier jour, tu gagnes immédiatement et seul. Passé ce premier jour, tu redeviens un simple villageois et tu gagnes avec le village.",
+    en: "You have no power. If you die, in any way, during the very first night or the very first day, you win immediately and alone. Past that first day you become an ordinary villager and win with the village.",
+  },
+  'roleGuide.ange.strengths': {
+    fr: "Victoire immédiate, sans attendre la fin | Personne ne devine ton objectif",
+    en: "Instant win, no need to wait for the end | Nobody guesses your goal",
+  },
+  'roleGuide.ange.weaknesses': {
+    fr: "Il faut que quelqu'un t'élimine, et vite | Après le premier jour, tu n'as plus d'objectif propre",
+    en: "Someone has to eliminate you, and quickly | After the first day you have no goal of your own",
+  },
+  'roleGuide.anancy.goal': { fr: "Être en vie à l'aube du cinquième jour.", en: "Be alive at dawn on the fifth day." },
+  'roleGuide.anancy.how': {
+    fr: "Tu n'appartiens à aucun camp. Chaque nuit, tu échanges secrètement les rôles de deux joueurs vivants, sans jamais savoir lesquels. Un joueur déjà touché devient intouchable. Tu gagnes seul si tu es vivant à l'aube du cinquième jour.",
+    en: "You belong to no side. Each night you secretly swap the roles of two living players, without ever learning which. A player already touched becomes untouchable. You win alone if you are alive at dawn on the fifth day.",
+  },
+  'roleGuide.anancy.strengths': {
+    fr: "Tu bouleverses les camps sans que personne comprenne | Tu gagnes quel que soit le camp dominant",
+    en: "You upend the sides and nobody understands why | You win whichever side dominates",
+  },
+  'roleGuide.anancy.weaknesses': {
+    fr: "Tu joues à l'aveugle : tu ignores les rôles échangés | Il faut survivre cinq jours entre loups et village",
+    en: "You play blind: you never learn the roles you swap | You must survive five days between wolves and village",
+  },
+  'roleGuide.chasseuse.goal': { fr: "Voir ta cible éliminée par le vote du village.", en: "See your target eliminated by the village vote." },
+  'roleGuide.chasseuse.how': {
+    fr: "Tu n'appartiens à aucun camp. Dès la deuxième nuit, une cible secrète t'est attribuée parmi les vivants, sans que tu connaisses son camp ni son rôle. Tu gagnes seule si le village l'élimine par le vote. Si elle meurt autrement, tu abandonnes ou reçois une nouvelle cible (une seule fois par partie).",
+    en: "You belong to no side. From the second night, a secret target is assigned to you among the living, without learning their side or role. You win alone if the village eliminates them by vote. If they die another way, you give up or receive a new target (once per game).",
+  },
+  'roleGuide.chasseuse.strengths': {
+    fr: "Une cible précise : tu pèses sur le vote du village | Tu peux gagner même si ton camp s'effondre",
+    en: "A precise target: you weigh on the village vote | You can win even if everyone else loses",
+  },
+  'roleGuide.chasseuse.weaknesses': {
+    fr: "Tu ne sais rien de ta cible | Si elle meurt hors vote, une seule seconde chance — sinon tu redeviens villageoise",
+    en: "You know nothing about your target | If they die outside the vote, you get one second chance — otherwise you turn villager",
+  },
   'help.landing.tribesLink': { fr: 'Les tribus', en: 'Tribes' },
   'help.category.tribes.title': { fr: 'Les tribus', en: 'Tribes' },
   'help.category.tribes.subtitle': { fr: 'Village, chat, niveau, rôles et modération', en: 'Village, chat, level, roles and moderation' },

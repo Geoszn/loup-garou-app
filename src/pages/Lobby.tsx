@@ -549,7 +549,6 @@ export default function Lobby() {
     Number(counts.voleur) +
     Number(counts.enfant_sauvage) +
     Number(counts.griot) +
-    Number(counts.ange) +
     Number(counts.daron)
   const balanceTotal = Math.max(balanceWolves + balanceVillage, 1)
   const rolesOverflow = customized && specialTotal > playerCount
@@ -1051,7 +1050,7 @@ export default function Lobby() {
                   <div className="grid grid-cols-2 gap-2">
                     {!disabledRoles.has('griot') && <RoleChip emoji="🎭" label={t(ROLES.griot.nameKey)} checked={counts.griot} onChange={(v) => { setCounts((c) => ({ ...c, griot: v })); setCustomized(true) }} hintOpen={openHint?.key === 'griot'} onToggleHint={() => toggleHint('maison', 'griot', t('lobby.griotToggleHint'))} />}
                     {!disabledRoles.has('anancy') && <RoleChip emoji="🕸️" label={t(ROLES.anancy.nameKey)} neutral checked={counts.anancy} onChange={(v) => { setCounts((c) => ({ ...c, anancy: v })); setCustomized(true) }} hintOpen={openHint?.key === 'anancy'} onToggleHint={() => toggleHint('maison', 'anancy', t('lobby.anancyToggleHint'))} />}
-                    {!disabledRoles.has('ange') && <RoleChip emoji="👼" label={t(ROLES.ange.nameKey)} checked={counts.ange} onChange={(v) => { setCounts((c) => ({ ...c, ange: v })); setCustomized(true) }} hintOpen={openHint?.key === 'ange'} onToggleHint={() => toggleHint('maison', 'ange', t('lobby.angeToggleHint'))} />}
+                    {!disabledRoles.has('ange') && <RoleChip emoji="👼" label={t(ROLES.ange.nameKey)} neutral checked={counts.ange} onChange={(v) => { setCounts((c) => ({ ...c, ange: v })); setCustomized(true) }} hintOpen={openHint?.key === 'ange'} onToggleHint={() => toggleHint('maison', 'ange', t('lobby.angeToggleHint'))} />}
                     {!disabledRoles.has('daron') && <RoleChip emoji="🛡️" label={t(ROLES.daron.nameKey)} checked={counts.daron} onChange={(v) => { setCounts((c) => ({ ...c, daron: v })); setCustomized(true) }} hintOpen={openHint?.key === 'daron'} onToggleHint={() => toggleHint('maison', 'daron', t('lobby.daronToggleHint'))} />}
                     {!disabledRoles.has('chasseuse') && <RoleChip emoji="🎯" label={t(ROLES.chasseuse.nameKey)} neutral checked={counts.chasseuse} onChange={(v) => { setCounts((c) => ({ ...c, chasseuse: v })); setCustomized(true) }} hintOpen={openHint?.key === 'chasseuse'} onToggleHint={() => toggleHint('maison', 'chasseuse', t('lobby.chasseuseToggleHint'))} />}
                   </div>
