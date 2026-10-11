@@ -35,6 +35,7 @@ const SPECIAL_ROLE_KEYS: RoleId[] = [
   'loup_alpha',
   'sans_visage',
   'grand_mechant_loup',
+  'reine_louve',
   'voyante',
   'sorciere',
   'chasseur',
@@ -55,7 +56,7 @@ const SPECIAL_ROLE_KEYS: RoleId[] = [
 // village sous un même titre « Rôles spéciaux » et se confondait avec eux).
 // Même découpage que les totaux plus bas : loups d'un côté, solitaires (camp
 // neutre, voir totalNeutral) de l'autre, tout le reste = village.
-const WOLF_SPECIAL_KEYS: RoleId[] = ['loup_alpha', 'sans_visage', 'grand_mechant_loup']
+const WOLF_SPECIAL_KEYS: RoleId[] = ['loup_alpha', 'sans_visage', 'grand_mechant_loup', 'reine_louve']
 const NEUTRAL_SPECIAL_KEYS: RoleId[] = ['anancy', 'chasseuse']
 
 const CAMP_STYLE = {
@@ -180,6 +181,7 @@ export function RosterSummary({
     (roleCounts?.loup_alpha ? 1 : 0) +
     (roleCounts?.sans_visage ? 1 : 0) +
     (roleCounts?.grand_mechant_loup ? 1 : 0) +
+    (roleCounts?.reine_louve ? 1 : 0) +
     (infectionOccurred ? 1 : 0) +
     (wildChildConversionOccurred ? 1 : 0)
   const deadWolves = players.filter(
@@ -188,7 +190,8 @@ export function RosterSummary({
       (p.revealed_role === 'loup_garou' ||
         p.revealed_role === 'loup_alpha' ||
         p.revealed_role === 'sans_visage' ||
-        p.revealed_role === 'grand_mechant_loup')
+        p.revealed_role === 'grand_mechant_loup' ||
+        p.revealed_role === 'reine_louve')
   ).length
   const remainingWolves = Math.max(totalWolves - deadWolves, 0)
   // Anancy (voir migration 0119) et la Chasseuse (voir migration 0162,

@@ -54,6 +54,8 @@ export function ActionPanel({ view, gameId, selfId }: { view: MyGameView; gameId
             return <AnancyPanel view={view} gameId={gameId} selfId={selfId} />
           case 'grand_mechant_loup':
             return <GrandMechantLoupPanel view={view} gameId={gameId} selfId={selfId} />
+          case 'reine_louve':
+            return <ReineLouvePanel view={view} gameId={gameId} selfId={selfId} />
           case 'vote':
             return <VotePanel view={view} gameId={gameId} selfId={selfId} />
           case 'hunter':
@@ -443,6 +445,80 @@ function AnancyPanel({ view, gameId, selfId }: { view: MyGameView; gameId: strin
         confirmLabel={t('action.anancy.doNothing')}
         onCancel={() => setDoNothingOpen(false)}
         onConfirm={doNothing}
+      />
+    </PanelShell>
+  )
+}
+
+// Le Manteau de la Meute de la Reine Louve (voir migration 0242) : tour de nuit dédié, AVANT la Voyante. Elle choisit un loup
+// vivant de sa meute (elle comprise) que la Voyante verra comme un villageois cette nuit-là ; chaque loup n'est couvrable
+// qu'une fois par partie (view.queen_eligible_ids vient du serveur, seule source de vérité — les autres sont grisés). Elle peut
+// aussi ne couvrir personne.
+function ReineLouvePanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
+  const { t } = useLanguage()
+  const [selected, setSelected] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [skipOpen, setSkipOpen] = useState(false)
+  const teammates = new Set(view.wolf_teammates ?? [])
+  const pack = view.players.filter((p) => p.is_alive && (p.user_id === selfId || teammates.has(p.user_id)))
+  const eligible = new Set(view.queen_eligible_ids ?? [])
+  const blocked = pack.filter((p) => !eligible.has(p.user_id)).map((p) => p.user_id)
+  const earlier = (view.queen_protected_ids ?? [])
+    .map((id) => view.players.find((p) => p.user_id === id)?.display_name)
+    .filter((n): n is string => !!n)
+  const targetName = view.players.find((p) => p.user_id === selected)?.display_name ?? ''
+
+  async function send(target: string | null) {
+    setLoading(true)
+    setError(null)
+    const { error: rpcError } = await gameRpc('submit_reine_louve', { p_game_id: gameId, p_target: target })
+    setLoading(false)
+    setConfirmOpen(false)
+    setSkipOpen(false)
+    if (rpcError) setError(rpcError.message)
+  }
+
+  return (
+    <PanelShell emoji="👸" title={t('action.reineLouve.title')} subtitle={t('action.reineLouve.subtitle')}>
+      <PlayerGrid
+        players={pack}
+        selfId={selfId}
+        selectable
+        compact
+        selectedId={selected}
+        disabledIds={blocked}
+        onSelect={(id) => {
+          setSelected(id)
+          setConfirmOpen(true)
+        }}
+      />
+      {earlier.length > 0 && <p className="mt-3 text-xs text-moon-200/50">{t('action.reineLouve.alreadyCloaked', { names: earlier.join(', ') })}</p>}
+      <ErrorText>{error}</ErrorText>
+      <button
+        type="button"
+        onClick={() => setSkipOpen(true)}
+        disabled={loading}
+        className="mt-3 w-full rounded-xl border border-night-600 px-4 py-2.5 text-sm font-semibold text-moon-200/60 transition-colors hover:border-night-500 hover:text-moon-200 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        🤷 {t('action.reineLouve.skip')}
+      </button>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={t('action.reineLouve.confirmTitle')}
+        message={t('action.reineLouve.confirmMessage', { name: targetName })}
+        confirmLabel={t('action.reineLouve.confirm')}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => void send(selected)}
+      />
+      <ConfirmDialog
+        open={skipOpen}
+        title={t('action.reineLouve.skip')}
+        message={t('action.reineLouve.skipMessage')}
+        onCancel={() => setSkipOpen(false)}
+        onConfirm={() => void send(null)}
       />
     </PanelShell>
   )

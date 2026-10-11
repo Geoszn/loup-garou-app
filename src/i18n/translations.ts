@@ -479,6 +479,43 @@ export const translations = {
     fr: "Choisissez une seconde victime (facultatif) — différente de celle de la meute, jamais un autre Loup. Frappe garantie : la Sorcière ne peut pas la sauver.",
     en: "Choose a second victim (optional) — different from the pack's, never another Wolf. Guaranteed strike: the Witch cannot save them.",
   },
+  'role.reine_louve.name': { fr: 'Reine Louve', en: 'Wolf Queen' },
+  'role.reine_louve.description': {
+    fr: "Vous votez avec la meute exactement comme un Loup simple. En plus, chaque nuit, avant la Voyante, vous pouvez jeter le Manteau de la Meute sur un loup vivant (vous y compris) : si la Voyante le sonde cette nuit-là, elle le voit comme un simple villageois. Le sort ne dure qu'une nuit, et chaque loup ne peut être couvert qu'une seule fois dans la partie — même si la Voyante ne sonde personne. Vous apprenez au lever du jour si votre manteau l'a trompée.",
+    en: "You vote with the pack exactly like a simple Wolf. On top of that, each night, before the Seer, you may cast the Pack's Cloak on a living wolf (yourself included): if the Seer inspects them that night, she sees a plain villager. The spell lasts one night only, and each wolf can be cloaked just once per game — even if the Seer inspects nobody. At dawn you learn whether your cloak fooled her.",
+  },
+  'role.reine_louve.nightAction': {
+    fr: "Couvrez un loup (facultatif) : la Voyante le verra comme un villageois cette nuit. Une seule fois par loup et par partie.",
+    en: "Cloak a wolf (optional): the Seer will see a villager tonight. Only once per wolf per game.",
+  },
+  'nightStep.reine_louve': { fr: 'La Reine Louve étend son manteau...', en: 'The Wolf Queen is spreading her cloak...' },
+  'turnNotif.reine_louve': { fr: '👸 Reine Louve, couvrez un loup de votre meute.', en: '👸 Wolf Queen, cloak a wolf of your pack.' },
+  'action.reineLouve.title': { fr: 'Le Manteau de la Meute', en: "The Pack's Cloak" },
+  'action.reineLouve.subtitle': {
+    fr: "Choisissez un loup à couvrir cette nuit : si la Voyante le sonde, elle verra un simple villageois. Chaque loup ne peut être couvert qu'une fois dans la partie, même si la Voyante ne sonde personne.",
+    en: "Pick a wolf to cloak tonight: if the Seer inspects them, she sees a plain villager. Each wolf can be cloaked only once per game, even if the Seer inspects nobody.",
+  },
+  'action.reineLouve.skip': { fr: 'Ne couvrir personne cette nuit', en: 'Cloak nobody tonight' },
+  'action.reineLouve.skipMessage': {
+    fr: "Aucun loup ne sera couvert cette nuit. Vos protections restantes sont conservées pour plus tard.",
+    en: "No wolf will be cloaked tonight. Your remaining cloaks are kept for later.",
+  },
+  'action.reineLouve.confirmTitle': { fr: 'Confirmer le manteau', en: 'Confirm the cloak' },
+  'action.reineLouve.confirmMessage': {
+    fr: "Vous allez couvrir {{name}} : si la Voyante le sonde cette nuit, elle le verra comme un villageois. Ce loup ne pourra plus être couvert de la partie.",
+    en: "You are about to cloak {{name}}: if the Seer inspects them tonight, she will see a villager. This wolf can no longer be cloaked for the rest of the game.",
+  },
+  'action.reineLouve.confirm': { fr: 'Couvrir ce loup', en: 'Cloak this wolf' },
+  'action.reineLouve.alreadyCloaked': { fr: 'Déjà couverts plus tôt dans la partie : {{names}}.', en: 'Already cloaked earlier in the game: {{names}}.' },
+  'game.queenShieldTitle': { fr: 'Manteau de la Meute', en: "The Pack's Cloak" },
+  'game.queenShieldWorked': {
+    fr: "🧣 Votre manteau a trompé la Voyante : elle a sondé le loup que vous aviez couvert et l'a pris pour un villageois.",
+    en: "🧣 Your cloak fooled the Seer: she inspected the wolf you had cloaked and took them for a villager.",
+  },
+  'lobby.reineLouveToggleHint': {
+    fr: "Vote avec la meute comme un loup simple. Chaque nuit, avant la Voyante, elle peut couvrir un loup (elle comprise) : si la Voyante le sonde, elle le voit comme un villageois. Chaque loup n'est couvert qu'une fois par partie — idéale avec au moins 3 loups.",
+    en: "Votes with the pack like a simple Wolf. Each night, before the Seer, she may cloak a wolf (herself included): if the Seer inspects them, she sees a villager. Each wolf can be cloaked only once per game — best with at least 3 wolves.",
+  },
   'role.daron.name': { fr: 'Daron', en: 'Guardian' },
   'role.daron.description': {
     fr: "Chaque nuit, protégez un joueur vivant de votre choix (vous y compris) contre les Loups-Garous et le poison de la Sorcière. Jamais la même personne deux nuits de suite — et sans jamais savoir qui vous protégez : même un Loup-Garou peut être épargné sans le vouloir.",

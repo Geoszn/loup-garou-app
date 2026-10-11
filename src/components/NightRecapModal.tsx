@@ -71,6 +71,7 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
   // n'importe quelle nuit tant que le Loup Alpha est vivant et n'a pas
   // encore utilisé son infection, donc pas de garde `isFirstNight` non plus.
   const alphaInfectedMe = view.alpha_infected_me
+  const queenShieldWorked = view.queen_shield_worked
   const witchInfected = view.witch_infected_notice_id ? view.players.find((p) => p.user_id === view.witch_infected_notice_id) : null
 
   // Anancy (voir migration 0119) : révèle SEULEMENT que mon rôle a changé
@@ -147,6 +148,7 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
             wildChildConversionThisRound ||
             alphaInfectedMe ||
             witchInfected ||
+            queenShieldWorked ||
             (wolfNightRecap && wolfNightRecap.length > 0) ||
             myGriotReveal ||
             anancySwappedMe ||
@@ -173,6 +175,12 @@ export function NightRecapModal({ view, gameId, selfId }: { view: MyGameView; ga
                 <div className="animate-fade-in rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2.5">
                   <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">{t('game.witchSavedMeTitle')}</p>
                   <p className="mt-1 text-sm text-moon-200/90">{t('game.witchSavedMe')}</p>
+                </div>
+              )}
+              {queenShieldWorked && (
+                <div className="animate-fade-in rounded-xl border border-moon-400/40 bg-moon-400/10 px-3 py-2.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-moon-300">{t('game.queenShieldTitle')}</p>
+                  <p className="mt-1 text-sm text-moon-200/90">{t('game.queenShieldWorked')}</p>
                 </div>
               )}
               {witchInfected && (

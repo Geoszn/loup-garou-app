@@ -14,6 +14,7 @@ export type NightStep =
   | 'voleur'
   | 'cupidon'
   | 'enfant_sauvage'
+  | 'reine_louve'
   | 'voyante'
   | 'griot'
   | 'loup_garou'
@@ -62,6 +63,9 @@ export interface RoleCounts {
   // coéquipier, invisible pour la Sorcière) tant qu'aucun loup n'est encore
   // mort dans la partie — pouvoir perdu pour de bon dès qu'un loup meurt.
   grand_mechant_loup: boolean
+  // La Reine Louve (voir migration 0242) : vote avec la meute comme un loup simple ; chaque nuit, avant la Voyante, couvre un
+  // loup (elle comprise, une fois chacun par partie) que la Voyante verra alors comme un villageois cette nuit-là.
+  reine_louve: boolean
   // Le Daron (voir migration 0158) : protège un joueur différent chaque
   // nuit (auto-protection permise, jamais deux nuits de suite la même
   // personne) contre l'attaque des Loups ET le poison de la Sorcière —
@@ -423,6 +427,11 @@ export interface MyGameView {
   wolf_target_visible_to_witch: string | null
   // Infection décidée par les loups cette nuit (null sinon) : montrée à la Sorcière à part, jamais comme une victime à guérir.
   wolf_infect_target_visible_to_witch: string | null
+  // Reine Louve uniquement (migration 0242) : loups encore couvrables pendant son tour, loups déjà couverts dans la partie,
+  // et, au lever du jour, si son manteau a trompé la Voyante cette nuit.
+  queen_eligible_ids: string[] | null
+  queen_protected_ids: string[] | null
+  queen_shield_worked: boolean
   // Au lever du jour, pour la Sorcière : le joueur réellement infecté cette nuit.
   witch_infected_notice_id: string | null
   wolf_current_votes: { actor_id: string; target_id: string | null }[]

@@ -17,6 +17,7 @@ export type RoleId =
   | 'anancy'
   | 'ange'
   | 'grand_mechant_loup'
+  | 'reine_louve'
   | 'daron'
   | 'chasseuse'
 
@@ -199,6 +200,18 @@ export const ROLES: Record<RoleId, RoleInfo> = {
     descriptionKey: 'role.grand_mechant_loup.description',
     nightActionKey: 'role.grand_mechant_loup.nightAction',
   },
+  // Vote avec la meute comme un loup simple (WolfPanel générique), puis dispose d'un tour de nuit dédié AVANT la Voyante
+  // (night_step='reine_louve', voir QueenPanel dans ActionPanel.tsx) : elle couvre un loup (elle comprise, une fois chacun
+  // par partie) que la Voyante verra comme un villageois cette nuit-là — voir migration 0242.
+  reine_louve: {
+    id: 'reine_louve',
+    team: 'loups',
+    emoji: '👸',
+    color: '#8a2f4a',
+    nameKey: 'role.reine_louve.name',
+    descriptionKey: 'role.reine_louve.description',
+    nightActionKey: 'role.reine_louve.nightAction',
+  },
   // Protège un joueur différent chaque nuit contre l'attaque des Loups ET
   // le poison de la Sorcière (jamais deux nuits de suite la même personne,
   // auto-protection permise) — voir migration 0158. Aucune condition de
@@ -236,6 +249,7 @@ export const ROLE_ORDER: RoleId[] = [
   'loup_alpha',
   'sans_visage',
   'grand_mechant_loup',
+  'reine_louve',
   'voyante',
   'sorciere',
   'chasseur',

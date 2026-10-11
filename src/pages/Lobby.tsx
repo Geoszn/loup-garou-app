@@ -47,6 +47,8 @@ const DEFAULT_COUNTS: RoleCounts = {
   // désactivés par défaut.
   ange: false,
   grand_mechant_loup: false,
+  // La Reine Louve (voir migration 0242) — même principe, désactivée par défaut.
+  reine_louve: false,
   // Le Daron (voir migration 0158) — même principe, désactivé par défaut ;
   // absent du mode automatique pour l'instant, uniquement activable ici.
   daron: false,
@@ -529,13 +531,14 @@ export default function Lobby() {
     Number(counts.anancy) +
     Number(counts.ange) +
     Number(counts.grand_mechant_loup) +
+    Number(counts.reine_louve) +
     Number(counts.daron) +
     Number(counts.chasseuse)
   // Répartition Loups/Village affichée en barre (voir la refonte du panneau
   // ci-dessous) — équilibre lisible d'un coup d'œil plutôt qu'un calcul de
   // tête. Anancy (camp neutre) n'est compté ni comme loup ni comme village,
   // comme dans RosterSummary.tsx.
-  const balanceWolves = counts.loup_garou + Number(counts.loup_alpha) + Number(counts.sans_visage) + Number(counts.grand_mechant_loup)
+  const balanceWolves = counts.loup_garou + Number(counts.loup_alpha) + Number(counts.sans_visage) + Number(counts.grand_mechant_loup) + Number(counts.reine_louve)
   const balanceVillage =
     Number(counts.voyante) +
     Number(counts.sorciere) +
@@ -1000,6 +1003,16 @@ export default function Lobby() {
                         onToggleHint={() => toggleHint('loups', 'grand_mechant_loup', t('lobby.grandMechantLoupToggleHint'))}
                       />
                     )}
+                    {!disabledRoles.has('reine_louve') && (
+                      <RoleChip
+                        emoji="👸"
+                        label={t(ROLES.reine_louve.nameKey)}
+                        checked={counts.reine_louve}
+                        onChange={(v) => { setCounts((c) => ({ ...c, reine_louve: v })); setCustomized(true) }}
+                        hintOpen={openHint?.key === 'reine_louve'}
+                        onToggleHint={() => toggleHint('loups', 'reine_louve', t('lobby.reineLouveToggleHint'))}
+                      />
+                    )}
                   </div>
                   {openHint?.group === 'loups' && <RoleHintBox text={openHint.text} />}
                 </div>
@@ -1226,6 +1239,7 @@ const AUTO_PREVIEW_ROLE_KEYS: (keyof RoleCounts)[] = [
   'loup_alpha',
   'sans_visage',
   'grand_mechant_loup',
+  'reine_louve',
   'voyante',
   'sorciere',
   'chasseur',
