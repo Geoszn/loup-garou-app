@@ -3,9 +3,11 @@ import type { RealtimeChannel } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './AuthContext'
 
+// Volontairement SANS code de partie : ce canal est lu par tous les joueurs connectés, y compris les outils de
+// développement du navigateur. Diffuser le code d'une partie ici permettait à n'importe quel ami, membre de
+// tribu ou curieux de la rejoindre sans invitation ni validation de l'hôte (retour utilisateur du 2026-10-11).
 export interface PresenceMeta {
   status: 'idle' | 'in_game'
-  game_code: string | null
 }
 
 interface PresenceContextValue {
@@ -14,7 +16,7 @@ interface PresenceContextValue {
   // consommateur (voir FriendsOnlineWidget.tsx), ce contexte se contente de
   // savoir qui a l'app ouverte en ce moment et quoi.
   onlineStatus: Record<string, PresenceMeta>
-  setMyStatus: (status: PresenceMeta['status'], gameCode?: string | null) => void
+  setMyStatus: (status: PresenceMeta['status']) => void
 }
 
 const PresenceContext = createContext<PresenceContextValue>({
@@ -31,7 +33,7 @@ const PresenceContext = createContext<PresenceContextValue>({
  *
  * Monté une seule fois (voir main.tsx, à l'intérieur de AuthProvider dont
  * dépend `user`) pour toute la durée de la session connectée — GameRoom.tsx
- * appelle setMyStatus('in_game', code) à l'entrée d'une partie et
+ * appelle setMyStatus('in_game') à l'entrée d'une partie et
  * setMyStatus('idle') en sortant, sur ce même canal déjà ouvert, plutôt que
  * d'ouvrir un second canal de présence concurrent pour le même utilisateur
  * (qui entrerait en conflit sur la même clé de présence).
@@ -64,7 +66,7 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          await channel.track({ status: 'idle', game_code: null } satisfies PresenceMeta)
+          await channel.track({ status: 'idle' } satisfies PresenceMeta)
         }
       })
     channelRef.current = channel
@@ -76,8 +78,8 @@ export function PresenceProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.id])
 
-  function setMyStatus(status: PresenceMeta['status'], gameCode: string | null = null) {
-    channelRef.current?.track({ status, game_code: gameCode } satisfies PresenceMeta)
+  function setMyStatus(status: PresenceMeta['status']) {
+    channelRef.current?.track({ status } satisfies PresenceMeta)
   }
 
   return <PresenceContext.Provider value={{ onlineStatus, setMyStatus }}>{children}</PresenceContext.Provider>

@@ -45,7 +45,7 @@ export function FriendsOnlineWidget({ friends }: { friends: FriendPerson[] }) {
         <ul className="flex flex-col gap-2">
           {visible.map((f) => {
             const presence = onlineStatus[f.user_id]
-            const inGame = presence.status === 'in_game' && presence.game_code
+            const inGame = presence.status === 'in_game'
             return (
               <li key={f.user_id} className="flex items-center justify-between gap-2 text-sm">
                 <span className="flex min-w-0 items-center gap-1.5 text-moon-200/90">
@@ -56,11 +56,7 @@ export function FriendsOnlineWidget({ friends }: { friends: FriendPerson[] }) {
                   <Avatar config={f.avatar_config} icon={f.avatar_icon} name={f.username} className="h-6 w-6" />
                   <span className="truncate">{f.username}</span>
                 </span>
-                {inGame ? (
-                  <CopyButton value={presence.game_code!} label={presence.game_code!} className="px-2.5 py-1 text-[11px]" />
-                ) : (
-                  <span className="shrink-0 text-[11px] text-moon-200/40">{t('friendsOnline.idle')}</span>
-                )}
+                <span className="shrink-0 text-[11px] text-moon-200/40">{inGame ? t('friendsOnline.inGame') : t('friendsOnline.idle')}</span>
               </li>
             )
           })}

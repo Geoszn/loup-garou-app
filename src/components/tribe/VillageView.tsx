@@ -129,23 +129,21 @@ export function VillageView({
   tribe,
   members,
   onlineIds,
-  gameCodes,
+  inGameIds,
   selfId,
   onProfile,
   onChat,
   onManage,
-  onJoinGame,
 }: {
   tribe: TribeInfo
   members: TribeMember[]
   onlineIds: Set<string>
-  /** Membres actuellement en partie : id → code de la partie. */
-  gameCodes: Record<string, string>
+  /** Membres actuellement en partie (sans le code : il ne doit jamais circuler). */
+  inGameIds: Set<string>
   selfId: string | undefined
   onProfile: (m: TribeMember) => void
   onChat: () => void
   onManage: (m: TribeMember) => void
-  onJoinGame: (code: string) => void
 }) {
   const { t } = useLanguage()
   const band = COLOR_HEX[tribe.color] ?? COLOR_HEX.amber
@@ -179,7 +177,6 @@ export function VillageView({
   const selectedIndex = members.findIndex((m) => m.user_id === selectedId)
   const selected = selectedIndex >= 0 ? members[selectedIndex] : null
   const canManage = !!selected && selected.user_id !== selfId && (tribe.my_role === 'chef' || (tribe.my_role === 'sous_chef' && selected.role === 'membre'))
-  const selectedGame = selected ? gameCodes[selected.user_id] : undefined
 
   // --- le monde : la scène + sa marge de ciel, positions en % ---------------
   const HT = worldHeight(layout.H)
@@ -379,7 +376,7 @@ export function VillageView({
             const online = onlineIds.has(m.user_id)
             const isNew = fresh.has(m.user_id)
             const isSelected = m.user_id === selectedId
-            const inGame = !!gameCodes[m.user_id]
+            const inGame = inGameIds.has(m.user_id)
             return (
               <HutButton
                 key={m.user_id}
@@ -481,11 +478,6 @@ export function VillageView({
             <ActionButton onClick={() => onProfile(selected)}>👤 {t('tribe.village.profile')}</ActionButton>
           )}
           <ActionButton onClick={onChat}>💬 {t('tribe.village.write')}</ActionButton>
-          {selectedGame && selected.user_id !== selfId && (
-            <ActionButton tone="go" onClick={() => onJoinGame(selectedGame)}>
-              🎮 {t('tribe.village.joinGame')}
-            </ActionButton>
-          )}
           {canManage && <ActionButton onClick={() => onManage(selected)}>⚙️ {t('tribe.village.manage')}</ActionButton>}
           <ActionButton onClick={() => setSelectedId(null)} aria-label={t('tribe.village.close')}>
             ✕

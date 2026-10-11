@@ -55,7 +55,7 @@ export default function GameRoom() {
   // un changement de route sans passer par un bouton "Quitter" dédié.
   useEffect(() => {
     if (!code) return
-    setMyStatus('in_game', code.toUpperCase())
+    setMyStatus('in_game')
     return () => setMyStatus('idle')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code])

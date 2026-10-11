@@ -26,6 +26,7 @@ const POLL_MS = 20000
 export interface LiveGame {
   key: string
   game_id?: string
+  /** Seulement pour ses propres parties : le code des autres n'est jamais envoyé. */
   code?: string
   is_public: boolean
   is_mine: boolean
@@ -385,12 +386,12 @@ export function LiveVillage() {
               {t('village.resume')}
             </Button>
           )}
-          {!selected.is_mine && selected.is_public && selected.game_id && selected.code && (
+          {!selected.is_mine && selected.is_public && selected.game_id && (
             <Button
               className="shrink-0 px-3 py-1.5 text-xs"
               variant={joinable ? 'primary' : 'ghost'}
               disabled={full || selected.already_requested || join.requestingId === selected.game_id}
-              onClick={() => join.requestJoin({ game_id: selected.game_id!, code: selected.code!, status: selected.status as GameStatus } satisfies JoinTarget)}
+              onClick={() => join.requestJoin({ game_id: selected.game_id!, status: selected.status as GameStatus } satisfies JoinTarget)}
             >
               {selected.already_requested ? t('village.requested') : full ? t('village.full') : joinable ? t('village.join') : t('village.watch')}
             </Button>

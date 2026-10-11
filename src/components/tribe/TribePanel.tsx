@@ -496,9 +496,9 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
     if (user) ids.add(user.id)
     return ids
   }, [onlineStatus, user])
-  const gameCodes = useMemo(() => {
-    const out: Record<string, string> = {}
-    for (const [id, p] of Object.entries(onlineStatus)) if (p.status === 'in_game' && p.game_code) out[id] = p.game_code
+  const inGameIds = useMemo(() => {
+    const out = new Set<string>()
+    for (const [id, p] of Object.entries(onlineStatus)) if (p.status === 'in_game') out.add(id)
     return out
   }, [onlineStatus])
   const onlineCount = detail ? detail.members.filter((m) => onlineIds.has(m.user_id)).length : 0
@@ -630,12 +630,11 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
             tribe={tribe}
             members={detail.members}
             onlineIds={onlineIds}
-            gameCodes={gameCodes}
+            inGameIds={inGameIds}
             selfId={user?.id}
             onProfile={(m) => setProfileId(m.user_id)}
             onChat={() => setTab('chat')}
             onManage={setSelected}
-            onJoinGame={(code) => navigate(`/rejoindre/${code}`)}
           />
         ) : (
           <div className="h-72 animate-pulse rounded-3xl bg-night-900/40" />

@@ -7,7 +7,6 @@ import type { GameStatus } from '../types/game'
 /** Le strict nécessaire pour demander à rejoindre une partie publique. */
 export interface JoinTarget {
   game_id: string
-  code: string
   status: GameStatus
 }
 
@@ -43,7 +42,7 @@ export function useJoinPublicGame(displayName: string) {
       setChoiceGame(game)
       return
     }
-    if (await submitJoinRequest(game)) navigate(`/attente/${game.game_id}`, { state: { code: game.code } })
+    if (await submitJoinRequest(game)) navigate(`/attente/${game.game_id}`)
   }
 
   async function watchChosen() {
@@ -55,7 +54,7 @@ export function useJoinPublicGame(displayName: string) {
   async function requestOnlyChosen() {
     if (!choiceGame) return
     const game = choiceGame
-    if (await submitJoinRequest(game)) navigate(`/attente/${game.game_id}`, { state: { code: game.code } })
+    if (await submitJoinRequest(game)) navigate(`/attente/${game.game_id}`)
   }
 
   return {
