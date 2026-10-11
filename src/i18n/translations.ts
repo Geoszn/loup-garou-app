@@ -481,8 +481,8 @@ export const translations = {
   },
   'role.reine_louve.name': { fr: 'Reine Louve', en: 'Wolf Queen' },
   'role.reine_louve.description': {
-    fr: "Vous votez avec la meute exactement comme un Loup simple. En plus, chaque nuit, avant la Voyante, vous pouvez jeter le Manteau de la Meute sur un loup vivant (vous y compris) : si la Voyante le sonde cette nuit-là, elle le voit comme un simple villageois. Le sort ne dure qu'une nuit, et chaque loup ne peut être couvert qu'une seule fois dans la partie — même si la Voyante ne sonde personne. Vous apprenez au lever du jour si votre manteau l'a trompée.",
-    en: "You vote with the pack exactly like a simple Wolf. On top of that, each night, before the Seer, you may cast the Pack's Cloak on a living wolf (yourself included): if the Seer inspects them that night, she sees a plain villager. The spell lasts one night only, and each wolf can be cloaked just once per game — even if the Seer inspects nobody. At dawn you learn whether your cloak fooled her.",
+    fr: "Vous votez avec la meute comme un Loup simple. Chaque nuit, avant la Voyante, couvrez un loup vivant (vous compris) : si elle le sonde, elle le voit comme un villageois. Une fois par loup et par partie. Au matin, vous savez si elle s'est trompée.",
+    en: "You vote with the pack like a simple Wolf. Each night, before the Seer, cloak a living wolf (yourself included): if she inspects them, she sees a villager. Once per wolf per game. At dawn, you learn if she was fooled.",
   },
   'role.reine_louve.nightAction': {
     fr: "Couvrez un loup (facultatif) : la Voyante le verra comme un villageois cette nuit. Une seule fois par loup et par partie.",
