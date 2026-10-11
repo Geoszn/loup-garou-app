@@ -23,6 +23,9 @@ export const AVATARS_ANNOUNCEMENT_KEY = 'avatars-2026-09'
 /** Annonce de l'arrivée des tribus (octobre 2026) : ne jamais la réutiliser. */
 export const TRIBES_ANNOUNCEMENT_KEY = 'tribes-launch-2026-10'
 
+/** Annonce de l'arrivée de la Reine Louve (migration 0242) : ne jamais la réutiliser. */
+export const QUEEN_ANNOUNCEMENT_KEY = 'reine-louve-2026-10'
+
 /** Annonce de la collection boutique Octobre Rose (migration 0218). */
 export const STORE_ANNOUNCEMENT_KEY = 'store-pink-october-2026'
 
@@ -38,6 +41,28 @@ const STORE_LOOKS = {
 }
 const STORE_SPARKLES: [number, number, number][] = [[8, 14, 10], [88, 10, 14], [20, 72, 8], [92, 62, 10], [50, 6, 8], [74, 84, 8], [6, 44, 7], [60, 92, 6]]
 
+/** La carte de la Reine Louve (illustration du bucket « role-cards », repli sur un emoji) dans un cadre doré, sous la lune. */
+function QueenBanner() {
+  const [failed, setFailed] = useState(false)
+  const { data } = supabase.storage.from('role-cards').getPublicUrl('reine_louve.jpg')
+  const url = data?.publicUrl
+  return (
+    <div className="relative flex h-60 w-full items-center justify-center overflow-hidden" style={{ background: 'radial-gradient(ellipse at 50% 30%, #3a1d2a 0%, #1a0f14 70%)' }} aria-hidden="true">
+      {BANNER_STARS.map((s, i) => (
+        <span key={i} className="absolute rounded-full bg-white" style={{ left: `${s.x}%`, top: `${s.y}%`, width: s.s, height: s.s, opacity: 0.6 }} />
+      ))}
+      <div className="absolute left-1/2 top-3 h-40 w-40 -translate-x-1/2 rounded-full" style={{ background: 'radial-gradient(circle, rgba(255,230,160,.35), transparent 70%)' }} />
+      <div className="relative h-48 w-32 overflow-hidden rounded-xl border-2 shadow-[0_0_28px_rgba(224,168,74,0.45)]" style={{ borderColor: '#e0a84a', background: 'linear-gradient(#3b1a28,#1a0f14)' }}>
+        {url && !failed ? (
+          <img src={url} alt="" className="h-full w-full object-cover" onError={() => setFailed(true)} />
+        ) : (
+          <div className="flex h-full items-center justify-center text-6xl">👸</div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function seasonAnnouncementKey(slug: string): string {
   return `season-launch-${slug}`
 }
@@ -47,7 +72,7 @@ interface Compensation {
   quests_count: number
 }
 
-type Slide = 'avatars' | 'compensation' | 'season' | 'store' | 'tribes'
+type Slide = 'avatars' | 'compensation' | 'season' | 'store' | 'tribes' | 'queen'
 
 const SHOWCASE: AvatarConfig[] = [
   { skin: 4, hair: 'afro', outfit: 'cloak', acc: 'glasses', head: 'none', face: 'round', bg: 3 },
@@ -151,6 +176,8 @@ export function AnnouncementsModal() {
     // EN COURS (season.is_active) — jamais rejouée si le joueur ouvre
     // l'appli après coup, une fois la saison déjà bien avancée ou terminée.
     // Les tribus : une seule fois, pour tout le monde.
+    // La Reine Louve : la plus récente, donc en premier.
+    if (!seen.includes(QUEEN_ANNOUNCEMENT_KEY)) list.push('queen')
     if (!seen.includes(TRIBES_ANNOUNCEMENT_KEY)) list.push('tribes')
     if (season && season.is_active && !seen.includes(seasonAnnouncementKey(season.slug))) list.push('season')
     if (store) list.push('store')
@@ -213,6 +240,21 @@ export function AnnouncementsModal() {
     navigate('/tribu')
   }
 
+  function markQueenSeen() {
+    void supabase.rpc('mark_announcement_seen', { p_key: QUEEN_ANNOUNCEMENT_KEY })
+  }
+
+  function queenNext() {
+    markQueenSeen()
+    advance()
+  }
+
+  function queenDiscover() {
+    markQueenSeen()
+    setSlides([])
+    navigate('/aide')
+  }
+
   function markStoreSeen() {
     void supabase.rpc('mark_announcement_seen', { p_key: STORE_ANNOUNCEMENT_KEY })
   }
@@ -260,7 +302,7 @@ export function AnnouncementsModal() {
           <div className="flex w-full items-center justify-between text-[11px] text-moon-200/50">
             <span className="font-semibold uppercase tracking-[0.18em]">{t('announce.counter', { n: index + 1, total })}</span>
             {!isLast && (
-              <button type="button" onClick={current === 'avatars' ? avatarsNext : current === 'tribes' ? tribesNext : advance} className="transition hover:text-moon-100">
+              <button type="button" onClick={current === 'avatars' ? avatarsNext : current === 'tribes' ? tribesNext : current === 'queen' ? queenNext : advance} className="transition hover:text-moon-100">
                 {t('announce.skip')}
               </button>
             )}
@@ -304,6 +346,27 @@ export function AnnouncementsModal() {
                 </li>
               </ul>
             )}
+          </>
+        )}
+
+        {current === 'queen' && (
+          <>
+            <div className={`-mx-6 w-[calc(100%+3rem)] shrink-0 self-stretch ${total > 1 ? '' : '-mt-6'}`}>
+              <QueenBanner />
+            </div>
+            <span className="rounded-full border border-moon-400/40 bg-moon-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-moon-300">
+              {t('announce.queen.badge')}
+            </span>
+            <h2 className="font-display text-xl leading-tight text-moon-200">{t('announce.queen.title')}</h2>
+            <p className="text-sm leading-relaxed text-moon-200/80">{t('announce.queen.body')}</p>
+            <ul className="flex w-full flex-col gap-1.5 text-left text-xs text-moon-200/70">
+              {([['🧣', 'announce.queen.b1'], ['🐺', 'announce.queen.b2'], ['🔔', 'announce.queen.b3']] as const).map(([icon, key]) => (
+                <li key={key} className="flex items-center gap-2 rounded-xl border border-night-600/60 bg-night-900/50 px-3 py-2">
+                  <span aria-hidden="true">{icon}</span>
+                  {t(key)}
+                </li>
+              ))}
+            </ul>
           </>
         )}
 
@@ -411,6 +474,16 @@ export function AnnouncementsModal() {
                   </button>
                 </>
               )}
+            </>
+          )}
+          {current === 'queen' && (
+            <>
+              <button type="button" onClick={queenDiscover} className={primaryButton}>
+                {t('announce.queen.cta')}
+              </button>
+              <button type="button" onClick={queenNext} className={linkButton}>
+                {t('announce.queen.later')}
+              </button>
             </>
           )}
           {current === 'tribes' && (
