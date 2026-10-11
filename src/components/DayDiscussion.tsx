@@ -6,8 +6,11 @@ import type { MyGameView, PublicPlayer } from '../types/game'
 import { Avatar } from './Avatar'
 import { ChatPanel } from './ChatPanel'
 
-// Écran de débat (jour) : un seul bloc, le vocal (teinté de vert, bien identifiable) au-dessus des messages écrits,
-// avec le micro et « Voter » dans la barre d'écriture. Le vocal et l'écrit partagent le même cadre.
+// Écran de débat (jour) : une carte vocale arrondie, fixe, posée en haut du chat écrit (même cadre) ; seuls les messages
+// défilent en dessous. Le micro et « Voter » sont dans la barre d'écriture. Palette du jeu : or, terre cuite, brun savane.
+
+/** Bandeau tissé (esprit kente) au sommet de la carte vocale. */
+const WOVEN_BAND = 'repeating-linear-gradient(90deg, #e0a84a 0 14px, #9c331f 14px 28px, #3a2a1c 28px 42px, #c98a1a 42px 56px)'
 
 const speakingOf = (session: VoiceSession, p: { id: string; sessionIds: string[] } | undefined, isSelf: boolean) =>
   isSelf ? session.selfSpeaking : !!p && p.sessionIds.some((id) => session.speakingIds.has(id))
@@ -17,7 +20,7 @@ function SoundBars({ className = '' }: { className?: string }) {
   return (
     <span aria-hidden="true" className={`flex h-3 items-end gap-[2px] ${className}`}>
       {[0, 1, 2].map((i) => (
-        <span key={i} className="voice-bar w-[3px] rounded-full bg-emerald-400" style={{ animationDelay: `${i * 0.15}s` }} />
+        <span key={i} className="voice-bar w-[3px] rounded-full bg-moon-400" style={{ animationDelay: `${i * 0.15}s` }} />
       ))}
     </span>
   )
@@ -30,7 +33,7 @@ export function MicButton({ session, listenOnly }: { session: VoiceSession; list
   const base = 'relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl shadow-md transition-transform active:scale-95'
   if (!session.joined) {
     return (
-      <button type="button" onClick={() => session.setJoined(true)} aria-label={t('dayLayout.mic.join')} title={t('dayLayout.mic.join')} className={`${base} border-2 border-emerald-500/60 bg-emerald-500/10 text-emerald-600`}>
+      <button type="button" onClick={() => session.setJoined(true)} aria-label={t('dayLayout.mic.join')} title={t('dayLayout.mic.join')} className={`${base} border-2 border-moon-400/60 bg-moon-400/10 text-moon-300`}>
         🎙️
       </button>
     )
@@ -63,7 +66,7 @@ export function MicButton({ session, listenOnly }: { session: VoiceSession; list
       aria-pressed={!session.muted}
       aria-label={session.muted ? t('dayLayout.mic.off') : t('dayLayout.mic.on')}
       title={session.muted ? t('dayLayout.mic.off') : t('dayLayout.mic.on')}
-      className={`${base} ${session.muted ? 'bg-blood-700 text-[#fdf6e3]' : 'bg-emerald-500 text-night-950'} ${!session.muted && session.selfSpeaking ? 'ring-4 ring-emerald-300/50' : ''}`}
+      className={`${base} ${session.muted ? 'bg-blood-700 text-[#fdf6e3]' : 'bg-gradient-to-b from-moon-400 to-[#c98a1a] text-night-950'} ${!session.muted && session.selfSpeaking ? 'ring-4 ring-moon-400/40' : ''}`}
     >
       {session.muted ? '🔇' : '🎤'}
     </button>
@@ -81,7 +84,7 @@ function VoiceBand({ session, players, selfId, listenOnly }: { session: VoiceSes
   let status: ReactNode
   if (speakers.length > 0) {
     status = (
-      <span className="flex min-w-0 items-center gap-1.5 text-emerald-600">
+      <span className="flex min-w-0 items-center gap-1.5 text-moon-300">
         <SoundBars />
         <span className="min-w-0 truncate">{speakers.map((p) => (p.user_id === selfId ? t('dayLayout.me') : p.display_name)).join(', ')}</span>
       </span>
@@ -93,10 +96,12 @@ function VoiceBand({ session, players, selfId, listenOnly }: { session: VoiceSes
   }
 
   return (
-    <div className="shrink-0 border-b border-emerald-500/30 bg-gradient-to-b from-emerald-500/20 to-emerald-500/5 px-2.5 pb-2 pt-2">
-      <div className="flex items-center justify-between gap-2 px-0.5 text-[11px] font-semibold text-emerald-700">
+    <div className="mx-2.5 mb-1 mt-2.5 shrink-0 overflow-hidden rounded-2xl bg-night-900 shadow-md ring-1 ring-moon-400/45">
+      <div aria-hidden="true" className="h-1.5" style={{ background: WOVEN_BAND }} />
+      <div className="bg-gradient-to-b from-moon-400/20 to-blood-600/10 px-2.5 pb-1.5 pt-2">
+      <div className="flex items-center justify-between gap-2 px-0.5 text-[11px] font-semibold text-moon-300">
         <span className="flex min-w-0 items-center gap-2">
-          <span className="shrink-0 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px] tracking-widest">🎙️ {t('dayLayout.voiceLabel')}</span>
+          <span className="shrink-0 rounded-full bg-moon-400/20 px-2 py-0.5 text-[9px] tracking-widest">🎙️ {t('dayLayout.voiceLabel')}</span>
           <span className="min-w-0 truncate">{status}</span>
         </span>
         {session.joined && (
@@ -130,10 +135,10 @@ function VoiceBand({ session, players, selfId, listenOnly }: { session: VoiceSes
                   color={p.avatar_color}
                   name={p.display_name}
                   mood={speaking ? 'talk' : 'smile'}
-                  className={`aspect-square h-auto w-full rounded-full ${speaking ? 'ring-[3px] ring-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.75)]' : 'ring-1 ring-night-600'}`}
+                  className={`aspect-square h-auto w-full rounded-full ${speaking ? 'ring-[3px] ring-moon-400 shadow-[0_0_14px_rgba(224,168,74,0.8)]' : 'ring-1 ring-night-600'}`}
                 />
                 {speaking && (
-                  <span className="absolute -right-1 -top-1 rounded-full bg-night-950 px-1 py-0.5 ring-1 ring-emerald-400/60">
+                  <span className="absolute -right-1 -top-1 rounded-full bg-night-950 px-1 py-0.5 ring-1 ring-moon-400/60">
                     <SoundBars />
                   </span>
                 )}
@@ -149,12 +154,13 @@ function VoiceBand({ session, players, selfId, listenOnly }: { session: VoiceSes
                   </button>
                 )}
               </div>
-              <span className={`w-full truncate text-center text-[10px] leading-none ${speaking ? 'font-bold text-emerald-600' : isSelf ? 'font-semibold text-moon-200/80' : 'text-moon-200/60'}`}>
+              <span className={`w-full truncate text-center text-[10px] leading-none ${speaking ? 'font-bold text-moon-300' : isSelf ? 'font-semibold text-moon-200/80' : 'text-moon-200/60'}`}>
                 {isSelf ? t('dayLayout.me') : p.display_name}
               </span>
             </div>
           )
         })}
+      </div>
       </div>
     </div>
   )
@@ -200,10 +206,11 @@ export function DayDiscussion({ view, gameId, code, selfId, me, voiceChannel, vo
     <div className="flex h-[calc(100dvh-6rem-var(--nav-h,0px))] min-h-[26rem] flex-col">
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-night-600/60 bg-night-900/50 shadow-card">
         <VoiceBand session={session} players={view.players} selfId={selfId} listenOnly={listenOnly} />
-        <div className="flex shrink-0 items-center justify-between gap-2 px-3 pb-1 pt-2 text-[9px] font-semibold uppercase tracking-widest text-moon-200/45">
-          <span>💬 {t('dayLayout.writtenLabel')}</span>
-          {view.lover_id && <ChannelToggle channel={channel} onChange={setChannel} unreadAmoureux={unreadAmoureux} />}
-        </div>
+        {view.lover_id && (
+          <div className="flex shrink-0 justify-end px-3 pb-1">
+            <ChannelToggle channel={channel} onChange={setChannel} unreadAmoureux={unreadAmoureux} />
+          </div>
+        )}
         <ChatPanel
           fill
           hideHeader

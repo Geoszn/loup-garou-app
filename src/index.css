@@ -136,6 +136,9 @@ html.capacitor-native *::-webkit-scrollbar-thumb {
   --c-night-500: 107 77 52;   /* #6b4d34 bordure survolée / inputs */
   --c-moon-200: 232 220 196;  /* #e8dcc4 texte principal (parchemin clair) */
   --c-moon-300: 217 154 63;   /* #d99a3f titres/accents ambre */
+  /* Couleurs des noms d'auteurs dans les chats : terres, épices et teintures, lisibles sur fond brun. */
+  --cn-0: #f0b95a; --cn-1: #f28b66; --cn-2: #d9c27a; --cn-3: #9fc99a;
+  --cn-4: #e89bb5; --cn-5: #8fc3d6; --cn-6: #c9a6e6; --cn-7: #f2a65a;
   --c-shadow-hairline: 255 255 255;
   --c-shadow-hairline-a: 0.04;
   --c-shadow-contact: 0 0 0;
@@ -161,6 +164,9 @@ html.capacitor-native *::-webkit-scrollbar-thumb {
   --c-night-500: 184 169 128; /* #b8a980 bordure forte / inputs */
   --c-moon-200: 46 42 32;     /* #2e2a20 texte principal (brun encre) */
   --c-moon-300: 150 118 44;   /* #96762c titres/accents or bronze */
+  /* Mêmes teintes, assombries pour rester lisibles sur le parchemin du jour. */
+  --cn-0: #8a5a00; --cn-1: #b5381c; --cn-2: #6b5a10; --cn-3: #2f6b3a;
+  --cn-4: #a3305f; --cn-5: #1f5d7a; --cn-6: #6a3a9a; --cn-7: #a2480a;
   --c-shadow-hairline: 255 255 255;
   --c-shadow-hairline-a: 0.8;
   --c-shadow-contact: 120 100 60;

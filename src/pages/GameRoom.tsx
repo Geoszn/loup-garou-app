@@ -1402,12 +1402,12 @@ const CallVotePanel = memo(function CallVotePanel({
         onClick={isActor ? callVote : toggleAgree}
         aria-label={`${chipLabel} · ${actionLabel}`}
         title={`${actionLabel} (${relevantAgreedCount}/${others.length})`}
-        className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl shadow-md transition-opacity active:scale-95 disabled:opacity-50 ${
-          !isActor && agreed ? 'bg-emerald-500 text-night-950' : 'bg-amber-400 text-night-950'
+        className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl shadow-md ring-1 transition-opacity active:scale-95 disabled:opacity-50 ${
+          !isActor && agreed ? 'bg-moon-400 text-night-950 ring-moon-400' : 'bg-night-700 text-moon-200 ring-moon-400/60'
         }`}
       >
         <span aria-hidden="true">{!isActor && agreed ? '✓' : '🗳️'}</span>
-        <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-night-950 px-1 text-center text-[10px] font-bold leading-5 tabular-nums text-moon-200 ring-1 ring-night-600">
+        <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-moon-400 px-1 text-center text-[10px] font-bold leading-5 tabular-nums text-night-950 ring-1 ring-night-950/40">
           {relevantAgreedCount}/{others.length}
         </span>
       </button>

@@ -473,12 +473,11 @@ export const ChatPanel = memo(function ChatPanel({
  * message, ou on est la Petite Fille vivante) — factorisée en dehors du
  * composant (pas de dépendance sur des hooks) pour être appelable aussi bien
  * depuis ChatPanel (aperçu de citation) que depuis MessageRow (bulle citée). */
-/** Couleur stable par auteur (lisible en thème jour comme en thème nuit) : on suit qui parle d'un coup d'œil. */
-const NAME_COLORS = ['#ea580c', '#0d9488', '#8b5cf6', '#db2777', '#d97706', '#3b82f6', '#16a34a', '#c026d3']
+/** Couleur stable par auteur (teintes terre et épices du jeu, variables --cn-* : voir index.css, jour et nuit) : on suit qui parle d'un coup d'œil. */
 function nameColor(key: string | null | undefined): string {
   let h = 0
   for (const ch of key ?? '') h = (h * 31 + ch.charCodeAt(0)) >>> 0
-  return NAME_COLORS[h % NAME_COLORS.length]
+  return `var(--cn-${h % 8})`
 }
 
 /** Au-delà de ce délai, un message du même auteur ouvre un nouveau groupe (avec son nom). */
