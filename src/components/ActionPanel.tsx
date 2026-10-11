@@ -134,40 +134,66 @@ function VoleurPanel({ gameId }: { view: MyGameView; gameId: string }) {
   )
 }
 
+// Cupidon choisit À L'AVEUGLE (migration 0240) : autant de cartes identiques et anonymes que de joueurs
+// éligibles (les vivants sauf lui, comme avant : il ne peut pas se choisir). Il en touche deux ; c'est le
+// SERVEUR qui tire au sort qui se cache derrière chaque carte, au moment de l'envoi. Cupidon ne saura jamais
+// qui il a uni — seuls les deux amoureux sont prévenus (voir lover_with, récapitulatif du lever du jour).
 function CupidonPanel({ view, gameId, selfId }: { view: MyGameView; gameId: string; selfId: string }) {
   const { t } = useLanguage()
-  const [first, setFirst] = useState<string | null>(null)
-  const [second, setSecond] = useState<string | null>(null)
+  const [first, setFirst] = useState<number | null>(null)
+  const [second, setSecond] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  // Cupidon ne peut pas se choisir lui-même comme amoureux (voir migration
-  // 0206) — exclu de la liste, comme la Voyante/le vote excluent déjà
-  // selfId de leurs propres cibles.
-  const alive = view.players.filter((p) => p.is_alive && p.user_id !== selfId)
+  const cardCount = view.players.filter((p) => p.is_alive && p.user_id !== selfId).length
 
-  function pick(id: string) {
-    if (first === id) { setFirst(second); setSecond(null); return }
-    if (second === id) { setSecond(null); return }
-    if (!first) { setFirst(id); return }
-    if (!second) { setSecond(id); return }
-    setFirst(id)
+  function pick(slot: number) {
+    if (first === slot) { setFirst(second); setSecond(null); return }
+    if (second === slot) { setSecond(null); return }
+    if (first === null) { setFirst(slot); return }
+    if (second === null) { setSecond(slot); return }
+    setFirst(slot)
     setSecond(null)
   }
 
   async function confirm() {
-    if (!first || !second) return
+    if (first === null || second === null) return
     setLoading(true)
     setError(null)
-    const { error: rpcError } = await gameRpc('submit_cupidon', { p_game_id: gameId, p_lover1: first, p_lover2: second })
+    const { error: rpcError } = await gameRpc('submit_cupidon_blind', { p_game_id: gameId, p_slot1: first, p_slot2: second })
     setLoading(false)
     if (rpcError) setError(rpcError.message)
   }
 
   return (
     <PanelShell emoji="💘" title={t('action.cupidon.title')} subtitle={t('action.cupidon.subtitle')}>
-      <PlayerGrid players={alive} selectable compact selectedId={undefined} highlightIds={[first, second].filter(Boolean) as string[]} onSelect={pick} />
+      <div className="grid grid-cols-4 gap-1.5 sm:grid-cols-5 md:grid-cols-6">
+        {Array.from({ length: cardCount }, (_, slot) => {
+          const picked = slot === first || slot === second
+          return (
+            <button
+              key={slot}
+              type="button"
+              aria-pressed={picked}
+              aria-label={t('action.cupidon.card')}
+              onClick={() => pick(slot)}
+              className={`relative flex aspect-square flex-col items-center justify-center rounded-xl border p-1 transition-all active:scale-95 ${
+                picked ? 'border-pink-400 bg-pink-500/15 shadow-[0_0_14px_rgba(236,100,160,0.35)]' : 'border-night-600/60 bg-night-900/50 hover:border-moon-400/50'
+              }`}
+            >
+              {/* Le même avatar pour tout le monde : rien ne permet de reconnaître un joueur. */}
+              <svg viewBox="0 0 48 48" className="h-3/4 w-3/4" aria-hidden="true">
+                <circle cx="24" cy="24" r="22" fill="#2a1f2e" stroke={picked ? '#f472b6' : '#5a4a60'} strokeWidth="2" />
+                <path d="M24 9c-6.2 0-10.5 4.6-10.5 10.4 0 3.6 1.4 6 3.4 7.9-4.8 1.7-8.2 5.6-9 10.7A22 22 0 0 0 24 46a22 22 0 0 0 16.1-8c-.8-5.1-4.2-9-9-10.7 2-1.9 3.4-4.3 3.4-7.9C34.5 13.6 30.2 9 24 9z" fill="#4a3a52" />
+                <text x="24" y="28" textAnchor="middle" fontSize="15" fontWeight="700" fill={picked ? '#f9a8d4' : '#9a88a2'}>?</text>
+              </svg>
+              {picked && <span className="absolute -right-1 -top-1 text-base leading-none" aria-hidden="true">💘</span>}
+            </button>
+          )
+        })}
+      </div>
+      <p className="mt-3 text-center text-xs text-moon-200/50">{t('action.cupidon.pickedCount', { n: (first !== null ? 1 : 0) + (second !== null ? 1 : 0) })}</p>
       <ErrorText>{error}</ErrorText>
-      <Button className="mt-4 w-full" disabled={!first || !second || loading} onClick={confirm}>
+      <Button className="mt-4 w-full" disabled={first === null || second === null || loading} onClick={confirm}>
         {loading ? t('common.sending') : t('action.cupidon.confirm')}
       </Button>
     </PanelShell>

@@ -409,12 +409,12 @@ export const translations = {
   },
   'role.cupidon.name': { fr: 'Cupidon', en: 'Cupid' },
   'role.cupidon.description': {
-    fr: 'La première nuit uniquement, vous désignez deux joueurs qui tombent amoureux pour toujours. Si l’un meurt, l’autre meurt de chagrin. S’ils survivent tous les deux jusqu’à la fin, vous gagnez vous aussi (+30 points), en plus de votre victoire côté village.',
-    en: 'On the first night only, you choose two players who fall in love forever. If one dies, the other dies of grief. If they both survive to the end, you win too (+30 points), on top of your village win.',
+    fr: 'La première nuit uniquement, vous touchez deux cartes mystères : les deux joueurs cachés derrière tombent amoureux pour toujours, et vous ne saurez jamais qui ils sont — eux seuls sont prévenus. Si l’un meurt, l’autre meurt de chagrin. S’ils survivent tous les deux jusqu’à la fin, vous gagnez vous aussi (+30 points), en plus de votre victoire côté village.',
+    en: 'On the first night only, you tap two mystery cards: the two players hidden behind them fall in love forever, and you will never know who they are — only they are told. If one dies, the other dies of grief. If they both survive to the end, you win too (+30 points), on top of your village win.',
   },
   'role.cupidon.nightAction': {
-    fr: 'Désignez les deux amoureux (uniquement la première nuit).',
-    en: 'Choose the two lovers (first night only).',
+    fr: 'Touchez deux cartes mystères pour former le couple (uniquement la première nuit).',
+    en: 'Tap two mystery cards to form the couple (first night only).',
   },
   'role.ancien.name': { fr: 'Ancien', en: 'Elder' },
   'role.ancien.description': {
@@ -1081,9 +1081,11 @@ export const translations = {
   'action.voleur.steal': { fr: 'Voler une carte', en: 'Steal a card' },
   'action.cupidon.title': { fr: 'Désignez les deux amoureux', en: 'Choose the two lovers' },
   'action.cupidon.subtitle': {
-    fr: "Cette action n'a lieu que la première nuit. S'ils survivent ensemble jusqu'à la fin, vous gagnez aussi (+30 points), en plus de votre victoire côté village.",
-    en: "This action only happens on the first night. If they survive together to the end, you win too (+30 points), on top of your village win.",
+    fr: "Touche deux cartes : tu ne sauras pas qui se cache derrière, ni qui tu uniras. Seuls les deux amoureux seront prévenus. Cette action n'a lieu que la première nuit.",
+    en: "Tap two cards: you won't know who is behind them, nor who you unite. Only the two lovers will be told. This action only happens on the first night.",
   },
+  'action.cupidon.card': { fr: 'Carte mystère', en: 'Mystery card' },
+  'action.cupidon.pickedCount': { fr: '{{n}} / 2 cartes choisies', en: '{{n}} / 2 cards chosen' },
   'action.cupidon.confirm': { fr: 'Confirmer le couple', en: 'Confirm the couple' },
   'action.enfantSauvage.title': { fr: 'Choisissez votre mentor', en: 'Choose your mentor' },
   'action.enfantSauvage.subtitle': {
