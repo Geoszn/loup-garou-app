@@ -1964,7 +1964,7 @@ export const translations = {
   'help.bases.camps.title': { fr: "Les trois camps", en: "The three sides" },
   'help.bases.camps.hint': { fr: "Touche un camp pour voir ses cartes.", en: "Tap a side to see its cards." },
   'help.bases.rolesCta.title': { fr: "Découvrir les rôles", en: "Discover the roles" },
-  'help.bases.rolesCta.desc': { fr: "{n} cartes, leurs pouvoirs et leurs failles.", en: "{n} cards, their powers and their flaws." },
+  'help.bases.rolesCta.desc': { fr: "{{n}} cartes, leurs pouvoirs et leurs failles.", en: "{{n}} cards, their powers and their flaws." },
   'help.roles.title': { fr: "Les rôles", en: "The roles" },
   'help.roles.subtitle': { fr: "Touche une carte pour voir sa fiche complète.", en: "Tap a card to see its full sheet." },
   'help.roles.camp.village': { fr: "Village", en: "Village" },
