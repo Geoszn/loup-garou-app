@@ -11,7 +11,15 @@ import { supabase } from '../lib/supabase'
  * préférence après l'inscription. `onChanged` (optionnel) est appelé après
  * un choix effectif, ex. pour rediriger depuis la page Mon compte une fois
  * la préférence enregistrée. */
-export function LanguageSwitcher({ onChanged }: { onChanged?: (lang: Lang) => void } = {}) {
+export function LanguageSwitcher({
+  onChanged,
+  fill = false,
+}: {
+  onChanged?: (lang: Lang) => void
+  /** Variante "champ de formulaire" (SignUp) : même hauteur qu'un champ de
+   * saisie, boutons de largeur égale — au lieu de la petite pilule d'en-tête. */
+  fill?: boolean
+} = {}) {
   const { lang, setLang, t } = useLanguage()
   const { session, refreshProfile } = useAuth()
 
@@ -29,13 +37,15 @@ export function LanguageSwitcher({ onChanged }: { onChanged?: (lang: Lang) => vo
     <div
       role="group"
       aria-label={t('common.language')}
-      className="flex items-center overflow-hidden rounded-full border border-night-600 bg-night-800/60 text-xs"
+      className={`flex shrink-0 items-center overflow-hidden border border-night-600 bg-night-800/60 ${
+        fill ? 'h-[46px] rounded-xl text-sm' : 'rounded-full text-xs'
+      }`}
     >
       <button
         type="button"
         onClick={() => choose('fr')}
         aria-pressed={lang === 'fr'}
-        className={`px-2.5 py-1.5 font-semibold transition-colors ${
+        className={`${fill ? 'h-full w-12' : 'px-2.5 py-1.5'} font-semibold transition-colors ${
           lang === 'fr' ? 'bg-blood-600 text-[#fdf6e3]' : 'text-moon-200/50 hover:text-moon-200'
         }`}
       >
@@ -45,7 +55,7 @@ export function LanguageSwitcher({ onChanged }: { onChanged?: (lang: Lang) => vo
         type="button"
         onClick={() => choose('en')}
         aria-pressed={lang === 'en'}
-        className={`px-2.5 py-1.5 font-semibold transition-colors ${
+        className={`${fill ? 'h-full w-12' : 'px-2.5 py-1.5'} font-semibold transition-colors ${
           lang === 'en' ? 'bg-blood-600 text-[#fdf6e3]' : 'text-moon-200/50 hover:text-moon-200'
         }`}
       >

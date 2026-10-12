@@ -230,17 +230,18 @@ export const translations = {
   'resetPassword.requestNewLink': { fr: 'Demander un nouveau lien', en: 'Request a new link' },
 
   // --- Inscription (SignUp.tsx) ----------------------------------------------
-  'signup.langLabel': {
-    fr: 'Langue préférée — deviendra la langue par défaut de votre compte',
-    en: 'Preferred language — will become your account’s default language',
+  'signup.lang': { fr: 'Langue', en: 'Language' },
+  'signup.langHint': {
+    fr: 'Devient la langue par défaut de votre compte.',
+    en: 'Becomes your account’s default language.',
   },
   'signup.title': { fr: 'Créer un compte', en: 'Create an account' },
-  'signup.subtitle': { fr: 'Rejoignez le village pour lancer vos parties.', en: 'Join the village to start your games.' },
+  'signup.subtitle': { fr: 'Rejoignez le village.', en: 'Join the village.' },
   'signup.username': { fr: 'Pseudo', en: 'Username' },
   'signup.email': { fr: 'Email', en: 'Email' },
   'signup.password': { fr: 'Mot de passe', en: 'Password' },
   'signup.continent': { fr: 'Continent', en: 'Continent' },
-  'signup.continentPlaceholder': { fr: 'Choisissez votre continent', en: 'Choose your continent' },
+  'signup.continentPlaceholder': { fr: 'Choisir…', en: 'Choose…' },
   'signup.submit': { fr: 'Créer mon compte', en: 'Create my account' },
   'signup.submitting': { fr: 'Création...', en: 'Creating...' },
   'signup.error.continentRequired': { fr: 'Choisissez votre continent.', en: 'Choose your continent.' },
