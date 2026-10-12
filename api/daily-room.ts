@@ -139,6 +139,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const roomName = `wg-${String(code).toLowerCase()}-${channel}`.slice(0, 41)
 
+  // Invités (comptes temporaires, migration 0250) : 20 minutes de vocal par partie. guest_voice_begin renvoie les secondes accordées
+  // (0 = quota épuisé, -1 = compte normal, sans limite). Une fonction pas encore en base (migration non appliquée) ne bloque jamais
+  // le vocal : on traite cela comme « sans limite ».
+  let guestSeconds: number | null = null
+  {
+    const { data: granted, error: guestError } = await supabase.rpc('guest_voice_begin', { p_game_id: gameId })
+    if (!guestError && typeof granted === 'number' && granted >= 0) {
+      if (granted === 0) {
+        res.status(403).json({ error: 'guest_voice_exhausted' })
+        return
+      }
+      guestSeconds = granted
+    }
+  }
+
   // L'hôte de la partie reçoit un jeton Daily "propriétaire" (is_owner) pour
   // ce salon précis : c'est ce qui lui permet ensuite, côté client, de
   // couper à distance le micro d'un autre joueur via updateParticipant().
@@ -191,7 +206,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     })
     if (existing.ok) {
       const data = await existing.json()
-      res.status(200).json({ url: data.url, token: await ownerToken() })
+      res.status(200).json({ url: data.url, token: await ownerToken(), guestSeconds })
       return
     }
 
@@ -239,7 +254,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         })
         if (retry.ok) {
           const data = await retry.json()
-          res.status(200).json({ url: data.url, token: await ownerToken() })
+          res.status(200).json({ url: data.url, token: await ownerToken(), guestSeconds })
           return
         }
       }
@@ -249,7 +264,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const data = await created.json()
-    res.status(200).json({ url: data.url, token: await ownerToken() })
+    res.status(200).json({ url: data.url, token: await ownerToken(), guestSeconds })
   } catch (err) {
     res.status(500).json({ error: err instanceof Error ? err.message : 'Erreur inconnue' })
   }

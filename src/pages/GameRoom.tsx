@@ -37,13 +37,15 @@ import type { MyGameView, PublicPlayer } from '../types/game'
 import type { VoiceChannel } from '../hooks/useVoiceChat'
 import { Avatar } from '../components/Avatar'
 import { useNoPinchZoom } from '../hooks/useNoPinchZoom'
+import { GuestIdsProvider } from '../lib/guestContext'
+import { GuestBanner, GuestEndTeaser } from '../components/GuestWall'
 import { PracticeAssistant } from '../components/PracticeAssistant'
 
 export default function GameRoom() {
   // Partie en cours : écran fixe, le pincement ne zoome pas (un zoom accidentel décalerait tout le jeu).
   useNoPinchZoom()
   const { code } = useParams()
-  const { user, profile } = useAuth()
+  const { user, profile, isGuest } = useAuth()
   const { setMyStatus } = usePresence()
   const navigate = useNavigate()
   const { t } = useLanguage()
@@ -332,459 +334,462 @@ export default function GameRoom() {
   // l'interface de jeu (voir src/index.css) : blanc de jour, noir de nuit,
   // avec un fondu animé porté par `.game-theme-root` sur chaque enfant.
   return (
-    <div
-      data-theme-switching={themeSwitching ? '' : undefined}
-      className={`game-theme-root relative bg-night-950 ${
-        // Débat plein écran : la page fait exactement la hauteur visible (le chat défile seul, rien ne déborde).
-        fullScreen ? 'flex h-[calc(100dvh-var(--nav-h,0px)-1.25rem)] flex-col overflow-hidden' : 'min-h-screen pb-16'
-      } ${isNight ? '' : 'theme-day'}`}
-      style={{
-        backgroundImage: isNight
-          ? 'radial-gradient(circle at 50% -10%, rgb(var(--c-night-600) / 0.35), transparent 55%)'
-          : 'radial-gradient(circle at 50% -10%, rgba(198,46,66,0.06), transparent 55%)',
-      }}
-    >
-      {/* Grain léger en surcouche plein écran : casse l'effet d'aplat sans
-          coût de rendu supplémentaire par carte. */}
-      <div className="texture-noise" />
-      {/* Connexion instable (voir useGame.ts : le sondage de secours toutes
-          les 2,5s a échoué même après la tentative de récupération
-          automatique dans supabase.ts) — un joueur qui voit l'écran figé
-          sans le moindre signal ne sait pas s'il doit attendre ou recharger.
-          Disparaît tout seul dès que le prochain sondage réussit. */}
-      {gameError && (
-        <div className="fixed inset-x-0 top-0 z-50 flex justify-center px-3 pt-[max(env(safe-area-inset-top),0.5rem)]">
-          <p className="rounded-full border border-amber-400/40 bg-night-950/95 px-3.5 py-1.5 text-[11px] font-semibold text-amber-300 shadow-lg backdrop-blur">
-            ⚠️ {t('game.connectionUnstable')}
-          </p>
-        </div>
-      )}
-      <PhaseBanner
-        status={view.game.status}
-        nightNumber={view.game.night_number}
-        nightStep={view.game.night_step}
-        deadline={view.game.phase_deadline}
-        players={view.players}
-        roleCounts={view.game.settings.role_counts}
-        onlineUserIds={onlineUserIds}
-        infectionOccurred={view.alpha_infection_occurred}
-        wildChildConversionOccurred={view.wild_child_conversion_occurred}
-        selfId={user.id}
-        sfxEnabled={sfx.enabled}
-        sfxSupported={sfx.supported}
-        onToggleSfx={sfx.toggle}
-        notifEnabled={notifications.enabled}
-        notifSupported={notifications.supported}
-        onToggleNotif={notifications.toggle}
-        onLeave={view.game.status !== 'ended' ? requestLeave : undefined}
-        isHost={isHost}
-        onOpenModeration={() => setModOpen(true)}
-        onOpenArtifacts={(alive ? hasOeilBaobabToShow(view) : hasArtifactsToShow(view)) ? () => setArtifactsOpen(true) : undefined}
-        hasUsableArtifact={hasUsableArtifact(view)}
-        onExtendTime={async () => {
-          const { error } = await supabase.rpc('extend_phase_deadline', { p_game_id: gameId, p_seconds: 30 })
-          return error?.message ?? null
-        }}
-      />
-
-      {/* Mode de test solo (voir migration 0127) : réservé à l'admin ET à
-          ses propres parties (isHost) — visible pendant toute phase où un
-          bot pourrait avoir un choix en attente. Un clic résout UNE seule
-          étape (voir handleAutoPlayBots) : jamais d'enchaînement automatique,
-          l'admin garde la main pour observer chaque étape.
-          Retour utilisateur (capture d'écran) : le bouton restait affiché
-          même dans une partie sans aucun bot, où il n'a jamais rien à
-          résoudre — repli sur la même détection heuristique que Lobby.tsx
-          (préfixe "🤖 " du pseudo, is_bot n'étant pas exposé par
-          get_my_game_view). Masqué dès qu'un vrai second joueur participe
-          (voir hasOtherRealPlayer) : ce n'est plus un test solo. */}
-      {profile?.is_admin &&
-        isHost &&
-        !hasOtherRealPlayer &&
-        view.players.some((p) => p.display_name.startsWith('🤖 ')) &&
-        // 'day_discussion' ajouté (voir migration 0144) : admin_auto_play_bots
-        // gère désormais aussi le débat (accord de la meute-bots pour lancer
-        // le vote) — jusqu'ici la phase la plus longue à devoir attendre en
-        // entier faute de bouton visible pour la faire avancer.
-        ['captain_election', 'night', 'day_discussion', 'day_vote'].includes(view.game.status) && (
-          <div className="mx-auto mt-3 flex max-w-3xl flex-col gap-1.5 px-4">
-            <button
-              type="button"
-              onClick={handleAutoPlayBots}
-              disabled={botPlayLoading}
-              className="w-full rounded-xl border border-moon-400/30 bg-moon-400/5 px-4 py-2.5 text-sm font-semibold text-moon-300 transition-colors hover:border-moon-400/50 disabled:opacity-50"
-            >
-              {botPlayLoading ? t('common.sending') : t('game.autoPlayBotsButton')}
-            </button>
-            {botPlayError && <ErrorText>{botPlayError}</ErrorText>}
-          </div>
-        )}
-
+    <GuestIdsProvider ids={view.guest_user_ids}>
       <div
-        className={`mx-auto flex w-full max-w-3xl flex-col ${
-          fullScreen ? 'min-h-0 flex-1' : `gap-4 px-4 pt-4 ${view.game.status === 'role_reveal' ? 'pb-28' : 'pb-4'}`
-        }`}
+        data-theme-switching={themeSwitching ? '' : undefined}
+        className={`game-theme-root relative bg-night-950 ${
+          // Débat plein écran : la page fait exactement la hauteur visible (le chat défile seul, rien ne déborde).
+          fullScreen ? 'flex h-[calc(100dvh-var(--nav-h,0px)-1.25rem)] flex-col overflow-hidden' : 'min-h-screen pb-16'
+        } ${isNight ? '' : 'theme-day'}`}
+        style={{
+          backgroundImage: isNight
+            ? 'radial-gradient(circle at 50% -10%, rgb(var(--c-night-600) / 0.35), transparent 55%)'
+            : 'radial-gradient(circle at 50% -10%, rgba(198,46,66,0.06), transparent 55%)',
+        }}
       >
-        {/* Partie d'entraînement : bots, conseils par étape et bilan (rien si partie normale). */}
-        <PracticeAssistant view={view} gameId={gameId!} />
-        {/* Boussole du Village (artefact du Loup Store, migration 0152) :
-            en dehors de tout statut/alive comme le panneau de succession
-            juste en dessous — le propriétaire doit pouvoir consulter
-            l'historique à tout moment, vivant ou mort, quelle que soit la
-            phase en cours. null (pas juste vide) tant que l'artefact n'est
-            pas possédé (voir game_view_artifacts_fields). */}
-        {view.vote_history && (
-          <VoteHistoryPanel voteHistory={view.vote_history} players={view.players} />
-        )}
-
-        {/* Le Capitaine qui vient de mourir doit désigner son successeur —
-            à ce moment-là il est forcément déjà mort (`captain_pending` n'est
-            posé qu'à sa mort dans kill_player), donc ce panneau ne doit PAS
-            être conditionné à `alive` comme les blocs "night"/"day_vote"
-            ci-dessous, sans quoi il ne s'affiche jamais pour la personne
-            censée cliquer dessus. Affiché en dehors de tout statut/alive,
-            au-dessus de l'écran fantôme, pour rester visible quelle que soit
-            la phase où la mort est survenue.
-
-            BUG CORRIGÉ (retour utilisateur : "vérifie si la carte du
-            chasseur fonctionne bien") : exactement le même piège touchait le
-            Chasseur — `hunter_pending` n'est lui aussi posé qu'APRÈS que
-            kill_player l'ait déjà marqué mort (is_alive = false), donc les
-            blocs "night"/"day_vote" ci-dessous, tous les deux conditionnés à
-            `alive`, ne pouvaient physiquement JAMAIS afficher son panneau de
-            tir — son tour expirait systématiquement au bout du délai
-            (message "n'a pas tiré à temps"), sans que le bouton n'apparaisse
-            une seule fois. Même correctif que pour `captain_succession` :
-            affiché ici, hors de toute condition `alive`. Aucun risque de
-            double affichage avec les blocs plus bas : `alive` y est de toute
-            façon toujours faux à ce moment précis. */}
-        {/* 'chasseuse_choice' (migration 0162, rebaptisée en 0163) :
-            contrairement à captain_succession/hunter ci-dessus, la
-            Chasseuse elle-même reste généralement VIVANTE quand ce choix
-            apparaît (seule sa cible est morte) — affiché ici pour rester
-            visible quelle que soit la phase (la décision peut traîner
-            plusieurs phases sans bloquer personne d'autre). Le bloc "night"
-            plus bas exclut explicitement 'chasseuse_choice' de son propre
-            déclenchement générique pour éviter un double affichage du même
-            panneau. */}
-        {/* 'revival_choice' (Pierre des Ancêtres / Larme de Renaissance,
-            migration 0172) : même piège que captain_succession/hunter
-            ci-dessus — games.revival_pending n'est posé qu'APRÈS que
-            kill_player ait déjà marqué la victime is_alive = false, donc
-            affiché ici plutôt que dans un bloc conditionné à `alive`. */}
-        {(view.pending_action_required === 'captain_succession' ||
-          view.pending_action_required === 'hunter' ||
-          view.pending_action_required === 'chasseuse_choice' ||
-          view.pending_action_required === 'revival_choice') && (
-          <ActionPanel view={view} gameId={gameId!} selfId={user.id} />
-        )}
-
-        {!alive && view.game.status !== 'ended' && (
-          <div className="flex animate-fade-in flex-col gap-2 rounded-2xl border border-night-500/60 bg-night-950/60 p-3">
-            <p className="text-xs text-moon-200/50">
-              {view.my_role
-                ? t('game.eliminatedNoticeWithRole', { role: roleLabel(view.my_role, t) })
-                : t('game.eliminatedNoticeNoRole')}
+        {/* Grain léger en surcouche plein écran : casse l'effet d'aplat sans
+            coût de rendu supplémentaire par carte. */}
+        <div className="texture-noise" />
+        {/* Connexion instable (voir useGame.ts : le sondage de secours toutes
+            les 2,5s a échoué même après la tentative de récupération
+            automatique dans supabase.ts) — un joueur qui voit l'écran figé
+            sans le moindre signal ne sait pas s'il doit attendre ou recharger.
+            Disparaît tout seul dès que le prochain sondage réussit. */}
+        {gameError && (
+          <div className="fixed inset-x-0 top-0 z-50 flex justify-center px-3 pt-[max(env(safe-area-inset-top),0.5rem)]">
+            <p className="rounded-full border border-amber-400/40 bg-night-950/95 px-3.5 py-1.5 text-[11px] font-semibold text-amber-300 shadow-lg backdrop-blur">
+              ⚠️ {t('game.connectionUnstable')}
             </p>
-            {/* Pierre des Ancêtres (migration 0152) : me?.pending_revival
-                vient de game_players (recalculé pour chaque joueur, voir
-                types/game.ts) — juste une teaser, l'annonce publique réelle
-                arrive dans le journal de partie au prochain passage au jour
-                (voir advance_phase). */}
-            {me?.pending_revival && <p className="text-xs font-semibold text-amber-300">{t('game.pendingRevivalNotice')}</p>}
-            <GhostPanel
-              gameId={gameId!}
-              code={code!}
-              selfId={user.id}
-              displayName={me?.display_name ?? t('common.playerFallback')}
-              gameStatus={view.game.status}
-              players={view.players}
-              parcheminGriotUsed={view.my_parchemin_griot_used}
-              ownsDernierSouffle={view.my_owns_dernier_souffle}
-              dernierSouffleUsed={view.my_dernier_souffle_used}
-              dernierSouffleStock={view.my_dernier_souffle_stock}
-            />
-            {/* Pronostic des fantômes (migration 0221) : facultatif, replié ;
-                disparaît tout seul quand il est impossible (bots, < 6 humains…). */}
-            <GhostBetPanel gameId={gameId!} players={view.players} />
           </div>
         )}
+        <PhaseBanner
+          status={view.game.status}
+          nightNumber={view.game.night_number}
+          nightStep={view.game.night_step}
+          deadline={view.game.phase_deadline}
+          players={view.players}
+          roleCounts={view.game.settings.role_counts}
+          onlineUserIds={onlineUserIds}
+          infectionOccurred={view.alpha_infection_occurred}
+          wildChildConversionOccurred={view.wild_child_conversion_occurred}
+          selfId={user.id}
+          sfxEnabled={sfx.enabled}
+          sfxSupported={sfx.supported}
+          onToggleSfx={sfx.toggle}
+          notifEnabled={notifications.enabled}
+          notifSupported={notifications.supported}
+          onToggleNotif={notifications.toggle}
+          onLeave={view.game.status !== 'ended' ? requestLeave : undefined}
+          isHost={isHost}
+          onOpenModeration={() => setModOpen(true)}
+          onOpenArtifacts={(alive ? hasOeilBaobabToShow(view) : hasArtifactsToShow(view)) ? () => setArtifactsOpen(true) : undefined}
+          hasUsableArtifact={hasUsableArtifact(view)}
+          onExtendTime={async () => {
+            const { error } = await supabase.rpc('extend_phase_deadline', { p_game_id: gameId, p_seconds: 30 })
+            return error?.message ?? null
+          }}
+        />
 
-        {view.game.status === 'role_reveal' && (
-          <div className="flex animate-fade-in flex-col items-center gap-4 pt-6">
-            <p className="text-sm uppercase tracking-widest text-moon-200/40">{t('game.yourRole')}</p>
-            <RoleCard roleId={view.my_role} />
-            <WolfPackList view={view} myRole={view.my_role} />
-            <ReadyPanel view={view} gameId={gameId!} selfId={user.id} />
-          </div>
-        )}
+        {/* Mode de test solo (voir migration 0127) : réservé à l'admin ET à
+            ses propres parties (isHost) — visible pendant toute phase où un
+            bot pourrait avoir un choix en attente. Un clic résout UNE seule
+            étape (voir handleAutoPlayBots) : jamais d'enchaînement automatique,
+            l'admin garde la main pour observer chaque étape.
+            Retour utilisateur (capture d'écran) : le bouton restait affiché
+            même dans une partie sans aucun bot, où il n'a jamais rien à
+            résoudre — repli sur la même détection heuristique que Lobby.tsx
+            (préfixe "🤖 " du pseudo, is_bot n'étant pas exposé par
+            get_my_game_view). Masqué dès qu'un vrai second joueur participe
+            (voir hasOtherRealPlayer) : ce n'est plus un test solo. */}
+        {profile?.is_admin &&
+          isHost &&
+          !hasOtherRealPlayer &&
+          view.players.some((p) => p.display_name.startsWith('🤖 ')) &&
+          // 'day_discussion' ajouté (voir migration 0144) : admin_auto_play_bots
+          // gère désormais aussi le débat (accord de la meute-bots pour lancer
+          // le vote) — jusqu'ici la phase la plus longue à devoir attendre en
+          // entier faute de bouton visible pour la faire avancer.
+          ['captain_election', 'night', 'day_discussion', 'day_vote'].includes(view.game.status) && (
+            <div className="mx-auto mt-3 flex max-w-3xl flex-col gap-1.5 px-4">
+              <button
+                type="button"
+                onClick={handleAutoPlayBots}
+                disabled={botPlayLoading}
+                className="w-full rounded-xl border border-moon-400/30 bg-moon-400/5 px-4 py-2.5 text-sm font-semibold text-moon-300 transition-colors hover:border-moon-400/50 disabled:opacity-50"
+              >
+                {botPlayLoading ? t('common.sending') : t('game.autoPlayBotsButton')}
+              </button>
+              {botPlayError && <ErrorText>{botPlayError}</ErrorText>}
+            </div>
+          )}
 
-        {view.game.status === 'night' && alive && (
-          <div className="flex min-h-0 flex-1 animate-fade-in flex-col">
-            <NightScreen
-              view={view}
-              gameId={gameId!}
-              code={code!}
-              selfId={user.id}
-              me={me}
-              isWolf={isWolfTeam(view.my_role)}
-              nightTab={nightTab}
-              setNightTab={setNightTab}
-              unreadWolves={unreadWolves}
-              unreadVillage={unreadVillage}
-              // Loups-Garous : panneau affiché pendant toute la fenêtre de vote plutôt que de basculer sur l'attente dès
-              // le premier vote — submit_wolf_vote accepte de changer la cible tant que tous les loups n'ont pas voté
-              // (upsert côté serveur, migration 0035). 'chasseuse_choice' exclu : déjà affiché par le bloc
-              // inconditionnel en haut de page (la Chasseuse reste vivante quand ce choix apparaît).
-              actionPanel={
-                isWolfTeam(view.my_role) && view.game.night_step === 'loup_garou' ? (
-                  <WolfPanel view={view} gameId={gameId!} selfId={user.id} />
-                ) : view.pending_action_required &&
-                  view.pending_action_required !== 'vote' &&
-                  view.pending_action_required !== 'chasseuse_choice' ? (
-                  <ActionPanel view={view} gameId={gameId!} selfId={user.id} />
-                ) : null
-              }
-              // Résultat de l'action de cette nuit : indépendant de `pending_action_required`, qui bascule à null dès
-              // l'envoi — le joueur doit pouvoir le relire bien après.
-              resultPanel={<NightResultPanel view={view} />}
-              hasResult={hasNightResult(view)}
-              playersSheet={playersSheet}
-              roleSheet={
-                <div className="flex flex-col gap-3">
-                  <RoleCard roleId={view.my_role} />
-                  <WolfPackList view={view} myRole={view.my_role} />
-                  <ChasseuseTargetPanel view={view} />
-                  <DaronProtectionPanel view={view} />
-                </div>
-              }
-              roleDot={view.my_chasseuse_target_assigned_this_round || view.my_protected_by_daron_this_round}
-            />
-          </div>
-        )}
+        <div
+          className={`mx-auto flex w-full max-w-3xl flex-col ${
+            fullScreen ? 'min-h-0 flex-1' : `gap-4 px-4 pt-4 ${view.game.status === 'role_reveal' ? 'pb-28' : 'pb-4'}`
+          }`}
+        >
+          {isGuest && !fullScreen && view.game.status !== 'ended' && <GuestBanner />}
+          {/* Partie d'entraînement : bots, conseils par étape et bilan (rien si partie normale). */}
+          <PracticeAssistant view={view} gameId={gameId!} />
+          {/* Boussole du Village (artefact du Loup Store, migration 0152) :
+              en dehors de tout statut/alive comme le panneau de succession
+              juste en dessous — le propriétaire doit pouvoir consulter
+              l'historique à tout moment, vivant ou mort, quelle que soit la
+              phase en cours. null (pas juste vide) tant que l'artefact n'est
+              pas possédé (voir game_view_artifacts_fields). */}
+          {view.vote_history && (
+            <VoteHistoryPanel voteHistory={view.vote_history} players={view.players} />
+          )}
 
-        {/* Pop-up plein écran, même patron que day_vote_recap plus bas :
-            reste affichée par-dessus le reste tant que la nuit vient d'être
-            résolue (statut 'day_reveal'), 30s par défaut ou moins si tous
-            les vivants cliquent "Continuer" (voir migration 0041). */}
-        {view.game.status === 'day_reveal' && <NightRecapModal view={view} gameId={gameId!} selfId={user.id} />}
+          {/* Le Capitaine qui vient de mourir doit désigner son successeur —
+              à ce moment-là il est forcément déjà mort (`captain_pending` n'est
+              posé qu'à sa mort dans kill_player), donc ce panneau ne doit PAS
+              être conditionné à `alive` comme les blocs "night"/"day_vote"
+              ci-dessous, sans quoi il ne s'affiche jamais pour la personne
+              censée cliquer dessus. Affiché en dehors de tout statut/alive,
+              au-dessus de l'écran fantôme, pour rester visible quelle que soit
+              la phase où la mort est survenue.
 
-        {view.game.status === 'captain_election' && (
-          <div className="flex animate-fade-in flex-col gap-4">
-            {/* La grille reste affichée après le premier vote (voir
-                CaptainVotePanel — submit_captain_vote fait un upsert côté
-                serveur) plutôt que de basculer sur un écran d'attente
-                générique : ça laisse le temps de changer d'avis avant la
-                fin du chrono, avec un bandeau bien visible confirmant que
-                le vote est enregistré. */}
-            {alive ? (
-              <CaptainVotePanel view={view} gameId={gameId!} selfId={user.id} />
-            ) : (
-              <CollapsiblePlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
-            )}
-            {/* Vocal ouvert pendant l'élection (voir migration 0066) pour que
-                le village puisse discuter à voix haute avant de voter — le
-                texte écrit, lui, reste fermé pendant cette phase courte. */}
-            {alive && (
-              <VoiceChat
+              BUG CORRIGÉ (retour utilisateur : "vérifie si la carte du
+              chasseur fonctionne bien") : exactement le même piège touchait le
+              Chasseur — `hunter_pending` n'est lui aussi posé qu'APRÈS que
+              kill_player l'ait déjà marqué mort (is_alive = false), donc les
+              blocs "night"/"day_vote" ci-dessous, tous les deux conditionnés à
+              `alive`, ne pouvaient physiquement JAMAIS afficher son panneau de
+              tir — son tour expirait systématiquement au bout du délai
+              (message "n'a pas tiré à temps"), sans que le bouton n'apparaisse
+              une seule fois. Même correctif que pour `captain_succession` :
+              affiché ici, hors de toute condition `alive`. Aucun risque de
+              double affichage avec les blocs plus bas : `alive` y est de toute
+              façon toujours faux à ce moment précis. */}
+          {/* 'chasseuse_choice' (migration 0162, rebaptisée en 0163) :
+              contrairement à captain_succession/hunter ci-dessus, la
+              Chasseuse elle-même reste généralement VIVANTE quand ce choix
+              apparaît (seule sa cible est morte) — affiché ici pour rester
+              visible quelle que soit la phase (la décision peut traîner
+              plusieurs phases sans bloquer personne d'autre). Le bloc "night"
+              plus bas exclut explicitement 'chasseuse_choice' de son propre
+              déclenchement générique pour éviter un double affichage du même
+              panneau. */}
+          {/* 'revival_choice' (Pierre des Ancêtres / Larme de Renaissance,
+              migration 0172) : même piège que captain_succession/hunter
+              ci-dessus — games.revival_pending n'est posé qu'APRÈS que
+              kill_player ait déjà marqué la victime is_alive = false, donc
+              affiché ici plutôt que dans un bloc conditionné à `alive`. */}
+          {(view.pending_action_required === 'captain_succession' ||
+            view.pending_action_required === 'hunter' ||
+            view.pending_action_required === 'chasseuse_choice' ||
+            view.pending_action_required === 'revival_choice') && (
+            <ActionPanel view={view} gameId={gameId!} selfId={user.id} />
+          )}
+
+          {!alive && view.game.status !== 'ended' && (
+            <div className="flex animate-fade-in flex-col gap-2 rounded-2xl border border-night-500/60 bg-night-950/60 p-3">
+              <p className="text-xs text-moon-200/50">
+                {view.my_role
+                  ? t('game.eliminatedNoticeWithRole', { role: roleLabel(view.my_role, t) })
+                  : t('game.eliminatedNoticeNoRole')}
+              </p>
+              {/* Pierre des Ancêtres (migration 0152) : me?.pending_revival
+                  vient de game_players (recalculé pour chaque joueur, voir
+                  types/game.ts) — juste une teaser, l'annonce publique réelle
+                  arrive dans le journal de partie au prochain passage au jour
+                  (voir advance_phase). */}
+              {me?.pending_revival && <p className="text-xs font-semibold text-amber-300">{t('game.pendingRevivalNotice')}</p>}
+              <GhostPanel
                 gameId={gameId!}
                 code={code!}
-                channel={voiceChannel}
+                selfId={user.id}
                 displayName={me?.display_name ?? t('common.playerFallback')}
-                selfUserId={user.id}
-                listenOnly={view.village_muted}
+                gameStatus={view.game.status}
                 players={view.players}
+                parcheminGriotUsed={view.my_parchemin_griot_used}
+                ownsDernierSouffle={view.my_owns_dernier_souffle}
+                dernierSouffleUsed={view.my_dernier_souffle_used}
+                dernierSouffleStock={view.my_dernier_souffle_stock}
               />
-            )}
-          </div>
-        )}
+              {/* Pronostic des fantômes (migration 0221) : facultatif, replié ;
+                  disparaît tout seul quand il est impossible (bots, < 6 humains…). */}
+              {!isGuest && <GhostBetPanel gameId={gameId!} players={view.players} />}
+            </div>
+          )}
 
-        {view.game.status === 'day_discussion' && (
-          <div className={`flex animate-fade-in flex-col ${discussionFull ? 'min-h-0 flex-1' : 'gap-4'}`}>
-            {alive ? (
-              <DayDiscussion
+          {view.game.status === 'role_reveal' && (
+            <div className="flex animate-fade-in flex-col items-center gap-4 pt-6">
+              <p className="text-sm uppercase tracking-widest text-moon-200/40">{t('game.yourRole')}</p>
+              <RoleCard roleId={view.my_role} />
+              <WolfPackList view={view} myRole={view.my_role} />
+              <ReadyPanel view={view} gameId={gameId!} selfId={user.id} />
+            </div>
+          )}
+
+          {view.game.status === 'night' && alive && (
+            <div className="flex min-h-0 flex-1 animate-fade-in flex-col">
+              <NightScreen
                 view={view}
                 gameId={gameId!}
                 code={code!}
                 selfId={user.id}
                 me={me}
-                voiceChannel={voiceChannel}
-                vote={<CallVotePanel chip view={view} gameId={gameId!} selfId={user.id} me={me} isHost={isHost} />}
-                unreadAmoureux={unreadAmoureux}
+                isWolf={isWolfTeam(view.my_role)}
+                nightTab={nightTab}
+                setNightTab={setNightTab}
+                unreadWolves={unreadWolves}
+                unreadVillage={unreadVillage}
+                // Loups-Garous : panneau affiché pendant toute la fenêtre de vote plutôt que de basculer sur l'attente dès
+                // le premier vote — submit_wolf_vote accepte de changer la cible tant que tous les loups n'ont pas voté
+                // (upsert côté serveur, migration 0035). 'chasseuse_choice' exclu : déjà affiché par le bloc
+                // inconditionnel en haut de page (la Chasseuse reste vivante quand ce choix apparaît).
+                actionPanel={
+                  isWolfTeam(view.my_role) && view.game.night_step === 'loup_garou' ? (
+                    <WolfPanel view={view} gameId={gameId!} selfId={user.id} />
+                  ) : view.pending_action_required &&
+                    view.pending_action_required !== 'vote' &&
+                    view.pending_action_required !== 'chasseuse_choice' ? (
+                    <ActionPanel view={view} gameId={gameId!} selfId={user.id} />
+                  ) : null
+                }
+                // Résultat de l'action de cette nuit : indépendant de `pending_action_required`, qui bascule à null dès
+                // l'envoi — le joueur doit pouvoir le relire bien après.
+                resultPanel={<NightResultPanel view={view} />}
+                hasResult={hasNightResult(view)}
                 playersSheet={playersSheet}
                 roleSheet={
                   <div className="flex flex-col gap-3">
                     <RoleCard roleId={view.my_role} />
-                    <AnancySwapNotice swapped={view.anancy_swapped_me} />
+                    <WolfPackList view={view} myRole={view.my_role} />
                     <ChasseuseTargetPanel view={view} />
+                    <DaronProtectionPanel view={view} />
                   </div>
                 }
-                roleDot={view.anancy_swapped_me || view.my_chasseuse_target_assigned_this_round}
+                roleDot={view.my_chasseuse_target_assigned_this_round || view.my_protected_by_daron_this_round}
               />
-            ) : (
-              <>
-                <CollapsiblePlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
-                {isHost && <CallVotePanel view={view} gameId={gameId!} selfId={user.id} me={me} isHost={isHost} />}
-                <p className="text-center text-xs text-moon-200/50">{t('game.discussionHint')}</p>
-              </>
-            )}
-          </div>
-        )}
-
-        {view.game.status === 'day_vote' && (
-          <div className="flex animate-fade-in flex-col gap-4">
-            {/* 'hunter'/'captain_succession'/'balance_ange' : le vote vient
-                d'être dépouillé (avant même la fin du chrono si tout le
-                monde avait voté) et ce joueur précis a une action spéciale à
-                jouer — la grille de vote n'a alors plus lieu d'être,
-                ActionPanel prend le relais. Dans tous les autres cas (vote
-                pas encore dépouillé, qu'on ait déjà voté ou non), VotePanel
-                reste affiché — voir son bandeau "vote enregistré" une fois
-                qu'on a voté, plutôt que de basculer sur un écran d'attente
-                qui empêchait de changer d'avis. */}
-            {alive ? (
-              view.pending_action_required === 'hunter' ||
-              view.pending_action_required === 'captain_succession' ||
-              view.pending_action_required === 'balance_ange' ? (
-                <ActionPanel view={view} gameId={gameId!} selfId={user.id} />
-              ) : (
-                <VotePanel view={view} gameId={gameId!} selfId={user.id} />
-              )
-            ) : (
-              <CollapsiblePlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
-            )}
-            {alive && (
-              <DayTabs
-                dayTab={dayTab}
-                setDayTab={setDayTab}
-                voice={
-                  <VoiceChat
-                    gameId={gameId!}
-                    code={code!}
-                    channel={voiceChannel}
-                    displayName={me?.display_name ?? t('common.playerFallback')}
-                    selfUserId={user.id}
-                    listenOnly={view.village_muted}
-                    players={view.players}
-                  />
-                }
-                chat={
-                  <ChatPanel
-                    players={view.players}
-                    gameId={gameId!}
-                    channel="village"
-                    selfId={user.id}
-                    compact
-                    readOnly={view.village_muted}
-                    note={view.village_muted ? t('game.villageMutedNote') : undefined}
-                  />
-                }
-                grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} moodContext={moodContext} />}
-                loversChat={
-                  view.lover_id ? (
-                    <ChatPanel players={view.players} gameId={gameId!} channel="amoureux" selfId={user.id} compact />
-                  ) : undefined
-                }
-                unreadAmoureux={unreadAmoureux}
-                unreadVillage={unreadVillage}
-              />
-            )}
-            {alive && <RolePanel myRole={view.my_role} />}
-            {alive && <AnancySwapNotice swapped={view.anancy_swapped_me} />}
-            {alive && <ChasseuseTargetPanel view={view} />}
-          </div>
-        )}
-
-        {/* Pop-up plein écran (pas un bloc de page normal) : peu importe où
-            elle est déclarée dans le JSX, elle s'affiche par-dessus tout le
-            reste tant que le statut est 'day_vote_recap'. */}
-        {view.game.status === 'day_vote_recap' && <VoteRecapModal view={view} gameId={gameId!} selfId={user.id} />}
-
-        {isHost && (
-          // <Modal> (voir ui.tsx) plutôt qu'un overlay/carte refaits à la
-          // main ici : même comportement (Échap, clic sur le fond, croix
-          // h-8 w-8) que toutes les autres pop-ups de l'app, sans avoir à
-          // le maintenir en double.
-          <Modal open={modOpen} onClose={() => setModOpen(false)} title={t('moderation.title')}>
-            <ModerationPanel view={view} gameId={gameId!} selfId={user.id} />
-          </Modal>
-        )}
-
-        <Modal open={artifactsOpen} onClose={() => setArtifactsOpen(false)} title={t('artifacts.menuTitle')}>
-          <ArtifactsMenu view={view} gameId={gameId!} />
-        </Modal>
-
-        {showDeathImpact && (
-          <DeathImpactModal
-            myRole={view.my_role}
-            impact={view.my_impact_preview}
-            onClose={() => setShowDeathImpact(false)}
-          />
-        )}
-
-        {view.game.status === 'ended' && (
-          <EndScreen
-            view={view}
-            isHost={isHost}
-            selfId={user.id}
-            gameId={gameId!}
-            code={code!}
-            displayName={me?.display_name ?? t('common.playerFallback')}
-            onRestart={handleRestart}
-            restarting={restarting}
-            restartError={restartError}
-            onLeave={requestLeave}
-          />
-        )}
-
-        {/* Débat et nuit en plein écran : le journal est déjà dans le fil du chat (jour) ou sans objet (nuit). */}
-        {!fullScreen && (
-        <Card className="!p-0 border-night-700/60 bg-night-900/40">
-          <button
-            type="button"
-            onClick={() => setLogOpen((v) => !v)}
-            className="flex w-full items-center justify-between px-4 py-3 text-left"
-          >
-            <span className="text-xs uppercase tracking-widest text-moon-200/40">
-              {t('game.logTitle')}{view.log.length > 0 ? ` (${view.log.length})` : ''}
-            </span>
-            <span className="text-xs text-moon-200/40">{logOpen ? t('common.hide') : t('common.show')}</span>
-          </button>
-          {logOpen && (
-            <div className="px-4 pb-4">
-              <LogList entries={view.log} compact />
             </div>
           )}
-        </Card>
-        )}
+
+          {/* Pop-up plein écran, même patron que day_vote_recap plus bas :
+              reste affichée par-dessus le reste tant que la nuit vient d'être
+              résolue (statut 'day_reveal'), 30s par défaut ou moins si tous
+              les vivants cliquent "Continuer" (voir migration 0041). */}
+          {view.game.status === 'day_reveal' && <NightRecapModal view={view} gameId={gameId!} selfId={user.id} />}
+
+          {view.game.status === 'captain_election' && (
+            <div className="flex animate-fade-in flex-col gap-4">
+              {/* La grille reste affichée après le premier vote (voir
+                  CaptainVotePanel — submit_captain_vote fait un upsert côté
+                  serveur) plutôt que de basculer sur un écran d'attente
+                  générique : ça laisse le temps de changer d'avis avant la
+                  fin du chrono, avec un bandeau bien visible confirmant que
+                  le vote est enregistré. */}
+              {alive ? (
+                <CaptainVotePanel view={view} gameId={gameId!} selfId={user.id} />
+              ) : (
+                <CollapsiblePlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
+              )}
+              {/* Vocal ouvert pendant l'élection (voir migration 0066) pour que
+                  le village puisse discuter à voix haute avant de voter — le
+                  texte écrit, lui, reste fermé pendant cette phase courte. */}
+              {alive && (
+                <VoiceChat
+                  gameId={gameId!}
+                  code={code!}
+                  channel={voiceChannel}
+                  displayName={me?.display_name ?? t('common.playerFallback')}
+                  selfUserId={user.id}
+                  listenOnly={view.village_muted}
+                  players={view.players}
+                />
+              )}
+            </div>
+          )}
+
+          {view.game.status === 'day_discussion' && (
+            <div className={`flex animate-fade-in flex-col ${discussionFull ? 'min-h-0 flex-1' : 'gap-4'}`}>
+              {alive ? (
+                <DayDiscussion
+                  view={view}
+                  gameId={gameId!}
+                  code={code!}
+                  selfId={user.id}
+                  me={me}
+                  voiceChannel={voiceChannel}
+                  vote={<CallVotePanel chip view={view} gameId={gameId!} selfId={user.id} me={me} isHost={isHost} />}
+                  unreadAmoureux={unreadAmoureux}
+                  playersSheet={playersSheet}
+                  roleSheet={
+                    <div className="flex flex-col gap-3">
+                      <RoleCard roleId={view.my_role} />
+                      <AnancySwapNotice swapped={view.anancy_swapped_me} />
+                      <ChasseuseTargetPanel view={view} />
+                    </div>
+                  }
+                  roleDot={view.anancy_swapped_me || view.my_chasseuse_target_assigned_this_round}
+                />
+              ) : (
+                <>
+                  <CollapsiblePlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
+                  {isHost && <CallVotePanel view={view} gameId={gameId!} selfId={user.id} me={me} isHost={isHost} />}
+                  <p className="text-center text-xs text-moon-200/50">{t('game.discussionHint')}</p>
+                </>
+              )}
+            </div>
+          )}
+
+          {view.game.status === 'day_vote' && (
+            <div className="flex animate-fade-in flex-col gap-4">
+              {/* 'hunter'/'captain_succession'/'balance_ange' : le vote vient
+                  d'être dépouillé (avant même la fin du chrono si tout le
+                  monde avait voté) et ce joueur précis a une action spéciale à
+                  jouer — la grille de vote n'a alors plus lieu d'être,
+                  ActionPanel prend le relais. Dans tous les autres cas (vote
+                  pas encore dépouillé, qu'on ait déjà voté ou non), VotePanel
+                  reste affiché — voir son bandeau "vote enregistré" une fois
+                  qu'on a voté, plutôt que de basculer sur un écran d'attente
+                  qui empêchait de changer d'avis. */}
+              {alive ? (
+                view.pending_action_required === 'hunter' ||
+                view.pending_action_required === 'captain_succession' ||
+                view.pending_action_required === 'balance_ange' ? (
+                  <ActionPanel view={view} gameId={gameId!} selfId={user.id} />
+                ) : (
+                  <VotePanel view={view} gameId={gameId!} selfId={user.id} />
+                )
+              ) : (
+                <CollapsiblePlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
+              )}
+              {alive && (
+                <DayTabs
+                  dayTab={dayTab}
+                  setDayTab={setDayTab}
+                  voice={
+                    <VoiceChat
+                      gameId={gameId!}
+                      code={code!}
+                      channel={voiceChannel}
+                      displayName={me?.display_name ?? t('common.playerFallback')}
+                      selfUserId={user.id}
+                      listenOnly={view.village_muted}
+                      players={view.players}
+                    />
+                  }
+                  chat={
+                    <ChatPanel
+                      players={view.players}
+                      gameId={gameId!}
+                      channel="village"
+                      selfId={user.id}
+                      compact
+                      readOnly={view.village_muted}
+                      note={view.village_muted ? t('game.villageMutedNote') : undefined}
+                    />
+                  }
+                  grid={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} moodContext={moodContext} />}
+                  loversChat={
+                    view.lover_id ? (
+                      <ChatPanel players={view.players} gameId={gameId!} channel="amoureux" selfId={user.id} compact />
+                    ) : undefined
+                  }
+                  unreadAmoureux={unreadAmoureux}
+                  unreadVillage={unreadVillage}
+                />
+              )}
+              {alive && <RolePanel myRole={view.my_role} />}
+              {alive && <AnancySwapNotice swapped={view.anancy_swapped_me} />}
+              {alive && <ChasseuseTargetPanel view={view} />}
+            </div>
+          )}
+
+          {/* Pop-up plein écran (pas un bloc de page normal) : peu importe où
+              elle est déclarée dans le JSX, elle s'affiche par-dessus tout le
+              reste tant que le statut est 'day_vote_recap'. */}
+          {view.game.status === 'day_vote_recap' && <VoteRecapModal view={view} gameId={gameId!} selfId={user.id} />}
+
+          {isHost && (
+            // <Modal> (voir ui.tsx) plutôt qu'un overlay/carte refaits à la
+            // main ici : même comportement (Échap, clic sur le fond, croix
+            // h-8 w-8) que toutes les autres pop-ups de l'app, sans avoir à
+            // le maintenir en double.
+            <Modal open={modOpen} onClose={() => setModOpen(false)} title={t('moderation.title')}>
+              <ModerationPanel view={view} gameId={gameId!} selfId={user.id} />
+            </Modal>
+          )}
+
+          <Modal open={artifactsOpen} onClose={() => setArtifactsOpen(false)} title={t('artifacts.menuTitle')}>
+            <ArtifactsMenu view={view} gameId={gameId!} />
+          </Modal>
+
+          {showDeathImpact && (
+            <DeathImpactModal
+              myRole={view.my_role}
+              impact={view.my_impact_preview}
+              onClose={() => setShowDeathImpact(false)}
+            />
+          )}
+
+          {view.game.status === 'ended' && (
+            <EndScreen
+              view={view}
+              isHost={isHost}
+              selfId={user.id}
+              gameId={gameId!}
+              code={code!}
+              displayName={me?.display_name ?? t('common.playerFallback')}
+              onRestart={handleRestart}
+              restarting={restarting}
+              restartError={restartError}
+              onLeave={requestLeave}
+            />
+          )}
+
+          {/* Débat et nuit en plein écran : le journal est déjà dans le fil du chat (jour) ou sans objet (nuit). */}
+          {!fullScreen && (
+          <Card className="!p-0 border-night-700/60 bg-night-900/40">
+            <button
+              type="button"
+              onClick={() => setLogOpen((v) => !v)}
+              className="flex w-full items-center justify-between px-4 py-3 text-left"
+            >
+              <span className="text-xs uppercase tracking-widest text-moon-200/40">
+                {t('game.logTitle')}{view.log.length > 0 ? ` (${view.log.length})` : ''}
+              </span>
+              <span className="text-xs text-moon-200/40">{logOpen ? t('common.hide') : t('common.show')}</span>
+            </button>
+            {logOpen && (
+              <div className="px-4 pb-4">
+                <LogList entries={view.log} compact />
+              </div>
+            )}
+          </Card>
+          )}
+        </div>
+
+        <ConfirmDialog
+          open={confirmLeaveOpen}
+          title={t('game.leaveConfirmTitle')}
+          message={
+            view.game.status === 'ended'
+              ? t('game.leaveConfirmMessageEnded')
+              : alive
+                ? t('game.leaveConfirmMessageActive')
+                : t('game.leaveConfirmMessageGhost')
+          }
+          confirmLabel={t('common.leave')}
+          danger
+          onCancel={() => setConfirmLeaveOpen(false)}
+          onConfirm={handleLeave}
+        />
+
+        <ConfirmDialog
+          open={cannotLeaveOpen}
+          title={t('game.cannotLeaveTitle')}
+          message={t('game.cannotLeaveMessage')}
+          confirmLabel={t('game.cannotLeaveOk')}
+          hideCancel
+          onCancel={() => setCannotLeaveOpen(false)}
+          onConfirm={() => setCannotLeaveOpen(false)}
+        />
       </div>
-
-      <ConfirmDialog
-        open={confirmLeaveOpen}
-        title={t('game.leaveConfirmTitle')}
-        message={
-          view.game.status === 'ended'
-            ? t('game.leaveConfirmMessageEnded')
-            : alive
-              ? t('game.leaveConfirmMessageActive')
-              : t('game.leaveConfirmMessageGhost')
-        }
-        confirmLabel={t('common.leave')}
-        danger
-        onCancel={() => setConfirmLeaveOpen(false)}
-        onConfirm={handleLeave}
-      />
-
-      <ConfirmDialog
-        open={cannotLeaveOpen}
-        title={t('game.cannotLeaveTitle')}
-        message={t('game.cannotLeaveMessage')}
-        confirmLabel={t('game.cannotLeaveOk')}
-        hideCancel
-        onCancel={() => setCannotLeaveOpen(false)}
-        onConfirm={() => setCannotLeaveOpen(false)}
-      />
-    </div>
+    </GuestIdsProvider>
   )
 }
 
@@ -1655,7 +1660,7 @@ export function EndScreen({
   onLeave: () => void
 }) {
   const { t } = useLanguage()
-  const { profile } = useAuth()
+  const { profile, isGuest } = useAuth()
   const winner = view.game.winner_team
 
   // Salon fermé par l'hôte avant le lancement (voir close_lobby, migration
@@ -1787,8 +1792,9 @@ export function EndScreen({
   useEffect(() => {
     if (questSyncedRef.current) return
     questSyncedRef.current = true
-    supabase.rpc('sync_daily_quests_for_game', { p_game_id: gameId })
-  }, [gameId])
+    // Un invité n'a pas de quêtes (le serveur refuse l'appel).
+    if (!isGuest) supabase.rpc('sync_daily_quests_for_game', { p_game_id: gameId })
+  }, [gameId, isGuest])
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-4 text-center">
@@ -1802,7 +1808,7 @@ export function EndScreen({
       )}
 
       <EndHero
-        won={myResult ? myResult.won : null}
+        won={myResult ? myResult.won : (view.my_guest_result?.won ?? null)}
         title={title}
         explanation={explanation}
         myRole={view.my_role}
@@ -1811,19 +1817,21 @@ export function EndScreen({
 
       {/* Mon rang et la progression vers le prochain palier (voir my_game_result, migration 0073) — jamais affichés avant
           la fin de la partie. Le total suit le profil, qui monte si le coffre ci-dessous rapporte des points. */}
-      {myResult && <EndRankCard points={Math.max(myResult.new_rank_points, profile?.rank_points ?? 0)} previousPoints={myPreviousPoints} />}
+      {isGuest && <GuestEndTeaser pointsPreview={view.my_guest_result ? view.my_guest_result.points_preview : null} />}
 
-      {myResult && (
+      {!isGuest && myResult && <EndRankCard points={Math.max(myResult.new_rank_points, profile?.rank_points ?? 0)} previousPoints={myPreviousPoints} />}
+
+      {!isGuest && myResult && (
         <RecapFold title="game.endFoldPoints">
           <EndPoints result={myResult} />
         </RecapFold>
       )}
 
-      <GhostBetResult gameId={gameId} enabled={!view.my_alive} players={view.players} />
+      {!isGuest && <GhostBetResult gameId={gameId} enabled={!view.my_alive} players={view.players} />}
 
       {/* Coffre de fin de partie (voir RewardChest.tsx) : bonus de points aléatoire, indépendant du résultat — affiché
           même en cas de défaite. */}
-      <RewardChest gameId={gameId} />
+      {!isGuest && <RewardChest gameId={gameId} />}
 
       <RecapFold title="game.endFoldRoles" open>
         <EndRoles reveal={view.final_reveal ?? []} players={view.players} selfId={selfId} isWinner={isWinningEntry} />

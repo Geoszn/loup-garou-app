@@ -10,6 +10,8 @@ export interface VoiceRoom {
   // `?t=...`, seule la propriété `token` de join() est documentée comme
   // garantie pour un call object (voir historique de ce fichier).
   token: string | null
+  // Invité : secondes de vocal accordées pour cette session (voir api/daily-room.ts) ; null pour un compte normal (sans limite).
+  guestSeconds: number | null
 }
 
 export async function getVoiceRoomUrl(
@@ -31,5 +33,9 @@ export async function getVoiceRoomUrl(
   if (!res.ok) {
     throw new Error(data.error || 'Impossible de rejoindre le salon vocal.')
   }
-  return { url: data.url as string, token: (data.token as string | null) ?? null }
+  return {
+    url: data.url as string,
+    token: (data.token as string | null) ?? null,
+    guestSeconds: typeof data.guestSeconds === 'number' ? data.guestSeconds : null,
+  }
 }

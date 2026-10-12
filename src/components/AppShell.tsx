@@ -15,7 +15,7 @@ import { reloadStoreUnseen, useStoreUnseen } from '../hooks/useStoreUnseen'
  * non lus, invitations, demandes) et l'indicateur « récompense à récupérer ». Les pages gardent leur
  * propre mise en page ; l'espace du bas leur est réservé ici. `compact` : même barre autour d'un écran de jeu. */
 export function AppShell({ compact = false }: { compact?: boolean }) {
-  const { user } = useAuth()
+  const { user, isGuest } = useAuth()
   const location = useLocation()
   const [pendingFriends, setPendingFriends] = useState(0)
   const { claimableCount, reload: reloadQuests } = useMyQuests()
@@ -25,7 +25,7 @@ export function AppShell({ compact = false }: { compact?: boolean }) {
   // Point rouge « nouveauté » de la boutique : relu à chaque changement de page, au retour sur l'appli et toutes les 90 s.
   const storeUnseen = useStoreUnseen()
   useEffect(() => {
-    if (!user) return
+    if (!user || isGuest) return
     void reloadStoreUnseen()
     const id = window.setInterval(() => void reloadStoreUnseen(), 90000)
     const onVisible = () => document.visibilityState === 'visible' && void reloadStoreUnseen()
@@ -34,10 +34,10 @@ export function AppShell({ compact = false }: { compact?: boolean }) {
       window.clearInterval(id)
       document.removeEventListener('visibilitychange', onVisible)
     }
-  }, [user, location.pathname])
+  }, [user, isGuest, location.pathname])
 
   useEffect(() => {
-    if (!user) return
+    if (!user || isGuest) return
     let active = true
     // `force` : relecture réelle quand une demande d'ami arrive (évènement
     // Realtime) ; au montage on partage la requête de l'accueil (rpcCache.ts).
@@ -57,7 +57,7 @@ export function AppShell({ compact = false }: { compact?: boolean }) {
       active = false
       supabase.removeChannel(channel)
     }
-  }, [user])
+  }, [user, isGuest])
 
   // Une récompense peut avoir été récupérée sur une autre page : on relit à chaque changement de page.
   useEffect(() => {
@@ -81,7 +81,7 @@ export function AppShell({ compact = false }: { compact?: boolean }) {
           <div aria-hidden="true" className="h-24" />
         </>
       )}
-      <BottomNav alertCount={pendingFriends + tribeAlertCount(tribeSummary)} claimable={claimableCount > 0} storeNew={storeUnseen > 0} />
+      <BottomNav alertCount={pendingFriends + tribeAlertCount(tribeSummary)} claimable={claimableCount > 0} storeNew={storeUnseen > 0} guest={isGuest} />
     </>
   )
 }

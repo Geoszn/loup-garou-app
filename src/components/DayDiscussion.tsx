@@ -5,6 +5,7 @@ import type { VoiceChannel } from '../hooks/useVoiceChat'
 import type { MyGameView, PublicPlayer } from '../types/game'
 import { Avatar } from './Avatar'
 import { BottomSheet } from './BottomSheet'
+import { GuestVoiceCard } from './GuestWall'
 import { ChatPanel } from './ChatPanel'
 
 // Écran de débat (jour), plein écran : le chat n'a plus de cadre, il occupe tout l'espace sous la barre de phase
@@ -255,6 +256,7 @@ export function VoiceSheet({ session, players, selfId, listenOnly, status }: { s
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-moon-200/70">{status || t('voiceChat.idle')}</p>
+      <GuestVoiceCard endsAt={session.guestEndsAt} over={session.guestVoiceOver} />
       <div className="flex flex-wrap gap-2">
         {!session.joined ? (
           <button type="button" onClick={() => session.setJoined(true)} className="rounded-full bg-gradient-to-b from-moon-400 to-[#c98a1a] px-4 py-2 text-sm font-semibold text-night-950 active:scale-95">

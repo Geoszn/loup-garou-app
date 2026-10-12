@@ -6,6 +6,7 @@ import { notifyJoinRequest } from '../lib/pushSubscription'
 import { Button, ErrorText, Input, Label, Modal } from '../components/ui'
 import { PublicGamesList } from '../components/PublicGamesBrowser'
 import { GameInProgressChoice } from '../components/GameInProgressChoice'
+import { GuestWallBody } from '../components/GuestWall'
 import { HowToPlayButton } from '../components/HowToPlayButton'
 import { useLanguage } from '../i18n/LanguageContext'
 
@@ -17,7 +18,7 @@ const card =
 /** Page « Jouer » : les deux façons de lancer une partie — créer ou rejoindre —
  * avec, pour chacune, ce qui se passe ensuite. */
 export default function Play() {
-  const { profile } = useAuth()
+  const { profile, isGuest } = useAuth()
   const navigate = useNavigate()
   const { t } = useLanguage()
   const displayName = profile?.username ?? t('common.playerFallback')
@@ -30,6 +31,8 @@ export default function Play() {
   }, [])
 
   const [createOpen, setCreateOpen] = useState(false)
+  // Un invité ne peut pas créer de partie (il peut seulement en rejoindre) : cette carte lui montre le mur « compte requis ».
+  const [wallOpen, setWallOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
 
@@ -143,7 +146,7 @@ export default function Play() {
           <div className="rounded-xl border border-blood-700/40 bg-blood-700/10 px-4 py-2.5 text-sm text-moon-200/90">{t('play.paused')}</div>
         )}
 
-        <button type="button" className={card} onClick={() => setCreateOpen(true)}>
+        <button type="button" className={card} onClick={() => (isGuest ? setWallOpen(true) : setCreateOpen(true))}>
           <span className="flex items-center gap-3">
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-moon-400/30 bg-moon-400/10 text-moon-300">
               <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
@@ -152,6 +155,7 @@ export default function Play() {
               </svg>
             </span>
             <span className="font-display text-xl text-moon-200">{t('dashboard.createGame')}</span>
+            {isGuest && <span className="ml-auto text-lg" aria-label={t('guest.nav.locked')}>🔒</span>}
           </span>
           <span className="text-sm leading-relaxed text-moon-200/75">{t('play.create.text')}</span>
           <ul className="flex flex-col gap-1 text-xs text-moon-200/55">
@@ -200,6 +204,10 @@ export default function Play() {
           ))}
         </div>
       </div>
+
+      <Modal open={wallOpen} onClose={() => setWallOpen(false)} title={`🔒 ${t('guest.wall.create')}`}>
+        <GuestWallBody feature="create" hideTitle />
+      </Modal>
 
       <Modal open={createOpen} onClose={() => !creating && setCreateOpen(false)} title={`🌕 ${t('dashboard.create.title')}`}>
         <div className="flex flex-col gap-3">

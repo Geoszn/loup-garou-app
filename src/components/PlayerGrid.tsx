@@ -3,6 +3,7 @@ import { roleLabel } from '../lib/roles'
 import { tierGroup } from '../lib/ranks'
 import type { PublicPlayer } from '../types/game'
 import { FriendRequestPopover } from './FriendRequestPopover'
+import { GuestBadge, useGuestIds } from '../lib/guestContext'
 import { Avatar } from './Avatar'
 import { hadDeathsThisNight, playerMood } from '../lib/avatarMood'
 import type { GameStatus } from '../types/game'
@@ -92,6 +93,7 @@ export const PlayerGrid = memo(function PlayerGrid({
   // (selectable), pour ne jamais gêner le choix d'une cible pendant un vote.
   // Un seul avatar ouvert à la fois ; un clic n'importe où ailleurs le ferme.
   const [openId, setOpenId] = useState<string | null>(null)
+  const guestIds = useGuestIds()
   // Position de l'avatar ouvert : le popover est posé en `fixed` à partir de là, sinon il serait coupé par le tiroir ou la
   // fenêtre qui contient la grille (défilement interne).
   const [openAnchor, setOpenAnchor] = useState<DOMRect | null>(null)
@@ -186,6 +188,7 @@ export const PlayerGrid = memo(function PlayerGrid({
                   'plume_anancy', migration 0151) : reprend le nom de
                   l'artefact tel qu'édité côté admin, jamais un libellé fixé
                   ici — si l'admin le renomme, ce titre suit automatiquement. */}
+              {guestIds.has(p.user_id) && <GuestBadge label={t('guest.badge')} />}
               {(p.plume_title_fr || p.plume_title_en) && (
                 <span className={`-mt-0.5 truncate italic text-purple-300/70 ${compact ? 'text-[8px]' : 'text-[9px]'}`}>
                   {(lang === 'en' ? p.plume_title_en : p.plume_title_fr) ?? p.plume_title_fr}

@@ -18,7 +18,7 @@ export interface Quest {
 
 /** Quêtes du jour du joueur (get_my_quests) et récupération d'une récompense. */
 export function useMyQuests() {
-  const { user, refreshProfile } = useAuth()
+  const { user, isGuest, refreshProfile } = useAuth()
   const [quests, setQuests] = useState<Quest[] | null>(null)
   const [claiming, setClaiming] = useState<string | null>(null)
 
@@ -26,13 +26,15 @@ export function useMyQuests() {
   // bas et l'accueil la demandaient chacune au même instant — voir rpcCache.ts) ;
   // après une réclamation on relit pour de bon.
   const reload = useCallback(async (force = false) => {
+    // Un invité n'a ni quêtes ni récompenses (le serveur refuse l'appel) : on ne le demande même pas.
+    if (isGuest) return
     // Première lecture sur l'accueil : section du groupé (homeBootstrap.ts) ;
     // relecture forcée (après une réclamation) : appel direct.
     const data = force
       ? (await cachedRpc<Quest[]>('get_my_quests', undefined, { force: true })).data
       : await homeSection<Quest[]>('quests', async () => (await cachedRpc<Quest[]>('get_my_quests')).data)
     if (data) setQuests(data)
-  }, [])
+  }, [isGuest])
 
   useEffect(() => {
     if (user) void reload()

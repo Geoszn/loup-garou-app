@@ -14,6 +14,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
     const redirect = encodeURIComponent(location.pathname + location.search)
     return <Navigate to={`/connexion?redirect=${redirect}`} replace />
   }
-  if (!session.user.email_confirmed_at) return <Navigate to="/verifier-email" replace />
+  // Un invité (connexion anonyme) n'a pas d'e-mail à confirmer : il passe.
+  if (!session.user.email_confirmed_at && !session.user.is_anonymous) return <Navigate to="/verifier-email" replace />
   return <>{children}</>
 }

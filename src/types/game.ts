@@ -516,6 +516,9 @@ export interface MyGameView {
   my_dernier_souffle_stock: number
   // L'Œil du Baobab (migration 0246) : charges en réserve, et résultat privé s'il a déjà été utilisé dans cette partie.
   my_oeil_baobab_stock: number
+  // Invités (migration 0250) : qui est invité dans cette partie, et ce que j'aurais gagné avec un compte (null si je ne suis pas invité).
+  guest_user_ids: string[]
+  my_guest_result: { won: boolean; points_preview: number } | null
   my_oeil_baobab_result: { targets: string[]; has_wolf: boolean } | null
   // Boussole du Village (artefact du Loup Store, effect_key =
   // 'boussole_village', migration 0152) : historique complet des votes de

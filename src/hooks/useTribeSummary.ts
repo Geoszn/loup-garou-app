@@ -16,7 +16,7 @@ export function notifyTribeSummaryChanged() {
 }
 
 export function useTribeSummary(enabled = true, pollMs = 0) {
-  const { user } = useAuth()
+  const { user, isGuest } = useAuth()
   const [summary, setSummary] = useState<TribeSummary | null>(null)
   const [loaded, setLoaded] = useState(false)
 
@@ -30,7 +30,7 @@ export function useTribeSummary(enabled = true, pollMs = 0) {
   const refresh = useCallback(() => fetchSummary(true), [fetchSummary])
 
   useEffect(() => {
-    if (!user || !enabled) return
+    if (!user || !enabled || isGuest) return
     void fetchSummary(false)
     const onChanged = () => void fetchSummary(true)
     const onVisible = () => {
@@ -44,7 +44,7 @@ export function useTribeSummary(enabled = true, pollMs = 0) {
       document.removeEventListener('visibilitychange', onVisible)
       if (timer) clearInterval(timer)
     }
-  }, [user, enabled, pollMs, fetchSummary])
+  }, [user, enabled, isGuest, pollMs, fetchSummary])
 
   return { summary, loaded, refresh }
 }

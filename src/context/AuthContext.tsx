@@ -41,6 +41,11 @@ interface AuthContextValue {
   user: User | null
   profile: Profile | null
   loading: boolean
+  /** Invité : compte temporaire (connexion anonyme), sans e-mail — voir migration 0250. Peut rejoindre et jouer, mais ni boutique,
+   * ni progression, ni amis, ni tribus, ni création de partie. */
+  isGuest: boolean
+  /** Ouvre une session d'invité avec ce pseudo (16 caractères au plus). Renvoie un message d'erreur, ou null si tout va bien. */
+  signInAsGuest: (username: string, lang: 'fr' | 'en') => Promise<string | null>
   refreshProfile: () => Promise<void>
   signOut: () => Promise<void>
 }
@@ -116,9 +121,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
   }
 
+  async function signInAsGuest(username: string, lang: 'fr' | 'en'): Promise<string | null> {
+    const clean = username.replace(/[\u0000-\u001f]/g, '').trim().slice(0, 16)
+    if (clean.length < 2) return lang === 'en' ? 'Choose a nickname (2 characters at least).' : 'Choisis un pseudo (2 caractères au moins).'
+    // Déjà une session (compte ou invité) : on la garde, rien à créer.
+    if (session) return null
+    const { error } = await supabase.auth.signInAnonymously({ options: { data: { username: clean, lang } } })
+    return error ? error.message : null
+  }
+
   return (
     <AuthContext.Provider
-      value={{ session, user: session?.user ?? null, profile, loading, refreshProfile, signOut }}
+      value={{ session, user: session?.user ?? null, profile, loading, isGuest: !!session?.user?.is_anonymous, signInAsGuest, refreshProfile, signOut }}
     >
       {children}
     </AuthContext.Provider>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useVoiceChat, type VoiceChannel } from '../hooks/useVoiceChat'
 import { useVoiceOptIn } from '../hooks/useVoiceOptIn'
 import { useIdleWhenHidden } from '../hooks/useIdleWhenHidden'
@@ -56,7 +56,13 @@ export function useVoiceSession({
     deafened,
     toggleSound,
     forcedMuteNotice,
+    guestEndsAt,
+    guestVoiceOver,
   } = useVoiceChat(gameId, code, connectChannel, displayName, selfUserId, listenOnly)
+  // Quota des invités épuisé : le vocal est quitté (le texte reste ouvert) ; le bouton redevient « rejoindre » et le serveur refuse.
+  useEffect(() => {
+    if (guestVoiceOver) setJoined(false)
+  }, [guestVoiceOver, setJoined])
   return {
     channel,
     joined,
@@ -77,6 +83,8 @@ export function useVoiceSession({
     deafened,
     toggleSound,
     forcedMuteNotice,
+    guestEndsAt,
+    guestVoiceOver,
   }
 }
 

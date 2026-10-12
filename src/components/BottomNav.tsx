@@ -56,8 +56,9 @@ function useKeyboardOpen(): boolean {
 
 /** Barre de navigation fixe, dans la zone du pouce : Accueil, Récompenses,
  * Jouer (bouton central), Tribu (les amis y sont un onglet secondaire), Profil. Chaque entrée est une page à part
- * entière. `storeNew` : un nouvel article est en vente dans la boutique (point rouge sur Récompenses). */
-export function BottomNav({ alertCount = 0, claimable = false, storeNew = false }: { alertCount?: number; claimable?: boolean; storeNew?: boolean }) {
+ * entière. `storeNew` : un nouvel article est en vente dans la boutique (point rouge sur Récompenses). `guest` : invité (compte
+ * temporaire) — Récompenses, Tribu et Profil sont verrouillés (🔒) et mènent à l'écran « compte requis ». */
+export function BottomNav({ alertCount = 0, claimable = false, storeNew = false, guest = false }: { alertCount?: number; claimable?: boolean; storeNew?: boolean; guest?: boolean }) {
   const { t } = useLanguage()
   const { profile } = useAuth()
   const myAvatar = useMyAvatarConfig()
@@ -105,6 +106,9 @@ export function BottomNav({ alertCount = 0, claimable = false, storeNew = false 
   }
 
   const cls = ({ isActive }: { isActive: boolean }) => `${itemBase} ${isActive ? 'text-moon-300' : 'text-moon-200/50 hover:text-moon-200'}`
+  // Entrée réservée aux comptes : atténuée et marquée d'un cadenas pour un invité.
+  const lockedCls = ({ isActive }: { isActive: boolean }) => (guest ? `${itemBase} ${isActive ? 'text-moon-300' : 'text-moon-200/30 hover:text-moon-200/60'}` : cls({ isActive }))
+  const lock = guest ? <span className="absolute right-[24%] top-0.5 text-[9px]" aria-label={t('guest.nav.locked')}>🔒</span> : null
 
   if (keyboardOpen) return null
 
@@ -125,14 +129,14 @@ export function BottomNav({ alertCount = 0, claimable = false, storeNew = false 
           {t('nav.home')}
         </NavLink>
 
-        <NavLink to="/recompenses" className={cls} onClick={guard('/recompenses')}>
+        <NavLink to="/recompenses" className={lockedCls} onClick={guard('/recompenses')}>
           <Icon>
             <rect x="4" y="9" width="16" height="11" rx="1.5" />
             <path d="M12 9v11M3 9h18M12 9c-2.5 0-4.5-1-4.5-2.8S9.5 4 12 9c2.5-5 4.5-3.8 4.5-2.8S14.5 9 12 9z" />
           </Icon>
           {t('nav.rewards')}
           {/* Point rouge : une récompense à récupérer, ou un nouvel article dans la boutique. */}
-          {(claimable || storeNew) && <span className="absolute right-[26%] top-1 h-2 w-2 rounded-full bg-blood-400" />}
+          {guest ? lock : (claimable || storeNew) && <span className="absolute right-[26%] top-1 h-2 w-2 rounded-full bg-blood-400" />}
         </NavLink>
 
         <div className="flex flex-1 justify-center">
@@ -173,18 +177,19 @@ export function BottomNav({ alertCount = 0, claimable = false, storeNew = false 
           )}
         </div>
 
-        <NavLink to="/tribu" className={cls} onClick={guard('/tribu')}>
+        <NavLink to="/tribu" className={lockedCls} onClick={guard('/tribu')}>
           <Icon>
             <path d="M12 3l7 2.5v6c0 4.5-3 7.6-7 9.5-4-1.9-7-5-7-9.5v-6z" />
             <path d="M12 8.5l1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.3-2.4 1.3.5-2.6-1.9-1.8 2.6-.4z" />
           </Icon>
           {t('nav.tribe')}
-          <Badge count={alertCount} />
+          {guest ? lock : <Badge count={alertCount} />}
         </NavLink>
 
-        <NavLink to="/profil" className={cls} onClick={guard('/profil')}>
+        <NavLink to="/profil" className={lockedCls} onClick={guard('/profil')}>
           <Avatar config={myAvatar.config} icon={profile?.avatar_icon} name={profile?.username} className="h-6 w-6 ring-1 ring-night-600" />
           {t('nav.profile')}
+          {lock}
         </NavLink>
       </div>
     </nav>

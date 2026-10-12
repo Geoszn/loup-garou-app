@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { LinkButton } from '../components/ui'
+import { Button, LinkButton } from '../components/ui'
+import { GuestJoinSheet } from '../components/GuestJoin'
 import { LeaderboardWidget } from '../components/LeaderboardWidget'
 import { EventBanner } from '../components/EventBanner'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
@@ -16,6 +18,7 @@ export default function Landing() {
   // besoin de recharger la page pour voir apparaître/disparaître un
   // événement.
   const { events, refresh } = useActiveEvents()
+  const [guestOpen, setGuestOpen] = useState(false)
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -79,14 +82,30 @@ export default function Landing() {
           {t('landing.hero.title1')} <span className="text-blood-500">{t('landing.hero.title2')}</span>
         </h1>
         <p className="mt-6 max-w-2xl text-balance text-lg text-moon-200/70">{t('landing.hero.tagline')}</p>
-        <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-          <LinkButton to={session ? '/dashboard' : '/inscription'} className="px-8 py-4 text-base">
-            {t('landing.cta.start')}
-          </LinkButton>
-          <LinkButton to={session ? '/dashboard' : '/connexion'} variant="ghost" className="px-8 py-4 text-base">
-            {t('landing.cta.joinWithCode')}
-          </LinkButton>
-        </div>
+        {session ? (
+          <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+            <LinkButton to="/dashboard" className="px-8 py-4 text-base">
+              {t('landing.cta.start')}
+            </LinkButton>
+            <LinkButton to="/dashboard" variant="ghost" className="px-8 py-4 text-base">
+              {t('landing.cta.joinWithCode')}
+            </LinkButton>
+          </div>
+        ) : (
+          <>
+            <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+              {/* Jouer en invité : un pseudo suffit, ni e-mail ni mot de passe (compte temporaire, voir GuestJoin.tsx). */}
+              <Button onClick={() => setGuestOpen(true)} className="px-8 py-4 text-base">
+                {t('guest.playAsGuest')}
+              </Button>
+              <LinkButton to="/inscription" variant="ghost" className="px-8 py-4 text-base">
+                {t('guest.createAccountFree')}
+              </LinkButton>
+            </div>
+            <p className="mt-3 max-w-sm text-xs text-moon-200/45">{t('guest.noEmailNote')}</p>
+            <GuestJoinSheet open={guestOpen} onClose={() => setGuestOpen(false)} />
+          </>
+        )}
 
         <div className="mt-20 grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
           <FeatureCard emoji="🎭" title={t('landing.feature.roles.title')} text={t('landing.feature.roles.text')} />

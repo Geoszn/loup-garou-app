@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useGame } from '../hooks/useGame'
+import { GuestIdsProvider } from '../lib/guestContext'
+import { GuestBanner } from '../components/GuestWall'
 import { useNotificationSound } from '../hooks/useNotificationSound'
 import { supabase } from '../lib/supabase'
 import { notifyGameInvite, notifyGameStarted, notifyTribeMessage, isStandaloneDisplay } from '../lib/pushSubscription'
@@ -156,7 +158,7 @@ function formatDuration(totalSeconds: number): string {
 
 export default function Lobby() {
   const { code } = useParams()
-  const { user, profile } = useAuth()
+  const { user, profile, isGuest } = useAuth()
   const navigate = useNavigate()
   const { t } = useLanguage()
   const [gameId, setGameId] = useState<string | null>(null)
@@ -228,10 +230,12 @@ export default function Lobby() {
   const showHomeScreenHint = !isStandaloneDisplay() && !homeScreenHintDismissed
 
   useEffect(() => {
+    // Un invité n'a pas d'amis (le serveur refuse l'appel).
+    if (isGuest) return
     supabase.rpc('get_my_social').then(({ data, error }) => {
       if (!error && data) setFriends(data.friends ?? [])
     })
-  }, [])
+  }, [isGuest])
 
   useEffect(() => {
     supabase.rpc('get_disabled_roles').then(({ data, error }) => {
@@ -557,6 +561,7 @@ export default function Lobby() {
   // effectif.
 
   return (
+    <GuestIdsProvider ids={view?.guest_user_ids}>
     <div className="relative min-h-screen overflow-hidden px-4 py-6 pb-28 sm:py-10">
       <div className="texture-noise" />
       {/* Lune d'ambiance (public/moon.svg) : asset de marque déjà présent
@@ -575,6 +580,7 @@ export default function Lobby() {
         style={{ animationDuration: '8s' }}
       />
       <div className="relative mx-auto flex max-w-3xl flex-col gap-4">
+        {isGuest && <GuestBanner />}
         <header className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             {/* Même logo, même respiration que Login/Landing/FullScreenLoader
@@ -1226,6 +1232,7 @@ export default function Lobby() {
         onConfirm={handleLeave}
       />
     </div>
+    </GuestIdsProvider>
   )
 }
 

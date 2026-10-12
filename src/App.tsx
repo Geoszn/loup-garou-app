@@ -17,6 +17,7 @@ import NotFound from './pages/NotFound'
 import { FullScreenLoader } from './components/FullScreenLoader'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppShell } from './components/AppShell'
+import { AccountOnly, GuestHome } from './components/GuestWall'
 import { UpdateBanner } from './components/UpdateBanner'
 import { SeoManager } from './components/SeoManager'
 
@@ -38,6 +39,7 @@ const Help = lazy(() => import('./pages/Help'))
 // bundle principal, chargés à la demande — n'affectent pas le premier
 // écran vu après connexion (Dashboard, resté eager).
 const Account = lazy(() => import('./pages/Account'))
+const CreateAccountFromGuest = lazy(() => import('./pages/CreateAccountFromGuest'))
 const Stats = lazy(() => import('./pages/Stats'))
 const Play = lazy(() => import('./pages/Play'))
 const Rewards = lazy(() => import('./pages/Rewards'))
@@ -132,7 +134,14 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route
+          path="/dashboard"
+          element={
+            <AccountOnly feature="account" fallback={<GuestHome />}>
+              <Dashboard />
+            </AccountOnly>
+          }
+        />
         <Route
           path="/jouer"
           element={
@@ -144,33 +153,41 @@ export default function App() {
         <Route
           path="/recompenses"
           element={
-            <Suspense fallback={<FullScreenLoader />}>
-              <Rewards />
-            </Suspense>
+            <AccountOnly feature="rewards">
+              <Suspense fallback={<FullScreenLoader />}>
+                <Rewards />
+              </Suspense>
+            </AccountOnly>
           }
         />
         <Route
           path="/amis"
           element={
-            <Suspense fallback={<FullScreenLoader />}>
-              <Friends />
-            </Suspense>
+            <AccountOnly feature="friends">
+              <Suspense fallback={<FullScreenLoader />}>
+                <Friends />
+              </Suspense>
+            </AccountOnly>
           }
         />
         <Route
           path="/tribu"
           element={
-            <Suspense fallback={<FullScreenLoader />}>
-              <Tribe />
-            </Suspense>
+            <AccountOnly feature="tribe">
+              <Suspense fallback={<FullScreenLoader />}>
+                <Tribe />
+              </Suspense>
+            </AccountOnly>
           }
         />
         <Route
           path="/profil"
           element={
-            <Suspense fallback={<FullScreenLoader />}>
-              <Profile />
-            </Suspense>
+            <AccountOnly feature="profile">
+              <Suspense fallback={<FullScreenLoader />}>
+                <Profile />
+              </Suspense>
+            </AccountOnly>
           }
         />
       </Route>
@@ -179,9 +196,11 @@ export default function App() {
         path="/compte"
         element={
           <ProtectedRoute>
-            <Suspense fallback={<FullScreenLoader />}>
-              <Account />
-            </Suspense>
+            <AccountOnly feature="account">
+              <Suspense fallback={<FullScreenLoader />}>
+                <Account />
+              </Suspense>
+            </AccountOnly>
           </ProtectedRoute>
         }
       />
@@ -189,15 +208,25 @@ export default function App() {
         path="/stats"
         element={
           <ProtectedRoute>
-            <Suspense fallback={<FullScreenLoader />}>
-              <Stats />
-            </Suspense>
+            <AccountOnly feature="stats">
+              <Suspense fallback={<FullScreenLoader />}>
+                <Stats />
+              </Suspense>
+            </AccountOnly>
           </ProtectedRoute>
         }
       />
       <Route
         path="/rejoindre/:code"
         element={<JoinByLink />}
+      />
+      <Route
+        path="/creer-mon-compte"
+        element={
+          <Suspense fallback={<FullScreenLoader />}>
+            <CreateAccountFromGuest />
+          </Suspense>
+        }
       />
       {/* Salon, attente et partie : la barre de navigation reste affichée (AppShell compact). */}
       <Route

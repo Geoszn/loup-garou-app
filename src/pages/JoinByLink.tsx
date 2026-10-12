@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { notifyJoinRequest } from '../lib/pushSubscription'
 import { Card, ErrorText, LinkButton } from '../components/ui'
 import { GameInProgressChoice } from '../components/GameInProgressChoice'
+import { GuestNicknameForm } from '../components/GuestJoin'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { useLanguage } from '../i18n/LanguageContext'
 
@@ -50,7 +51,8 @@ export default function JoinByLink() {
     // choix explicite à la place — ce useEffect ne s'occupe donc plus que
     // du cas "déjà connecté".
     if (!session) return
-    if (!session.user.email_confirmed_at) {
+    // Un invité (connexion anonyme) n'a pas d'e-mail à confirmer.
+    if (!session.user.email_confirmed_at && !session.user.is_anonymous) {
       navigate(`/verifier-email?redirect=${encodeURIComponent(`/rejoindre/${code}`)}`)
       return
     }
@@ -178,8 +180,18 @@ export default function JoinByLink() {
           <div className="mb-3 text-3xl">🐺</div>
           <h1 className="mb-2 font-display text-xl text-moon-200">{t('joinByLink.authTitle')}</h1>
           <p className="mb-6 text-sm text-moon-200/60">{t('joinByLink.authBody')}</p>
+          {/* Jouer en invité : un pseudo suffit. Une fois la session ouverte, l'effet de cette page rejoint la partie tout seul. */}
+          <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-moon-400/30 bg-moon-400/[0.06] p-3 text-left">
+            <p className="text-xs font-semibold text-moon-300">{t('guest.link.title')}</p>
+            <GuestNicknameForm cta={t('guest.link.join')} />
+          </div>
+          <div className="mb-3 flex items-center gap-3 text-[11px] text-moon-200/35">
+            <span className="h-px flex-1 bg-night-600/60" />
+            {t('guest.link.or')}
+            <span className="h-px flex-1 bg-night-600/60" />
+          </div>
           <div className="flex flex-col gap-2.5">
-            <LinkButton to={`/inscription?redirect=${encodeURIComponent(redirect)}`} className="w-full">
+            <LinkButton to={`/inscription?redirect=${encodeURIComponent(redirect)}`} variant="ghost" className="w-full">
               {t('joinByLink.authSignup')}
             </LinkButton>
             <LinkButton to={`/connexion?redirect=${encodeURIComponent(redirect)}`} variant="ghost" className="w-full">

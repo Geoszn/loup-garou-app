@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 // d'une partie, même pour ceux qui n'utilisent jamais le vocal.
 import type { DailyCall, DailyEventObjectTrack } from '@daily-co/daily-js'
 import { getVoiceRoomUrl } from '../lib/daily'
+import { supabase } from '../lib/supabase'
 import { useLanguage } from '../i18n/LanguageContext'
 
 // Niveau sonore (0 à 1, voir DailyParticipantsAudioLevel) au-dessus duquel un
@@ -132,6 +133,11 @@ export function useVoiceChat(
   // essai manuel après un échec (voir VoiceChat.tsx, bouton "Réessayer")
   // sans obliger le joueur à recharger toute la page.
   const [retryToken, setRetryToken] = useState(0)
+  // Invité (migration 0250) : 20 minutes de vocal par partie. `guestEndsAt` = fin de la session en cours (ms), `guestVoiceOver` = quota épuisé.
+  const [guestEndsAt, setGuestEndsAt] = useState<number | null>(null)
+  const [guestVoiceOver, setGuestVoiceOver] = useState(false)
+  // Partie pour laquelle une session limitée est ouverte : sert à décompter le temps réellement écoulé quand l'invité quitte le vocal.
+  const guestSessionRef = useRef<string | null>(null)
 
   function clearRemoteAudio() {
     for (const el of remoteAudioElsRef.current.values()) {
@@ -194,6 +200,13 @@ export function useVoiceChat(
       }
       call.destroy()
     }
+    // Invité : on décompte le temps réellement passé au vocal (le reste du quota reste disponible).
+    if (guestSessionRef.current) {
+      const guestGame = guestSessionRef.current
+      guestSessionRef.current = null
+      void supabase.rpc('guest_voice_end', { p_game_id: guestGame }).then(() => undefined, () => undefined)
+    }
+    setGuestEndsAt(null)
     setConnected(false)
     setParticipants([])
     setCanModerate(false)
@@ -278,8 +291,12 @@ export function useVoiceChat(
       setError(null)
 
       try {
-        const { url, token: ownerToken } = await getVoiceRoomUrl(gameId, code, channel)
+        const { url, token: ownerToken, guestSeconds } = await getVoiceRoomUrl(gameId, code, channel)
         if (cancelled) return
+        if (guestSeconds !== null) {
+          guestSessionRef.current = gameId
+          setGuestEndsAt(Date.now() + guestSeconds * 1000)
+        }
 
         const { default: DailyIframe } = await import('@daily-co/daily-js')
         if (cancelled) return
@@ -369,7 +386,14 @@ export function useVoiceChat(
           /* pas bloquant : le vocal marche quand même sans le voyant local */
         }
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : t('voiceChat.errorConnection'))
+        if (!cancelled) {
+          if (e instanceof Error && e.message === 'guest_voice_exhausted') {
+            setGuestVoiceOver(true)
+            setError(t('guest.voice.over'))
+          } else {
+            setError(e instanceof Error ? e.message : t('voiceChat.errorConnection'))
+          }
+        }
       } finally {
         if (!cancelled) setConnecting(false)
       }
@@ -411,6 +435,24 @@ export function useVoiceChat(
       document.removeEventListener('keydown', retryPendingPlayback)
     }
   }, [])
+
+  // Quota des invités épuisé : on coupe le vocal (on peut toujours écouter le texte et écrire).
+  useEffect(() => {
+    if (!guestEndsAt) return
+    const expire = () => {
+      setGuestVoiceOver(true)
+      setError(t('guest.voice.over'))
+      void teardown()
+    }
+    const ms = guestEndsAt - Date.now()
+    if (ms <= 0) {
+      expire()
+      return
+    }
+    const id = setTimeout(expire, ms)
+    return () => clearTimeout(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guestEndsAt])
 
   // Efface l'avertissement "coupé par le modérateur" tout seul après
   // quelques secondes — pas besoin d'un bouton "fermer" pour un message
@@ -493,5 +535,7 @@ export function useVoiceChat(
     deafened,
     toggleSound,
     forcedMuteNotice,
+    guestEndsAt,
+    guestVoiceOver,
   }
 }

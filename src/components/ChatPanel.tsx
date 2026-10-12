@@ -5,6 +5,7 @@ import type { TranslationKey } from '../i18n/translations'
 import { REACTION_EMOJIS, type ChatChannel, type ChatMessage, type ChatReaction, type PublicPlayer, type ReactionEmoji } from '../types/game'
 import { Avatar } from './Avatar'
 import { translateGameLogMessage } from '../lib/gameLogTranslate'
+import { GuestBadge, useGuestIds } from '../lib/guestContext'
 
 const CHANNEL_LABEL: Record<ChatChannel, { titleKey: TranslationKey; emoji: string; placeholderKey: TranslationKey }> = {
   village: { titleKey: 'chat.village.title', emoji: '💬', placeholderKey: 'chat.village.placeholder' },
@@ -609,6 +610,7 @@ const MessageRow = memo(function MessageRow({
   onReply: (m: ChatMessage) => void
 }) {
   const { t } = useLanguage()
+  const guestIds = useGuestIds()
 
   // Message anonyme (village, la nuit) : l'auteur réel n'est jamais présent
   // dans `m` elle-même (voir migration 0026) — seulement dans `identities`,
@@ -735,6 +737,11 @@ const MessageRow = memo(function MessageRow({
         {!isMine && startsGroup && (
           <span className="mb-0.5 block text-[11px] font-bold leading-tight" style={{ color: nameColor(m.is_anonymous ? label : m.user_id) }}>
             {m.is_anonymous ? (label ? `🕵️ ${label}` : t('chat.anonymous')) : label}
+            {!m.is_anonymous && m.user_id && guestIds.has(m.user_id) && (
+              <span className="ml-1.5 align-middle">
+                <GuestBadge label={t('guest.badge')} />
+              </span>
+            )}
           </span>
         )}
         {m.reply_to_message_id && (

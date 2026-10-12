@@ -36,6 +36,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // (migration 0237). Une erreur ici ne doit pas bloquer les notifications.
   const { data: closedGames } = await serviceClient.rpc('close_inactive_games')
 
+  // Ménage des invités (comptes temporaires, migration 0250) : supprime ceux inactifs depuis plus de 30 jours. Même règle : sans blocage.
+  await serviceClient.rpc('purge_stale_guests', { p_days: 30 })
+
   const { data, error } = await serviceClient.rpc('pick_engagement_notifications')
   if (error) {
     res.status(500).json({ error: error.message })
