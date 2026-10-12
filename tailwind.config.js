@@ -85,6 +85,11 @@ export default {
           '0%': { opacity: '0', transform: 'translateX(24px)' },
           '100%': { opacity: '1', transform: 'translateX(0)' },
         },
+        // Tiroir du bas (BottomSheet) : monte depuis le bord de l'écran.
+        'sheet-up': {
+          '0%': { transform: 'translateY(100%)' },
+          '100%': { transform: 'translateY(0)' },
+        },
         // Petit "pop" avec léger dépassement (voir PlayerGrid.tsx) : le badge
         // ✓ d'un joueur qu'on vient de sélectionner surgit plutôt que
         // d'apparaître à plat, pour que l'œil le remarque immédiatement même
@@ -132,6 +137,7 @@ export default {
         'overlay-in': 'overlay-in 0.2s ease-out',
         'modal-in': 'modal-in 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
         'drawer-in': 'drawer-in 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+        'sheet-up': 'sheet-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1)',
         'tuto-shake': 'tuto-shake 0.35s ease',
         'tuto-pop': 'tuto-pop 0.4s ease',
         'tuto-howl': 'tuto-howl 0.6s ease',

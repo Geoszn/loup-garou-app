@@ -1,9 +1,10 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type MutableRefObject, type ReactNode } from 'react'
+import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type MutableRefObject, type ReactNode } from 'react'
 import { useChat, type RevealedIdentity } from '../hooks/useChat'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
 import { REACTION_EMOJIS, type ChatChannel, type ChatMessage, type ChatReaction, type PublicPlayer, type ReactionEmoji } from '../types/game'
 import { Avatar } from './Avatar'
+import { translateGameLogMessage } from '../lib/gameLogTranslate'
 
 const CHANNEL_LABEL: Record<ChatChannel, { titleKey: TranslationKey; emoji: string; placeholderKey: TranslationKey }> = {
   village: { titleKey: 'chat.village.title', emoji: '💬', placeholderKey: 'chat.village.placeholder' },
@@ -47,6 +48,8 @@ export const ChatPanel = memo(function ChatPanel({
   embedded = false,
   composerLead,
   composerTrail,
+  floating = false,
+  events,
 }: {
   gameId: string
   channel: ChatChannel
@@ -81,8 +84,14 @@ export const ChatPanel = memo(function ChatPanel({
   /** Éléments placés avant le champ d'écriture (ex. le bouton micro) et après le bouton d'envoi (ex. « Voter »). */
   composerLead?: ReactNode
   composerTrail?: ReactNode
+  /** Plein écran sans cadre (débat de jour) : les messages défilent sur le fond de la page et la barre
+   * d'écriture devient une bulle flottante. Réserve de la place en haut (rangée vocale posée par le parent)
+   * et en bas (sous la bulle). */
+  floating?: boolean
+  /** Évènements du journal de la partie, affichés comme des lignes discrètes entre les messages, à leur date. */
+  events?: { id: string; message: string; created_at: string }[]
 }) {
-  const { t } = useLanguage()
+  const { t, lang } = useLanguage()
   const { messages, identities, reactions, send, sending, toggleReaction } = useChat(gameId, channel)
   // Message dont le petit menu (réagir / répondre) est ouvert (au plus un à
   // la fois) — purement local à l'affichage, jamais persisté. Ouvert par un
@@ -223,6 +232,33 @@ export const ChatPanel = memo(function ChatPanel({
   // messages", pour ne jamais lui faire perdre le fil.
   const hiddenCount = Math.max(messages.length - visibleCount, 0)
   const shownMessages = useMemo(() => (hiddenCount > 0 ? messages.slice(hiddenCount) : messages), [messages, hiddenCount])
+  // Place chaque évènement du journal avant le premier message plus récent que lui (clé = index du message
+  // dans shownMessages, ou shownMessages.length pour ceux qui suivent le dernier). Ceux plus anciens que la
+  // fenêtre de messages affichée sont ignorés, comme les messages eux-mêmes.
+  const eventSlots = useMemo(() => {
+    const slots = new Map<number, { id: string; message: string }[]>()
+    if (!events || events.length === 0) return slots
+    const firstShownAt = hiddenCount > 0 && shownMessages[0] ? Date.parse(shownMessages[0].created_at) : -Infinity
+    const sorted = [...events].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
+    let i = 0
+    for (const e of sorted) {
+      const at = Date.parse(e.created_at)
+      if (at < firstShownAt) continue
+      while (i < shownMessages.length && Date.parse(shownMessages[i].created_at) <= at) i++
+      const list = slots.get(i)
+      if (list) list.push(e)
+      else slots.set(i, [e])
+    }
+    return slots
+  }, [events, shownMessages, hiddenCount])
+  const eventCount = events?.length ?? 0
+  const prevEventCountRef = useRef(eventCount)
+  useEffect(() => {
+    const el = listRef.current
+    const added = eventCount - prevEventCountRef.current
+    prevEventCountRef.current = eventCount
+    if (added > 0 && el && atBottomRef.current) el.scrollTop = el.scrollHeight
+  }, [eventCount])
   const lastMessage = messages[messages.length - 1]
   const prevCountRef = useRef(0)
   useEffect(() => {
@@ -347,7 +383,7 @@ export const ChatPanel = memo(function ChatPanel({
       // responsable des ralentissements ressentis "en utilisant beaucoup le
       // clavier" sur iPhone : coût de repaint répété pour une transition qui
       // n'apportait de toute façon aucun bénéfice visuel perceptible ici.
-      className={`flex flex-col ${embedded && !expanded ? '' : 'border border-night-600/60'} ${
+      className={`${floating ? 'relative ' : ''}flex flex-col ${embedded && !expanded ? '' : 'border border-night-600/60'} ${
         expanded
           ? `rounded-none ${embedded ? 'bg-night-900' : 'bg-night-900/95'}`
           : `${embedded ? '' : 'rounded-2xl bg-night-900/50'} ${fill ? 'min-h-0 flex-1' : compact ? compactHeightClassName : 'h-[65vh] max-h-[30rem]'}`
@@ -377,7 +413,7 @@ export const ChatPanel = memo(function ChatPanel({
       <div
         ref={listRef}
         onScroll={handleListScroll}
-        className="h-full overflow-y-auto overscroll-contain scrollbar-thin px-3 py-3"
+        className={`h-full overflow-y-auto overscroll-contain scrollbar-thin px-3 ${floating ? `${expanded ? 'pt-3' : 'pt-14'} ${readOnly ? 'pb-4' : 'pb-28'}` : 'py-3'}`}
         onClick={(e) => {
           if (expanded && e.target === e.currentTarget) (document.activeElement as HTMLElement | null)?.blur()
         }}
@@ -397,13 +433,15 @@ export const ChatPanel = memo(function ChatPanel({
         {shownMessages.map((m, i) => {
           const authorId = authorIdOf(m, identities)
           const next = shownMessages[i + 1]
-          const showAvatar = !!players && (!next || authorIdOf(next, identities) !== authorId)
+          const showAvatar = !!players && (!next || authorIdOf(next, identities) !== authorId || !!eventSlots.get(i + 1))
           const prev = shownMessages[i - 1]
+          const eventsBefore = eventSlots.get(i)
           const startsGroup =
-            !prev || !authorId || authorIdOf(prev, identities) !== authorId || new Date(m.created_at).getTime() - new Date(prev.created_at).getTime() > GROUP_GAP_MS
+            !!eventsBefore || !prev || !authorId || authorIdOf(prev, identities) !== authorId || new Date(m.created_at).getTime() - new Date(prev.created_at).getTime() > GROUP_GAP_MS
           return (
+          <Fragment key={m.id}>
+          {eventsBefore?.map((e) => <EventLine key={e.id} text={translateGameLogMessage(e.message, lang, t)} />)}
           <MessageRow
-            key={m.id}
             message={m}
             author={authorId ? playersById.get(authorId) : undefined}
             showAvatar={showAvatar}
@@ -422,14 +460,16 @@ export const ChatPanel = memo(function ChatPanel({
             onToggleReaction={handleToggleReaction}
             onReply={handleReply}
           />
+          </Fragment>
           )
         })}
+        {eventSlots.get(shownMessages.length)?.map((e) => <EventLine key={e.id} text={translateGameLogMessage(e.message, lang, t)} />)}
       </div>
         {unreadBelow > 0 && (
           <button
             type="button"
             onClick={jumpToBottom}
-            className="absolute bottom-2 right-3 flex animate-fade-in items-center gap-1.5 rounded-full border border-moon-400/40 bg-night-800/95 px-3 py-1.5 text-xs font-semibold text-moon-200 shadow-card"
+            className={`absolute ${floating && !readOnly ? 'bottom-24' : 'bottom-2'} right-3 flex animate-fade-in items-center gap-1.5 rounded-full border border-moon-400/40 bg-night-800/95 px-3 py-1.5 text-xs font-semibold text-moon-200 shadow-card`}
           >
             ↓ {t('chat.newMessages')}
           </button>
@@ -437,7 +477,13 @@ export const ChatPanel = memo(function ChatPanel({
       </div>
 
       {!readOnly && replyTarget && (
-        <div className="flex items-center gap-2 border-t border-night-600/50 bg-night-800/50 px-3 py-1.5 text-xs">
+        <div
+          className={
+            floating
+              ? 'absolute inset-x-5 bottom-[4.75rem] z-10 flex items-center gap-2 rounded-2xl border border-night-600/60 bg-night-800/95 px-3 py-1.5 text-xs shadow-card'
+              : 'flex items-center gap-2 border-t border-night-600/50 bg-night-800/50 px-3 py-1.5 text-xs'
+          }
+        >
           <span className="min-w-0 flex-1 truncate text-moon-200/60">
             <span className="text-moon-300">{t('chat.replyingTo')}</span> {labelFor(replyTarget, identities, t)} —{' '}
             {replyTarget.content}
@@ -462,6 +508,7 @@ export const ChatPanel = memo(function ChatPanel({
           onFocusChange={setInputFocused}
           lead={composerLead}
           trail={composerTrail}
+          floating={floating}
         />
       )}
     </div>
@@ -795,6 +842,7 @@ function Composer({
   onFocusChange,
   lead,
   trail,
+  floating = false,
 }: {
   placeholder: string
   sending: boolean
@@ -804,6 +852,7 @@ function Composer({
   onFocusChange: (focused: boolean) => void
   lead?: ReactNode
   trail?: ReactNode
+  floating?: boolean
 }) {
   const [text, setText] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -835,7 +884,14 @@ function Composer({
   }
 
   return (
-    <form onSubmit={handleSubmit} className={`flex gap-2 border-t border-night-600/50 bg-night-900/60 p-2.5 ${lead || trail ? 'items-center' : ''}`}>
+    <form
+      onSubmit={handleSubmit}
+      className={
+        floating
+          ? 'absolute inset-x-3 bottom-4 z-10 flex items-center gap-1.5 rounded-full border border-moon-400/30 bg-night-900/90 p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.55)] backdrop-blur-md'
+          : `flex gap-2 border-t border-night-600/50 bg-night-900/60 p-2.5 ${lead || trail ? 'items-center' : ''}`
+      }
+    >
       {lead}
       <input
         ref={inputRef}
@@ -845,18 +901,33 @@ function Composer({
         onBlur={handleInputBlur}
         placeholder={placeholder}
         maxLength={500}
-        className="min-w-0 flex-1 rounded-full border border-night-600 bg-night-800/70 px-4 py-3 text-[16px] text-moon-200 outline-none placeholder:text-moon-200/30 focus:border-moon-400/50 sm:text-sm"
+        className={
+          floating
+            ? 'min-w-0 flex-1 bg-transparent px-2 py-2.5 text-[16px] text-moon-200 outline-none placeholder:text-moon-200/35 sm:text-sm'
+            : 'min-w-0 flex-1 rounded-full border border-night-600 bg-night-800/70 px-4 py-3 text-[16px] text-moon-200 outline-none placeholder:text-moon-200/30 focus:border-moon-400/50 sm:text-sm'
+        }
       />
       <button
         type="submit"
         disabled={!text.trim() || sending}
         // Fond rouge fixe, non lié au thème jour/nuit : texte clair fixe
         // aussi (voir la même correction sur VoteRecapModal).
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-blood-500 to-blood-700 text-sm font-semibold text-[#fdf6e3] shadow-md transition-opacity active:scale-95 disabled:opacity-30"
+        className={`flex ${floating ? 'h-10 w-10' : 'h-11 w-11'} shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-blood-500 to-blood-700 text-sm font-semibold text-[#fdf6e3] shadow-md transition-opacity active:scale-95 disabled:opacity-30`}
       >
         ➤
       </button>
       {trail}
     </form>
+  )
+}
+
+/** Évènement du journal de la partie, glissé dans le fil des messages (débat de jour plein écran). */
+function EventLine({ text }: { text: string }) {
+  return (
+    <div className="my-3 flex items-center justify-center gap-2 px-2 text-center text-[11px] text-moon-300/75">
+      <span aria-hidden="true" className="h-px w-5 shrink-0 bg-moon-300/25" />
+      <span>📜 {text}</span>
+      <span aria-hidden="true" className="h-px w-5 shrink-0 bg-moon-300/25" />
+    </div>
   )
 }

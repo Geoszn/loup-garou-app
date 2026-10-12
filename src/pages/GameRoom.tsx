@@ -217,6 +217,8 @@ export default function GameRoom() {
 
   const me = view.players.find((p) => p.user_id === user.id)
   const alive = me?.is_alive ?? false
+  // Débat de jour d'un joueur vivant : écran plein, voir DayDiscussion.
+  const discussionFull = view.game.status === 'day_discussion' && alive
   const isHost = me?.is_host ?? false
   // Demande utilisateur : dès qu'un vrai second joueur (donc plus juste
   // l'admin lui-même, éventuellement entouré de bots) participe, le mode de
@@ -326,7 +328,10 @@ export default function GameRoom() {
   return (
     <div
       data-theme-switching={themeSwitching ? '' : undefined}
-      className={`game-theme-root relative min-h-screen bg-night-950 pb-16 ${isNight ? '' : 'theme-day'}`}
+      className={`game-theme-root relative bg-night-950 ${
+        // Débat plein écran : la page fait exactement la hauteur visible (le chat défile seul, rien ne déborde).
+        discussionFull ? 'flex h-[calc(100dvh-var(--nav-h,0px)-1.25rem)] flex-col overflow-hidden' : 'min-h-screen pb-16'
+      } ${isNight ? '' : 'theme-day'}`}
       style={{
         backgroundImage: isNight
           ? 'radial-gradient(circle at 50% -10%, rgb(var(--c-night-600) / 0.35), transparent 55%)'
@@ -409,7 +414,11 @@ export default function GameRoom() {
           </div>
         )}
 
-      <div className={`mx-auto flex max-w-3xl flex-col gap-4 px-4 pt-4 ${view.game.status === 'role_reveal' ? 'pb-28' : 'pb-4'}`}>
+      <div
+        className={`mx-auto flex w-full max-w-3xl flex-col ${
+          discussionFull ? 'min-h-0 flex-1' : `gap-4 px-4 pt-4 ${view.game.status === 'role_reveal' ? 'pb-28' : 'pb-4'}`
+        }`}
+      >
         {/* Partie d'entraînement : bots, conseils par étape et bilan (rien si partie normale). */}
         <PracticeAssistant view={view} gameId={gameId!} />
         {/* Boussole du Village (artefact du Loup Store, migration 0152) :
@@ -590,7 +599,7 @@ export default function GameRoom() {
         )}
 
         {view.game.status === 'day_discussion' && (
-          <div className="flex animate-fade-in flex-col gap-4">
+          <div className={`flex animate-fade-in flex-col ${discussionFull ? 'min-h-0 flex-1' : 'gap-4'}`}>
             {alive ? (
               <DayDiscussion
                 view={view}
@@ -601,17 +610,23 @@ export default function GameRoom() {
                 voiceChannel={voiceChannel}
                 vote={<CallVotePanel chip view={view} gameId={gameId!} selfId={user.id} me={me} isHost={isHost} />}
                 unreadAmoureux={unreadAmoureux}
+                playersSheet={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} compact />}
+                roleSheet={
+                  <div className="flex flex-col gap-3">
+                    <RoleCard roleId={view.my_role} />
+                    <AnancySwapNotice swapped={view.anancy_swapped_me} />
+                    <ChasseuseTargetPanel view={view} />
+                  </div>
+                }
+                roleDot={view.anancy_swapped_me || view.my_chasseuse_target_assigned_this_round}
               />
             ) : (
               <>
                 <CollapsiblePlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} />
                 {isHost && <CallVotePanel view={view} gameId={gameId!} selfId={user.id} me={me} isHost={isHost} />}
+                <p className="text-center text-xs text-moon-200/50">{t('game.discussionHint')}</p>
               </>
             )}
-            <p className="text-center text-xs text-moon-200/50">{t('game.discussionHint')}</p>
-            {alive && <RolePanel myRole={view.my_role} />}
-            {alive && <AnancySwapNotice swapped={view.anancy_swapped_me} />}
-            {alive && <ChasseuseTargetPanel view={view} />}
           </div>
         )}
 
@@ -721,6 +736,8 @@ export default function GameRoom() {
           />
         )}
 
+        {/* Pendant le débat plein écran, le journal est déjà dans le fil du chat. */}
+        {!discussionFull && (
         <Card className="!p-0 border-night-700/60 bg-night-900/40">
           <button
             type="button"
@@ -738,6 +755,7 @@ export default function GameRoom() {
             </div>
           )}
         </Card>
+        )}
       </div>
 
       <ConfirmDialog
