@@ -129,7 +129,7 @@ export function ArtifactsPanel({ balance, onPurchased }: { balance: number; onPu
               key={a.id}
               type="button"
               onClick={() => setDetail(a)}
-              className="flex flex-col items-center gap-1 rounded-xl border border-night-600/60 bg-night-900/40 p-2 text-center transition-colors hover:border-amber-400/40"
+              className={`flex flex-col items-center gap-1 rounded-xl border bg-night-900/40 p-2 text-center transition-colors hover:border-amber-400/40 ${RARITY_STYLE[a.rarity ?? 'commun'].border}`}
             >
               <div className="relative">
                 <ArtifactIcon artifact={a} size="h-12 w-12" />
@@ -157,6 +157,11 @@ export function ArtifactsPanel({ balance, onPurchased }: { balance: number; onPu
         <Modal open onClose={() => setDetail(null)} title={name(detail)}>
           <div className="flex flex-col items-center gap-3 text-center">
             <ArtifactIcon artifact={detail} size="h-20 w-20" />
+            {detail.rarity && (
+              <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${RARITY_STYLE[detail.rarity].border} ${RARITY_STYLE[detail.rarity].text}`}>
+                {t(`hub.skins.rarity.${detail.rarity}` as TranslationKey)}
+              </span>
+            )}
             <p className="text-sm text-moon-200/70">{lang === 'en' ? detail.description_en : detail.description_fr}</p>
             <span className="flex items-center gap-1.5 font-display text-xl font-semibold text-amber-300">
               <LoupCoinIcon className="h-5 w-5" /> {detail.price_coins}
@@ -179,14 +184,14 @@ export function ArtifactsPanel({ balance, onPurchased }: { balance: number; onPu
                 </Button>
               ) : (
                 <Button className="flex-1" disabled={!detail.can_purchase || balance < detail.price_coins} onClick={() => setConfirm(detail)}>
-                  {detail.owned ? t('loupStore.boutique.buyMore') : t('loupStore.boutique.buy')}
+                  {detail.max_stock !== null && detail.quantity >= detail.max_stock ? t('loupStore.boutique.stockFull') : detail.owned ? t('loupStore.boutique.buyMore') : t('loupStore.boutique.buy')}
                 </Button>
               )}
             </div>
             {balance < detail.price_coins && (
               <p className="text-[11px] text-blood-400">{t('hub.missing', { coins: detail.price_coins - balance })}</p>
             )}
-            {detail.owned && detail.max_stock !== null && !detail.can_purchase && (
+            {detail.owned && detail.max_stock !== null && detail.quantity < detail.max_stock && !detail.can_purchase && (
               <p className="text-[11px] text-moon-200/40">{t('loupStore.boutique.onCooldown')}</p>
             )}
           </div>

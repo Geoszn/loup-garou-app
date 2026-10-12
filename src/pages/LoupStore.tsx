@@ -37,9 +37,13 @@ export const CATEGORY_FILTER_LABEL_KEYS: Record<ArtifactCategory, TranslationKey
   fragments: 'loupStore.category.fragments',
 }
 
+/** Rareté d'un artefact : fixe le stock maximum qu'un joueur peut garder (voir artifact_stock_cap, migration 0246). */
+export type ArtifactRarity = 'commun' | 'rare' | 'epique' | 'legendaire'
+
 export interface StoreArtifact {
   id: string
   category: ArtifactCategory
+  rarity: ArtifactRarity
   image_path: string | null
   name_fr: string
   name_en: string

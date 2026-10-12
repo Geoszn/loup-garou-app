@@ -15,7 +15,7 @@ import { AvatarIcon } from '../components/AvatarIcon'
 import { PlayerGrid } from '../components/PlayerGrid'
 import { ReadyGrid } from '../components/ReadyGrid'
 import { ActionPanel, VotePanel, CaptainVotePanel, WolfPanel, GRIOT_REVEAL_KEYS } from '../components/ActionPanel'
-import { ArtifactsMenu, hasArtifactsToShow, hasUsableArtifact } from '../components/ArtifactsMenu'
+import { ArtifactsMenu, hasArtifactsToShow, hasOeilBaobabToShow, hasUsableArtifact } from '../components/ArtifactsMenu'
 import { ChatPanel } from '../components/ChatPanel'
 import { useUnreadChatCount } from '../hooks/useChat'
 import { VoteRecapModal } from '../components/VoteRecapModal'
@@ -379,8 +379,8 @@ export default function GameRoom() {
         onLeave={view.game.status !== 'ended' ? requestLeave : undefined}
         isHost={isHost}
         onOpenModeration={() => setModOpen(true)}
-        onOpenArtifacts={!alive && hasArtifactsToShow(view) ? () => setArtifactsOpen(true) : undefined}
-        hasUsableArtifact={!alive && hasUsableArtifact(view)}
+        onOpenArtifacts={(alive ? hasOeilBaobabToShow(view) : hasArtifactsToShow(view)) ? () => setArtifactsOpen(true) : undefined}
+        hasUsableArtifact={hasUsableArtifact(view)}
         onExtendTime={async () => {
           const { error } = await supabase.rpc('extend_phase_deadline', { p_game_id: gameId, p_seconds: 30 })
           return error?.message ?? null

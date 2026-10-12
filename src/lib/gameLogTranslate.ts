@@ -68,6 +68,7 @@ const EXACT_MATCHES: Record<string, TranslationKey> = {
   '🐺 Les Loups-Garous ont dévoré assez de villageois pour prendre le contrôle. Les loups gagnent !': 'gameLog.wolvesWin',
   '💘 Il ne reste que les deux amoureux... L’amour triomphe !': 'gameLog.loversWin',
   'La partie a été arrêtée par un administrateur.': 'gameLog.gameStoppedByAdmin',
+  '👁️ Quelqu’un a consulté l’Œil du Baobab.': 'gameLog.oeilBaobab',
   'La partie a été créée. En attente des joueurs...': 'gameLog.gameCreated',
   '⚖️ Le village a eu tort de lyncher l’Ancien : ses pouvoirs spéciaux s’éteignent pour le reste de la partie...':
     'gameLog.ancienLynchedPowersOff',

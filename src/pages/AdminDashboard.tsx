@@ -4540,6 +4540,12 @@ type ArtifactEffect =
   | 'pierre_ancetres'
   | 'feu_sacre_ancetres'
   | 'larme_renaissance'
+  | 'oeil_baobab'
+
+// Rareté : fixe le stock maximum qu'un joueur peut garder (voir artifact_stock_cap, migration 0246).
+type ArtifactRarity = 'commun' | 'rare' | 'epique' | 'legendaire'
+const ARTIFACT_RARITY_CAP: Record<ArtifactRarity, number> = { commun: 5, rare: 3, epique: 2, legendaire: 1 }
+const ARTIFACT_RARITY_LABELS: Record<ArtifactRarity, string> = { commun: 'Commun', rare: 'Rare', epique: 'Épique', legendaire: 'Légendaire' }
 
 const ARTIFACT_EFFECT_LABELS: Record<ArtifactEffect, string> = {
   none: 'Aucun effet (cosmétique / collection)',
@@ -4553,6 +4559,7 @@ const ARTIFACT_EFFECT_LABELS: Record<ArtifactEffect, string> = {
   pierre_ancetres: 'Revient en jeu au jour suivant après une élimination (Pierre des Ancêtres)',
   feu_sacre_ancetres: 'Bloque une élimination par vote, une fois par partie (Feu Sacré des Ancêtres)',
   larme_renaissance: 'Revient en jeu au jour suivant, mais en simple Villageois (Larme de Renaissance)',
+  oeil_baobab: 'Désigne 3 joueurs : au moins un Loup parmi eux, ou aucun (L’Œil du Baobab)',
 }
 
 // Délai de rachat en HEURES (voir migration 0173 — auparavant en jours,
@@ -4745,6 +4752,7 @@ interface StoreArtifact {
   // HEURES depuis la migration 0173.
   max_stock: number | null
   repurchase_cooldown_hours: number | null
+  rarity: ArtifactRarity
   starts_at: string | null
   ends_at: string | null
   active: boolean
@@ -4815,6 +4823,7 @@ function StoreArtifactsTab() {
       p_starts_at: sa.starts_at,
       p_ends_at: sa.ends_at,
       p_active: !sa.active,
+      p_rarity: sa.rarity,
     })
     setBusyId(null)
     if (rpcError) {
@@ -5062,6 +5071,7 @@ interface StoreArtifactFormState {
   price_coins: string
   max_stock: string
   repurchase_cooldown_hours: string
+  rarity: ArtifactRarity
   availMode: AvailMode
   starts_at: string
   ends_at: string
@@ -5077,8 +5087,9 @@ const EMPTY_ARTIFACT_FORM: StoreArtifactFormState = {
   description_fr: '',
   description_en: '',
   price_coins: '20',
-  max_stock: '1',
-  repurchase_cooldown_hours: '24',
+  max_stock: '5',
+  repurchase_cooldown_hours: '0',
+  rarity: 'commun',
   availMode: 'unlimited',
   starts_at: '',
   ends_at: '',
@@ -5112,8 +5123,9 @@ function StoreArtifactFormDrawer({
         description_fr: artifact.description_fr,
         description_en: artifact.description_en,
         price_coins: String(artifact.price_coins),
-        max_stock: String(artifact.max_stock ?? 1),
-        repurchase_cooldown_hours: String(artifact.repurchase_cooldown_hours ?? 24),
+        max_stock: String(artifact.max_stock ?? ARTIFACT_RARITY_CAP[artifact.rarity ?? 'commun']),
+        repurchase_cooldown_hours: String(artifact.repurchase_cooldown_hours ?? 0),
+        rarity: artifact.rarity ?? 'commun',
         availMode: artifact.starts_at || artifact.ends_at ? 'period' : 'unlimited',
         starts_at: artifact.starts_at ? toDatetimeLocal(artifact.starts_at) : '',
         ends_at: artifact.ends_at ? toDatetimeLocal(artifact.ends_at) : '',
@@ -5151,6 +5163,10 @@ function StoreArtifactFormDrawer({
       setError('Stock maximum invalide.')
       return
     }
+    if (isRare && maxStock > ARTIFACT_RARITY_CAP[form.rarity]) {
+      setError(`Un artefact ${ARTIFACT_RARITY_LABELS[form.rarity].toLowerCase()} plafonne le stock à ${ARTIFACT_RARITY_CAP[form.rarity]} par joueur.`)
+      return
+    }
     // 0 est une valeur valide depuis la migration 0173 (rachat immédiat) —
     // seule une valeur négative ou non numérique est refusée, contrairement
     // au stock maximum ci-dessus qui doit rester strictement positif.
@@ -5179,6 +5195,7 @@ function StoreArtifactFormDrawer({
       p_starts_at: form.availMode === 'period' && form.starts_at ? new Date(form.starts_at).toISOString() : null,
       p_ends_at: form.availMode === 'period' && form.ends_at ? new Date(form.ends_at).toISOString() : null,
       p_active: form.active,
+      p_rarity: form.rarity,
     })
     setBusy(false)
     if (rpcError) {
@@ -5234,6 +5251,25 @@ function StoreArtifactFormDrawer({
             {(Object.keys(ARTIFACT_CATEGORY_LABELS) as ArtifactCategory[]).map((id) => (
               <option key={id} value={id}>
                 {ARTIFACT_CATEGORY_LABELS[id]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <Label>Rareté</Label>
+          <select
+            value={form.rarity}
+            onChange={(ev) => {
+              const rarity = ev.target.value as ArtifactRarity
+              // Le stock suit le plafond de la rareté (modifiable ensuite, jamais au-dessus).
+              setForm((f) => ({ ...f, rarity, max_stock: String(ARTIFACT_RARITY_CAP[rarity]) }))
+            }}
+            className="w-full rounded-xl border border-night-500 bg-night-800/80 px-3 py-2.5 text-sm text-moon-200 outline-none transition focus:border-moon-400/60 focus:ring-2 focus:ring-moon-400/20"
+          >
+            {(Object.keys(ARTIFACT_RARITY_LABELS) as ArtifactRarity[]).map((id) => (
+              <option key={id} value={id}>
+                {ARTIFACT_RARITY_LABELS[id]} — stock max {ARTIFACT_RARITY_CAP[id]} par joueur
               </option>
             ))}
           </select>
