@@ -20,17 +20,17 @@ import { ChatPanel } from '../components/ChatPanel'
 import { useUnreadChatCount } from '../hooks/useChat'
 import { VoteRecapModal } from '../components/VoteRecapModal'
 import { NightRecapModal } from '../components/NightRecapModal'
-import { DeathImpactModal, impactLabel } from '../components/DeathImpactModal'
+import { DeathImpactModal } from '../components/DeathImpactModal'
 import { TierUpModal } from '../components/TierUpModal'
 import { RewardChest } from '../components/RewardChest'
 import { ModerationPanel } from '../components/ModerationPanel'
 import { VoiceChat } from '../components/VoiceChat'
 import { DayDiscussion } from '../components/DayDiscussion'
 import { NightScreen } from '../components/NightScreen'
+import { EndHero, EndPoints, EndRankCard, EndRoles, RecapFold } from '../components/EndRecap'
 import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, Modal, Segmented } from '../components/ui'
 import { ROLES, roleLabel, isWolfTeam, type RoleId } from '../lib/roles'
-import { RankTierBadge } from '../components/RankTierBadge'
-import { tierForPoints, tierLabel, type RankTier } from '../lib/ranks'
+import { tierForPoints, type RankTier } from '../lib/ranks'
 import { translateGameLogMessage } from '../lib/gameLogTranslate'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { MyGameView, PublicPlayer } from '../types/game'
@@ -1651,6 +1651,7 @@ export function EndScreen({
   onLeave: () => void
 }) {
   const { t } = useLanguage()
+  const { profile } = useAuth()
   const winner = view.game.winner_team
 
   // Salon fermé par l'hôte avant le lancement (voir close_lobby, migration
@@ -1755,11 +1756,8 @@ export function EndScreen({
 
   // Détail personnel de mon résultat pour cette partie (voir game_results,
   // migration 0073) — null si absent (ex. profil sans historique, cas
-  // limite). "Résultat de la partie" = points_gained - impact_bonus,
-  // toujours calculable exactement par soustraction plutôt que stocké en
-  // double : c'est la part liée à la survie + victoire/série/événement.
+  // limite). Le détail (résultat = points_gained - impact_bonus...) est calculé par EndPoints.
   const myResult = view.my_game_result
-  const myOutcomePoints = myResult ? myResult.points_gained - myResult.impact_bonus : 0
   // Palier "d'avant" recalculé à partir des points d'avant (new_rank_points -
   // points_gained), pour détecter un changement de palier sans avoir besoin
   // d'une colonne serveur dédiée — voir tierForPoints (lib/ranks.ts).
@@ -1789,7 +1787,7 @@ export function EndScreen({
   }, [gameId])
 
   return (
-    <Card className="text-center">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-4 text-center">
       {showTierUp && myResult && (
         <TierUpModal
           newTier={myResult.new_rank_tier as RankTier}
@@ -1799,107 +1797,33 @@ export function EndScreen({
         />
       )}
 
-      <h2 className="mb-2 font-display text-2xl text-moon-200">{title}</h2>
-      <p className="mx-auto mb-5 max-w-sm text-sm text-moon-200/60">{explanation}</p>
+      <EndHero
+        won={myResult ? myResult.won : null}
+        title={title}
+        explanation={explanation}
+        myRole={view.my_role}
+        survivalPercent={myResult ? Math.round(myResult.participation_ratio * 100) : null}
+      />
 
-      {/* Section personnelle : mon calcul de points pour cette partie précise
-          (voir my_game_result, migration 0073) — jamais affichée avant la fin
-          de la partie (contrairement au bonus d'impact seul, déjà montré via
-          la popup de mort). */}
+      {/* Mon rang et la progression vers le prochain palier (voir my_game_result, migration 0073) — jamais affichés avant
+          la fin de la partie. Le total suit le profil, qui monte si le coffre ci-dessous rapporte des points. */}
+      {myResult && <EndRankCard points={Math.max(myResult.new_rank_points, profile?.rank_points ?? 0)} previousPoints={myPreviousPoints} />}
+
       {myResult && (
-        <div className="mx-auto mb-5 max-w-sm animate-fade-in rounded-2xl border border-night-600/60 bg-night-900/50 p-4 text-left">
-          <p className="mb-3 text-center text-xs uppercase tracking-widest text-moon-200/40">{t('game.myResultTitle')}</p>
-
-          <div className="flex flex-col gap-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-moon-200/70">
-                {t('game.myResultOutcome')}{' '}
-                <span className="text-xs text-moon-200/40">
-                  {t('game.myResultOutcomeSurvival', { percent: String(Math.round(myResult.participation_ratio * 100)) })}
-                </span>
-              </span>
-              <span className={`font-display font-semibold ${myOutcomePoints >= 0 ? 'text-emerald-300' : 'text-blood-400'}`}>
-                {myOutcomePoints >= 0 ? '+' : ''}
-                {myOutcomePoints}
-              </span>
-            </div>
-
-            {myResult.impact_details.length > 0 && (
-              <div className="flex flex-col gap-1.5 border-t border-night-700/50 pt-2">
-                {myResult.impact_details.map((d, i) => (
-                  <div key={`${d.kind}-${i}`} className="flex items-center justify-between text-xs">
-                    <span className="text-moon-200/60">{impactLabel(d, t)}</span>
-                    <span className="font-semibold text-emerald-300">+{d.points}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="flex items-center justify-between border-t border-night-700/50 pt-2 text-sm">
-              <span className="font-semibold text-moon-200/80">{t('game.myResultTotal')}</span>
-              <span className={`font-display font-bold ${myResult.points_gained >= 0 ? 'text-emerald-300' : 'text-blood-400'}`}>
-                {myResult.points_gained >= 0 ? '+' : ''}
-                {myResult.points_gained}
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-3 flex items-center justify-between rounded-xl bg-night-800/60 px-3 py-2.5">
-            <div className="flex items-center gap-2">
-              <RankTierBadge tier={myResult.new_rank_tier as RankTier} size={24} />
-              <div>
-                <p className="text-xs text-moon-200/50">{t('game.myResultNewTotal')}</p>
-                <p className="font-display text-sm text-moon-200">
-                  {myResult.new_rank_points} · {tierLabel(myResult.new_rank_tier, t)}
-                </p>
-              </div>
-            </div>
-            {myTierChanged && <span className="text-xs font-semibold text-moon-300">{t('game.myResultTierUp')}</span>}
-          </div>
-
-          {/* XP de saison gagné pour cette partie (voir migration 0203) —
-              rendu séparé du bloc points de rang ci-dessus : deux compteurs
-              indépendants (voir échange avec l'admin), jamais mélangés.
-              Absent hors saison active (season_xp_gained alors undefined/0). */}
-          {!!myResult.season_xp_gained && (
-            <div className="mt-2 flex items-center justify-between rounded-xl border border-pink-400/30 bg-pink-400/10 px-3 py-2.5">
-              <span className="text-sm font-semibold text-pink-300">{t('game.myResultSeasonXp')}</span>
-              <span className="font-display font-bold text-pink-300">+{myResult.season_xp_gained} XP</span>
-            </div>
-          )}
-        </div>
+        <RecapFold title="game.endFoldPoints">
+          <EndPoints result={myResult} />
+        </RecapFold>
       )}
 
-      {/* Coffre de fin de partie (voir RewardChest.tsx) : bonus de points
-          aléatoire, indépendant du résultat ci-dessus — affiché même en cas
-          de défaite. */}
       <GhostBetResult gameId={gameId} enabled={!view.my_alive} players={view.players} />
 
+      {/* Coffre de fin de partie (voir RewardChest.tsx) : bonus de points aléatoire, indépendant du résultat — affiché
+          même en cas de défaite. */}
       <RewardChest gameId={gameId} />
 
-      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {view.final_reveal?.map((r) => {
-          const p = view.players.find((pl) => pl.user_id === r.user_id)
-          if (!p) return null
-          const roleInfo = ROLES[r.role as RoleId]
-          const won = isWinningEntry(r.user_id, r.role)
-          return (
-            <div
-              key={r.user_id}
-              className={`relative rounded-xl border p-2.5 text-xs ${
-                won
-                  ? 'border-moon-400/50 bg-moon-400/10 shadow-glow'
-                  : 'border-night-600/60 bg-night-900/50 opacity-60'
-              }`}
-            >
-              {won && <span className="absolute -right-1.5 -top-1.5 text-sm">👑</span>}
-              <div className="mb-1 text-lg">{roleInfo?.emoji}</div>
-              <p className="truncate text-moon-200/90">{p.display_name}</p>
-              <p className="text-moon-200/40">{roleLabel(r.role, t)}</p>
-            </div>
-          )
-        })}
-      </div>
+      <RecapFold title="game.endFoldRoles" open>
+        <EndRoles reveal={view.final_reveal ?? []} players={view.players} selfId={selfId} isWinner={isWinningEntry} />
+      </RecapFold>
 
       <div className="flex flex-col gap-3 sm:flex-row">
         {isHost && (
@@ -1912,37 +1836,31 @@ export function EndScreen({
         </Button>
       </div>
       {isHost && <ErrorText>{restartError}</ErrorText>}
-      {!isHost && (
-        <p className="mt-3 text-xs text-moon-200/40">{t('game.waitHostRestart')}</p>
-      )}
+      {!isHost && <p className="-mt-1 text-xs text-moon-200/40">{t('game.waitHostRestart')}</p>}
 
-      {/* Le salon reste ouvert entre deux parties : de nouveaux joueurs
-          peuvent encore rejoindre avec le code tant que l'hôte n'a pas
-          relancé — cette liste se met à jour en direct pour que tout le
-          monde voie qui est présent pour la prochaine manche. */}
-      <div className="mt-6 border-t border-night-700/50 pt-5 text-left">
-        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-night-600/60 bg-night-900/40 p-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-wider text-moon-200/50">{t('common.gameCodeLabel')}</p>
-            <p className="font-display text-2xl tracking-[0.3em] text-moon-300">{code}</p>
+      {/* Le salon reste ouvert entre deux parties : de nouveaux joueurs peuvent encore rejoindre avec le code tant que
+          l'hôte n'a pas relancé — cette liste se met à jour en direct pour que tout le monde voie qui est présent. */}
+      <RecapFold title="game.endFoldLobby">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3 rounded-2xl border border-night-600/60 bg-night-900/40 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-wider text-moon-200/50">{t('common.gameCodeLabel')}</p>
+              <p className="font-display text-2xl tracking-[0.3em] text-moon-300">{code}</p>
+            </div>
+            <CopyButton value={code} label={t('game.copyCode')} className="px-3 py-1.5 text-xs" />
           </div>
-          <CopyButton value={code} label={t('game.copyCode')} className="px-3 py-1.5 text-xs" />
-        </div>
 
-        {/* Vocal du salon, comme avant le lancement (canal 'lobby', ouvert
-            aussi au statut 'ended' — voir can_access_channel, migration
-            0039) : le salon reste ouvert entre deux parties, autant pouvoir
-            continuer à discuter en attendant que l'hôte relance. */}
-        <div className="mb-4">
+          {/* Vocal du salon, comme avant le lancement (canal 'lobby', ouvert aussi au statut 'ended' — voir
+              can_access_channel, migration 0039) : pour continuer à discuter en attendant que l'hôte relance. */}
           <VoiceChat gameId={gameId} code={code} channel="lobby" displayName={displayName} selfUserId={selfId} players={view.players} />
-        </div>
 
-        <p className="mb-2 text-xs uppercase tracking-widest text-moon-200/40">
-          {t('game.playersPresentForNext', { count: view.players.length })}
-        </p>
-        <PlayerGrid players={view.players} selfId={selfId} showDeathReveal={false} />
-        <p className="mt-2 text-xs text-moon-200/40">{t('game.othersCanStillJoin')}</p>
-      </div>
-    </Card>
+          <div>
+            <p className="mb-2 text-xs uppercase tracking-widest text-moon-200/40">{t('game.playersPresentForNext', { count: view.players.length })}</p>
+            <PlayerGrid players={view.players} selfId={selfId} showDeathReveal={false} />
+            <p className="mt-2 text-xs text-moon-200/40">{t('game.othersCanStillJoin')}</p>
+          </div>
+        </div>
+      </RecapFold>
+    </div>
   )
 }
