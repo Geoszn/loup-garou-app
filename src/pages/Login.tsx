@@ -40,7 +40,7 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-10">
+    <div className="flex min-h-[100dvh] items-start justify-center px-4 py-4 sm:items-center sm:py-10">
       <div className="w-full max-w-md">
         {/* Bandeau très visible, uniquement sur le domaine dédié
             (admin.loupgarouafrique.com) : le formulaire de connexion en
@@ -60,19 +60,31 @@ export default function Login() {
           </div>
         )}
 
-        <Card className={`w-full ${isAdminApp ? 'border-blood-700/40' : ''}`}>
-          <div className="mb-6 text-center">
-            <img src="/logo.png" alt="" className="mx-auto mb-2 h-14 w-14 rounded-full" />
-            <h1 className="font-display text-2xl text-moon-200">{t('login.title')}</h1>
-            <p className="mt-1 text-sm text-moon-200/50">{t('login.subtitle')}</p>
+        <Card className={`relative w-full !p-5 sm:!p-6 ${isAdminApp ? 'border-blood-700/40' : ''}`}>
+          <Link
+            to="/"
+            aria-label={t('common.close')}
+            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-moon-200/50 transition-colors hover:bg-night-600/60 hover:text-moon-200"
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </Link>
+          <div className="mb-4 flex items-center gap-3 pr-9">
+            <img src="/logo.png" alt="" className="h-11 w-11 shrink-0 rounded-full" />
+            <div className="min-w-0">
+              <h1 className="font-display text-xl leading-tight text-moon-200">{t('login.title')}</h1>
+              <p className="text-[13px] leading-snug text-moon-200/50">{t('login.subtitle')}</p>
+            </div>
           </div>
 
           {notice && <SuccessText>{notice}</SuccessText>}
 
-          <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-4">
+          <form onSubmit={handleSubmit} className="mt-3 flex flex-col gap-3">
             <div>
               <Label htmlFor="login-email">{t('login.email')}</Label>
               <Input
+                className="!py-2.5"
                 id="login-email"
                 type="email"
                 autoComplete="email"
@@ -93,6 +105,7 @@ export default function Login() {
                 </Link>
               </div>
               <PasswordInput
+                className="!py-2.5"
                 id="login-password"
                 autoComplete="current-password"
                 value={password}
@@ -104,12 +117,12 @@ export default function Login() {
 
             <ErrorText>{error}</ErrorText>
 
-            <Button type="submit" disabled={loading} className="mt-2 w-full">
+            <Button type="submit" disabled={loading} className="mt-1 w-full">
               {loading ? t('login.submitting') : t('login.submit')}
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-moon-200/50">
+          <p className="mt-4 text-center text-sm text-moon-200/50">
             {t('login.noAccount')}{' '}
             <Link
               to={
