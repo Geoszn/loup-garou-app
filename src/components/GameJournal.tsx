@@ -31,33 +31,60 @@ export function useJournalUnread(gameId: string, total: number, open: boolean): 
   return open ? 0 : Math.max(total - seen, 0)
 }
 
-export function GameJournal({ entries, topPx = 56 }: { entries: JournalEntry[]; topPx?: number }) {
+/** Volet du journal : s'ouvre sous la rangée du haut du chat plein écran, sur le haut du fil. Les messages récents
+ * (en bas) et la bulle d'écriture restent visibles et utilisables. Se ferme avec ✕, en tapant le fil, ou dès qu'on
+ * se met à écrire (voir ChatPanel `onComposerFocus`). */
+export function JournalDrawer({ open, onClose, entries, topPx }: { open: boolean; onClose: () => void; entries: JournalEntry[]; topPx?: number }) {
   const { t, lang } = useLanguage()
   const listRef = useRef<HTMLDivElement>(null)
   // Les plus récentes en bas, comme le chat : on se recolle au bas à l'ouverture et à chaque nouvelle entrée.
   useEffect(() => {
     const el = listRef.current
-    if (el) el.scrollTop = el.scrollHeight
-  }, [entries.length])
+    if (open && el) el.scrollTop = el.scrollHeight
+  }, [open, entries.length])
+  if (!open) return null
   const sorted = [...entries].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
   const time = (iso: string) => new Date(iso).toLocaleTimeString(lang === 'fr' ? 'fr-FR' : 'en-GB', { hour: '2-digit', minute: '2-digit' })
   return (
-    <div ref={listRef} style={{ paddingTop: Math.max(topPx - 4, 0) }} className="h-full overflow-y-auto overscroll-contain scrollbar-thin px-4 pb-28">
-      <p className="mb-4 text-center text-[11px] text-moon-200/45">{t('journal.note')}</p>
-      {sorted.length === 0 ? (
-        <p className="py-6 text-center text-sm text-moon-200/40">{t('game.logEmpty')}</p>
-      ) : (
-        <ol className="flex flex-col gap-3">
-          {sorted.map((e) => (
-            <li key={e.id} className="flex animate-fade-in items-baseline gap-3">
-              <span className="w-10 shrink-0 text-right text-[11px] tabular-nums text-moon-200/35">{time(e.created_at)}</span>
-              <span className="min-w-0 flex-1 border-l border-moon-300/20 pl-3 text-sm leading-snug text-moon-200/85">
-                {translateGameLogMessage(e.message, lang, t)}
-              </span>
-            </li>
-          ))}
-        </ol>
-      )}
-    </div>
+    <>
+      {/* Fond transparent : taper le fil referme le volet, sans toucher à la bulle d'écriture (qui reste en dessous). */}
+      <div className="absolute inset-x-0 bottom-24 top-0 z-[9]" onClick={onClose} aria-hidden="true" />
+      <section
+        role="dialog"
+        aria-label={t('tabs.journal')}
+        style={{ top: Math.max((topPx ?? 96) - 10, 0) }}
+        className="absolute inset-x-3 z-[9] flex max-h-[42%] animate-fade-in flex-col overflow-hidden rounded-2xl border border-night-600/70 bg-night-900 shadow-card"
+      >
+        <header className="flex items-center justify-between gap-2 border-b border-night-600/50 px-4 py-2">
+          <span className="text-[11px] font-semibold uppercase tracking-widest text-moon-300/80">{t('tabs.journal')}</span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t('common.close')}
+            className="flex h-7 w-7 items-center justify-center rounded-full text-moon-200/50 transition-colors hover:bg-night-700/60 hover:text-moon-200"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+        </header>
+        <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-thin px-4 py-3">
+          {sorted.length === 0 ? (
+            <p className="py-3 text-center text-sm text-moon-200/40">{t('game.logEmpty')}</p>
+          ) : (
+            <ol className="flex flex-col gap-2.5">
+              {sorted.map((e) => (
+                <li key={e.id} className="flex items-baseline gap-3">
+                  <span className="w-10 shrink-0 text-right text-[11px] tabular-nums text-moon-200/35">{time(e.created_at)}</span>
+                  <span className="min-w-0 flex-1 border-l border-moon-300/20 pl-3 text-sm leading-snug text-moon-200/85">
+                    {translateGameLogMessage(e.message, lang, t)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      </section>
+    </>
   )
 }

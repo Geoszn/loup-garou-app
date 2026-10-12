@@ -97,7 +97,7 @@ export default function GameRoom() {
   const [dayTab, setDayTab] = useState<'discuss' | 'village' | 'amoureux'>('discuss')
   // Onglet "Village" (anonyme) / "Loups" (nominatif, uniquement pour les
   // Loups-Garous pendant leur tour) pour la phase de nuit — voir NightScreen.
-  const [nightTab, setNightTab] = useState<'village' | 'wolves' | 'journal'>('village')
+  const [nightTab, setNightTab] = useState<'village' | 'wolves'>('village')
   // Badges "message non lu" sur les onglets Loups/Amoureux (voir migration
   // 0206 + useUnreadChatCount) — la RLS de chat_messages empêche de toute
   // façon quiconque n'y ayant pas accès de recevoir ces évènements
@@ -190,8 +190,7 @@ export default function GameRoom() {
   // pendant le tour de vote des loups.
   useEffect(() => {
     const wolfWindowOpen = view && view.game.status === 'night' && isWolfTeam(view.my_role)
-    if (view?.game.status !== 'night') setNightTab('village')
-    else if (!wolfWindowOpen) setNightTab((tab) => (tab === 'wolves' ? 'village' : tab))
+    if (!wolfWindowOpen) setNightTab('village')
   }, [view])
 
   // Stabilisé (audit de fluidité du 2026-10-01) : un littéral objet recréé
@@ -742,7 +741,7 @@ export default function GameRoom() {
             />
           )}
 
-          {/* Débat et nuit en plein écran : le journal a son propre onglet (📜 / Journal) dans la rangée du haut. */}
+          {/* Débat et nuit en plein écran : le journal est un volet (📜) dans la rangée du haut. */}
           {!fullScreen && (
           <Card className="!p-0 border-night-700/60 bg-night-900/40">
             <button
@@ -961,7 +960,7 @@ const GhostVillageWolvesChat = memo(function GhostVillageWolvesChat({
   players: PublicPlayer[]
 }) {
   const { t } = useLanguage()
-  const [tab, setTab] = useState<'village' | 'wolves' | 'journal'>('village')
+  const [tab, setTab] = useState<'village' | 'wolves'>('village')
   // Hooks appelés avant le `return` anticipé ci-dessous (règle des Hooks) —
   // sans intérêt tant que `showWolves` est faux, d'où le canal `null` dans
   // ce cas (même patron que unreadAmoureux dans GameRoom, plus haut).

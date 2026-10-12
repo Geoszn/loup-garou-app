@@ -51,7 +51,7 @@ export const ChatPanel = memo(function ChatPanel({
   floating = false,
   floatingTopClass = 'pt-14',
   floatingTopPx,
-  replaceList,
+  onComposerFocus,
 }: {
   gameId: string
   channel: ChatChannel
@@ -94,8 +94,8 @@ export const ChatPanel = memo(function ChatPanel({
   floatingTopClass?: string
   /** Hauteur mesurée de la rangée du parent (prioritaire sur `floatingTopClass`) : la liste démarre juste en dessous. */
   floatingTopPx?: number
-  /** Remplace la liste des messages (ex. l'onglet Journal) ; la bulle d'écriture reste en bas. */
-  replaceList?: ReactNode
+  /** Appelé quand le joueur met le curseur dans la bulle d'écriture (ex. pour refermer le volet du journal). */
+  onComposerFocus?: () => void
 }) {
   const { t, lang } = useLanguage()
   const { messages, identities, reactions, send, sending, toggleReaction } = useChat(gameId, channel)
@@ -148,6 +148,10 @@ export const ChatPanel = memo(function ChatPanel({
   // messages) à chaque fois — un coût significatif sur un salon très actif,
   // remonté comme un ralentissement général du chat sur mobile.
   const [inputFocused, setInputFocused] = useState(false)
+  useEffect(() => {
+    if (inputFocused) onComposerFocus?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputFocused])
   const [viewport, setViewport] = useState<{ height: number; top: number } | null>(null)
 
   // Le passage en plein écran ne sert qu'à échapper au clavier virtuel
@@ -394,10 +398,8 @@ export const ChatPanel = memo(function ChatPanel({
           voir la condition e.target === e.currentTarget) referme le clavier
           en plein écran, comme dans la plupart des apps de chat. */}
       <div className="relative min-h-0 flex-1">
-      {replaceList}
       <div
         ref={listRef}
-        hidden={!!replaceList}
         onScroll={handleListScroll}
         style={floating && !expanded && floatingTopPx !== undefined ? { paddingTop: Math.max(floatingTopPx - 4, 0) } : undefined}
         className={`h-full overflow-y-auto overscroll-contain scrollbar-thin px-3 ${floating ? `${expanded ? 'pt-3' : floatingTopClass} ${readOnly ? 'pb-4' : 'pb-28'}` : 'py-3'}`}

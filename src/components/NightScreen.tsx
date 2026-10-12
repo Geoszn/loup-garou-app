@@ -4,14 +4,14 @@ import { useVoiceSession } from './VoiceChat'
 import type { MyGameView, PublicPlayer } from '../types/game'
 import { BottomSheet } from './BottomSheet'
 import { ChatPanel } from './ChatPanel'
-import { GameJournal, useJournalUnread } from './GameJournal'
+import { JournalDrawer, useJournalUnread } from './GameJournal'
 import { NIGHT_STEP_ICON, NIGHT_STEP_LABEL } from './PhaseBanner'
 import { ChatStrip, MicButton, STRIP_BUTTON, stripTone, VoiceFaces, VoiceSheet, voiceSpeakers, voiceStatus } from './DayDiscussion'
 
 // Écran de nuit (joueur vivant), plein écran comme le débat de jour : le chat anonyme du village remplit l'écran, sa
 // bulle d'écriture flotte au-dessus de la barre du bas. Le panneau d'action du rôle (vote des loups, Voyante,
 // Sorcière...) vit dans un tiroir qui s'ouvre tout seul quand c'est le tour du joueur ; rôle et joueurs ont leurs tiroirs.
-// Onglets Village / Journal pour tous, et Loups en plus pour la meute (avec son vocal).
+// Onglet Village pour tous, Loups en plus pour la meute (avec son vocal) ; le journal est un volet (📜).
 
 type Sheet = 'action' | 'players' | 'role' | 'voice'
 
@@ -22,8 +22,8 @@ interface Props {
   selfId: string
   me: PublicPlayer | undefined
   isWolf: boolean
-  nightTab: 'village' | 'wolves' | 'journal'
-  setNightTab: (t: 'village' | 'wolves' | 'journal') => void
+  nightTab: 'village' | 'wolves'
+  setNightTab: (t: 'village' | 'wolves') => void
   unreadWolves: number
   unreadVillage: number
   /** Panneau d'action à jouer maintenant (vote des loups, Voyante...) ; null quand rien n'est attendu du joueur. */
@@ -69,8 +69,8 @@ export function NightScreen({
   const alive = view.players.filter((p) => p.is_alive)
   const inWolves = isWolf && nightTab === 'wolves'
   const channel = inWolves ? 'wolves' : 'village'
-  const inJournal = nightTab === 'journal'
-  const unreadJournal = useJournalUnread(gameId, view.log.length, inJournal)
+  const [journalOpen, setJournalOpen] = useState(false)
+  const unreadJournal = useJournalUnread(gameId, view.log.length, journalOpen)
 
   // Le tiroir d'action s'ouvre dès que le tour du joueur commence — sauf s'il est en train d'écrire, auquel cas seule
   // la pastille pulse. Une clé par étape : une action déjà fermée à la main ne se rouvre pas toute seule.
@@ -106,14 +106,12 @@ export function NightScreen({
   // Hauteur réelle de la rangée du haut (onglets + bloc « qui joue » + ligne d'état + visages du vocal), mesurée par ChatStrip.
   const [topPx, setTopPx] = useState<number | undefined>(undefined)
 
-  const tab = (id: 'village' | 'wolves' | 'journal', label: string, unread: number) => (
+  const tab = (id: 'village' | 'wolves', label: string, unread: number) => (
     <button
       type="button"
       onClick={() => setNightTab(id)}
       aria-pressed={nightTab === id}
-      // Le journal n'a qu'une icône (comme 📜 le jour) : trois onglets avec texte ne tiennent pas sur un téléphone.
-      aria-label={id === 'journal' ? t('tabs.journal') : undefined}
-      className={`${STRIP_BUTTON} ${stripTone(nightTab === id ? 'on' : 'idle')} gap-1 text-xs font-semibold ${id === 'journal' ? 'w-9' : 'px-2'}`}
+      className={`${STRIP_BUTTON} ${stripTone(nightTab === id ? 'on' : 'idle')} gap-1 px-2 text-xs font-semibold`}
     >
       {label}
       {unread > 0 && nightTab !== id && (
@@ -136,7 +134,7 @@ export function NightScreen({
         selfId={selfId}
         readOnly={channel === 'village' && villageMuted}
         note={channel === 'village' ? (villageMuted ? t('game.villageMutedNote') : t('game.nightChatNote')) : undefined}
-        replaceList={inJournal ? <GameJournal entries={view.log} topPx={topPx} /> : undefined}
+        onComposerFocus={() => setJournalOpen(false)}
         // Le micro des loups est disponible dans les deux onglets : le vocal reste celui de la meute.
         composerLead={isWolf ? <MicButton session={session} listenOnly={false} small /> : undefined}
       />
@@ -145,7 +143,6 @@ export function NightScreen({
         <div className="flex items-center gap-1.5 px-3">
           {tab('village', t('nightScreen.tab.village'), unreadVillage)}
           {isWolf && tab('wolves', t('tabs.wolves'), unreadWolves)}
-          {tab('journal', '📜', unreadJournal)}
           <span className="flex-1" />
           {(actionPanel || hasResult) && (
             <button
@@ -158,6 +155,16 @@ export function NightScreen({
               {resultUnseen && !actionPanel && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-night-950 bg-blood-500" />}
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => setJournalOpen((v) => !v)}
+            aria-expanded={journalOpen}
+            aria-label={t('tabs.journal')}
+            className={`${STRIP_BUTTON} ${stripTone(journalOpen ? 'accent' : 'idle')} w-8`}
+          >
+            📜
+            {unreadJournal > 0 && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-night-950 bg-blood-500" />}
+          </button>
           <button type="button" onClick={() => setSheet('players')} aria-label={t('dayLayout.sheet.players')} className={`${STRIP_BUTTON} ${stripTone()} gap-1 px-2.5 text-[11px] font-semibold`}>
             👥 {alive.length}/{view.players.length}
           </button>
@@ -181,6 +188,8 @@ export function NightScreen({
         )}
         {inWolves && <VoiceFaces session={session} players={view.players} selfId={selfId} onOpen={() => setSheet('voice')} />}
       </ChatStrip>
+
+      <JournalDrawer open={journalOpen} onClose={() => setJournalOpen(false)} entries={view.log} topPx={topPx} />
 
       <BottomSheet
         open={sheet === 'action'}

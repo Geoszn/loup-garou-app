@@ -7,7 +7,7 @@ import { Avatar } from './Avatar'
 import { BottomSheet } from './BottomSheet'
 import { GuestVoiceCard } from './GuestWall'
 import { ChatPanel } from './ChatPanel'
-import { GameJournal, useJournalUnread } from './GameJournal'
+import { JournalDrawer, useJournalUnread } from './GameJournal'
 
 // Écran de débat (jour), plein écran : le chat n'a plus de cadre, il occupe tout l'espace sous la barre de phase
 // et seule la bulle d'écriture (micro, texte, envoyer, voter) flotte au-dessus de la barre du bas. Le vocal est une
@@ -178,14 +178,15 @@ export function DayDiscussion({ view, gameId, code, selfId, me, voiceChannel, vo
   const { t } = useLanguage()
   const listenOnly = !!view.village_muted
   const session = useVoiceSession({ gameId, code, channel: voiceChannel, displayName: me?.display_name ?? t('common.playerFallback'), selfUserId: selfId, listenOnly })
-  const [channel, setChannel] = useState<'village' | 'amoureux' | 'journal'>('village')
+  const [channel, setChannel] = useState<'village' | 'amoureux'>('village')
+  const [journalOpen, setJournalOpen] = useState(false)
   const [sheet, setSheet] = useState<Sheet | null>(null)
   useEffect(() => {
-    if (!view.lover_id) setChannel((c) => (c === 'amoureux' ? 'village' : c))
+    if (!view.lover_id) setChannel('village')
   }, [view.lover_id])
   // Hauteur réelle de la rangée du haut (mesurée par ChatStrip) : le chat et le journal démarrent juste en dessous.
   const [topPx, setTopPx] = useState<number | undefined>(undefined)
-  const unreadJournal = useJournalUnread(gameId, view.log.length, channel === 'journal')
+  const unreadJournal = useJournalUnread(gameId, view.log.length, journalOpen)
 
   const alive = view.players.filter((p) => p.is_alive)
   const status = voiceStatus(session, view.players, selfId, t)
@@ -200,13 +201,13 @@ export function DayDiscussion({ view, gameId, code, selfId, me, voiceChannel, vo
         embedded
         players={view.players}
         gameId={gameId}
-        channel={channel === 'amoureux' ? 'amoureux' : 'village'}
+        channel={channel}
         selfId={selfId}
         readOnly={channel === 'village' && listenOnly}
         note={channel === 'village' && listenOnly ? t('game.villageMutedNote') : undefined}
         composerLead={<MicButton session={session} listenOnly={listenOnly} small />}
         composerTrail={<span className="flex [&>*]:!h-10 [&>*]:!w-10 [&>*]:!text-lg">{vote}</span>}
-        replaceList={channel === 'journal' ? <GameJournal entries={view.log} topPx={topPx} /> : undefined}
+        onComposerFocus={() => setJournalOpen(false)}
       />
 
       {/* Rangée vocale : des visages sur le fond du chat, qui s'estompent vers les messages ; celui qui parle s'allume. */}
@@ -225,10 +226,10 @@ export function DayDiscussion({ view, gameId, code, selfId, me, voiceChannel, vo
             </button>
             <button
               type="button"
-              onClick={() => setChannel(channel === 'journal' ? 'village' : 'journal')}
-              aria-pressed={channel === 'journal'}
+              onClick={() => setJournalOpen((v) => !v)}
+              aria-expanded={journalOpen}
               aria-label={t('tabs.journal')}
-              className={`${STRIP_BUTTON} w-8 ${stripTone(channel === 'journal' ? 'on' : 'idle')}`}
+              className={`${STRIP_BUTTON} w-8 ${stripTone(journalOpen ? 'accent' : 'idle')}`}
             >
               📜
               {unreadJournal > 0 && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-night-950 bg-blood-500" />}
@@ -250,6 +251,8 @@ export function DayDiscussion({ view, gameId, code, selfId, me, voiceChannel, vo
           </div>
         </div>
       </ChatStrip>
+
+      <JournalDrawer open={journalOpen} onClose={() => setJournalOpen(false)} entries={view.log} topPx={topPx} />
 
       <BottomSheet open={sheet === 'players'} onClose={() => setSheet(null)} title={`👥 ${t('dayLayout.sheet.players')}`}>
         {playersSheet}
