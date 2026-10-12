@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { notifyJoinRequest } from '../lib/pushSubscription'
 import { Button, ErrorText, Input, Label, Modal } from '../components/ui'
 import { PublicGamesList } from '../components/PublicGamesBrowser'
+import { GameInProgressChoice } from '../components/GameInProgressChoice'
 import { HowToPlayButton } from '../components/HowToPlayButton'
 import { useLanguage } from '../i18n/LanguageContext'
 
@@ -48,6 +49,8 @@ export default function Play() {
   const [code, setCode] = useState('')
   const [joining, setJoining] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
+  // Code d'une partie déjà en cours : on propose « regarder » ou « rejoindre » avant de créer la moindre demande.
+  const [choiceCode, setChoiceCode] = useState<string | null>(null)
 
   function closeJoin() {
     setJoinStep('closed')
@@ -62,7 +65,16 @@ export default function Play() {
       return
     }
     setJoining(true)
-    const { data, error } = await supabase.rpc('join_game', { p_code: code.trim().toUpperCase(), p_display_name: displayName })
+    const upper = code.trim().toUpperCase()
+    // Une partie déjà en cours n'est pas rejointe en silence : choix regarder / rejoindre d'abord (même règle que le lien
+    // d'invitation, voir JoinByLink.tsx). Un échec de cette vérification n'empêche pas de continuer : join_game refait le travail.
+    const { data: status } = await supabase.rpc('get_game_status_by_code', { p_code: upper })
+    if (status && status !== 'lobby' && status !== 'ended') {
+      setJoining(false)
+      setChoiceCode(upper)
+      return
+    }
+    const { data, error } = await supabase.rpc('join_game', { p_code: upper, p_display_name: displayName })
     setJoining(false)
     if (error) {
       setJoinError(error.message)
@@ -76,8 +88,48 @@ export default function Play() {
     navigate(`/partie/${data.code}/lobby`)
   }
 
+  // « Regarder » : observation seule, sans aucune demande (watch_game, migration 0249).
+  async function watchChosen() {
+    if (!choiceCode) return
+    setJoining(true)
+    const { data, error } = await supabase.rpc('watch_game', { p_code: choiceCode })
+    setJoining(false)
+    if (error) {
+      setChoiceCode(null)
+      setJoinError(error.message)
+      return
+    }
+    navigate(`/observer/${data.game_id}`)
+  }
+
+  // « Rejoindre » : la demande part à l'hôte et on observe en attendant son acceptation.
+  async function joinChosen() {
+    if (!choiceCode) return
+    setJoining(true)
+    const { data, error } = await supabase.rpc('join_game', { p_code: choiceCode, p_display_name: displayName })
+    setJoining(false)
+    if (error) {
+      setChoiceCode(null)
+      setJoinError(error.message)
+      return
+    }
+    if (data.status === 'pending') {
+      void notifyJoinRequest(data.game_id)
+      navigate(`/attente/${data.game_id}/observer`)
+      return
+    }
+    navigate(`/partie/${data.code}/lobby`)
+  }
+
   return (
     <div className="min-h-screen px-4 pt-8">
+      {choiceCode && (
+        <div className="fixed inset-0 z-[60] flex animate-overlay-in items-center justify-center bg-black/60 px-4 backdrop-blur-sm" onClick={() => setChoiceCode(null)}>
+          <div onClick={(e) => e.stopPropagation()}>
+            <GameInProgressChoice onWatch={watchChosen} onJoin={joinChosen} onCancel={() => setChoiceCode(null)} busy={joining} />
+          </div>
+        </div>
+      )}
       <div className="mx-auto flex max-w-3xl flex-col gap-4">
         <header className="flex items-start justify-between gap-3">
           <div>

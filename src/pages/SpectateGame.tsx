@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { notifyJoinRequest } from '../lib/pushSubscription'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useSpectatorGame } from '../hooks/useSpectatorGame'
@@ -78,12 +79,17 @@ function SpectatorLog({ entries }: { entries: { id: string; message: string }[] 
 export default function SpectateGame() {
   const { gameId } = useParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
+  // /observer/:gameId : on regarde SANS avoir envoyé de demande (watch_game, migration 0249). /attente/:gameId/observer : on
+  // observe en attendant que l'hôte réponde à notre demande de rejoindre.
+  const watchOnly = useLocation().pathname.startsWith('/observer/')
+  const { user, profile } = useAuth()
   const { t } = useLanguage()
   const { view, loading } = useSpectatorGame(gameId ?? null)
   const [rosterOpen, setRosterOpen] = useState(false)
   const [logOpen, setLogOpen] = useState(false)
   const [exiting, setExiting] = useState(false)
+  const [joining, setJoining] = useState(false)
+  const [joinError, setJoinError] = useState<string | null>(null)
   const redirectedRef = useRef(false)
 
   // Sortir directement d'ici, en un clic — retour utilisateur : avant, il
@@ -96,12 +102,31 @@ export default function SpectateGame() {
     if (!gameId) return
     setExiting(true)
     redirectedRef.current = true
-    await supabase.rpc('cancel_join_request', { p_game_id: gameId })
+    await supabase.rpc(watchOnly ? 'stop_watching_game' : 'cancel_join_request', { p_game_id: gameId })
     navigate('/dashboard')
   }
 
+  // Depuis l'observation seule : demander à rejoindre. On continue d'observer (écran d'observation avec demande) jusqu'à la réponse de l'hôte.
+  async function requestToJoin(code: string) {
+    setJoining(true)
+    setJoinError(null)
+    const { data, error } = await supabase.rpc('join_game', { p_code: code, p_display_name: profile?.username ?? t('common.playerFallback') })
+    setJoining(false)
+    if (error) {
+      setJoinError(error.message)
+      return
+    }
+    redirectedRef.current = true
+    if (data.status === 'pending') {
+      void notifyJoinRequest(data.game_id)
+      navigate(`/attente/${data.game_id}/observer`, { replace: true })
+      return
+    }
+    navigate(`/partie/${data.code}/lobby`, { replace: true })
+  }
+
   useEffect(() => {
-    if (!gameId) return
+    if (!gameId || watchOnly) return
     let cancelled = false
 
     async function poll() {
@@ -119,12 +144,15 @@ export default function SpectateGame() {
       cancelled = true
       clearInterval(interval)
     }
-  }, [gameId, navigate])
+  }, [gameId, navigate, watchOnly])
 
   if (!gameId || !user) return null
   if (loading || !view) return <FullScreenLoader />
 
   const { game, players, log } = view
+
+  // Retour au salon (nouvelle partie) : il n'y a plus rien à regarder, on rejoint directement.
+  if (watchOnly && game.status === 'lobby') return <Navigate to={`/rejoindre/${game.code}`} replace />
 
   return (
     <div className="game-theme-root relative min-h-screen bg-night-950 pb-16">
@@ -137,7 +165,7 @@ export default function SpectateGame() {
                 {t(PHASE_TITLE_KEY[game.status])}
                 {game.status === 'night' ? ` ${game.night_number}` : ''}
               </p>
-              <p className="text-xs text-moon-200/40">{t('spectate.badge')}</p>
+              <p className="text-xs text-moon-200/40">{t(watchOnly ? 'spectate.badgeWatchOnly' : 'spectate.badge')}</p>
             </div>
           </div>
           <Button variant="ghost" disabled={exiting} onClick={exitSpectating} className="!px-3 !py-2 text-xs">
@@ -145,7 +173,17 @@ export default function SpectateGame() {
           </Button>
         </Card>
 
-        <Card className="!py-4 text-sm text-moon-200/60">{t('spectate.subtitle')}</Card>
+        <Card className="flex flex-col gap-3 !py-4 text-sm text-moon-200/60">
+          <span>{t(watchOnly ? 'spectate.subtitleWatchOnly' : 'spectate.subtitle')}</span>
+          {watchOnly && (
+            <>
+              <Button disabled={joining} onClick={() => requestToJoin(game.code)} className="w-full">
+                {t('spectate.joinButton')}
+              </Button>
+              {joinError && <span className="text-xs text-blood-400">{joinError}</span>}
+            </>
+          )}
+        </Card>
 
         <Card className="!p-0 border-night-700/60 bg-night-900/40">
           <button

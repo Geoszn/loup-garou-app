@@ -222,6 +222,14 @@ export default function App() {
           }
         />
         <Route
+          path="/observer/:gameId"
+          element={
+              <Suspense fallback={<FullScreenLoader />}>
+                <SpectateGame />
+              </Suspense>
+          }
+        />
+        <Route
           path="/partie/:code/lobby"
           element={
               <Suspense fallback={<FullScreenLoader />}>

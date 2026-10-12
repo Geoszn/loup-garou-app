@@ -45,16 +45,26 @@ export function useJoinPublicGame(displayName: string) {
     if (await submitJoinRequest(game)) navigate(`/attente/${game.game_id}`)
   }
 
+  // « Regarder » : observation seule, sans demande (watch_game, migration 0249).
   async function watchChosen() {
     if (!choiceGame) return
     const game = choiceGame
-    if (await submitJoinRequest(game)) navigate(`/attente/${game.game_id}/observer`)
+    setRequestingId(game.game_id)
+    setError(null)
+    const { error: rpcError } = await supabase.rpc('watch_game', { p_game_id: game.game_id })
+    setRequestingId(null)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    navigate(`/observer/${game.game_id}`)
   }
 
-  async function requestOnlyChosen() {
+  // « Rejoindre » : la demande part à l'hôte, et on observe en attendant son acceptation.
+  async function joinChosen() {
     if (!choiceGame) return
     const game = choiceGame
-    if (await submitJoinRequest(game)) navigate(`/attente/${game.game_id}`)
+    if (await submitJoinRequest(game)) navigate(`/attente/${game.game_id}/observer`)
   }
 
   return {
@@ -64,7 +74,7 @@ export function useJoinPublicGame(displayName: string) {
     closeChoice: () => setChoiceGame(null),
     requestJoin,
     watchChosen,
-    requestOnlyChosen,
+    joinChosen,
   }
 }
 

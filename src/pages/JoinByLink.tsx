@@ -120,14 +120,23 @@ export default function JoinByLink() {
     return { gameId: data.game_id, code: data.code }
   }
 
+  // « Regarder » : observation seule, sans aucune demande (watch_game, migration 0249).
   async function handleWatch() {
-    const result = await submitJoinRequest()
-    if (result) navigate(`/attente/${result.gameId}/observer`, { replace: true })
+    if (!code) return
+    setChoiceBusy(true)
+    const { data, error: rpcError } = await supabase.rpc('watch_game', { p_code: code.toUpperCase() })
+    setChoiceBusy(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      return
+    }
+    navigate(`/observer/${data.game_id}`, { replace: true })
   }
 
-  async function handleRequestOnly() {
+  // « Rejoindre » : la demande part à l'hôte et on observe en attendant son acceptation.
+  async function handleJoin() {
     const result = await submitJoinRequest()
-    if (result) navigate(`/attente/${result.gameId}`, { replace: true, state: { code: result.code } })
+    if (result) navigate(`/attente/${result.gameId}/observer`, { replace: true })
   }
 
   if (error) {
@@ -147,7 +156,7 @@ export default function JoinByLink() {
       <div className="flex min-h-screen items-center justify-center px-4">
         <GameInProgressChoice
           onWatch={handleWatch}
-          onRequestOnly={handleRequestOnly}
+          onJoin={handleJoin}
           onCancel={() => navigate('/dashboard')}
           busy={choiceBusy}
         />

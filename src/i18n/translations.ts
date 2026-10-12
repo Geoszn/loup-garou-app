@@ -2923,17 +2923,23 @@ export const translations = {
     en: "You're not a member of this game yet. You can follow the village and the graveyard in read-only mode, and listen in on voice during debates — you'll officially join as soon as the host approves your request.",
   },
   'spectate.exit': { fr: '🚪 Quitter', en: '🚪 Leave' },
+  'spectate.badgeWatchOnly': { fr: 'Vous regardez — sans participer', en: 'You are watching — not taking part' },
+  'spectate.subtitleWatchOnly': {
+    fr: "Vous suivez le village et le cimetière en lecture seule, et vous écoutez le vocal pendant les débats. Vous ne participez pas à la partie : demandez à la rejoindre quand vous voulez.",
+    en: "You follow the village and the graveyard in read-only mode and listen in on voice during debates. You are not taking part: ask to join whenever you like.",
+  },
+  'spectate.joinButton': { fr: '🚪 Rejoindre la partie', en: '🚪 Join the game' },
 
   // --- Choix rejoindre/regarder pour une partie déjà en cours
   // (GameInProgressChoice.tsx, utilisé par JoinByLink.tsx et
   // PublicGamesBrowser.tsx) -----------------------------------------------
   'joinChoice.title': { fr: 'Cette partie a déjà commencé', en: 'This game has already started' },
   'joinChoice.body': {
-    fr: "Vous pouvez la regarder en direct en attendant, ou juste envoyer votre demande et revenir plus tard — l'hôte pourra vous accepter dès le retour au salon.",
-    en: "You can watch it live in the meantime, or just send your request and come back later — the host will be able to accept you once back in the lobby.",
+    fr: "Vous pouvez la regarder en direct sans la rejoindre, ou demander à la rejoindre : vous l'observerez en attendant que l'hôte vous accepte.",
+    en: "You can watch it live without joining, or ask to join it: you'll watch it while you wait for the host to accept you.",
   },
-  'joinChoice.watch': { fr: '👁️ Rejoindre et regarder', en: '👁️ Join and watch' },
-  'joinChoice.requestOnly': { fr: '⏳ Envoyer ma demande sans regarder', en: '⏳ Send my request without watching' },
+  'joinChoice.watch': { fr: '👁️ Regarder la partie', en: '👁️ Watch the game' },
+  'joinChoice.join': { fr: '🚪 Rejoindre la partie', en: '🚪 Join the game' },
   'joinChoice.later': { fr: 'Plus tard', en: 'Later' },
 
   // --- Rejoindre par lien (JoinByLink.tsx) -------------------------------------

@@ -11,19 +11,18 @@ import { useLanguage } from '../i18n/LanguageContext'
  * join_game/request_join_public_game, pas après : aucune demande n'est
  * créée si le joueur choisit "Plus tard".
  *
- * "Regarder" et "Envoyer la demande" créent tous les deux la même demande
- * en attente côté serveur (game_join_requests) — get_spectator_game_view
- * l'exige de toute façon pour autoriser le mode spectateur — seule la page
- * de destination change : directement dans le mode spectateur pour l'un,
- * sur l'écran d'attente simple pour l'autre. */
+ * « Regarder la partie » (en premier) ne crée AUCUNE demande : on observe en
+ * lecture seule, sans rejoindre (watch_game, migration 0249). « Rejoindre la
+ * partie » envoie la demande à l'hôte et ouvre l'observation en attendant son
+ * acceptation (game_join_requests) : une fois accepté, on devient joueur. */
 export function GameInProgressChoice({
   onWatch,
-  onRequestOnly,
+  onJoin,
   onCancel,
   busy,
 }: {
   onWatch: () => void
-  onRequestOnly: () => void
+  onJoin: () => void
   onCancel: () => void
   busy: boolean
 }) {
@@ -36,8 +35,8 @@ export function GameInProgressChoice({
       <Button onClick={onWatch} disabled={busy} className="mb-2.5 w-full">
         {t('joinChoice.watch')}
       </Button>
-      <Button variant="ghost" onClick={onRequestOnly} disabled={busy} className="mb-3 w-full">
-        {t('joinChoice.requestOnly')}
+      <Button variant="ghost" onClick={onJoin} disabled={busy} className="mb-3 w-full">
+        {t('joinChoice.join')}
       </Button>
       <button
         type="button"

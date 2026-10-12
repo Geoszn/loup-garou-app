@@ -15,7 +15,7 @@ export function JoinChoiceOverlay({ join }: { join: JoinPublicGame }) {
       <div onClick={(e) => e.stopPropagation()}>
         <GameInProgressChoice
           onWatch={join.watchChosen}
-          onRequestOnly={join.requestOnlyChosen}
+          onJoin={join.joinChosen}
           onCancel={join.closeChoice}
           busy={join.requestingId === join.choiceGame.game_id}
         />
