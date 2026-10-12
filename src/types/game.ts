@@ -512,6 +512,8 @@ export interface MyGameView {
   my_parchemin_griot_stock: number
   my_owns_dernier_souffle: boolean
   my_dernier_souffle_used: boolean
+  // Charges de Dernier Souffle en réserve (migration 0248).
+  my_dernier_souffle_stock: number
   // L'Œil du Baobab (migration 0246) : charges en réserve, et résultat privé s'il a déjà été utilisé dans cette partie.
   my_oeil_baobab_stock: number
   my_oeil_baobab_result: { targets: string[]; has_wolf: boolean } | null

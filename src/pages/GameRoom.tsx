@@ -502,6 +502,7 @@ export default function GameRoom() {
               parcheminGriotUsed={view.my_parchemin_griot_used}
               ownsDernierSouffle={view.my_owns_dernier_souffle}
               dernierSouffleUsed={view.my_dernier_souffle_used}
+              dernierSouffleStock={view.my_dernier_souffle_stock}
             />
             {/* Pronostic des fantômes (migration 0221) : facultatif, replié ;
                 disparaît tout seul quand il est impossible (bots, < 6 humains…). */}
@@ -895,6 +896,7 @@ const GhostPanel = memo(function GhostPanel({
   parcheminGriotUsed,
   ownsDernierSouffle,
   dernierSouffleUsed,
+  dernierSouffleStock,
 }: {
   gameId: string
   code: string
@@ -905,6 +907,7 @@ const GhostPanel = memo(function GhostPanel({
   parcheminGriotUsed: boolean
   ownsDernierSouffle: boolean
   dernierSouffleUsed: boolean
+  dernierSouffleStock: number
 }) {
   const villageVoiceAvailable = ['day_reveal', 'day_discussion', 'day_vote', 'captain_election'].includes(gameStatus)
   // Parchemin du Griot (artefact du Loup Store, migration 0148, activation
@@ -921,7 +924,7 @@ const GhostPanel = memo(function GhostPanel({
       {villageVoiceAvailable && (
         <VoiceChat gameId={gameId} code={code} channel="village" displayName={displayName} selfUserId={selfId} listenOnly players={players} />
       )}
-      {ownsDernierSouffle && !dernierSouffleUsed && <LastWordsForm gameId={gameId} />}
+      {ownsDernierSouffle && !dernierSouffleUsed && <LastWordsForm gameId={gameId} charges={dernierSouffleStock} />}
       <GhostVillageWolvesChat gameId={gameId} selfId={selfId} showWolves={showWolvesGhostPanel} players={players} />
       {/* Retour utilisateur : "agrandir la taille du chat du cimetière" —
           c'est là que les fantômes passent le plus clair de leur temps une
@@ -1003,7 +1006,7 @@ const GhostVillageWolvesChat = memo(function GhostVillageWolvesChat({
  * pas déjà été utilisé cette partie (dernierSouffleUsed vient de
  * get_my_game_view, recalculé à chaque lecture — pas besoin de suivre
  * l'état "envoyé" localement au-delà du succès immédiat de l'appel). */
-const LastWordsForm = memo(function LastWordsForm({ gameId }: { gameId: string }) {
+const LastWordsForm = memo(function LastWordsForm({ gameId, charges }: { gameId: string; charges: number }) {
   const { t } = useLanguage()
   const [content, setContent] = useState('')
   const [sending, setSending] = useState(false)
@@ -1030,6 +1033,7 @@ const LastWordsForm = memo(function LastWordsForm({ gameId }: { gameId: string }
     <div className="flex flex-col gap-2 rounded-2xl border border-amber-400/30 bg-amber-400/[0.05] p-3">
       <p className="text-xs font-semibold text-amber-300">{t('game.lastWords.title')}</p>
       <p className="text-xs text-moon-200/50">{t('game.lastWords.subtitle')}</p>
+      <p className="text-[11px] text-moon-200/40">{t('artifacts.stock', { count: charges })}</p>
       <div className="flex gap-2">
         <input
           value={content}
