@@ -52,7 +52,7 @@ export function ArtifactsMenu({ view, gameId }: { view: MyGameView; gameId: stri
     <div className="flex flex-col gap-2.5">
       {hasOeilBaobabToShow(view) && <OeilBaobabRow view={view} gameId={gameId} />}
       {!view.my_alive && view.my_owns_parchemin_griot && (
-        <ParcheminGriotRow gameId={gameId} used={view.my_parchemin_griot_used} />
+        <ParcheminGriotRow gameId={gameId} used={view.my_parchemin_griot_used} stock={view.my_parchemin_griot_stock} />
       )}
       {!view.my_alive && view.my_owns_dernier_souffle && view.my_dernier_souffle_used && <DernierSouffleRow />}
       <p className="mt-1 text-[11px] leading-relaxed text-moon-200/35">{t('artifacts.footerNote')}</p>
@@ -105,7 +105,7 @@ function ArtifactRow({
  * serveur ; seule la seconde ('armed' -> appel RPC) consomme réellement
  * l'artefact. Retour utilisateur explicite : "c'est très important la
  * deuxième confirmation". */
-function ParcheminGriotRow({ gameId, used }: { gameId: string; used: boolean }) {
+function ParcheminGriotRow({ gameId, used, stock }: { gameId: string; used: boolean; stock: number }) {
   const { t } = useLanguage()
   const [step, setStep] = useState<'idle' | 'armed'>('idle')
   const [loading, setLoading] = useState(false)
@@ -135,6 +135,7 @@ function ParcheminGriotRow({ gameId, used }: { gameId: string; used: boolean }) 
       badge={activated ? t('artifacts.badge.activated') : t('artifacts.badge.available')}
       badgeTone={activated ? 'used' : 'ok'}
     >
+      <p className="mt-1.5 text-[11px] text-moon-200/40">{t('artifacts.stock', { count: stock })}</p>
       {!activated && (
         <div className="mt-2.5 flex gap-2">
           {step === 'idle' ? (
@@ -205,7 +206,7 @@ function OeilBaobabRow({ view, gameId }: { view: MyGameView; gameId: string }) {
       emoji="👁️"
       name={t('artifacts.oeil.name')}
       description={t('artifacts.oeil.description')}
-      badge={result ? t('artifacts.badge.used') : usable ? t('artifacts.badge.available') : t('artifacts.oeil.stock', { count: view.my_oeil_baobab_stock })}
+      badge={result ? t('artifacts.badge.used') : usable ? t('artifacts.badge.available') : t('artifacts.stock', { count: view.my_oeil_baobab_stock })}
       badgeTone={usable ? 'ok' : 'used'}
     >
       {result && (

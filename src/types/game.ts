@@ -508,6 +508,8 @@ export interface MyGameView {
   // "Mes artefacts" (ArtifactsMenu.tsx). Repart à false à chaque nouvelle
   // partie, comme my_dernier_souffle_used (propre à game_artifact_uses).
   my_parchemin_griot_used: boolean
+  // Charges de Parchemin du Griot en réserve (migration 0247) — il fonctionne par stock comme les autres artefacts de jeu.
+  my_parchemin_griot_stock: number
   my_owns_dernier_souffle: boolean
   my_dernier_souffle_used: boolean
   // L'Œil du Baobab (migration 0246) : charges en réserve, et résultat privé s'il a déjà été utilisé dans cette partie.

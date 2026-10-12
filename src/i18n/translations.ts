@@ -3279,7 +3279,7 @@ export const translations = {
     fr: 'Choisis 3 joueurs : l’Œil te dit en secret s’il y a au moins un Loup parmi eux, ou aucun. Un indice, jamais une certitude. Une fois par partie, de jour, à partir du 2e jour.',
     en: 'Choose 3 players: the Eye secretly tells you whether there is at least one Wolf among them, or none. A clue, never a certainty. Once per game, by day, from day 2.',
   },
-  'artifacts.oeil.stock': { fr: 'Charges : {{count}}', en: 'Charges: {{count}}' },
+  'artifacts.stock': { fr: 'Charges : {{count}}', en: 'Charges: {{count}}' },
   'artifacts.oeil.pick': { fr: 'Choisis 3 autres joueurs ({{count}}/3)', en: 'Choose 3 other players ({{count}}/3)' },
   'artifacts.oeil.consult': { fr: 'Consulter l’Œil', en: 'Consult the Eye' },
   'artifacts.oeil.confirmNote': { fr: 'Dernière confirmation : cela consomme une charge et ne peut plus être annulé.', en: 'Last confirmation: this consumes a charge and cannot be undone.' },
