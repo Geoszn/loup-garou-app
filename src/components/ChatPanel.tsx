@@ -50,6 +50,7 @@ export const ChatPanel = memo(function ChatPanel({
   composerTrail,
   floating = false,
   floatingTopClass = 'pt-14',
+  floatingTopPx,
   events,
 }: {
   gameId: string
@@ -91,6 +92,8 @@ export const ChatPanel = memo(function ChatPanel({
   floating?: boolean
   /** Marge du haut de la liste en mode `floating` (une rangée posée par le parent : pt-14 ; deux rangées : pt-24). */
   floatingTopClass?: string
+  /** Hauteur mesurée de la rangée du parent (prioritaire sur `floatingTopClass`) : la liste démarre juste en dessous. */
+  floatingTopPx?: number
   /** Évènements du journal de la partie, affichés comme des lignes discrètes entre les messages, à leur date. */
   events?: { id: string; message: string; created_at: string }[]
 }) {
@@ -416,6 +419,7 @@ export const ChatPanel = memo(function ChatPanel({
       <div
         ref={listRef}
         onScroll={handleListScroll}
+        style={floating && !expanded && floatingTopPx !== undefined ? { paddingTop: Math.max(floatingTopPx - 12, 0) } : undefined}
         className={`h-full overflow-y-auto overscroll-contain scrollbar-thin px-3 ${floating ? `${expanded ? 'pt-3' : floatingTopClass} ${readOnly ? 'pb-4' : 'pb-28'}` : 'py-3'}`}
         onClick={(e) => {
           if (expanded && e.target === e.currentTarget) (document.activeElement as HTMLElement | null)?.blur()
@@ -728,7 +732,11 @@ const MessageRow = memo(function MessageRow({
           </span>
         )}
         {m.reply_to_message_id && (
-          <span className="mb-1 block truncate rounded-lg border-l-2 border-moon-400/40 bg-black/15 px-2 py-1 text-xs text-moon-200/50">
+          <span
+            className={`mb-1 block truncate rounded-lg border-l-2 px-2 py-1 text-xs ${
+              isMine ? 'border-[#fdf6e3]/60 bg-black/25 text-[#fdf6e3]/85' : 'border-moon-400/50 bg-black/10 text-moon-200/70'
+            }`}
+          >
             {repliedTo ? `${labelFor(repliedTo, identities, t)} — ${repliedTo.content}` : t('chat.repliedMessageUnavailable')}
           </span>
         )}

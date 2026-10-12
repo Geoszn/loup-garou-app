@@ -39,6 +39,24 @@ export const NIGHT_STEP_LABEL: Record<string, TranslationKey> = {
   resolve: 'nightStep.resolve',
 }
 
+// Même émoji que le rôle concerné (voir lib/roles.ts ROLES[id].emoji) — dupliqué ici en constantes plutôt qu'importé
+// pour éviter un import circulaire, 'resolve' n'étant de toute façon pas un rôle. Utilisé par l'écran de nuit
+// (NightScreen) pour montrer, d'un coup d'œil, quel rôle est en train d'agir.
+export const NIGHT_STEP_ICON: Record<string, string> = {
+  daron: '🛡️',
+  voleur: '🃏',
+  cupidon: '💘',
+  enfant_sauvage: '🐾',
+  reine_louve: '👸',
+  voyante: '🔮',
+  griot: '🎭',
+  loup_garou: '🐺',
+  grand_mechant_loup: '👹',
+  sorciere: '🧪',
+  anancy: '🕸️',
+  resolve: '🌙',
+}
+
 export function PhaseBanner({
   status,
   nightNumber,

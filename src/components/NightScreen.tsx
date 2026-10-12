@@ -4,6 +4,7 @@ import { useVoiceSession } from './VoiceChat'
 import type { MyGameView, PublicPlayer } from '../types/game'
 import { BottomSheet } from './BottomSheet'
 import { ChatPanel } from './ChatPanel'
+import { NIGHT_STEP_ICON, NIGHT_STEP_LABEL } from './PhaseBanner'
 import { ChatStrip, MicButton, STRIP_BUTTON, stripTone, VoiceFaces, VoiceSheet, voiceSpeakers, voiceStatus } from './DayDiscussion'
 
 // Écran de nuit (joueur vivant), plein écran comme le débat de jour : le chat anonyme du village remplit l'écran, sa
@@ -96,6 +97,12 @@ export function NightScreen({
     stripStatus = [speakers.length > 0 ? t('dayLayout.speaking', { names: speakers.join(', ') }) : '', t('nightScreen.wolfVoiceNote')].filter(Boolean).join(' · ')
   }
 
+  // Qui joue en ce moment : rappelé en permanence sous les onglets (la barre de phase le dit aussi, mais tronqué sur mobile).
+  const actorKey = view.game.night_step ? NIGHT_STEP_LABEL[view.game.night_step] : undefined
+  const actorIcon = view.game.night_step ? NIGHT_STEP_ICON[view.game.night_step] : undefined
+  // Hauteur réelle de la rangée du haut (onglets + bloc « qui joue » + ligne d'état + visages du vocal), mesurée par ChatStrip.
+  const [topPx, setTopPx] = useState<number | undefined>(undefined)
+
   const tab = (id: 'village' | 'wolves', label: string, unread: number) => (
     <button
       type="button"
@@ -114,7 +121,7 @@ export function NightScreen({
     <div className="relative flex min-h-0 flex-1 flex-col">
       <ChatPanel
         floating
-        floatingTopClass={inWolves ? 'pt-24' : stripStatus !== undefined ? 'pt-[4.5rem]' : 'pt-14'}
+        floatingTopPx={topPx}
         fill
         hideHeader
         embedded
@@ -128,7 +135,7 @@ export function NightScreen({
         composerLead={isWolf ? <MicButton session={session} listenOnly={false} small /> : undefined}
       />
 
-      <ChatStrip status={stripStatus}>
+      <ChatStrip status={stripStatus} onHeight={setTopPx}>
         <div className="flex items-center gap-2 px-3">
           {isWolf ? (
             <>
@@ -158,6 +165,19 @@ export function NightScreen({
             {roleDot && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-night-950 bg-blood-500" />}
           </button>
         </div>
+        {actorKey && (
+          <div className="px-3">
+            <div className={`flex items-center gap-3 rounded-2xl border px-3 py-1.5 ${actionPanel ? 'border-moon-400/50 bg-moon-400/15' : 'border-night-600/50 bg-night-800/60'}`}>
+              <span className="animate-breathe text-2xl drop-shadow-[0_0_10px_rgba(224,168,74,0.55)]" aria-hidden="true">
+                {actorIcon}
+              </span>
+              <div className="min-w-0">
+                <p className="font-display text-sm leading-tight text-moon-200">{t(actorKey)}</p>
+                <p className="text-[10px] uppercase tracking-[0.16em] text-moon-200/50">{actionPanel ? t('nightScreen.yourTurn') : t('game.waitingOthers')}</p>
+              </div>
+            </div>
+          </div>
+        )}
         {inWolves && <VoiceFaces session={session} players={view.players} selfId={selfId} onOpen={() => setSheet('voice')} />}
       </ChatStrip>
 

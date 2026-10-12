@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLanguage } from '../i18n/LanguageContext'
 import { useVoiceSession, type VoiceSession } from './VoiceChat'
 import type { VoiceChannel } from '../hooks/useVoiceChat'
@@ -79,9 +79,21 @@ export const stripTone = (tone: 'idle' | 'on' | 'accent' | 'voice' = 'idle') =>
 
 /** Rangée du haut du chat plein écran : posée sur le chat, fondue vers lui. `status` (même vide) réserve la ligne
  * d'état sous la rangée ; sans lui, pas de ligne. */
-export function ChatStrip({ children, status }: { children: ReactNode; status?: string }) {
+export function ChatStrip({ children, status, onHeight }: { children: ReactNode; status?: string; onHeight?: (px: number) => void }) {
+  const ref = useRef<HTMLDivElement>(null)
+  // Hauteur réelle de la rangée (elle varie : onglets, bloc « qui joue », visages du vocal...) : le chat s'en sert pour
+  // laisser la place exacte au-dessus de ses premiers messages.
+  useEffect(() => {
+    const el = ref.current
+    if (!el || !onHeight) return
+    const report = () => onHeight(el.offsetHeight)
+    report()
+    const observer = new ResizeObserver(report)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [onHeight])
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-night-950 from-55% via-night-950/90 to-transparent pb-6 pt-2">
+    <div ref={ref} className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-night-950 from-55% via-night-950/90 to-transparent pb-6 pt-2">
       <div className="pointer-events-auto flex flex-col gap-1">{children}</div>
       {status !== undefined && <p className="mt-0.5 h-3.5 truncate px-4 text-[10px] font-semibold text-moon-300/90">{status}</p>}
     </div>

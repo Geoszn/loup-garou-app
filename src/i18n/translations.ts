@@ -2283,6 +2283,7 @@ export const translations = {
   'nightScreen.sheet.action': { fr: 'Mon action', en: 'My action' },
   'nightScreen.wolfChatLink': { fr: '🐺 Chat des loups', en: '🐺 Wolves chat' },
   'nightScreen.wolfVoiceNote': { fr: "🔇 Le village n'entend pas le vocal des loups", en: "🔇 The village can't hear the wolves' voice chat" },
+  'nightScreen.yourTurn': { fr: 'À toi de jouer', en: 'Your turn' },
   'nightScreen.chip.play': { fr: 'À toi', en: 'Your turn' },
   'game.voteChip.go': { fr: 'Voter', en: 'Vote' },
   'game.voteChip.ready': { fr: 'Prêt ✓', en: 'Ready ✓' },
