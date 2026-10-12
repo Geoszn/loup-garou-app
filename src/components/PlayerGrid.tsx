@@ -92,13 +92,21 @@ export const PlayerGrid = memo(function PlayerGrid({
   // (selectable), pour ne jamais gêner le choix d'une cible pendant un vote.
   // Un seul avatar ouvert à la fois ; un clic n'importe où ailleurs le ferme.
   const [openId, setOpenId] = useState<string | null>(null)
+  // Position de l'avatar ouvert : le popover est posé en `fixed` à partir de là, sinon il serait coupé par le tiroir ou la
+  // fenêtre qui contient la grille (défilement interne).
+  const [openAnchor, setOpenAnchor] = useState<DOMRect | null>(null)
   const { t, lang } = useLanguage()
 
   useEffect(() => {
     if (!openId) return
     const close = () => setOpenId(null)
     document.addEventListener('click', close)
-    return () => document.removeEventListener('click', close)
+    // Un défilement (de la page ou d'un tiroir) décalerait l'avatar sous le popover fixe : on le ferme.
+    window.addEventListener('scroll', close, true)
+    return () => {
+      document.removeEventListener('click', close)
+      window.removeEventListener('scroll', close, true)
+    }
   }, [openId])
 
   return (
@@ -128,10 +136,11 @@ export const PlayerGrid = memo(function PlayerGrid({
             <button
               type="button"
               disabled={!clickable && !canAddFriend}
-              onClick={() => {
+              onClick={(e) => {
                 if (clickable) {
                   onSelect?.(p.user_id)
                 } else if (canAddFriend) {
+                  setOpenAnchor(e.currentTarget.getBoundingClientRect())
                   setOpenId((cur) => (cur === p.user_id ? null : p.user_id))
                 }
               }}
@@ -210,6 +219,7 @@ export const PlayerGrid = memo(function PlayerGrid({
                 displayName={p.display_name}
                 avatarIcon={p.avatar_icon}
                 avatarConfig={p.avatar_config}
+                anchor={openAnchor}
                 onClose={() => setOpenId(null)}
               />
             )}
