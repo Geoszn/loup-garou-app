@@ -63,6 +63,83 @@ export function MicButton({ session, listenOnly, small = false }: { session: Voi
 }
 
 
+/** Bouton rond de la rangée du haut (joueurs, rôle, amoureux...). Partagé avec l'écran de nuit (NightScreen). */
+export const STRIP_BUTTON = 'relative flex h-8 shrink-0 items-center justify-center border text-sm transition-colors active:scale-95'
+
+/** Teintes d'un bouton de la rangée, sans cadre ni fond au repos (ils se posent directement sur le chat) : onglet choisi
+ * = souligné en or ; « à toi » = pastille dorée pâle qui attire l'œil. Une seule teinte à la fois : deux classes de
+ * couleur sur un même bouton se battraient et l'ordre de la feuille de style déciderait. */
+export const stripTone = (tone: 'idle' | 'on' | 'accent' | 'voice' = 'idle') =>
+  ({
+    idle: 'rounded-full border-transparent bg-transparent text-moon-200/85',
+    on: 'rounded-none border-transparent border-b-2 border-b-moon-400 bg-transparent text-moon-200',
+    accent: 'rounded-full border-transparent bg-moon-400/20 text-moon-300',
+    voice: 'rounded-full border-transparent bg-transparent text-moon-300',
+  })[tone]
+
+/** Rangée du haut du chat plein écran : posée sur le chat, fondue vers lui. `status` (même vide) réserve la ligne
+ * d'état sous la rangée ; sans lui, pas de ligne. */
+export function ChatStrip({ children, status }: { children: ReactNode; status?: string }) {
+  return (
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-night-950 from-55% via-night-950/90 to-transparent pb-6 pt-2">
+      <div className="pointer-events-auto flex flex-col gap-1">{children}</div>
+      {status !== undefined && <p className="mt-0.5 h-3.5 truncate px-4 text-[10px] font-semibold text-moon-300/90">{status}</p>}
+    </div>
+  )
+}
+
+/** Noms de ceux qui parlent en ce moment (vide si personne, ou si on n'est pas connecté). */
+export function voiceSpeakers(session: VoiceSession, players: PublicPlayer[], selfId: string, t: ReturnType<typeof useLanguage>['t']): string[] {
+  if (!session.connected) return []
+  const byId = new Map(session.participants.map((p) => [p.id, p]))
+  return players
+    .filter((p) => p.is_alive && speakingOf(session, byId.get(p.user_id), p.user_id === selfId))
+    .map((p) => (p.user_id === selfId ? t('dayLayout.me') : p.display_name))
+}
+
+/** Texte d'état du vocal (qui parle, combien sont dans le vocal...). */
+export function voiceStatus(session: VoiceSession, players: PublicPlayer[], selfId: string, t: ReturnType<typeof useLanguage>['t']): string {
+  const byId = new Map(session.participants.map((p) => [p.id, p]))
+  const alive = players.filter((p) => p.is_alive)
+  const speakers = voiceSpeakers(session, players, selfId, t)
+  const inVoiceCount = session.connected ? alive.filter((p) => p.user_id === selfId || byId.has(p.user_id)).length : session.othersInVoice.length
+  if (speakers.length > 0) return t('dayLayout.speaking', { names: speakers.join(', ') })
+  if (session.joined) return session.connected ? t('dayLayout.inVoice', { count: inVoiceCount }) : session.connecting ? t('voiceChat.connecting') : (session.error ?? t('voiceChat.unavailable'))
+  return session.othersInVoice.length > 0 ? `🎙️ ${t('voiceChat.inVoice', { count: session.othersInVoice.length })}` : ''
+}
+
+/** Bouton 🎙️ et rangée de visages (celui qui parle s'allume) ; un tap ouvre les réglages du vocal. */
+export function VoiceFaces({ session, players, selfId, onOpen }: { session: VoiceSession; players: PublicPlayer[]; selfId: string; onOpen: () => void }) {
+  const { t } = useLanguage()
+  const byId = new Map(session.participants.map((p) => [p.id, p]))
+  return (
+    <div className="flex items-center gap-2 px-3">
+      <button type="button" onClick={onOpen} aria-label={t('dayLayout.voiceLabel')} className={`${STRIP_BUTTON} w-8 ${stripTone(session.connected ? 'voice' : 'idle')}`}>
+        🎙️
+      </button>
+      <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {players.filter((p) => p.is_alive).map((p) => {
+          const isSelf = p.user_id === selfId
+          const part = byId.get(p.user_id)
+          const speaking = speakingOf(session, part, isSelf)
+          const present = !session.connected || isSelf || !!part
+          return (
+            <Avatar
+              key={p.user_id}
+              config={p.avatar_config}
+              icon={p.avatar_icon}
+              color={p.avatar_color}
+              name={p.display_name}
+              mood={speaking ? 'talk' : 'smile'}
+              className={`h-8 w-8 shrink-0 rounded-full transition-all duration-200 ${present ? '' : 'opacity-30 grayscale'} ${speaking ? 'scale-110 ring-2 ring-moon-400 shadow-[0_0_12px_rgba(224,168,74,0.8)]' : 'ring-1 ring-night-600'}`}
+            />
+          )
+        })}
+      </button>
+    </div>
+  )
+}
+
 type Sheet = 'players' | 'role' | 'voice'
 
 interface Props {
@@ -93,17 +170,8 @@ export function DayDiscussion({ view, gameId, code, selfId, me, voiceChannel, vo
     if (!view.lover_id) setChannel('village')
   }, [view.lover_id])
 
-  const byId = new Map(session.participants.map((p) => [p.id, p]))
   const alive = view.players.filter((p) => p.is_alive)
-  const speakers = session.connected ? alive.filter((p) => speakingOf(session, byId.get(p.user_id), p.user_id === selfId)) : []
-  const inVoiceCount = session.connected ? alive.filter((p) => p.user_id === selfId || byId.has(p.user_id)).length : session.othersInVoice.length
-
-  let status = ''
-  if (speakers.length > 0) status = t('dayLayout.speaking', { names: speakers.map((p) => (p.user_id === selfId ? t('dayLayout.me') : p.display_name)).join(', ') })
-  else if (session.joined) status = session.connected ? t('dayLayout.inVoice', { count: inVoiceCount }) : session.connecting ? t('voiceChat.connecting') : (session.error ?? t('voiceChat.unavailable'))
-  else status = session.othersInVoice.length > 0 ? `🎙️ ${t('voiceChat.inVoice', { count: session.othersInVoice.length })}` : ''
-
-  const roundButton = 'relative flex h-8 shrink-0 items-center justify-center rounded-full border border-night-600/70 bg-night-800/70 text-sm text-moon-200/85 transition-colors active:scale-95'
+  const status = voiceStatus(session, view.players, selfId, t)
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
@@ -124,59 +192,36 @@ export function DayDiscussion({ view, gameId, code, selfId, me, voiceChannel, vo
       />
 
       {/* Rangée vocale : des visages sur le fond du chat, qui s'estompent vers les messages ; celui qui parle s'allume. */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-night-950 from-55% via-night-950/90 to-transparent pb-6 pt-2">
-        <div className="pointer-events-auto flex items-center gap-2 px-3">
-          <button
-            type="button"
-            onClick={() => setSheet('voice')}
-            aria-label={t('dayLayout.voiceLabel')}
-            className={`${roundButton} w-8 ${session.connected ? 'border-moon-400/50 text-moon-300' : ''}`}
-          >
-            🎙️
-          </button>
-          <button type="button" onClick={() => setSheet('voice')} className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {alive.map((p) => {
-              const isSelf = p.user_id === selfId
-              const part = byId.get(p.user_id)
-              const speaking = speakingOf(session, part, isSelf)
-              const present = !session.connected || isSelf || !!part
-              return (
-                <Avatar
-                  key={p.user_id}
-                  config={p.avatar_config}
-                  icon={p.avatar_icon}
-                  color={p.avatar_color}
-                  name={p.display_name}
-                  mood={speaking ? 'talk' : 'smile'}
-                  className={`h-8 w-8 shrink-0 rounded-full transition-all duration-200 ${present ? '' : 'opacity-30 grayscale'} ${speaking ? 'scale-110 ring-2 ring-moon-400 shadow-[0_0_12px_rgba(224,168,74,0.8)]' : 'ring-1 ring-night-600'}`}
-                />
-              )
-            })}
-          </button>
-          <button type="button" onClick={() => setSheet('players')} aria-label={t('dayLayout.sheet.players')} className={`${roundButton} gap-1 px-2.5 text-[11px] font-semibold`}>
-            👥 {alive.length}/{view.players.length}
-          </button>
-          <button type="button" onClick={() => setSheet('role')} aria-label={t('dayLayout.sheet.role')} className={`${roundButton} w-8`}>
-            🔮
-            {roleDot && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-night-950 bg-blood-500" />}
-          </button>
-          {view.lover_id && (
-            <button
-              type="button"
-              onClick={() => setChannel(channel === 'amoureux' ? 'village' : 'amoureux')}
-              aria-pressed={channel === 'amoureux'}
-              aria-label={t('dayLayout.lovers')}
-              className={`${roundButton} w-8 ${channel === 'amoureux' ? 'border-moon-400/60 bg-night-600' : ''}`}
-            >
-              💘
-              {unreadAmoureux > 0 && channel !== 'amoureux' && (
-                <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-blood-600 px-1 text-center text-[9px] leading-4 text-[#fdf6e3]">{unreadAmoureux}</span>
-              )}
+      <ChatStrip status={status}>
+        <div className="flex items-center">
+          <div className="min-w-0 flex-1">
+            <VoiceFaces session={session} players={view.players} selfId={selfId} onOpen={() => setSheet('voice')} />
+          </div>
+          <div className="flex shrink-0 items-center gap-2 pr-3">
+            <button type="button" onClick={() => setSheet('players')} aria-label={t('dayLayout.sheet.players')} className={`${STRIP_BUTTON} ${stripTone()} gap-1 px-2.5 text-[11px] font-semibold`}>
+              👥 {alive.length}/{view.players.length}
             </button>
-          )}
+            <button type="button" onClick={() => setSheet('role')} aria-label={t('dayLayout.sheet.role')} className={`${STRIP_BUTTON} ${stripTone()} w-8`}>
+              🔮
+              {roleDot && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-night-950 bg-blood-500" />}
+            </button>
+            {view.lover_id && (
+              <button
+                type="button"
+                onClick={() => setChannel(channel === 'amoureux' ? 'village' : 'amoureux')}
+                aria-pressed={channel === 'amoureux'}
+                aria-label={t('dayLayout.lovers')}
+                className={`${STRIP_BUTTON} w-8 ${stripTone(channel === 'amoureux' ? 'on' : 'idle')}`}
+              >
+                💘
+                {unreadAmoureux > 0 && channel !== 'amoureux' && (
+                  <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-blood-600 px-1 text-center text-[9px] leading-4 text-[#fdf6e3]">{unreadAmoureux}</span>
+                )}
+              </button>
+            )}
+          </div>
         </div>
-        <p className="mt-0.5 h-3.5 truncate px-4 text-[10px] font-semibold text-moon-300/90">{status}</p>
-      </div>
+      </ChatStrip>
 
       <BottomSheet open={sheet === 'players'} onClose={() => setSheet(null)} title={`👥 ${t('dayLayout.sheet.players')}`}>
         {playersSheet}
@@ -192,7 +237,7 @@ export function DayDiscussion({ view, gameId, code, selfId, me, voiceChannel, vo
 }
 
 /** Réglages du vocal : qui est là et qui parle, couper le son, quitter (et couper un micro si on modère). */
-function VoiceSheet({ session, players, selfId, listenOnly, status }: { session: VoiceSession; players: PublicPlayer[]; selfId: string; listenOnly: boolean; status: string }) {
+export function VoiceSheet({ session, players, selfId, listenOnly, status }: { session: VoiceSession; players: PublicPlayer[]; selfId: string; listenOnly: boolean; status: string }) {
   const { t } = useLanguage()
   const byId = new Map(session.participants.map((p) => [p.id, p]))
   return (

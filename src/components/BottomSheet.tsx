@@ -4,7 +4,22 @@ import { useLanguage } from '../i18n/LanguageContext'
 /** Tiroir qui monte du bas par-dessus l'écran (sans le déplacer) : sert aux infos annexes du débat de jour
  * (joueurs, rôle, vocal) pour que le chat garde tout l'écran. Rendu en place, pas dans un portail : il doit
  * hériter du thème jour/nuit de la partie. Se ferme au tap sur le fond, ✕ ou Échap. */
-export function BottomSheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
+export function BottomSheet({
+  open,
+  onClose,
+  title,
+  children,
+  banner,
+  maxHeightClass = 'max-h-[78%]',
+}: {
+  open: boolean
+  onClose: () => void
+  title: string
+  children: ReactNode
+  /** Bandeau fixe sous le titre (ne défile pas avec le contenu). */
+  banner?: ReactNode
+  maxHeightClass?: string
+}) {
   const { t } = useLanguage()
   useEffect(() => {
     if (!open) return
@@ -20,7 +35,7 @@ export function BottomSheet({ open, onClose, title, children }: { open: boolean;
         aria-modal="true"
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
-        className="mx-auto flex max-h-[78%] w-full max-w-3xl animate-sheet-up flex-col rounded-t-3xl border-t border-night-600/70 bg-gradient-to-b from-night-700 to-night-900 shadow-card"
+        className={`mx-auto flex ${maxHeightClass} w-full max-w-3xl animate-sheet-up flex-col rounded-t-3xl border-t border-night-600/70 bg-gradient-to-b from-night-700 to-night-900 shadow-card`}
       >
         <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-moon-200/20" />
         <div className="flex shrink-0 items-center justify-between px-5 pb-2 pt-2">
@@ -34,6 +49,7 @@ export function BottomSheet({ open, onClose, title, children }: { open: boolean;
             ✕
           </button>
         </div>
+        {banner && <div className="shrink-0 px-5 pb-3">{banner}</div>}
         <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">{children}</div>
       </div>
     </div>

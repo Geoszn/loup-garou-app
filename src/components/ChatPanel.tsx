@@ -49,6 +49,7 @@ export const ChatPanel = memo(function ChatPanel({
   composerLead,
   composerTrail,
   floating = false,
+  floatingTopClass = 'pt-14',
   events,
 }: {
   gameId: string
@@ -88,6 +89,8 @@ export const ChatPanel = memo(function ChatPanel({
    * d'écriture devient une bulle flottante. Réserve de la place en haut (rangée vocale posée par le parent)
    * et en bas (sous la bulle). */
   floating?: boolean
+  /** Marge du haut de la liste en mode `floating` (une rangée posée par le parent : pt-14 ; deux rangées : pt-24). */
+  floatingTopClass?: string
   /** Évènements du journal de la partie, affichés comme des lignes discrètes entre les messages, à leur date. */
   events?: { id: string; message: string; created_at: string }[]
 }) {
@@ -404,7 +407,7 @@ export const ChatPanel = memo(function ChatPanel({
         </span>
       </div>
       )}
-      {note && <p className="border-b border-night-600/40 px-4 py-1.5 text-[11px] text-moon-200/40">{note}</p>}
+      {note && !floating && <p className="border-b border-night-600/40 px-4 py-1.5 text-[11px] text-moon-200/40">{note}</p>}
 
       {/* Tapoter le fond vide de la liste (pas un message ni un bouton —
           voir la condition e.target === e.currentTarget) referme le clavier
@@ -413,11 +416,12 @@ export const ChatPanel = memo(function ChatPanel({
       <div
         ref={listRef}
         onScroll={handleListScroll}
-        className={`h-full overflow-y-auto overscroll-contain scrollbar-thin px-3 ${floating ? `${expanded ? 'pt-3' : 'pt-14'} ${readOnly ? 'pb-4' : 'pb-28'}` : 'py-3'}`}
+        className={`h-full overflow-y-auto overscroll-contain scrollbar-thin px-3 ${floating ? `${expanded ? 'pt-3' : floatingTopClass} ${readOnly ? 'pb-4' : 'pb-28'}` : 'py-3'}`}
         onClick={(e) => {
           if (expanded && e.target === e.currentTarget) (document.activeElement as HTMLElement | null)?.blur()
         }}
       >
+        {note && floating && <p className="mb-3 text-center text-[11px] text-moon-200/45">{note}</p>}
         {messages.length === 0 && (
           <p className="text-center text-xs text-moon-200/30">{t('chat.empty')}</p>
         )}

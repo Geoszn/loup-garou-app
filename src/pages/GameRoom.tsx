@@ -9,7 +9,7 @@ import { useTurnNotifications } from '../hooks/useTurnNotifications'
 import { supabase } from '../lib/supabase'
 import { gameRpc } from '../lib/gameRpc'
 import { FullScreenLoader } from '../components/FullScreenLoader'
-import { PhaseBanner, NIGHT_STEP_LABEL, NIGHT_STEP_ICON } from '../components/PhaseBanner'
+import { PhaseBanner } from '../components/PhaseBanner'
 import { RoleCard } from '../components/RoleCard'
 import { AvatarIcon } from '../components/AvatarIcon'
 import { PlayerGrid } from '../components/PlayerGrid'
@@ -26,6 +26,7 @@ import { RewardChest } from '../components/RewardChest'
 import { ModerationPanel } from '../components/ModerationPanel'
 import { VoiceChat } from '../components/VoiceChat'
 import { DayDiscussion } from '../components/DayDiscussion'
+import { NightScreen } from '../components/NightScreen'
 import { BottomActionBar, Button, Card, ConfirmDialog, CopyButton, ErrorText, Modal, Segmented } from '../components/ui'
 import { ROLES, roleLabel, isWolfTeam, type RoleId } from '../lib/roles'
 import { RankTierBadge } from '../components/RankTierBadge'
@@ -93,7 +94,7 @@ export default function GameRoom() {
   // joueurs les uns sous les autres, un seul écran focalisé à la fois.
   const [dayTab, setDayTab] = useState<'discuss' | 'village' | 'amoureux'>('discuss')
   // Onglet "Village" (anonyme) / "Loups" (nominatif, uniquement pour les
-  // Loups-Garous pendant leur tour) pour la phase de nuit — voir NightChat.
+  // Loups-Garous pendant leur tour) pour la phase de nuit — voir NightScreen.
   const [nightTab, setNightTab] = useState<'village' | 'wolves'>('village')
   // Badges "message non lu" sur les onglets Loups/Amoureux (voir migration
   // 0206 + useUnreadChatCount) — la RLS de chat_messages empêche de toute
@@ -219,6 +220,11 @@ export default function GameRoom() {
   const alive = me?.is_alive ?? false
   // Débat de jour d'un joueur vivant : écran plein, voir DayDiscussion.
   const discussionFull = view.game.status === 'day_discussion' && alive
+  // Nuit d'un joueur vivant : même principe, voir NightScreen.
+  const nightFull = view.game.status === 'night' && alive
+  const fullScreen = discussionFull || nightFull
+  // Tiroirs communs au jour et à la nuit (joueurs, rôle et avis liés au rôle).
+  const playersSheet = <PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} compact />
   const isHost = me?.is_host ?? false
   // Demande utilisateur : dès qu'un vrai second joueur (donc plus juste
   // l'admin lui-même, éventuellement entouré de bots) participe, le mode de
@@ -300,12 +306,12 @@ export default function GameRoom() {
 
   // Salon vocal piloté automatiquement par la phase de jeu (le texte, lui,
   // est géré directement dans chaque bloc de statut ci-dessous — voir
-  // NightChat pour la nuit). Les morts ont toujours accès au cimetière ; les
+  // NightScreen pour la nuit). Les morts ont toujours accès au cimetière ; les
   // vivants au village pendant le jour, ainsi que pendant l'élection du
   // Capitaine (captain_election, voir migration 0066) — le texte écrit reste
   // fermé pendant l'élection, seul le vocal s'ouvre. Pas de vocal de village
   // la nuit — le vocal des Loups pendant la nuit est géré séparément, à
-  // l'intérieur de NightChat (onglet "Loups" uniquement), pas ici : ce
+  // l'intérieur de NightScreen (onglet "Loups" uniquement), pas ici : ce
   // `voiceChannel` unique ne peut représenter qu'un seul salon à la fois,
   // alors que la nuit peut voir village (texte, sans vocal) ET loups (texte
   // + vocal) coexister selon le rôle du joueur.
@@ -330,7 +336,7 @@ export default function GameRoom() {
       data-theme-switching={themeSwitching ? '' : undefined}
       className={`game-theme-root relative bg-night-950 ${
         // Débat plein écran : la page fait exactement la hauteur visible (le chat défile seul, rien ne déborde).
-        discussionFull ? 'flex h-[calc(100dvh-var(--nav-h,0px)-1.25rem)] flex-col overflow-hidden' : 'min-h-screen pb-16'
+        fullScreen ? 'flex h-[calc(100dvh-var(--nav-h,0px)-1.25rem)] flex-col overflow-hidden' : 'min-h-screen pb-16'
       } ${isNight ? '' : 'theme-day'}`}
       style={{
         backgroundImage: isNight
@@ -416,7 +422,7 @@ export default function GameRoom() {
 
       <div
         className={`mx-auto flex w-full max-w-3xl flex-col ${
-          discussionFull ? 'min-h-0 flex-1' : `gap-4 px-4 pt-4 ${view.game.status === 'role_reveal' ? 'pb-28' : 'pb-4'}`
+          fullScreen ? 'min-h-0 flex-1' : `gap-4 px-4 pt-4 ${view.game.status === 'role_reveal' ? 'pb-28' : 'pb-4'}`
         }`}
       >
         {/* Partie d'entraînement : bots, conseils par étape et bilan (rien si partie normale). */}
@@ -513,52 +519,46 @@ export default function GameRoom() {
         )}
 
         {view.game.status === 'night' && alive && (
-          <div className="flex animate-fade-in flex-col gap-4">
-            {/* Loups-Garous : panneau affiché directement pendant toute la
-                fenêtre de vote (comme VotePanel/CaptainVotePanel plus bas),
-                plutôt que de basculer sur WaitingCard dès le premier vote
-                envoyé — submit_wolf_vote accepte déjà de changer la cible
-                tant que tous les loups vivants n'ont pas voté (upsert côté
-                serveur, migration 0035), mais l'écran d'attente empêchait
-                jusqu'ici de revenir modifier son choix. */}
-            {isWolfTeam(view.my_role) && view.game.night_step === 'loup_garou' ? (
-              <WolfPanel view={view} gameId={gameId!} selfId={user.id} />
-            ) : view.pending_action_required &&
-              view.pending_action_required !== 'vote' &&
-              view.pending_action_required !== 'chasseuse_choice' ? (
-              // 'chasseuse_choice' exclu : déjà affiché par le bloc
-              // inconditionnel en haut de page (voir plus haut) — la
-              // Chasseuse reste vivante quand ce choix apparaît,
-              // contrairement à hunter/captain_succession, donc ce bloc
-              // "night && alive" serait sinon aussi atteint.
-              <ActionPanel view={view} gameId={gameId!} selfId={user.id} />
-            ) : (
-              <WaitingCard alive={alive} myRole={view.my_role} nightStep={view.game.night_step} />
-            )}
-            {/* Résultat de l'action de cette nuit (Voyante / Petite Fille) :
-                affiché indépendamment de `pending_action_required`, qui bascule
-                à null dès l'envoi de l'action — donc bien avant que le serveur
-                ne change réellement de phase. Sans ce panneau persistant, le
-                joueur n'avait qu'une fraction de seconde pour lire son
-                résultat avant que l'écran ne repasse en "attente". */}
-            <NightResultPanel view={view} />
-            <NightChat
+          <div className="flex min-h-0 flex-1 animate-fade-in flex-col">
+            <NightScreen
+              view={view}
               gameId={gameId!}
               code={code!}
               selfId={user.id}
-              displayName={me?.display_name ?? t('common.playerFallback')}
+              me={me}
               isWolf={isWolfTeam(view.my_role)}
               nightTab={nightTab}
               setNightTab={setNightTab}
-              players={view.players}
-              villageMuted={view.village_muted}
               unreadWolves={unreadWolves}
               unreadVillage={unreadVillage}
+              // Loups-Garous : panneau affiché pendant toute la fenêtre de vote plutôt que de basculer sur l'attente dès
+              // le premier vote — submit_wolf_vote accepte de changer la cible tant que tous les loups n'ont pas voté
+              // (upsert côté serveur, migration 0035). 'chasseuse_choice' exclu : déjà affiché par le bloc
+              // inconditionnel en haut de page (la Chasseuse reste vivante quand ce choix apparaît).
+              actionPanel={
+                isWolfTeam(view.my_role) && view.game.night_step === 'loup_garou' ? (
+                  <WolfPanel view={view} gameId={gameId!} selfId={user.id} />
+                ) : view.pending_action_required &&
+                  view.pending_action_required !== 'vote' &&
+                  view.pending_action_required !== 'chasseuse_choice' ? (
+                  <ActionPanel view={view} gameId={gameId!} selfId={user.id} />
+                ) : null
+              }
+              // Résultat de l'action de cette nuit : indépendant de `pending_action_required`, qui bascule à null dès
+              // l'envoi — le joueur doit pouvoir le relire bien après.
+              resultPanel={<NightResultPanel view={view} />}
+              hasResult={hasNightResult(view)}
+              playersSheet={playersSheet}
+              roleSheet={
+                <div className="flex flex-col gap-3">
+                  <RoleCard roleId={view.my_role} />
+                  <WolfPackList view={view} myRole={view.my_role} />
+                  <ChasseuseTargetPanel view={view} />
+                  <DaronProtectionPanel view={view} />
+                </div>
+              }
+              roleDot={view.my_chasseuse_target_assigned_this_round || view.my_protected_by_daron_this_round}
             />
-            <WolfPackList view={view} myRole={view.my_role} />
-            <RolePanel myRole={view.my_role} />
-            <ChasseuseTargetPanel view={view} />
-            <DaronProtectionPanel view={view} />
           </div>
         )}
 
@@ -610,7 +610,7 @@ export default function GameRoom() {
                 voiceChannel={voiceChannel}
                 vote={<CallVotePanel chip view={view} gameId={gameId!} selfId={user.id} me={me} isHost={isHost} />}
                 unreadAmoureux={unreadAmoureux}
-                playersSheet={<PlayerGrid players={view.players} selfId={user.id} onlineUserIds={onlineUserIds} compact />}
+                playersSheet={playersSheet}
                 roleSheet={
                   <div className="flex flex-col gap-3">
                     <RoleCard roleId={view.my_role} />
@@ -736,8 +736,8 @@ export default function GameRoom() {
           />
         )}
 
-        {/* Pendant le débat plein écran, le journal est déjà dans le fil du chat. */}
-        {!discussionFull && (
+        {/* Débat et nuit en plein écran : le journal est déjà dans le fil du chat (jour) ou sans objet (nuit). */}
+        {!fullScreen && (
         <Card className="!p-0 border-night-700/60 bg-night-900/40">
           <button
             type="button"
@@ -1152,130 +1152,6 @@ const VoteHistoryPanel = memo(function VoteHistoryPanel({
   )
 })
 
-/** Chat de nuit : le village (anonyme, ouvert toute la nuit pour que les
- * joueurs sans action en cours ne s'ennuient pas en silence) et, en plus,
- * uniquement pour les Loups-Garous pendant leur tour, un onglet "Loups"
- * privé et nominatif pour se concerter et choisir leur victime. Même patron
- * que DayTabs, mais l'onglet "Loups" n'apparaît que s'il est
- * pertinent — pas la peine d'imposer un sélecteur à tout le monde pour un
- * choix qui n'existe que pour les loups.
- *
- * Demande utilisateur : vocal actif dans l'onglet "Loups", réservé à la
- * meute — VoiceChat n'est monté que quand `isWolf` (jamais pour le village
- * de nuit, resté texte seul). L'accès réel est déjà verrouillé côté serveur
- * (can_listen_channel → can_access_channel, migration 0091) : même si
- * quelqu'un forçait ce composant à s'afficher, seul un loup vivant en pleine
- * nuit obtiendrait effectivement une salle Daily de l'API.
- *
- * IMPORTANT : VoiceChat reste monté au-dessus des deux onglets (pas
- * seulement dans la branche `nightTab === 'wolves'`) — retour utilisateur :
- * un loup qui passe sur l'onglet "Village" pour lire/écrire dans le chat
- * villageois doit continuer à entendre et parler à sa meute, sans coupure.
- * Le composant unmount coupait la connexion Daily (useVoiceChat.ts quitte le
- * salon au démontage) à chaque changement d'onglet — corrigé en sortant
- * VoiceChat du `nightTab === 'wolves' ? ... : ...`, seul le ChatPanel texte
- * change avec l'onglet actif. */
-const NightChat = memo(function NightChat({
-  gameId,
-  code,
-  selfId,
-  displayName,
-  isWolf,
-  nightTab,
-  setNightTab,
-  players,
-  villageMuted,
-  unreadWolves,
-  unreadVillage,
-}: {
-  gameId: string
-  code: string
-  selfId: string
-  displayName: string
-  isWolf: boolean
-  nightTab: 'village' | 'wolves'
-  setNightTab: (t: 'village' | 'wolves') => void
-  players: PublicPlayer[]
-  /** Anancy vient de faire quitter le camp des Loups à ce joueur (voir
-   * migration 0123) — muet au village jusqu'à la nuit suivante. Ne concerne
-   * jamais le salon 'wolves' (celui-ci n'est de toute façon plus accessible
-   * une fois qu'on n'est plus loup). */
-  villageMuted: boolean
-  /** Messages des loups arrivés pendant qu'on est sur l'onglet "Village" —
-   * voir useUnreadChatCount (migration 0206). */
-  unreadWolves: number
-  /** Messages du village arrivés pendant qu'on est sur l'onglet "Loups" —
-   * même logique, dans l'autre sens. */
-  unreadVillage: number
-}) {
-  const { t } = useLanguage()
-
-  // Ouvert dès le début de la nuit pour toute la meute (plus seulement
-  // pendant `night_step === 'loup_garou'`, leur propre tour de vote) —
-  // retour utilisateur : les loups doivent pouvoir se concerter pendant que
-  // d'autres rôles (Voyante...) jouent le leur, pas juste au moment de
-  // choisir leur victime. Ce composant n'est de toute façon monté que
-  // pendant `status === 'night'` (voir GameRoom.tsx) : `isWolf` suffit donc
-  // seul, plus besoin d'une fenêtre distincte. Le panneau de VOTE
-  // (WolfPanel, ailleurs dans GameRoom.tsx) reste lui bien limité à
-  // `night_step === 'loup_garou'`, inchangé. Voir migration 0078 côté
-  // serveur (can_access_channel/can_read_channel pour le salon 'wolves').
-  if (!isWolf) {
-    return (
-      <ChatPanel
-        players={players}
-        gameId={gameId}
-        channel="village"
-        selfId={selfId}
-        readOnly={villageMuted}
-        note={villageMuted ? t('game.villageMutedNote') : t('game.nightChatNote')}
-      />
-    )
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      <VoiceChat gameId={gameId} code={code} channel="wolves" displayName={displayName} selfUserId={selfId} players={players} />
-      <Segmented
-        tabs={[
-          {
-            id: 'village',
-            label: (
-              <span className="inline-flex items-center">
-                {t('tabs.village')}
-                <UnreadBadge count={unreadVillage} />
-              </span>
-            ),
-          },
-          {
-            id: 'wolves',
-            label: (
-              <span className="inline-flex items-center">
-                {t('tabs.wolves')}
-                <UnreadBadge count={unreadWolves} />
-              </span>
-            ),
-          },
-        ]}
-        active={nightTab}
-        onChange={setNightTab}
-      />
-      {nightTab === 'village' ? (
-        <ChatPanel
-          players={players}
-          gameId={gameId}
-          channel="village"
-          selfId={selfId}
-          readOnly={villageMuted}
-          note={villageMuted ? t('game.villageMutedNote') : t('game.nightChatNote')}
-        />
-      ) : (
-        <ChatPanel players={players} gameId={gameId} channel="wolves" selfId={selfId} />
-      )}
-    </div>
-  )
-})
-
 /** Bouton "prêt" pendant la distribution des rôles : dès que tout le monde a
  * cliqué, la partie démarre immédiatement sans attendre la fin des 60s
  * (voir submit_ready côté serveur, qui force l'avancement une fois
@@ -1473,68 +1349,15 @@ const CallVotePanel = memo(function CallVotePanel({
   )
 })
 
-// `voting` a disparu (voir day_vote/captain_election dans GameRoom : la
-// grille de vote reste maintenant affichée après un premier vote au lieu de
-// basculer sur cet écran d'attente générique) — ne reste utilisé que pour
-// la nuit (nightStep) et pour les joueurs éliminés (!alive).
-const WaitingCard = memo(function WaitingCard({
-  alive,
-  myRole,
-  nightStep,
-}: {
-  alive: boolean
-  myRole: string | null
-  // Pendant la nuit, plutôt qu'un "en attente des autres joueurs" générique,
-  // on nomme le rôle précisément en train d'agir (même texte que le
-  // sous-titre du bandeau de phase — voir NIGHT_STEP_LABEL).
-  nightStep?: string | null
-}) {
-  const { t } = useLanguage()
-  // Bug corrigé : NIGHT_STEP_LABEL[nightStep] est une CLÉ de traduction
-  // ('nightStep.loup_garou'), pas le texte final — il manquait l'appel à
-  // t() ici, ce qui affichait la clé brute à l'écran pendant la nuit au
-  // lieu de la phrase traduite.
-  const nightLabelKey = nightStep ? NIGHT_STEP_LABEL[nightStep] : null
-  const nightLabel = nightLabelKey ? t(nightLabelKey) : null
-  const nightIcon = nightStep ? NIGHT_STEP_ICON[nightStep] : null
-
-  // Pendant la nuit (vivant) : rendu spécifique, beaucoup plus visible qu'un
-  // texte gris générique — une grande icône du rôle en train d'agir,
-  // animée, avec un halo doré. C'est le seul repère du joueur sur ce qui se
-  // passe pendant que d'autres agissent.
-  if (alive && nightLabel) {
-    // Réduit (voir retour utilisateur) : cette carte n'affiche qu'un statut
-    // passif ("X agit, patiente") pendant que le chat en dessous, lui, est
-    // l'endroit où se passe vraiment la partie pendant la nuit — elle ne
-    // doit pas dominer l'écran au point de reléguer le chat à une bande
-    // riquiqui en bas de page.
-    return (
-      <Card className="animate-fade-in flex flex-row items-center gap-3 border-moon-400/30 py-3 text-left shadow-glow">
-        <span className="animate-breathe text-3xl drop-shadow-[0_0_14px_rgba(224,168,74,0.55)]" aria-hidden="true">
-          {nightIcon}
-        </span>
-        <div>
-          <p className="font-display text-sm text-moon-200 sm:text-base">{nightLabel}</p>
-          <p className="text-[10px] uppercase tracking-[0.2em] text-moon-200/40">{t('game.waitingOthers')}</p>
-        </div>
-      </Card>
-    )
-  }
-
-  return (
-    <Card className="animate-fade-in text-center">
-      {!alive ? (
-        <p className="text-moon-200/60">
-          {myRole
-            ? t('game.waitingEliminatedWithRole', { role: roleLabel(myRole, t) })
-            : t('game.waitingEliminatedNoRole')}
-        </p>
-      ) : (
-        <p className="animate-breathe text-moon-200/60">{t('game.waitingOthers')}</p>
-      )}
-    </Card>
-  )
-})
+/** Vrai quand NightResultPanel a quelque chose à montrer : mêmes conditions que ses branches ci-dessous. */
+function hasNightResult(view: MyGameView): boolean {
+  const n = view.game.night_number
+  if ((view.thief_stole_my_card || view.thief_i_stole) && n === 1) return true
+  if (view.my_role === 'voyante') return view.seer_reveals.some((r) => r.night_number === n)
+  if (view.my_role === 'griot') return view.griot_reveals.some((r) => r.night_number === n)
+  if (view.my_role === 'daron') return !!view.players.find((p) => p.user_id === view.daron_protected_id)
+  return false
+}
 
 /** Affiche, pendant toute la durée de la nuit, le résultat de l'action
  * jouée cette nuit-là par la Voyante ou la Petite Fille — dès qu'il est

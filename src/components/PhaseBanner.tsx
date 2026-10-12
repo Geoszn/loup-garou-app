@@ -18,12 +18,8 @@ const PHASE_INFO: Record<GameStatus, { titleKey: TranslationKey; emoji: string }
   ended: { titleKey: 'phase.ended', emoji: '🏁' },
 }
 
-// Exporté pour être réutilisé par WaitingCard (GameRoom.tsx) : plutôt qu'un
-// "en attente des autres joueurs" générique pendant la nuit, on y affiche
-// qui est précisément en train d'agir — même texte que le sous-titre
-// ci-dessous, pour ne pas avoir deux formulations différentes du même état.
-// Ce sont des CLÉS de traduction (pas le texte final) : l'appelant doit les
-// passer à t() lui-même pour suivre la langue choisie.
+// Qui est précisément en train d'agir pendant la nuit (sous-titre du bandeau).
+// Ce sont des CLÉS de traduction (pas le texte final) : à passer à t() pour suivre la langue choisie.
 export const NIGHT_STEP_LABEL: Record<string, TranslationKey> = {
   daron: 'nightStep.daron',
   voleur: 'nightStep.voleur',
@@ -38,32 +34,9 @@ export const NIGHT_STEP_LABEL: Record<string, TranslationKey> = {
   grand_mechant_loup: 'nightStep.grand_mechant_loup',
   sorciere: 'nightStep.sorciere',
   // Retour utilisateur (capture d'écran : "en attente des autres joueurs"
-  // générique pendant qu'Anancy agissait) : ces 4 étapes manquaient de ce
-  // tableau, tombant systématiquement sur le texte générique de repli dans
-  // WaitingCard (GameRoom.tsx) faute de nightLabelKey correspondant.
+  // générique pendant qu'Anancy agissait) : ces 4 étapes manquaient de ce tableau.
   anancy: 'nightStep.anancy',
   resolve: 'nightStep.resolve',
-}
-
-// Même émoji que le rôle concerné (voir lib/roles.ts ROLES[id].emoji) —
-// dupliqué ici en constantes plutôt qu'importé pour éviter un import
-// circulaire (roles.ts n'a pas besoin de connaître ce composant), 'resolve'
-// n'étant de toute façon pas un rôle. Utilisé par WaitingCard (GameRoom.tsx)
-// pour rendre visuellement identifiable, d'un coup d'œil, quel rôle est en
-// train d'agir pendant qu'on attend.
-export const NIGHT_STEP_ICON: Record<string, string> = {
-  daron: '🛡️',
-  voleur: '🃏',
-  cupidon: '💘',
-  enfant_sauvage: '🐾',
-  reine_louve: '👸',
-  voyante: '🔮',
-  griot: '🎭',
-  loup_garou: '🐺',
-  grand_mechant_loup: '👹',
-  sorciere: '🧪',
-  anancy: '🕸️',
-  resolve: '🌙',
 }
 
 export function PhaseBanner({
