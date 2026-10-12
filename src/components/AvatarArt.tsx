@@ -300,6 +300,125 @@ function goldenAurora(uid: string): ReactNode {
   )
 }
 
+/** Palmier : tronc courbe, couronne de palmes, deux noix de coco ; oscille doucement autour de son pied. */
+function palm(bx: number, by: number, cx: number, cy: number, s: number, bend: number, delay: number): ReactNode {
+  const fronds = [-172, -138, -104, -66, -28, 8, 42]
+  return (
+    <g className="bgp8" style={{ transformOrigin: `${bx}px ${by}px`, animation: `bgp8s ${7 + delay}s ease-in-out ${-delay * 2}s infinite alternate` }}>
+      <path d={`M${bx} ${by}Q${(bx + cx) / 2 + bend} ${(by + cy) / 2} ${cx} ${cy}`} stroke="#5b3a20" strokeWidth={2.4 * s} fill="none" strokeLinecap="round" />
+      <path d={`M${bx + 0.7} ${by}Q${(bx + cx) / 2 + bend + 0.7} ${(by + cy) / 2} ${cx + 0.5} ${cy}`} stroke="#7a5230" strokeWidth={0.7 * s} fill="none" strokeLinecap="round" opacity=".6" />
+      <g transform={`translate(${cx} ${cy}) scale(${s})`}>
+        {fronds.map((a, i) => (
+          <path key={a} d="M0 0C5-8 14-9 24-2C15-3.6 7-2.6 0 0Z" transform={`rotate(${a})`} fill={i % 2 ? '#1c7a3d' : '#2fa055'} stroke="#0f4a25" strokeWidth=".35" strokeLinejoin="round" />
+        ))}
+        <circle cx="-1.3" cy="1.3" r=".95" fill="#5b3a20" />
+        <circle cx="1.2" cy="1.6" r=".95" fill="#6b4626" />
+      </g>
+    </g>
+  )
+}
+
+/** Fond n°8 « Plage » (édition limitée, 400 Loup Coins) : ciel turquoise, soleil, nuages qui dérivent, mer qui scintille,
+ * pirogue de pêcheur à l'horizon, vagues et écume sur le sable doré, deux palmiers qui se balancent. Seuls des transforms
+ * et des opacités sont animés (aucun filtre), et les animations s'arrêtent si le joueur a demandé moins de mouvement. */
+function beachBackdrop(uid: string): ReactNode {
+  const css =
+    '@keyframes bgp8c{from{transform:translateX(-5px)}to{transform:translateX(5px)}}' +
+    '@keyframes bgp8w{from{transform:translateX(-3px)}to{transform:translateX(3px)}}' +
+    '@keyframes bgp8s{from{transform:rotate(-1.6deg)}to{transform:rotate(1.8deg)}}' +
+    '@keyframes bgp8b{from{transform:translateY(-.6px) rotate(-2deg)}to{transform:translateY(.7px) rotate(2deg)}}' +
+    '@keyframes bgp8t{0%,100%{opacity:.15}50%{opacity:.95}}' +
+    '@keyframes bgp8h{0%,100%{opacity:.7}50%{opacity:1}}' +
+    '@keyframes bgp8g{from{transform:translate(-4px,1px)}to{transform:translate(5px,-1px)}}' +
+    '.bgp8{animation-timing-function:ease-in-out;animation-iteration-count:infinite}' +
+    '@media (prefers-reduced-motion:reduce){.bgp8{animation:none!important}}'
+  const glitter = [[76, 57, 9], [82, 59.5, 12], [78, 62, 15], [84, 64.5, 10], [79, 67, 13], [75, 69.5, 7]]
+  const cloud = (x: number, y: number, k: number) => (
+    <g transform={`translate(${x} ${y}) scale(${k})`} fill="#fff" opacity=".88">
+      <ellipse cx="0" cy="0" rx="7" ry="2.4" />
+      <ellipse cx="-3" cy="-1.7" rx="3.6" ry="2.2" />
+      <ellipse cx="2.2" cy="-2.2" rx="4.2" ry="2.6" />
+    </g>
+  )
+  return (
+    <>
+      <defs>
+        <linearGradient id={`${uid}sk`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#1fa9e6" />
+          <stop offset=".55" stopColor="#8fdcf6" />
+          <stop offset="1" stopColor="#ffe6b4" />
+        </linearGradient>
+        <linearGradient id={`${uid}se`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#3ad0cf" />
+          <stop offset=".6" stopColor="#139bb5" />
+          <stop offset="1" stopColor="#0c7fa0" />
+        </linearGradient>
+        <linearGradient id={`${uid}sa`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#fbe5b0" />
+          <stop offset="1" stopColor="#e3b878" />
+        </linearGradient>
+        <radialGradient id={`${uid}su`}>
+          <stop offset="0" stopColor="#fff4c8" stopOpacity=".95" />
+          <stop offset=".45" stopColor="#ffe28a" stopOpacity=".4" />
+          <stop offset="1" stopColor="#ffe28a" stopOpacity="0" />
+        </radialGradient>
+        <radialGradient id={`${uid}vg`} cx="50%" cy="46%" r="74%">
+          <stop offset=".62" stopColor="#000" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity=".38" />
+        </radialGradient>
+      </defs>
+      <style dangerouslySetInnerHTML={{ __html: css }} />
+      <rect width="100" height="56" fill={`url(#${uid}sk)`} />
+      <circle cx="80" cy="21" r="22" fill={`url(#${uid}su)`} className="bgp8" style={{ animation: 'bgp8h 6s ease-in-out infinite' }} />
+      <circle cx="80" cy="21" r="6.6" fill="#fffbe6" />
+      <g className="bgp8" style={{ animation: 'bgp8c 26s ease-in-out infinite alternate' }}>
+        {cloud(24, 17, 1)}
+        {cloud(56, 31, 0.7)}
+      </g>
+      <g className="bgp8" style={{ animation: 'bgp8g 14s ease-in-out infinite alternate' }} fill="none" stroke="#2c4a5e" strokeWidth=".55" strokeLinecap="round">
+        <path d="M40 12q1.6-1.8 3.2 0q1.6-1.8 3.2 0" />
+        <path d="M50 18q1.2-1.4 2.4 0q1.2-1.4 2.4 0" />
+      </g>
+
+      <rect y="52" width="100" height="26" fill={`url(#${uid}se)`} />
+      <rect y="51.6" width="100" height=".7" fill="#fff" opacity=".7" />
+      {glitter.map(([x, y, w], i) => (
+        <rect key={i} x={x - w / 2} y={y} width={w} height=".55" rx=".27" fill="#fffbe6" className="bgp8" style={{ animation: `bgp8t ${2.4 + (i % 3) * 0.6}s ease-in-out ${i * 0.35}s infinite` }} />
+      ))}
+      <g transform="translate(26 53.6)">
+        <g className="bgp8" style={{ animation: 'bgp8b 4.5s ease-in-out infinite alternate' }}>
+          <path d="M0 -2.2L0 -8.4L4.6 -3.4Z" fill="#fff3d1" stroke="#c9a96b" strokeWidth=".25" />
+          <path d="M-7 -1.7Q0 3.6 8.4 -2.4L7.4 -3Q0 .6 -6 -2.5Z" fill="#d94a3a" />
+          <path d="M-6 -2.3Q0 .6 7.2 -2.9" fill="none" stroke="#ffd24a" strokeWidth=".7" strokeLinecap="round" />
+        </g>
+      </g>
+
+      {[[0, 60, 0.4], [1, 65.5, 0.34], [2, 71, 0.3]].map(([i, y, o]) => (
+        <g key={i} className="bgp8" style={{ animation: `bgp8w ${5 + i * 1.3}s ease-in-out ${-i}s infinite alternate` }}>
+          <path d={`M-8 ${y}q6-2.2 12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0t12 0`} fill="none" stroke="#fff" strokeWidth=".6" strokeLinecap="round" opacity={o} />
+        </g>
+      ))}
+
+      <path d="M-4 80Q22 75.5 50 79T104 77V104H-4Z" fill={`url(#${uid}sa)`} />
+      <path d="M-4 80Q22 75.5 50 79T104 77" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" opacity=".9" className="bgp8" style={{ animation: 'bgp8w 6s ease-in-out infinite alternate' }} />
+      <path d="M-4 82.5Q22 78.5 50 81.6T104 79.8" fill="none" stroke="#fff" strokeWidth=".7" strokeLinecap="round" opacity=".55" />
+      <ellipse cx="50" cy="96" rx="52" ry="9" fill="#fff" opacity=".12" />
+      <g transform="translate(14 93)">
+        <path d="M0-3.2L.9-1L3.2-.9L1.4 .6L2 2.9L0 1.7L-2 2.9L-1.4 .6L-3.2-.9L-.9-1Z" fill="#ff8a4a" stroke="#b44a1a" strokeWidth=".25" />
+      </g>
+      <g transform="translate(87 91)">
+        <path d="M-3 1.6Q-3-2.8 0-2.8T3 1.6Q0 3.2-3 1.6Z" fill="#fde3d4" stroke="#c98c76" strokeWidth=".3" />
+        <path d="M0-2.6V2M-1.5-2.1V1.9M1.5-2.1V1.9" stroke="#e0aa94" strokeWidth=".3" />
+      </g>
+
+      {palm(8, 102, 15, 40, 1.05, -6, 0)}
+      {palm(95, 102, 87, 49, 0.82, 5, 1.4)}
+
+      <rect width="100" height="100" fill={`url(#${uid}vg)`} />
+    </>
+  )
+}
+
 const arc = (n: number, a0: number, a1: number, cx: number, cy: number, rx: number, ry: number): [number, number][] =>
   Array.from({ length: n }, (_, i) => {
     const a = Math.PI * (a0 + ((a1 - a0) * i) / (n - 1))
@@ -1596,6 +1715,7 @@ export function AvatarArt({ config, mood = 'smile' }: { config: AvatarConfig; mo
       <rect width="100" height="100" fill={AVATAR_BGS[config.bg]} />
       {config.bg === 6 && nightSky(uid)}
       {config.bg === 7 && goldenAurora(uid)}
+      {config.bg === 8 && beachBackdrop(uid)}
       <rect width="100" height="100" fill={`url(#${uid}bg)`} />
 
       {hairBack(config.hair, hairC, cover, hairHiding)}
@@ -1692,7 +1812,7 @@ export function ItemArt({ part, value, className = 'h-full w-full' }: { part: It
   let viewBox = '0 0 100 100'
   let body: ReactNode = null
   if (part === 'bg') {
-    body = value === '7' ? goldenAurora(uid) : nightSky(uid)
+    body = value === '8' ? beachBackdrop(uid) : value === '7' ? goldenAurora(uid) : nightSky(uid)
   } else if (part === 'hair') {
     const kind = value as AvatarConfig['hair']
     const h = HAIR_COLORS[kind] ?? '#1b120c'

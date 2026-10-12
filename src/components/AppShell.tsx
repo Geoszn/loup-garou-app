@@ -8,6 +8,7 @@ import { BottomNav } from './BottomNav'
 import { useMyQuests } from '../hooks/useMyQuests'
 import { useTribeSummary } from '../hooks/useTribeSummary'
 import { tribeAlertCount } from '../lib/tribe'
+import { reloadStoreUnseen, useStoreUnseen } from '../hooks/useStoreUnseen'
 
 /** Cadre commun des pages principales (Accueil, Récompenses, Jouer, Tribu,
  * Profil) : la barre de navigation du bas, avec la pastille de la tribu (messages
@@ -21,6 +22,19 @@ export function AppShell({ compact = false }: { compact?: boolean }) {
   // Pastille « Tribu » : messages non lus, invitations, demandes à traiter (une
   // lecture légère toutes les 45 s tant que l'appli est visible) + demandes d'amis.
   const { summary: tribeSummary } = useTribeSummary(true, 45000)
+  // Point rouge « nouveauté » de la boutique : relu à chaque changement de page, au retour sur l'appli et toutes les 90 s.
+  const storeUnseen = useStoreUnseen()
+  useEffect(() => {
+    if (!user) return
+    void reloadStoreUnseen()
+    const id = window.setInterval(() => void reloadStoreUnseen(), 90000)
+    const onVisible = () => document.visibilityState === 'visible' && void reloadStoreUnseen()
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [user, location.pathname])
 
   useEffect(() => {
     if (!user) return
@@ -67,7 +81,7 @@ export function AppShell({ compact = false }: { compact?: boolean }) {
           <div aria-hidden="true" className="h-24" />
         </>
       )}
-      <BottomNav alertCount={pendingFriends + tribeAlertCount(tribeSummary)} claimable={claimableCount > 0} />
+      <BottomNav alertCount={pendingFriends + tribeAlertCount(tribeSummary)} claimable={claimableCount > 0} storeNew={storeUnseen > 0} />
     </>
   )
 }

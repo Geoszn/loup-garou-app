@@ -56,8 +56,8 @@ function useKeyboardOpen(): boolean {
 
 /** Barre de navigation fixe, dans la zone du pouce : Accueil, Récompenses,
  * Jouer (bouton central), Tribu (les amis y sont un onglet secondaire), Profil. Chaque entrée est une page à part
- * entière. */
-export function BottomNav({ alertCount = 0, claimable = false }: { alertCount?: number; claimable?: boolean }) {
+ * entière. `storeNew` : un nouvel article est en vente dans la boutique (point rouge sur Récompenses). */
+export function BottomNav({ alertCount = 0, claimable = false, storeNew = false }: { alertCount?: number; claimable?: boolean; storeNew?: boolean }) {
   const { t } = useLanguage()
   const { profile } = useAuth()
   const myAvatar = useMyAvatarConfig()
@@ -131,7 +131,8 @@ export function BottomNav({ alertCount = 0, claimable = false }: { alertCount?: 
             <path d="M12 9v11M3 9h18M12 9c-2.5 0-4.5-1-4.5-2.8S9.5 4 12 9c2.5-5 4.5-3.8 4.5-2.8S14.5 9 12 9z" />
           </Icon>
           {t('nav.rewards')}
-          {claimable && <span className="absolute right-[26%] top-1 h-2 w-2 rounded-full bg-blood-400" />}
+          {/* Point rouge : une récompense à récupérer, ou un nouvel article dans la boutique. */}
+          {(claimable || storeNew) && <span className="absolute right-[26%] top-1 h-2 w-2 rounded-full bg-blood-400" />}
         </NavLink>
 
         <div className="flex flex-1 justify-center">

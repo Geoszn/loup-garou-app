@@ -14,6 +14,7 @@ import { DEFAULT_AVATAR_CONFIG } from '../lib/avatarParts'
 import { useMyAvatarConfig, notifyAvatarChanged } from '../components/AvatarEditor'
 import type { StoreSkin } from '../lib/skins'
 import { useMySeason } from '../hooks/useMySeason'
+import { markStoreSeen, useStoreUnseen } from '../hooks/useStoreUnseen'
 import { SeasonHub, SeasonQuestsCard } from '../components/SeasonHub'
 
 const STREAK_REWARD_COINS = 50 // à garder identique à claim_daily_login (migration 0196)
@@ -120,6 +121,12 @@ export default function Rewards() {
   const { quests, claiming, claim } = useMyQuests()
   const myAvatar = useMyAvatarConfig()
   const { season, refresh: refreshSeason } = useMySeason()
+  // Point rouge « nouveauté » de la boutique : visible sur l'onglet tant qu'on ne l'a pas ouvert, éteint à l'ouverture
+  // (y compris si un article arrive pendant qu'on est déjà dessus).
+  const storeUnseen = useStoreUnseen()
+  useEffect(() => {
+    if (tab === 'store' && storeUnseen > 0) void markStoreSeen()
+  }, [tab, storeUnseen])
 
   const loadAll = useCallback(async () => {
     const [coins, mine, skins] = await Promise.all([
@@ -234,12 +241,15 @@ export default function Rewards() {
               key={item.id}
               type="button"
               onClick={() => setTab(item.id)}
-              className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-semibold transition-colors ${
+              className={`relative flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-semibold transition-colors ${
                 tab === item.id ? 'border-blood-500 bg-blood-600 text-[#fdf6e3]' : 'border-night-600/60 bg-night-900/40 text-moon-200/60 hover:text-moon-200'
               }`}
             >
               <span aria-hidden="true">{item.icon}</span>
               {item.label}
+              {item.id === 'store' && storeUnseen > 0 && (
+                <span aria-hidden="true" className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-night-950 bg-blood-500" />
+              )}
               {item.soon && (
                 <span className="rounded-full border border-moon-400/40 bg-moon-400/10 px-1.5 text-[8px] uppercase tracking-wider text-moon-300">{t('hub.soon')}</span>
               )}

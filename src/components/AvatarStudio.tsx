@@ -75,6 +75,7 @@ const LOOKS: { label: TranslationKey; config: AvatarConfig }[] = [
 const BG_SWATCH: Record<number, string> = {
   6: 'linear-gradient(#2a0f45, #7a2a78 60%, #e0558f)',
   7: 'conic-gradient(from 20deg, #1b1040, #2de2b0, #8a5cff, #ffd56a, #1b1040)',
+  8: 'linear-gradient(#1fa9e6 0%, #8fdcf6 42%, #139bb5 52%, #0c7fa0 68%, #fbe5b0 72%, #e3b878 100%)',
 }
 
 // acc2 absent (avatars d'avant le 2e détail) vaut « aucun » : on compare normalisé.
