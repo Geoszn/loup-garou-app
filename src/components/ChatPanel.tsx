@@ -1,4 +1,4 @@
-import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type MutableRefObject, type ReactNode } from 'react'
+import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type MutableRefObject, type ReactNode, type RefObject } from 'react'
 import { useChat, type RevealedIdentity } from '../hooks/useChat'
 import { useLanguage } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
@@ -124,6 +124,8 @@ export const ChatPanel = memo(function ChatPanel({
   // ET depuis l'aperçu au-dessus du champ.
   const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
+  // Champ d'écriture : « répondre » le sélectionne tout de suite (voir handleReply) pour ouvrir le clavier.
+  const composerInputRef = useRef<HTMLInputElement>(null)
   const atBottomRef = useRef(true)
   const [unreadBelow, setUnreadBelow] = useState(0)
   // Seuls les derniers messages sont dessinés (voir MESSAGE_WINDOW) : un chat de
@@ -348,6 +350,9 @@ export const ChatPanel = memo(function ChatPanel({
   const handleReply = useCallback((m: ChatMessage) => {
     setReplyTarget(m)
     setMenuOpenFor(null)
+    // Donne le focus au champ dans le geste même du tap : c'est la seule façon pour que le clavier s'ouvre aussi sur iPhone
+    // (un focus déclenché plus tard, après le rendu, y est ignoré).
+    composerInputRef.current?.focus()
   }, [])
 
   // Referme le petit menu (réagir/répondre) dès qu'une réaction est posée —
@@ -517,6 +522,7 @@ export const ChatPanel = memo(function ChatPanel({
           lead={composerLead}
           trail={composerTrail}
           floating={floating}
+          inputRef={composerInputRef}
         />
       )}
     </div>
@@ -855,6 +861,7 @@ function Composer({
   lead,
   trail,
   floating = false,
+  inputRef: externalInputRef,
 }: {
   placeholder: string
   sending: boolean
@@ -865,9 +872,11 @@ function Composer({
   lead?: ReactNode
   trail?: ReactNode
   floating?: boolean
+  inputRef?: RefObject<HTMLInputElement>
 }) {
   const [text, setText] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
+  const ownInputRef = useRef<HTMLInputElement>(null)
+  const inputRef = externalInputRef ?? ownInputRef
 
   // ChatPanel passe en plein écran calé sur window.visualViewport dès que ce
   // champ reçoit le focus (voir `expanded` dans ChatPanel) — le champ se
