@@ -779,6 +779,11 @@ export const translations = {
   'tabs.village': { fr: '👥 Village', en: '👥 Village' },
   'tabs.graveyard': { fr: '👻 Cimetière', en: '👻 Graveyard' },
   'tabs.wolves': { fr: '🐺 Loups', en: '🐺 Wolves' },
+  'tabs.journal': { fr: '📜 Journal', en: '📜 Log' },
+  'journal.note': {
+    fr: 'Ce qui s’est passé dans la partie, dans l’ordre.',
+    en: 'What happened in the game, in order.',
+  },
   'tabs.amoureux': { fr: '💘 Amoureux', en: '💘 Lovers' },
 
   // --- Déroulement de partie (GameRoom.tsx) -----------------------------------

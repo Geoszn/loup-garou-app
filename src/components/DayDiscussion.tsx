@@ -7,10 +7,11 @@ import { Avatar } from './Avatar'
 import { BottomSheet } from './BottomSheet'
 import { GuestVoiceCard } from './GuestWall'
 import { ChatPanel } from './ChatPanel'
+import { GameJournal, useJournalUnread } from './GameJournal'
 
 // Écran de débat (jour), plein écran : le chat n'a plus de cadre, il occupe tout l'espace sous la barre de phase
 // et seule la bulle d'écriture (micro, texte, envoyer, voter) flotte au-dessus de la barre du bas. Le vocal est une
-// rangée de visages fondue en haut du chat ; le journal de la partie s'écrit dans le fil des messages ; joueurs,
+// rangée de visages fondue en haut du chat ; le journal de la partie a son propre onglet (📜) ; joueurs,
 // rôle et réglages du vocal vivent dans des tiroirs. Palette du jeu : or, terre cuite, brun savane.
 
 const speakingOf = (session: VoiceSession, p: { id: string; sessionIds: string[] } | undefined, isSelf: boolean) =>
@@ -94,9 +95,9 @@ export function ChatStrip({ children, status, onHeight }: { children: ReactNode;
     return () => observer.disconnect()
   }, [onHeight])
   return (
-    <div ref={ref} className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-night-950 from-55% via-night-950/90 to-transparent pb-6 pt-2">
-      <div className="pointer-events-auto flex flex-col gap-1">{children}</div>
-      {status !== undefined && <p className="mt-0.5 h-3.5 truncate px-4 text-[10px] font-semibold text-moon-300/90">{status}</p>}
+    <div ref={ref} className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-night-950 from-55% via-night-950/90 to-transparent pb-6 pt-3">
+      <div className="pointer-events-auto flex flex-col gap-2.5">{children}</div>
+      {status !== undefined && <p className="mt-1 h-3.5 truncate px-4 text-[10px] font-semibold text-moon-300/90">{status}</p>}
     </div>
   )
 }
@@ -130,7 +131,7 @@ export function VoiceFaces({ session, players, selfId, onOpen }: { session: Voic
       <button type="button" onClick={onOpen} aria-label={t('dayLayout.voiceLabel')} className={`${STRIP_BUTTON} w-8 ${stripTone(session.connected ? 'voice' : 'idle')}`}>
         🎙️
       </button>
-      <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 gap-2 overflow-x-auto py-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {players.filter((p) => p.is_alive).map((p) => {
           const isSelf = p.user_id === selfId
           const part = byId.get(p.user_id)
@@ -177,11 +178,14 @@ export function DayDiscussion({ view, gameId, code, selfId, me, voiceChannel, vo
   const { t } = useLanguage()
   const listenOnly = !!view.village_muted
   const session = useVoiceSession({ gameId, code, channel: voiceChannel, displayName: me?.display_name ?? t('common.playerFallback'), selfUserId: selfId, listenOnly })
-  const [channel, setChannel] = useState<'village' | 'amoureux'>('village')
+  const [channel, setChannel] = useState<'village' | 'amoureux' | 'journal'>('village')
   const [sheet, setSheet] = useState<Sheet | null>(null)
   useEffect(() => {
-    if (!view.lover_id) setChannel('village')
+    if (!view.lover_id) setChannel((c) => (c === 'amoureux' ? 'village' : c))
   }, [view.lover_id])
+  // Hauteur réelle de la rangée du haut (mesurée par ChatStrip) : le chat et le journal démarrent juste en dessous.
+  const [topPx, setTopPx] = useState<number | undefined>(undefined)
+  const unreadJournal = useJournalUnread(gameId, view.log.length, channel === 'journal')
 
   const alive = view.players.filter((p) => p.is_alive)
   const status = voiceStatus(session, view.players, selfId, t)
@@ -190,22 +194,23 @@ export function DayDiscussion({ view, gameId, code, selfId, me, voiceChannel, vo
     <div className="relative flex min-h-0 flex-1 flex-col">
       <ChatPanel
         floating
+        floatingTopPx={topPx}
         fill
         hideHeader
         embedded
         players={view.players}
         gameId={gameId}
-        channel={channel}
+        channel={channel === 'amoureux' ? 'amoureux' : 'village'}
         selfId={selfId}
         readOnly={channel === 'village' && listenOnly}
         note={channel === 'village' && listenOnly ? t('game.villageMutedNote') : undefined}
         composerLead={<MicButton session={session} listenOnly={listenOnly} small />}
         composerTrail={<span className="flex [&>*]:!h-10 [&>*]:!w-10 [&>*]:!text-lg">{vote}</span>}
-        events={channel === 'village' ? view.log : undefined}
+        replaceList={channel === 'journal' ? <GameJournal entries={view.log} topPx={topPx} /> : undefined}
       />
 
       {/* Rangée vocale : des visages sur le fond du chat, qui s'estompent vers les messages ; celui qui parle s'allume. */}
-      <ChatStrip status={status}>
+      <ChatStrip status={status} onHeight={setTopPx}>
         <div className="flex items-center">
           <div className="min-w-0 flex-1">
             <VoiceFaces session={session} players={view.players} selfId={selfId} onOpen={() => setSheet('voice')} />
@@ -217,6 +222,16 @@ export function DayDiscussion({ view, gameId, code, selfId, me, voiceChannel, vo
             <button type="button" onClick={() => setSheet('role')} aria-label={t('dayLayout.sheet.role')} className={`${STRIP_BUTTON} ${stripTone()} w-8`}>
               🔮
               {roleDot && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-night-950 bg-blood-500" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setChannel(channel === 'journal' ? 'village' : 'journal')}
+              aria-pressed={channel === 'journal'}
+              aria-label={t('tabs.journal')}
+              className={`${STRIP_BUTTON} w-8 ${stripTone(channel === 'journal' ? 'on' : 'idle')}`}
+            >
+              📜
+              {unreadJournal > 0 && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-night-950 bg-blood-500" />}
             </button>
             {view.lover_id && (
               <button

@@ -4,7 +4,6 @@ import { useLanguage } from '../i18n/LanguageContext'
 import type { TranslationKey } from '../i18n/translations'
 import { REACTION_EMOJIS, type ChatChannel, type ChatMessage, type ChatReaction, type PublicPlayer, type ReactionEmoji } from '../types/game'
 import { Avatar } from './Avatar'
-import { translateGameLogMessage } from '../lib/gameLogTranslate'
 import { GuestBadge, useGuestIds } from '../lib/guestContext'
 
 const CHANNEL_LABEL: Record<ChatChannel, { titleKey: TranslationKey; emoji: string; placeholderKey: TranslationKey }> = {
@@ -52,7 +51,7 @@ export const ChatPanel = memo(function ChatPanel({
   floating = false,
   floatingTopClass = 'pt-14',
   floatingTopPx,
-  events,
+  replaceList,
 }: {
   gameId: string
   channel: ChatChannel
@@ -95,8 +94,8 @@ export const ChatPanel = memo(function ChatPanel({
   floatingTopClass?: string
   /** Hauteur mesurée de la rangée du parent (prioritaire sur `floatingTopClass`) : la liste démarre juste en dessous. */
   floatingTopPx?: number
-  /** Évènements du journal de la partie, affichés comme des lignes discrètes entre les messages, à leur date. */
-  events?: { id: string; message: string; created_at: string }[]
+  /** Remplace la liste des messages (ex. l'onglet Journal) ; la bulle d'écriture reste en bas. */
+  replaceList?: ReactNode
 }) {
   const { t, lang } = useLanguage()
   const { messages, identities, reactions, send, sending, toggleReaction } = useChat(gameId, channel)
@@ -241,33 +240,6 @@ export const ChatPanel = memo(function ChatPanel({
   // messages", pour ne jamais lui faire perdre le fil.
   const hiddenCount = Math.max(messages.length - visibleCount, 0)
   const shownMessages = useMemo(() => (hiddenCount > 0 ? messages.slice(hiddenCount) : messages), [messages, hiddenCount])
-  // Place chaque évènement du journal avant le premier message plus récent que lui (clé = index du message
-  // dans shownMessages, ou shownMessages.length pour ceux qui suivent le dernier). Ceux plus anciens que la
-  // fenêtre de messages affichée sont ignorés, comme les messages eux-mêmes.
-  const eventSlots = useMemo(() => {
-    const slots = new Map<number, { id: string; message: string }[]>()
-    if (!events || events.length === 0) return slots
-    const firstShownAt = hiddenCount > 0 && shownMessages[0] ? Date.parse(shownMessages[0].created_at) : -Infinity
-    const sorted = [...events].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
-    let i = 0
-    for (const e of sorted) {
-      const at = Date.parse(e.created_at)
-      if (at < firstShownAt) continue
-      while (i < shownMessages.length && Date.parse(shownMessages[i].created_at) <= at) i++
-      const list = slots.get(i)
-      if (list) list.push(e)
-      else slots.set(i, [e])
-    }
-    return slots
-  }, [events, shownMessages, hiddenCount])
-  const eventCount = events?.length ?? 0
-  const prevEventCountRef = useRef(eventCount)
-  useEffect(() => {
-    const el = listRef.current
-    const added = eventCount - prevEventCountRef.current
-    prevEventCountRef.current = eventCount
-    if (added > 0 && el && atBottomRef.current) el.scrollTop = el.scrollHeight
-  }, [eventCount])
   const lastMessage = messages[messages.length - 1]
   const prevCountRef = useRef(0)
   useEffect(() => {
@@ -422,10 +394,12 @@ export const ChatPanel = memo(function ChatPanel({
           voir la condition e.target === e.currentTarget) referme le clavier
           en plein écran, comme dans la plupart des apps de chat. */}
       <div className="relative min-h-0 flex-1">
+      {replaceList}
       <div
         ref={listRef}
+        hidden={!!replaceList}
         onScroll={handleListScroll}
-        style={floating && !expanded && floatingTopPx !== undefined ? { paddingTop: Math.max(floatingTopPx - 12, 0) } : undefined}
+        style={floating && !expanded && floatingTopPx !== undefined ? { paddingTop: Math.max(floatingTopPx - 4, 0) } : undefined}
         className={`h-full overflow-y-auto overscroll-contain scrollbar-thin px-3 ${floating ? `${expanded ? 'pt-3' : floatingTopClass} ${readOnly ? 'pb-4' : 'pb-28'}` : 'py-3'}`}
         onClick={(e) => {
           if (expanded && e.target === e.currentTarget) (document.activeElement as HTMLElement | null)?.blur()
@@ -447,14 +421,12 @@ export const ChatPanel = memo(function ChatPanel({
         {shownMessages.map((m, i) => {
           const authorId = authorIdOf(m, identities)
           const next = shownMessages[i + 1]
-          const showAvatar = !!players && (!next || authorIdOf(next, identities) !== authorId || !!eventSlots.get(i + 1))
+          const showAvatar = !!players && (!next || authorIdOf(next, identities) !== authorId)
           const prev = shownMessages[i - 1]
-          const eventsBefore = eventSlots.get(i)
           const startsGroup =
-            !!eventsBefore || !prev || !authorId || authorIdOf(prev, identities) !== authorId || new Date(m.created_at).getTime() - new Date(prev.created_at).getTime() > GROUP_GAP_MS
+            !prev || !authorId || authorIdOf(prev, identities) !== authorId || new Date(m.created_at).getTime() - new Date(prev.created_at).getTime() > GROUP_GAP_MS
           return (
           <Fragment key={m.id}>
-          {eventsBefore?.map((e) => <EventLine key={e.id} text={translateGameLogMessage(e.message, lang, t)} />)}
           <MessageRow
             message={m}
             author={authorId ? playersById.get(authorId) : undefined}
@@ -477,7 +449,6 @@ export const ChatPanel = memo(function ChatPanel({
           </Fragment>
           )
         })}
-        {eventSlots.get(shownMessages.length)?.map((e) => <EventLine key={e.id} text={translateGameLogMessage(e.message, lang, t)} />)}
       </div>
         {unreadBelow > 0 && (
           <button
@@ -946,16 +917,5 @@ function Composer({
       </button>
       {trail}
     </form>
-  )
-}
-
-/** Évènement du journal de la partie, glissé dans le fil des messages (débat de jour plein écran). */
-function EventLine({ text }: { text: string }) {
-  return (
-    <div className="my-3 flex items-center justify-center gap-2 px-2 text-center text-[11px] text-moon-300/75">
-      <span aria-hidden="true" className="h-px w-5 shrink-0 bg-moon-300/25" />
-      <span>📜 {text}</span>
-      <span aria-hidden="true" className="h-px w-5 shrink-0 bg-moon-300/25" />
-    </div>
   )
 }
