@@ -95,9 +95,9 @@ export function ChatStrip({ children, status, onHeight }: { children: ReactNode;
     return () => observer.disconnect()
   }, [onHeight])
   return (
-    <div ref={ref} className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-night-950 from-55% via-night-950/90 to-transparent pb-6 pt-3">
+    <div ref={ref} className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-night-950 from-55% via-night-950/90 to-transparent pb-6 pt-4">
       <div className="pointer-events-auto flex flex-col gap-2.5">{children}</div>
-      {status !== undefined && <p className="mt-1 h-3.5 truncate px-4 text-[10px] font-semibold text-moon-300/90">{status}</p>}
+      {status !== undefined && <p className="mt-1.5 h-3.5 truncate px-4 text-[10px] font-semibold text-moon-300/90">{status}</p>}
     </div>
   )
 }

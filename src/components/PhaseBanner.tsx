@@ -152,7 +152,7 @@ export function PhaseBanner({
     // retiré, dégradé rendu quasi opaque (97% au lieu de 90%) pour garder
     // un rendu visuel très proche sans le coût GPU.
     <div
-      className={`sticky top-0 z-20 flex items-center justify-between gap-3 border-b bg-gradient-to-r px-4 pb-3 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.4)] sm:px-6 ${
+      className={`sticky top-0 z-20 flex items-center justify-between gap-3 border-b bg-gradient-to-r px-4 pb-4 shadow-[0_2px_12px_-2px_rgba(0,0,0,0.4)] sm:px-6 ${
         status === 'night'
           ? 'border-night-600/60 from-night-950/97 via-night-900/97 to-night-950/97'
           : 'border-blood-700/30 from-night-900/97 via-night-800/97 to-night-900/97'
@@ -160,7 +160,7 @@ export function PhaseBanner({
       // Comme la barre fixe en bas (voir ui.tsx) : garantit un espace
       // au moins équivalent à py-3 même quand env(safe-area-inset-top)
       // vaut 0 (web), et pousse sous la barre de statut dans l'app native.
-      style={{ paddingTop: 'max(env(safe-area-inset-top), 0.75rem)' }}
+      style={{ paddingTop: 'max(env(safe-area-inset-top), 1rem)' }}
     >
       {/* key={status} : force un remontage de ce bloc à chaque changement de
           phase, pour rejouer le fondu d'entrée sur le titre — sans ça React
@@ -168,11 +168,11 @@ export function PhaseBanner({
       <div key={status} className="flex min-w-0 animate-fade-in items-center gap-3">
         <span className="shrink-0 text-2xl drop-shadow-[0_0_8px_rgba(245,230,184,0.5)]">{info.emoji}</span>
         <div className="min-w-0">
-          <p className="truncate font-display text-base leading-none text-moon-200 sm:text-lg">
+          <p className="truncate font-display text-base leading-tight text-moon-200 sm:text-lg">
             {t(info.titleKey)}
             {status === 'night' ? ` ${nightNumber}` : ''}
           </p>
-          {subtitle && <p className="mt-0.5 truncate text-xs text-moon-200/70">{subtitle}</p>}
+          {subtitle && <p className="mt-1 truncate text-xs text-moon-200/70">{subtitle}</p>}
         </div>
       </div>
       {/* Rangée volontairement réduite au strict nécessaire toujours visible
