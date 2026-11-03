@@ -5,7 +5,7 @@
 // qu'envoyer. Même authentification que api/cron-send-campaigns.ts :
 // `Authorization: Bearer $CRON_SECRET`, refus sans secret configuré.
 import { createClient } from '@supabase/supabase-js'
-import { configureVapid, sendPushToUser } from '../server/pushSend.js'
+import { configureVapid, sendPushToUser, mapWithConcurrency } from '../server/pushSend.js'
 
 interface VercelRequest {
   method?: string
@@ -47,30 +47,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const rows = (data ?? []) as { user_id: string; kind: string; title: string; body: string; url: string }[]
   let sent = 0
-  for (const row of rows) {
-    try {
-      const result = await sendPushToUser(serviceClient, row.user_id, { title: row.title, body: row.body, url: row.url })
-      sent += result.sent
-    } catch {
-      // Un échec d'envoi ne doit pas bloquer les autres joueurs.
-    }
-  }
+  // 10 envois en parallèle au plus (un échec d'envoi ne bloque pas les autres joueurs, voir mapWithConcurrency) : en
+  // séquence, des milliers de destinataires dépassent la durée maximale de la fonction.
+  await mapWithConcurrency(rows, 10, async (row) => {
+    const result = await sendPushToUser(serviceClient, row.user_id, { title: row.title, body: row.body, url: row.url })
+    sent += result.sent
+  })
 
   // Résumé du matin du chat de tribu (migration 0234) : à la fin des heures calmes de chacun.
   let digestSent = 0
   const { data: digest } = await serviceClient.rpc('pick_tribe_chat_digest')
   const digestRows = (Array.isArray(digest) ? digest : []) as { user_id: string; lang: string | null; tribe_id: string; tribe_name: string; total: number; mentions: number }[]
-  for (const d of digestRows) {
+  await mapWithConcurrency(digestRows, 10, async (d) => {
     const en = d.lang === 'en'
     const base = en ? `Overnight: ${d.total} message${d.total > 1 ? 's' : ''}` : `Pendant la nuit : ${d.total} message${d.total > 1 ? 's' : ''}`
     const extra = d.mentions > 0 ? (en ? ` · ${d.mentions} for you` : ` · ${d.mentions} pour toi`) : ''
-    try {
-      const result = await sendPushToUser(serviceClient, d.user_id, { title: `🌅 ${d.tribe_name}`, body: base + extra, url: '/tribu?tab=chat', tag: `tribe-chat-${d.tribe_id}` })
-      digestSent += result.sent
-    } catch {
-      // Même principe : un échec ne bloque pas les autres.
-    }
-  }
+    const result = await sendPushToUser(serviceClient, d.user_id, { title: `🌅 ${d.tribe_name}`, body: base + extra, url: '/tribu?tab=chat', tag: `tribe-chat-${d.tribe_id}` })
+    digestSent += result.sent
+  })
 
   res.status(200).json({ picked: rows.length, sent, digest: digestRows.length, digestSent, closedGames: typeof closedGames === 'number' ? closedGames : 0 })
 }

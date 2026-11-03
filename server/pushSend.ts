@@ -34,6 +34,26 @@ export interface PushPayload {
 }
 
 /**
+ * Exécute `fn` sur chaque élément avec au plus `limit` appels en parallèle (au lieu d'un `Promise.all` sans borne, qui
+ * ouvre autant de connexions sortantes que d'abonnés : à plusieurs milliers, la fonction serverless sature mémoire et
+ * sockets, ou dépasse sa durée maximale). Une erreur dans `fn` n'arrête pas les autres éléments.
+ */
+export async function mapWithConcurrency<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
+  let next = 0
+  const worker = async () => {
+    while (next < items.length) {
+      const item = items[next++]
+      try {
+        await fn(item)
+      } catch {
+        // Un échec isolé ne doit pas bloquer la suite.
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+}
+
+/**
  * Envoie `payload` à tous les abonnements actifs d'un joueur (il peut en
  * avoir plusieurs — un par navigateur/appareil, voir migration 0105) et
  * retire ceux qui répondent 404/410 (abonnement expiré ou révoqué côté
@@ -112,19 +132,17 @@ export async function dispatchNotificationCampaign(
     let removed = 0
     const body = JSON.stringify({ title: locked.push_title, body: locked.push_body, url: locked.push_url ?? '/dashboard' })
 
-    await Promise.all(
-      targets.map(async (sub) => {
-        try {
-          await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } }, body)
-          sent++
-        } catch (err: any) {
-          if (err?.statusCode === 404 || err?.statusCode === 410) {
-            await serviceClient.from('push_subscriptions').delete().eq('id', sub.id)
-            removed++
-          }
+    await mapWithConcurrency(targets, 50, async (sub) => {
+      try {
+        await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } }, body)
+        sent++
+      } catch (err: any) {
+        if (err?.statusCode === 404 || err?.statusCode === 410) {
+          await serviceClient.from('push_subscriptions').delete().eq('id', sub.id)
+          removed++
         }
-      })
-    )
+      }
+    })
 
     await serviceClient
       .from('notification_campaigns')

@@ -107,6 +107,15 @@
   "functions": {
     "api/admin-daily-usage.ts": {
       "maxDuration": 60
+    },
+    "api/cron-engagement-notifications.ts": {
+      "maxDuration": 60
+    },
+    "api/cron-send-campaigns.ts": {
+      "maxDuration": 60
+    },
+    "api/admin-send-campaign.ts": {
+      "maxDuration": 60
     }
   }
 }
