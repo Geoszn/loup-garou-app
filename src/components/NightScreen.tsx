@@ -6,7 +6,8 @@ import { BottomSheet } from './BottomSheet'
 import { ChatPanel } from './ChatPanel'
 import { JournalDrawer, useJournalUnread } from './GameJournal'
 import { NIGHT_STEP_ICON, NIGHT_STEP_LABEL } from './PhaseBanner'
-import { ChatStrip, MicButton, STRIP_BUTTON, stripTone, VoiceFaces, VoiceSheet, voiceSpeakers, voiceStatus } from './DayDiscussion'
+import { ChatStrip, STRIP_BUTTON, stripTone, VoiceFaces, VoiceSheet, voiceSpeakers, voiceStatus } from './DayDiscussion'
+import { ActionBar, ActionTab, MicTab } from './ActionBar'
 
 // Écran de nuit (joueur vivant), plein écran comme le débat de jour : le chat anonyme du village remplit l'écran, sa
 // bulle d'écriture flotte au-dessus de la barre du bas. Le panneau d'action du rôle (vote des loups, Voyante,
@@ -135,44 +136,36 @@ export function NightScreen({
         readOnly={channel === 'village' && villageMuted}
         note={channel === 'village' ? (villageMuted ? t('game.villageMutedNote') : t('game.nightChatNote')) : undefined}
         onComposerFocus={() => setJournalOpen(false)}
-        // Le micro des loups est disponible dans les deux onglets : le vocal reste celui de la meute.
-        composerLead={isWolf ? <MicButton session={session} listenOnly={false} small /> : undefined}
+        actionBar={
+          <ActionBar>
+            {/* Le micro des loups est disponible dans les deux onglets : le vocal reste celui de la meute. */}
+            {isWolf && <MicTab session={session} listenOnly={false} />}
+            {(actionPanel || hasResult) && (
+              <ActionTab
+                wide
+                tone={actionPanel ? 'gold' : 'idle'}
+                pulse={!!actionPanel}
+                icon="🎯"
+                label={actionPanel ? t('actionBar.play') : t('nightScreen.sheet.action')}
+                ariaLabel={t('nightScreen.sheet.action')}
+                dot={resultUnseen && !actionPanel}
+                onClick={() => setSheet('action')}
+              />
+            )}
+            <ActionTab icon={<span className="text-[13px] font-bold tabular-nums">{alive.length}/{view.players.length}</span>} label={t('actionBar.players')} ariaLabel={t('dayLayout.sheet.players')} onClick={() => setSheet('players')} />
+            <ActionTab icon="🔮" label={t('actionBar.role')} ariaLabel={t('dayLayout.sheet.role')} dot={roleDot} onClick={() => setSheet('role')} />
+            <ActionTab icon="📜" label={t('actionBar.journal')} ariaLabel={t('tabs.journal')} ariaPressed={journalOpen} tone={journalOpen ? 'gold' : 'idle'} dot={unreadJournal > 0} onClick={() => setJournalOpen((v) => !v)} />
+          </ActionBar>
+        }
       />
 
       <ChatStrip status={stripStatus} onHeight={setTopPx}>
-        <div className="flex items-center gap-1.5 px-3">
-          {tab('village', t('nightScreen.tab.village'), unreadVillage)}
-          {isWolf && tab('wolves', t('tabs.wolves'), unreadWolves)}
-          <span className="flex-1" />
-          {(actionPanel || hasResult) && (
-            <button
-              type="button"
-              onClick={() => setSheet('action')}
-              aria-label={t('nightScreen.sheet.action')}
-              className={`${STRIP_BUTTON} ${stripTone(actionPanel ? 'accent' : 'idle')} gap-1 px-2.5 text-xs font-semibold ${actionPanel ? 'animate-pulse' : ''}`}
-            >
-              🎯 {actionPanel ? t('nightScreen.chip.play') : ''}
-              {resultUnseen && !actionPanel && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-night-950 bg-blood-500" />}
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setJournalOpen((v) => !v)}
-            aria-expanded={journalOpen}
-            aria-label={t('tabs.journal')}
-            className={`${STRIP_BUTTON} ${stripTone(journalOpen ? 'accent' : 'idle')} w-8`}
-          >
-            📜
-            {unreadJournal > 0 && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-night-950 bg-blood-500" />}
-          </button>
-          <button type="button" onClick={() => setSheet('players')} aria-label={t('dayLayout.sheet.players')} className={`${STRIP_BUTTON} ${stripTone()} gap-1 px-2.5 text-[11px] font-semibold`}>
-            👥 {alive.length}/{view.players.length}
-          </button>
-          <button type="button" onClick={() => setSheet('role')} aria-label={t('dayLayout.sheet.role')} className={`${STRIP_BUTTON} ${stripTone()} w-8`}>
-            🔮
-            {roleDot && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-night-950 bg-blood-500" />}
-          </button>
-        </div>
+        {isWolf && (
+          <div className="flex items-center gap-1.5 px-3">
+            {tab('village', t('nightScreen.tab.village'), unreadVillage)}
+            {tab('wolves', t('tabs.wolves'), unreadWolves)}
+          </div>
+        )}
         {actorKey && (
           <div className="px-3">
             <div className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 ${actionPanel ? 'border-moon-400/50 bg-moon-400/15' : 'border-night-600/50 bg-night-800/60'}`}>

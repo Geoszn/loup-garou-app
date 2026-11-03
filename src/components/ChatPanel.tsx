@@ -48,6 +48,7 @@ export const ChatPanel = memo(function ChatPanel({
   embedded = false,
   composerLead,
   composerTrail,
+  actionBar,
   floating = false,
   floatingTopClass = 'pt-14',
   floatingTopPx,
@@ -86,6 +87,8 @@ export const ChatPanel = memo(function ChatPanel({
   /** Éléments placés avant le champ d'écriture (ex. le bouton micro) et après le bouton d'envoi (ex. « Voter »). */
   composerLead?: ReactNode
   composerTrail?: ReactNode
+  /** Barre d'actions (micro, vote, joueurs...) posée au-dessus de la bulle d'écriture en mode `floating` ; masquée quand le clavier est ouvert. */
+  actionBar?: ReactNode
   /** Plein écran sans cadre (débat de jour) : les messages défilent sur le fond de la page et la barre
    * d'écriture devient une bulle flottante. Réserve de la place en haut (rangée vocale posée par le parent)
    * et en bas (sous la bulle). */
@@ -207,6 +210,9 @@ export const ChatPanel = memo(function ChatPanel({
   // garde sa taille normale, aucun clavier virtuel ne vient jamais masquer
   // quoi que ce soit.
   const expanded = isTouchDevice && inputFocused && !!viewport
+  // Avec une barre d'actions, l'ensemble « barre + saisie » est posé EN BAS DU FLUX (la liste de messages s'arrête juste au-dessus) : rien ne
+  // recouvre jamais le dernier message, contrairement à la bulle flottante par-dessus la liste.
+  const docked = floating && !!actionBar
 
   // Index des messages par id, recalculé seulement quand `messages` change.
   // Avant, la citation d'un message (repliedTo) était retrouvée via
@@ -401,8 +407,17 @@ export const ChatPanel = memo(function ChatPanel({
       <div
         ref={listRef}
         onScroll={handleListScroll}
-        style={floating && !expanded && floatingTopPx !== undefined ? { paddingTop: Math.max(floatingTopPx - 4, 0) } : undefined}
-        className={`h-full overflow-y-auto overscroll-contain scrollbar-thin px-3 ${floating ? `${expanded ? 'pt-3' : floatingTopClass} ${readOnly ? 'pb-4' : 'pb-28'}` : 'py-3'}`}
+        style={
+          floating && !expanded && floatingTopPx !== undefined
+            ? {
+                paddingTop: floatingTopPx + 4,
+                // Les anciens messages glissent DERRIÈRE la rangée du haut en s'estompant (au lieu d'être coupés net).
+                maskImage: `linear-gradient(to bottom, transparent ${Math.round(floatingTopPx * 0.5)}px, #000 ${floatingTopPx + 14}px)`,
+                WebkitMaskImage: `linear-gradient(to bottom, transparent ${Math.round(floatingTopPx * 0.5)}px, #000 ${floatingTopPx + 14}px)`,
+              }
+            : undefined
+        }
+        className={`h-full overflow-y-auto overscroll-contain scrollbar-thin px-3 ${floating ? `${expanded ? 'pt-3' : floatingTopClass} ${docked ? 'pb-3' : readOnly ? 'pb-4' : 'pb-28'}` : 'py-3'}`}
         onClick={(e) => {
           if (expanded && e.target === e.currentTarget) (document.activeElement as HTMLElement | null)?.blur()
         }}
@@ -456,7 +471,7 @@ export const ChatPanel = memo(function ChatPanel({
           <button
             type="button"
             onClick={jumpToBottom}
-            className={`absolute ${floating && !readOnly ? 'bottom-24' : 'bottom-2'} right-3 flex animate-fade-in items-center gap-1.5 rounded-full border border-moon-400/40 bg-night-800/95 px-3 py-1.5 text-xs font-semibold text-moon-200 shadow-card`}
+            className={`absolute ${floating && !readOnly && !docked ? 'bottom-24' : 'bottom-2'} right-3 flex animate-fade-in items-center gap-1.5 rounded-full border border-moon-400/40 bg-night-800/95 px-3 py-1.5 text-xs font-semibold text-moon-200 shadow-card`}
           >
             ↓ {t('chat.newMessages')}
           </button>
@@ -466,9 +481,11 @@ export const ChatPanel = memo(function ChatPanel({
       {!readOnly && replyTarget && (
         <div
           className={
-            floating
-              ? 'absolute inset-x-5 bottom-[4.75rem] z-10 flex items-center gap-2 rounded-2xl border border-night-600/60 bg-night-800/95 px-3 py-1.5 text-xs shadow-card'
-              : 'flex items-center gap-2 border-t border-night-600/50 bg-night-800/50 px-3 py-1.5 text-xs'
+            docked
+              ? 'mx-3 mt-2 flex items-center gap-2 rounded-2xl border border-night-600/60 bg-night-800 px-3 py-1.5 text-xs'
+              : floating
+                ? 'absolute inset-x-5 bottom-[4.75rem] z-10 flex items-center gap-2 rounded-2xl border border-night-600/60 bg-night-800/95 px-3 py-1.5 text-xs shadow-card'
+                : 'flex items-center gap-2 border-t border-night-600/50 bg-night-800/50 px-3 py-1.5 text-xs'
           }
         >
           <span className="min-w-0 flex-1 truncate text-moon-200/60">
@@ -485,6 +502,8 @@ export const ChatPanel = memo(function ChatPanel({
         </div>
       )}
 
+      {actionBar && !expanded && <div className="shrink-0 pt-2">{actionBar}</div>}
+
       {!readOnly && (
         <Composer
           placeholder={t(info.placeholderKey)}
@@ -496,6 +515,7 @@ export const ChatPanel = memo(function ChatPanel({
           lead={composerLead}
           trail={composerTrail}
           floating={floating}
+          docked={docked}
           inputRef={composerInputRef}
         />
       )}
@@ -841,6 +861,7 @@ function Composer({
   lead,
   trail,
   floating = false,
+  docked = false,
   inputRef: externalInputRef,
 }: {
   placeholder: string
@@ -852,6 +873,8 @@ function Composer({
   lead?: ReactNode
   trail?: ReactNode
   floating?: boolean
+  /** Posée en bas du flux (au lieu de flotter par-dessus la liste) : voir ChatPanel `docked`. */
+  docked?: boolean
   inputRef?: RefObject<HTMLInputElement>
 }) {
   const [text, setText] = useState('')
@@ -888,7 +911,9 @@ function Composer({
     <form
       onSubmit={handleSubmit}
       className={
-        floating
+        docked
+          ? 'mx-3 mb-3 mt-2 flex shrink-0 items-center gap-1.5 rounded-full border border-moon-400/30 bg-night-900 p-1.5 shadow-md'
+          : floating
           ? 'absolute inset-x-3 bottom-4 z-10 flex items-center gap-1.5 rounded-full border border-moon-400/30 bg-night-900/90 p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.55)] backdrop-blur-md'
           : `flex gap-2 border-t border-night-600/50 bg-night-900/60 p-2.5 ${lead || trail ? 'items-center' : ''}`
       }

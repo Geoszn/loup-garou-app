@@ -8,6 +8,7 @@ import { BottomSheet } from './BottomSheet'
 import { GuestVoiceCard } from './GuestWall'
 import { ChatPanel } from './ChatPanel'
 import { JournalDrawer, useJournalUnread } from './GameJournal'
+import { ActionBar, ActionTab, MicTab } from './ActionBar'
 
 // Écran de débat (jour), plein écran : le chat n'a plus de cadre, il occupe tout l'espace sous la barre de phase
 // et seule la bulle d'écriture (micro, texte, envoyer, voter) flotte au-dessus de la barre du bas. Le vocal est une
@@ -16,54 +17,6 @@ import { JournalDrawer, useJournalUnread } from './GameJournal'
 
 const speakingOf = (session: VoiceSession, p: { id: string; sessionIds: string[] } | undefined, isSelf: boolean) =>
   isSelf ? session.selfSpeaking : !!p && p.sessionIds.some((id) => session.speakingIds.has(id))
-
-/** Le bouton micro : rejoint le vocal, puis coupe / rend la parole. */
-export function MicButton({ session, listenOnly, small = false }: { session: VoiceSession; listenOnly: boolean; small?: boolean }) {
-  const { t } = useLanguage()
-  if (!session.channel) return null
-  const base = `relative flex ${small ? 'h-10 w-10 text-lg' : 'h-12 w-12 text-xl'} shrink-0 items-center justify-center rounded-full shadow-md transition-transform active:scale-95`
-  if (!session.joined) {
-    return (
-      <button type="button" onClick={() => session.setJoined(true)} aria-label={t('dayLayout.mic.join')} title={t('dayLayout.mic.join')} className={`${base} border-2 border-moon-400/60 bg-moon-400/10 text-moon-300`}>
-        🎙️
-      </button>
-    )
-  }
-  if (session.connecting) {
-    return (
-      <span className={`${base} bg-night-700 text-moon-200`} aria-label={t('voiceChat.connecting')}>
-        <span className="h-5 w-5 animate-spin rounded-full border-2 border-moon-200/30 border-t-moon-200" />
-      </span>
-    )
-  }
-  if (!session.connected) {
-    return (
-      <button type="button" onClick={session.retry} aria-label={t('voiceChat.retry')} title={session.error ?? t('voiceChat.retry')} className={`${base} bg-amber-500/80 text-night-950`}>
-        ⚠️
-      </button>
-    )
-  }
-  if (listenOnly) {
-    return (
-      <span className={`${base} bg-night-700 text-moon-200/60`} title={t('dayLayout.mic.listen')} aria-label={t('dayLayout.mic.listen')}>
-        🎧
-      </span>
-    )
-  }
-  return (
-    <button
-      type="button"
-      onClick={session.toggleMute}
-      aria-pressed={!session.muted}
-      aria-label={session.muted ? t('dayLayout.mic.off') : t('dayLayout.mic.on')}
-      title={session.muted ? t('dayLayout.mic.off') : t('dayLayout.mic.on')}
-      className={`${base} ${session.muted ? 'bg-blood-700 text-[#fdf6e3]' : 'bg-gradient-to-b from-moon-400 to-[#c98a1a] text-night-950'} ${!session.muted && session.selfSpeaking ? 'ring-4 ring-moon-400/40' : ''}`}
-    >
-      {session.muted ? '🔇' : '🎤'}
-    </button>
-  )
-}
-
 
 /** Bouton rond de la rangée du haut (joueurs, rôle, amoureux...). Partagé avec l'écran de nuit (NightScreen). */
 export const STRIP_BUTTON = 'relative flex h-8 shrink-0 items-center justify-center border text-sm transition-colors active:scale-95'
@@ -95,7 +48,7 @@ export function ChatStrip({ children, status, onHeight }: { children: ReactNode;
     return () => observer.disconnect()
   }, [onHeight])
   return (
-    <div ref={ref} className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-night-950 from-55% via-night-950/90 to-transparent pb-6 pt-4">
+    <div ref={ref} className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-gradient-to-b from-night-950/90 from-40% via-night-950/60 to-transparent pb-6 pt-4">
       <div className="pointer-events-auto flex flex-col gap-2.5">{children}</div>
       {status !== undefined && <p className="mt-1.5 h-3.5 truncate px-4 text-[10px] font-semibold text-moon-300/90">{status}</p>}
     </div>
@@ -128,10 +81,7 @@ export function VoiceFaces({ session, players, selfId, onOpen }: { session: Voic
   const byId = new Map(session.participants.map((p) => [p.id, p]))
   return (
     <div className="flex items-center gap-2 px-3">
-      <button type="button" onClick={onOpen} aria-label={t('dayLayout.voiceLabel')} className={`${STRIP_BUTTON} w-8 ${stripTone(session.connected ? 'voice' : 'idle')}`}>
-        🎙️
-      </button>
-      <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 gap-2 overflow-x-auto py-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <button type="button" onClick={onOpen} aria-label={t('dayLayout.voiceLabel')} className="flex min-w-0 flex-1 gap-2 overflow-x-auto py-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {players.filter((p) => p.is_alive).map((p) => {
           const isSelf = p.user_id === selfId
           const part = byId.get(p.user_id)
@@ -205,51 +155,33 @@ export function DayDiscussion({ view, gameId, code, selfId, me, voiceChannel, vo
         selfId={selfId}
         readOnly={channel === 'village' && listenOnly}
         note={channel === 'village' && listenOnly ? t('game.villageMutedNote') : undefined}
-        composerLead={<MicButton session={session} listenOnly={listenOnly} small />}
-        composerTrail={<span className="flex [&>*]:!h-10 [&>*]:!w-10 [&>*]:!text-lg">{vote}</span>}
         onComposerFocus={() => setJournalOpen(false)}
+        actionBar={
+          <ActionBar>
+            <MicTab session={session} listenOnly={listenOnly} />
+            {vote}
+            <ActionTab icon={<span className="text-[13px] font-bold tabular-nums">{alive.length}/{view.players.length}</span>} label={t('actionBar.players')} ariaLabel={t('dayLayout.sheet.players')} onClick={() => setSheet('players')} />
+            <ActionTab icon="🔮" label={t('actionBar.role')} ariaLabel={t('dayLayout.sheet.role')} dot={roleDot} onClick={() => setSheet('role')} />
+            <ActionTab icon="📜" label={t('actionBar.journal')} ariaLabel={t('tabs.journal')} ariaPressed={journalOpen} tone={journalOpen ? 'gold' : 'idle'} dot={unreadJournal > 0} onClick={() => setJournalOpen((v) => !v)} />
+            {view.lover_id && (
+              <ActionTab
+                icon="💘"
+                label={t('actionBar.lovers')}
+                ariaLabel={t('dayLayout.lovers')}
+                ariaPressed={channel === 'amoureux'}
+                tone={channel === 'amoureux' ? 'gold' : 'idle'}
+                badge={unreadAmoureux > 0 && channel !== 'amoureux' ? unreadAmoureux : undefined}
+                badgeAlert
+                onClick={() => setChannel(channel === 'amoureux' ? 'village' : 'amoureux')}
+              />
+            )}
+          </ActionBar>
+        }
       />
 
       {/* Rangée vocale : des visages sur le fond du chat, qui s'estompent vers les messages ; celui qui parle s'allume. */}
       <ChatStrip status={status} onHeight={setTopPx}>
-        <div className="flex items-center">
-          <div className="min-w-0 flex-1">
-            <VoiceFaces session={session} players={view.players} selfId={selfId} onOpen={() => setSheet('voice')} />
-          </div>
-          <div className="flex shrink-0 items-center gap-2 pr-3">
-            <button type="button" onClick={() => setSheet('players')} aria-label={t('dayLayout.sheet.players')} className={`${STRIP_BUTTON} ${stripTone()} gap-1 px-2.5 text-[11px] font-semibold`}>
-              👥 {alive.length}/{view.players.length}
-            </button>
-            <button type="button" onClick={() => setSheet('role')} aria-label={t('dayLayout.sheet.role')} className={`${STRIP_BUTTON} ${stripTone()} w-8`}>
-              🔮
-              {roleDot && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-night-950 bg-blood-500" />}
-            </button>
-            <button
-              type="button"
-              onClick={() => setJournalOpen((v) => !v)}
-              aria-expanded={journalOpen}
-              aria-label={t('tabs.journal')}
-              className={`${STRIP_BUTTON} w-8 ${stripTone(journalOpen ? 'accent' : 'idle')}`}
-            >
-              📜
-              {unreadJournal > 0 && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-night-950 bg-blood-500" />}
-            </button>
-            {view.lover_id && (
-              <button
-                type="button"
-                onClick={() => setChannel(channel === 'amoureux' ? 'village' : 'amoureux')}
-                aria-pressed={channel === 'amoureux'}
-                aria-label={t('dayLayout.lovers')}
-                className={`${STRIP_BUTTON} w-8 ${stripTone(channel === 'amoureux' ? 'on' : 'idle')}`}
-              >
-                💘
-                {unreadAmoureux > 0 && channel !== 'amoureux' && (
-                  <span className="absolute -right-1 -top-1 min-w-4 rounded-full bg-blood-600 px-1 text-center text-[9px] leading-4 text-[#fdf6e3]">{unreadAmoureux}</span>
-                )}
-              </button>
-            )}
-          </div>
-        </div>
+        <VoiceFaces session={session} players={view.players} selfId={selfId} onOpen={() => setSheet('voice')} />
       </ChatStrip>
 
       <JournalDrawer open={journalOpen} onClose={() => setJournalOpen(false)} entries={view.log} topPx={topPx} />

@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase'
 import { gameRpc } from '../lib/gameRpc'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { PhaseBanner } from '../components/PhaseBanner'
+import { ActionTab } from '../components/ActionBar'
 import { RoleCard } from '../components/RoleCard'
 import { AvatarIcon } from '../components/AvatarIcon'
 import { PlayerGrid } from '../components/PlayerGrid'
@@ -1298,22 +1299,19 @@ const CallVotePanel = memo(function CallVotePanel({
 
   if (chip) {
     const chipLabel = isActor ? (majorityAgreed ? t('game.voteChip.go') : t('game.voteChip.wait')) : agreed ? t('game.voteChip.ready') : t('game.voteChip.go')
+    const ready = !isActor && agreed
     return (
-      <button
-        type="button"
+      <ActionTab
+        wide
+        tone={ready ? 'ready' : isActor && !majorityAgreed ? 'idle' : 'gold'}
+        icon={ready ? '✓' : '🗳️'}
+        label={chipLabel}
+        badge={`${relevantAgreedCount}/${others.length}`}
         disabled={loading || (isActor && !majorityAgreed)}
         onClick={isActor ? callVote : toggleAgree}
-        aria-label={`${chipLabel} · ${actionLabel}`}
+        ariaLabel={`${chipLabel} · ${actionLabel}`}
         title={`${actionLabel} (${relevantAgreedCount}/${others.length})`}
-        className={`relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl shadow-md ring-1 transition-opacity active:scale-95 disabled:opacity-50 ${
-          !isActor && agreed ? 'bg-moon-400 text-night-950 ring-moon-400' : 'bg-night-700 text-moon-200 ring-moon-400/60'
-        }`}
-      >
-        <span aria-hidden="true">{!isActor && agreed ? '✓' : '🗳️'}</span>
-        <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-moon-400 px-1 text-center text-[10px] font-bold leading-5 tabular-nums text-night-950 ring-1 ring-night-950/40">
-          {relevantAgreedCount}/{others.length}
-        </span>
-      </button>
+      />
     )
   }
 
