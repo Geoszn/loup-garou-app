@@ -7,6 +7,11 @@ import type { MyGameView } from '../types/game'
 // l'utilisateur courant permet au voyant "en ligne" (PlayerGrid.tsx,
 // RosterSummary.tsx) de savoir qui a l'appli ouverte en ce moment. Optionnel
 // pour ne pas casser un éventuel appel existant sans présence.
+/** Le serveur n'a pas la fonction demandée (migration pas encore appliquée) — PostgREST répond PGRST202. */
+function isMissingFunction(error: { code?: string; message?: string }): boolean {
+  return error.code === 'PGRST202' || /could not find the function/i.test(error.message ?? '')
+}
+
 export function useGame(gameId: string | null, userId: string | null = null) {
   const [view, setView] = useState<MyGameView | null>(null)
   const [loading, setLoading] = useState(true)
@@ -35,8 +40,20 @@ export function useGame(gameId: string | null, userId: string | null = null) {
   // re-render complet même quand rien de visible ne bougeait — un des
   // principaux contributeurs au ressenti de lenteur pendant une partie.
   const lastRawRef = useRef<string | null>(null)
+  // Numéro de version de la partie (migration 0253) correspondant à la dernière lecture complète : tant que le serveur
+  // annonce le même numéro, la vue n'a pas changé et on ne la relit pas (le sondage ne coûte qu'une lecture d'un entier).
+  const versionRef = useRef<number | null>(null)
+  // Dernière version annoncée par Realtime, utilisée par le rafraîchissement groupé.
+  const targetVersionRef = useRef<number | null>(null)
+  // false si le serveur n'a pas (encore) get_game_version : on retombe sur l'ancien sondage complet.
+  const versionSupportedRef = useRef(true)
+  const lastVersionCheckRef = useRef(0)
+  // Après une erreur : attente croissante (1 s, 2 s, 4 s... 30 s) avec un peu d'aléa, pour que les joueurs d'une partie
+  // ne relancent pas tous leurs requêtes au même instant sur une base déjà essoufflée.
+  const errorStreakRef = useRef(0)
+  const backoffUntilRef = useRef(0)
 
-  const refresh = useCallback(async function refresh(): Promise<void> {
+  const refresh = useCallback(async function refresh(knownVersion?: number): Promise<void> {
     if (!gameId) return
     if (busyRef.current) {
       pendingRef.current = true
@@ -44,6 +61,17 @@ export function useGame(gameId: string | null, userId: string | null = null) {
     }
     busyRef.current = true
     lastRefreshAtRef.current = Date.now()
+    // La version est lue AVANT la vue : si l'état bouge entre les deux, la prochaine vérification relira la vue (jamais
+    // l'inverse, qui laisserait un état périmé étiqueté « à jour »).
+    let version: number | null = knownVersion ?? null
+    if (version === null && versionSupportedRef.current) {
+      const { data: versionData, error: versionError } = await supabase.rpc('get_game_version', { p_game_id: gameId })
+      if (versionError) {
+        if (isMissingFunction(versionError)) versionSupportedRef.current = false
+      } else {
+        version = Number(versionData)
+      }
+    }
     const { data, error: rpcError } = await supabase.rpc('get_my_game_view', { p_game_id: gameId })
     busyRef.current = false
     if (pendingRef.current) {
@@ -51,9 +79,14 @@ export function useGame(gameId: string | null, userId: string | null = null) {
       void refresh()
     }
     if (rpcError) {
+      errorStreakRef.current += 1
+      backoffUntilRef.current = Date.now() + Math.min(30000, 1000 * 2 ** (errorStreakRef.current - 1)) + Math.random() * 1000
       setError(rpcError.message)
       return
     }
+    errorStreakRef.current = 0
+    backoffUntilRef.current = 0
+    versionRef.current = version
     setError(null)
     const raw = JSON.stringify(data)
     if (raw !== lastRawRef.current) {
@@ -74,8 +107,10 @@ export function useGame(gameId: string | null, userId: string | null = null) {
     if (refreshTimerRef.current) return
     refreshTimerRef.current = setTimeout(() => {
       refreshTimerRef.current = null
-      void refresh()
-    }, 120 + Math.random() * 280)
+      const known = targetVersionRef.current
+      targetVersionRef.current = null
+      void refresh(known ?? undefined)
+    }, Math.max(120 + Math.random() * 280, backoffUntilRef.current - Date.now()))
   }, [refresh])
 
   // Une action du joueur lui-même (voter, agir, se déclarer prêt...) vient
@@ -90,9 +125,16 @@ export function useGame(gameId: string | null, userId: string | null = null) {
 
     const channel = supabase
       .channel(`game-${gameId}`, userId ? { config: { presence: { key: userId } } } : undefined)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `id=eq.${gameId}` }, scheduleRefresh)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_players', filter: `game_id=eq.${gameId}` }, scheduleRefresh)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_log', filter: `game_id=eq.${gameId}` }, scheduleRefresh)
+      // Un seul abonnement (au lieu de trois : games, game_players, game_log) : le numéro de version de la partie monte à
+      // chaque changement qui touche la vue — votes et actions de nuit compris (migration 0253).
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_state_version', filter: `game_id=eq.${gameId}` }, (payload) => {
+        const v = Number((payload.new as { version?: number } | null)?.version)
+        if (Number.isFinite(v)) {
+          if (v === versionRef.current) return
+          targetVersionRef.current = v
+        }
+        scheduleRefresh()
+      })
       .on('presence', { event: 'sync' }, () => {
         setOnlineUserIds(new Set(Object.keys(channel.presenceState())))
       })
@@ -115,30 +157,44 @@ export function useGame(gameId: string | null, userId: string | null = null) {
     }
   }, [gameId, userId, refresh, scheduleRefresh])
 
-  // Filet de sécurité : Realtime peut manquer un événement (ex. le canal
-  // vient tout juste de se ré-abonner, ou la réplication a un peu de
-  // latence) — sans ça, un joueur pourrait rester bloqué à voir un salon
-  // périmé indéfiniment. On re-synchronise donc l'état à intervalle régulier
-  // en plus des mises à jour Realtime, qui restent la voie rapide normale.
-  // 6s plutôt que 2,5s (voir dépassement d'egress du 2026-09-28 : ce
-  // sondage, multiplié par chaque joueur connecté pendant toute la durée
-  // d'une partie, pesait lourd sur le volume de données sortantes du plan
-  // gratuit) — Realtime reste la voie rapide pour tout changement normal,
-  // ce filet ne sert qu'à rattraper un événement manqué.
-  // Fréquence adaptative (audit du 2026-10-06, pg_stat_statements) : quand
-  // Realtime est abonné, on ne resynchronise que toutes les 15 s ; s'il est
-  // coupé (plafond de débit, réseau), on resserre à 5 s pour que la partie ne
-  // reste pas figée. Rien tant que l'onglet est caché — le retour au premier
-  // plan relance une lecture immédiate.
+  // Filet de sécurité : Realtime peut manquer un événement (canal qui vient de se ré-abonner, réplication en retard...) —
+  // sans ça, un joueur pourrait rester bloqué sur un état périmé. Depuis la migration 0253, le sondage ne relit plus la
+  // vue complète (~200 ms, l'appel le plus coûteux de l'appli) : il lit seulement le numéro de version de la partie
+  // (une lecture indexée) toutes les 8 s (4 s si Realtime est coupé) et ne relit la vue que s'il a changé. Une lecture
+  // complète reste forcée au moins une fois par minute. Rien tant que l'onglet est caché — le retour au premier plan
+  // relance une lecture immédiate. Sans get_game_version côté serveur : ancien sondage complet (10 s / 5 s).
   useEffect(() => {
     if (!gameId) return
-    const check = setInterval(() => {
+    const check = setInterval(async () => {
       if (typeof document !== 'undefined' && document.hidden) return
-      const limit = realtimeOkRef.current ? 10000 : 5000
-      if (Date.now() - lastRefreshAtRef.current >= limit) void refresh()
+      const now = Date.now()
+      if (now < backoffUntilRef.current) return
+      const sinceRefresh = now - lastRefreshAtRef.current
+      // Sans numéro de version côté serveur : ancien sondage complet.
+      if (!versionSupportedRef.current) {
+        if (sinceRefresh >= (realtimeOkRef.current ? 10000 : 5000)) void refresh()
+        return
+      }
+      // Filet de sécurité : une lecture complète au moins toutes les 60 s, quoi qu'annonce le numéro de version.
+      if (sinceRefresh >= 60000) {
+        void refresh()
+        return
+      }
+      if (now - lastVersionCheckRef.current < (realtimeOkRef.current ? 8000 : 4000)) return
+      lastVersionCheckRef.current = now
+      const { data, error: versionError } = await supabase.rpc('get_game_version', { p_game_id: gameId })
+      if (versionError) {
+        if (isMissingFunction(versionError)) versionSupportedRef.current = false
+        return
+      }
+      const v = Number(data)
+      if (v !== versionRef.current) void refresh(v)
     }, 2500)
     const onVisible = () => {
-      if (!document.hidden) void refresh()
+      if (!document.hidden) {
+        lastVersionCheckRef.current = 0
+        void refresh()
+      }
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => {
