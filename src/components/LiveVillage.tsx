@@ -218,7 +218,7 @@ export function LiveVillage() {
   const wide = useWideScreen()
   const { t, lang } = useLanguage()
   const { profile } = useAuth()
-  const { onlineStatus } = usePresence()
+  const { onlineCount } = usePresence()
   const navigate = useNavigate()
   const displayName = profile?.username ?? t('common.playerFallback')
   const join = useJoinPublicGame(displayName)
@@ -258,7 +258,7 @@ export function LiveVillage() {
   const placed = useMemo(() => layoutPage(pageGames), [pageGames])
   const selected = pageGames.find((g) => g.key === selectedKey) ?? pageGames[0] ?? null
 
-  const online = Object.keys(onlineStatus).length
+  const online = onlineCount
   const playersInGames = sorted.reduce((sum, g) => sum + g.player_count, 0)
 
   function statusLabel(g: LiveGame): string {
