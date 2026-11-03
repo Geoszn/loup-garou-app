@@ -158,19 +158,41 @@ export function useGame(gameId: string | null, userId: string | null = null) {
   // ticks nécessaires. Le changement de phase, lui, arrive à tout le monde par
   // Realtime.
   const amHost = !!userId && !!view?.players.some((p) => p.user_id === userId && p.is_host)
+  // Le chronomètre serveur (pg_cron, migration 0251) fait déjà avancer les phases à l'heure : tant qu'il répond
+  // présent, le tick des navigateurs n'est plus qu'un filet de secours, bien plus rare. S'il s'arrête, la réponse
+  // repasse à faux dans les 25 s et on retrouve les ticks de 2 s (hôte) / 8 s (autres).
+  const serverTickRef = useRef(false)
+  const lastTickAtRef = useRef(0)
+  const inProgress = !!view && view.game.status !== 'lobby' && view.game.status !== 'ended'
   useEffect(() => {
-    if (!gameId) return
-    if (!view || view.game.status === 'lobby' || view.game.status === 'ended') return
+    if (!gameId || !inProgress) return
+    let cancelled = false
+    const check = async () => {
+      const { data } = await supabase.rpc('server_tick_alive')
+      if (!cancelled) serverTickRef.current = data === true
+    }
+    void check()
+    const id = setInterval(check, 20000)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+    }
+  }, [gameId, inProgress])
+
+  useEffect(() => {
+    if (!gameId || !inProgress) return
 
     const interval = setInterval(
       async () => {
+        if (serverTickRef.current && Date.now() - lastTickAtRef.current < (amHost ? 10000 : 30000)) return
+        lastTickAtRef.current = Date.now()
         await supabase.rpc('tick_game', { p_game_id: gameId })
       },
       amHost ? 2000 : 8000
     )
 
     return () => clearInterval(interval)
-  }, [gameId, view?.game.status, amHost])
+  }, [gameId, inProgress, amHost])
 
   // La présence n'est exposée que dans le salon d'attente : une fois la partie lancée (et après), savoir qui est
   // connecté permettrait de deviner les rôles ou les actions de nuit — on ne renvoie plus rien.
