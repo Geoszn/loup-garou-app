@@ -1,5 +1,7 @@
 import { useId, type ReactNode } from 'react'
 import { AVATAR_BGS, SKIN_TONES, type AvatarConfig, type AvatarMood } from '../lib/avatarParts'
+import { shade, mix, toRgb } from '../lib/avatarColor'
+import { FaceDefs, Neck, Ears, SkinShading, Eyes, Brows, Nose, Mouth } from './avatarFace'
 
 // Dessin du buste d'un avatar (SVG 100×100), style « dessin animé détaillé » :
 // pour chaque forme un aplat de base, un ton d'ombre et un ton de lumière, le
@@ -16,18 +18,6 @@ import { AVATAR_BGS, SKIN_TONES, type AvatarConfig, type AvatarMood } from '../l
 //    couvre-chef remonte pour dégager les yeux) et une ombre tombe sur le
 //    visage ; un gélé remplace tout autre couvre-chef.
 const INK = '#24150c'
-
-function toRgb(hex: string): [number, number, number] {
-  const n = parseInt(hex.slice(1), 16)
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-}
-const toHex = (c: number[]) => '#' + c.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')
-const shade = (hex: string, amt: number) => toHex(toRgb(hex).map((v) => v + amt))
-const mix = (a: string, b: string, t: number) => {
-  const A = toRgb(a)
-  const B = toRgb(b)
-  return toHex(A.map((v, i) => v + (B[i] - v) * t))
-}
 
 const HEAD_PATHS: Record<AvatarConfig['face'], string> = {
   oval: 'M32 39C32 27 40 20.5 50 20.5S68 27 68 39C68 49 66.5 57 62 62.5C58.5 66.8 54 69 50 69S41.5 66.8 38 62.5C33.5 57 32 49 32 39Z',
@@ -66,6 +56,34 @@ function Braid({ x, y0, y1, bend = 0, h, bead = '#e0b04a', w = 4.4 }: { x: numbe
       <path d={d} fill="none" stroke={h} strokeWidth={w} strokeLinecap="round" />
       {links}
       <circle cx={ex} cy={y1 + 0.6} r="1.7" fill={bead} stroke={INK} strokeWidth=".7" />
+    </g>
+  )
+}
+
+/** Tresse qui naît au cuir chevelu : racine cachée sous la calotte de cheveux (hairFront), départ vers l'extérieur puis retombée
+ * le long de la tête et de l'épaule, avec un petit nœud à la racine et une perle au bout. `bow` > 0 gonfle la courbe vers
+ * l'extérieur ; le côté gauche/droit se règle par le signe de `bow` et la position. */
+function HangingBraid({ sx, sy, ex, ey, bow, h, bead = '#e0b04a', w = 4.2 }: { sx: number; sy: number; ex: number; ey: number; bow: number; h: string; bead?: string; w?: number }) {
+  const c1x = sx + bow
+  const c1y = sy + (ey - sy) * 0.28
+  const c2x = ex + bow * 0.55
+  const c2y = ey - (ey - sy) * 0.34
+  const d = `M${sx} ${sy}C${c1x} ${c1y} ${c2x} ${c2y} ${ex} ${ey}`
+  const links: ReactNode[] = []
+  const n = Math.floor(Math.hypot(ex - sx, ey - sy) / 3.1)
+  for (let i = 1; i < n; i++) {
+    const t = i / n
+    const u = 1 - t
+    const px = u * u * u * sx + 3 * u * u * t * c1x + 3 * u * t * t * c2x + t * t * t * ex
+    const py = u * u * u * sy + 3 * u * u * t * c1y + 3 * u * t * t * c2y + t * t * t * ey
+    links.push(<path key={i} d={`M${px - w * 0.34} ${py - 1.1}l${w * 0.34} 1.4l${w * 0.34} -1.4`} fill="none" stroke={shade(h, 55)} strokeWidth=".65" strokeLinecap="round" opacity=".8" />)
+  }
+  return (
+    <g>
+      <path d={d} fill="none" stroke={INK} strokeWidth={w + 1.6} strokeLinecap="round" />
+      <path d={d} fill="none" stroke={h} strokeWidth={w} strokeLinecap="round" />
+      {links}
+      <circle cx={ex} cy={ey + 0.7} r="1.6" fill={bead} stroke={INK} strokeWidth=".65" />
     </g>
   )
 }
@@ -447,14 +465,17 @@ function curtains(kind: AvatarConfig['hair'], h: string): ReactNode {
         <P d="M68.6 42C72 52 66.6 60 70.6 70C74 78 69 84 66 90L59 86C62.4 78 58 70 61.4 60C63.6 51.6 61.6 45 63.4 40Z" fill={h} />
         <L d="M34.4 52c-2 6 2 10 0 16M64 54c2 6-2 10 0 16" c={hl} w="1.1" o={0.7} />
         <L d="M32.6 74c1.6 4 .6 8 2.6 12M67.4 74c-1.6 4-.6 8-2.6 12" c={hl} w="1" o={0.6} />
+        <L d="M35.4 46c-1.8 8 .8 15-.6 25M37.6 44c.4 8-.6 14 .4 22M64.6 46c1.8 8-.8 15 .6 25M62.4 44c-.4 8 .6 14-.4 22" c={shade(h, -45)} w=".6" o={0.55} />
       </>
     )
   }
+  const hs = shade(h, -45)
   return (
     <>
-      <P d="M31.4 41.6C30.4 54 29.6 68 29 82C32 84 36 84 39 82C37.6 68 38.2 54 36.4 40Z" fill={h} />
-      <P d="M68.6 41.6C69.6 54 70.4 68 71 82C68 84 64 84 61 82C62.4 68 61.8 54 63.6 40Z" fill={h} />
-      <L d="M33.6 46c-.6 10-.8 20-.6 30M66.4 46c.6 10 .8 20 .6 30" c={hl} w="1.2" o={0.55} />
+      <P d="M31.4 41.6C30.2 53 29.2 66 28.6 79C28.2 84 29 87 30.4 89.4C33.4 86.6 36.6 84 39.4 80.6C38 68 38.6 54 36.4 40Z" fill={h} w={1.2} />
+      <P d="M68.6 41.6C69.8 53 70.8 66 71.4 79C71.8 84 71 87 69.6 89.4C66.6 86.6 63.4 84 60.6 80.6C62 68 61.4 54 63.6 40Z" fill={h} w={1.2} />
+      <L d="M33.4 46C32.8 58 32.2 70 31.4 84M66.6 46C67.2 58 67.8 70 68.6 84" c={hl} w=".9" o={0.55} />
+      <L d="M35.4 44C35.2 56 35.6 68 36.8 78M64.6 44C64.8 56 64.4 68 63.2 78M31.8 60C31.2 70 30.8 78 30.6 86M68.2 60C68.8 70 69.2 78 69.4 86" c={hs} w=".6" o={0.6} />
     </>
   )
 }
@@ -490,20 +511,20 @@ function hairBack(kind: AvatarConfig['hair'], h: string, cover = false, hide = f
     case 'braids':
       return (
         <>
-          {[25, 29, 33].map((x, i) => (
-            <Braid key={x} x={x} y0={34} y1={74 + i * 3} bend={-3 + i} h={h} />
+          {[[37, 26, 24, 78], [35, 29, 27.5, 82], [33.5, 32, 31, 84]].map(([sx, sy, ex, ey], i) => (
+            <HangingBraid key={`l${i}`} sx={sx} sy={sy} ex={ex} ey={ey} bow={-5.5} h={h} />
           ))}
-          {[67, 71, 75].map((x, i) => (
-            <Braid key={x} x={x} y0={34} y1={77 - i * 3} bend={3 - i} h={h} />
+          {[[63, 26, 76, 78], [65, 29, 72.5, 82], [66.5, 32, 69, 84]].map(([sx, sy, ex, ey], i) => (
+            <HangingBraid key={`r${i}`} sx={sx} sy={sy} ex={ex} ey={ey} bow={5.5} h={h} />
           ))}
         </>
       )
     case 'ponytail_pop':
       return (
         <>
-          <P d="M68 22C80 15 93 27 91 46C90 58 85 68 79 77C79.6 67 77 60.6 74.6 54C72 46 70 38 66 30Z" fill={h} />
-          <L d="M74 24c7 1 11 8 11 17M78 34c3 6 4 14 1 24" c={shade(h, 52)} w="1.2" o={0.6} />
-          <L d="M82 56c-1.6 6-3.4 10-5.6 14M86 46c-.4 5-1.4 9-3 13" c={shade(h, -38)} w="1.1" o={0.7} />
+          <P d="M67 25C75 22 82 30 82 44C82 58 80 70 76.6 82C75.4 72 73.6 64 71.6 56C69.6 46 68 36 65.6 29Z" fill={h} />
+          <L d="M71 27c5 1.4 8 8 8 17M74 40c2 6 2.6 14 .6 24" c={shade(h, 52)} w="1.1" o={0.6} />
+          <L d="M77.6 58c-.8 6-1.8 10-3 15M80.4 44c0 5-.6 9-1.6 13" c={shade(h, -38)} w="1" o={0.7} />
         </>
       )
     case 'puffs':
@@ -516,11 +537,11 @@ function hairBack(kind: AvatarConfig['hair'], h: string, cover = false, hide = f
     case 'locs':
       return (
         <>
-          {[24, 28, 32, 36].map((x, i) => (
-            <Braid key={x} x={x} y0={32} y1={70 + ((i * 7) % 12)} bend={-2.5} h={h} bead={h} w={4.8} />
+          {[[38, 25, 22.5, 74], [36, 27, 26, 80], [34.5, 30, 30, 76], [33.5, 33, 33.5, 82]].map(([sx, sy, ex, ey], i) => (
+            <HangingBraid key={`l${i}`} sx={sx} sy={sy} ex={ex} ey={ey} bow={-4.6} h={h} bead={h} w={4.6} />
           ))}
-          {[64, 68, 72, 76].map((x, i) => (
-            <Braid key={x} x={x} y0={32} y1={73 - ((i * 5) % 11)} bend={2.5} h={h} bead={h} w={4.8} />
+          {[[62, 25, 77.5, 74], [64, 27, 74, 80], [65.5, 30, 70, 76], [66.5, 33, 66.5, 82]].map(([sx, sy, ex, ey], i) => (
+            <HangingBraid key={`r${i}`} sx={sx} sy={sy} ex={ex} ey={ey} bow={4.6} h={h} bead={h} w={4.6} />
           ))}
         </>
       )
@@ -652,6 +673,8 @@ function hairFront(kind: AvatarConfig['hair'], h: string, uid: string, headPath:
           <P d="M31 42C29.6 26 39 19.6 50 19.6S70.4 26 69 42C67 34 62 30 56 29.4 53 29.2 51 29.6 50 30 49 29.6 47 29.2 44 29.4 38 30 33 34 31 42Z" fill={h} />
           <L d="M50 19.8V30" c={hl} w=".9" o={0.85} />
           <L d="M37 25c4-3.6 9-5.2 14-4.8M41 28.6c-1.6 1.8-3 3.8-3.6 6M59 28.6c1.6 1.8 3 3.8 3.6 6" c={hl} w="1.4" o={0.4} />
+          <L d="M49.4 20.6C43.6 21.6 38.4 25.6 35.2 33.6M50.6 20.6C56.4 21.6 61.6 25.6 64.8 33.6" c={hl} w=".7" o={0.55} />
+          <L d="M47 21C41.4 23 37.2 27.6 34.4 36.4M53 21C58.6 23 62.8 27.6 65.6 36.4M44 22.6C39.4 25.4 36 30 33.6 38" c={shade(h, -45)} w=".6" o={0.6} />
           {curtains('long', h)}
         </>
       )
@@ -752,8 +775,8 @@ function hairFront(kind: AvatarConfig['hair'], h: string, uid: string, headPath:
           {[36, 41, 46, 51, 56, 61, 66].map((x, i) => (
             <circle key={x} cx={x - 1.5 + (i % 2)} cy={25 + (i % 3) * 2.6} r="1.5" fill="none" stroke={hl} strokeWidth=".7" opacity=".6" />
           ))}
-          {[[30.5, 38], [34, 40], [66, 40], [69.5, 38]].map(([x, y], i) => (
-            <Braid key={x} x={x} y0={y} y1={y + 36 + (i % 2) * 8} bend={x < 50 ? -1.5 : 1.5} h={h} bead={h} w={4.6} />
+          {[[35, 31, 29.5, 70], [33.5, 34, 33, 74], [65, 31, 70.5, 70], [66.5, 34, 67, 74]].map(([sx, sy, ex, ey], i) => (
+            <HangingBraid key={i} sx={sx} sy={sy} ex={ex} ey={ey} bow={sx < 50 ? -2.4 : 2.4} h={h} bead={h} w={4.4} />
           ))}
         </>
       )
@@ -819,8 +842,9 @@ function hairFront(kind: AvatarConfig['hair'], h: string, uid: string, headPath:
     case 'pompadour_ken':
       return (
         <>
-          <P d="M31.8 40C28.6 25 32.6 11 46 7.6C59 4.8 71.6 11.6 68.2 40C66.4 34.6 62.4 31.4 57 30.4C49 28.4 41 29.6 36 32.6C34 34.2 32.8 36.6 31.8 40Z" fill={h} />
-          <P d="M35.6 30C35 20 41.6 12.4 51 12C60.6 11.6 67 17.6 67.4 27C63 21.4 56 19.4 49 21.4C43 23 38.6 26.4 35.6 30Z" fill={shade(h, 14)} w={1.1} />
+          <P d="M31.8 40C28.6 25 32.6 11 46 7.6C59 4.8 71.6 11.6 68.2 40C66.4 34.6 62.4 31.4 57 30.4C49 28.4 41 29.6 36 32.6C34 34.2 32.8 36.6 31.8 40Z" fill={h} w={1.1} />
+          <P d="M35.6 30C35 20 41.6 12.4 51 12C60.6 11.6 67 17.6 67.4 27C63 21.4 56 19.4 49 21.4C43 23 38.6 26.4 35.6 30Z" fill={shade(h, 14)} w={0.9} />
+          <L d="M36 30C37 23 41 17 47 14M42 28C42.6 22 46 17 51 15.6M48 27C49 22 52 18 57 17M55 28C56 23 59 20 63 20.6M62 30C63.4 26 64.6 23 66.6 22.6" c={hs} w=".6" o={0.6} />
           <L d="M39 22C41.6 17 46.4 14.2 52 14M45 21C47 18 50.6 16.4 55 16.4M52 20C54 18.6 57.4 18.2 61 19.6" c={hl} w="1.2" o={0.8} />
           <L d="M33.6 33C33 25 35 17.6 40 12.4M60 8.4C66 9.6 69 14 68.6 22" c={hs} w=".9" o={0.6} />
           <L d="M42 10.6c4-2 9-2.2 13.4-.4" c="#fff4cf" w="1.6" o={0.7} />
@@ -1324,11 +1348,11 @@ function faceAccessory(kind: AvatarConfig['acc'], skin: string, ey: number): Rea
     case 'hoops':
       return (
         <g>
-          {[31.4, 68.6].map((x) => (
+          {[27.6, 72.4].map((x) => (
             <g key={x}>
-              <ellipse cx={x} cy="55" rx="3.6" ry="5.6" fill="none" stroke={INK} strokeWidth="3" />
-              <ellipse cx={x} cy="55" rx="3.6" ry="5.6" fill="none" stroke="#f0c75a" strokeWidth="1.7" />
-              <path d={`M${x - 2.2} 52.4c.6-1 1.6-1.4 2.4-1.2`} stroke="#fff" strokeWidth=".7" fill="none" strokeLinecap="round" />
+              <ellipse cx={x} cy={ey + 8.4} rx="2.7" ry="3.5" fill="none" stroke={INK} strokeWidth="2" />
+              <ellipse cx={x} cy={ey + 8.4} rx="2.7" ry="3.5" fill="none" stroke="#f0c75a" strokeWidth="1.1" />
+              <path d={`M${x - 1.5} ${ey + 6.6}c.4-.7 1.1-1 1.7-.8`} stroke="#fff" strokeWidth=".5" fill="none" strokeLinecap="round" />
             </g>
           ))}
         </g>
@@ -1344,11 +1368,11 @@ function faceAccessory(kind: AvatarConfig['acc'], skin: string, ey: number): Rea
     case 'ring':
       return (
         <g>
-          {[29, 71].map((x) => (
+          {[27.8, 72.2].map((x) => (
             <g key={x}>
-              <circle cx={x} cy="52.4" r="2.5" fill="none" stroke={INK} strokeWidth="2.4" />
-              <circle cx={x} cy="52.4" r="2.5" fill="none" stroke="#f0c75a" strokeWidth="1.2" />
-              <circle cx={x} cy="49.4" r="1" fill="#fff4cf" stroke={INK} strokeWidth=".5" />
+              <circle cx={x} cy={ey + 7.4} r="1.5" fill="none" stroke={INK} strokeWidth="1.5" />
+              <circle cx={x} cy={ey + 7.4} r="1.5" fill="none" stroke="#f0c75a" strokeWidth=".75" />
+              <circle cx={x} cy={ey + 5.5} r=".7" fill="#fff4cf" stroke={INK} strokeWidth=".35" />
             </g>
           ))}
         </g>
@@ -1379,20 +1403,20 @@ function faceAccessory(kind: AvatarConfig['acc'], skin: string, ey: number): Rea
       return (
         <g strokeLinecap="round">
           {[
-            ['M34.6 50.6l8 2.4', '#f3ece0'],
-            ['M34.4 54.4l9 3', '#f3ece0'],
-            ['M35.4 58l7.2 2.2', '#c2432a'],
-            ['M65.4 50.6l-8 2.4', '#f3ece0'],
-            ['M65.6 54.4l-9 3', '#f3ece0'],
-            ['M64.6 58l-7.2 2.2', '#c2432a'],
+            ['M35.6 49.6l6.4 1.4', '#f3ece0'],
+            ['M35.2 52.6l7 1.9', '#f3ece0'],
+            ['M35.8 55.6l5.8 1.7', '#c2432a'],
+            ['M64.4 49.6l-6.4 1.4', '#f3ece0'],
+            ['M64.8 52.6l-7 1.9', '#f3ece0'],
+            ['M64.2 55.6l-5.8 1.7', '#c2432a'],
           ].map(([d, c]) => (
             <g key={d}>
-              <path d={d} fill="none" stroke={INK} strokeWidth="3" />
-              <path d={d} fill="none" stroke={c} strokeWidth="1.8" />
+              <path d={d} fill="none" stroke={INK} strokeWidth="2.1" opacity=".8" />
+              <path d={d} fill="none" stroke={c} strokeWidth="1.2" />
             </g>
           ))}
-          <path d="M50 29.4v5.4" stroke={INK} strokeWidth="3.2" />
-          <path d="M50 29.4v5.4" stroke="#f3ece0" strokeWidth="2" />
+          <path d="M50 30.6v3.8" stroke={INK} strokeWidth="2.2" opacity=".8" />
+          <path d="M50 30.6v3.8" stroke="#f3ece0" strokeWidth="1.3" />
         </g>
       )
     case 'eyepatch':
@@ -1470,7 +1494,7 @@ function headwearArt(kind: AvatarConfig['head'], uid: string): ReactNode {
       )
     case 'hat':
       return (
-        <g transform="translate(0 -4)">
+        <g transform="translate(4 -4) scale(.92 1)">
           {/* bord : large, avec une épaisseur côté face */}
           <path d="M19.8 29.6C20 38.4 36 41 50 41S79.8 38.4 80.2 29.6Z" fill="#5e4524" stroke={INK} strokeWidth="1" strokeLinejoin="round" />
           <P d="M19.6 28.4C19.6 23.6 33 21.6 50 21.6S80.4 23.6 80.4 28.4C80.4 33.6 66 36.2 50 36.2S19.6 33.6 19.6 28.4Z" fill="#8a6a3a" />
@@ -1534,7 +1558,7 @@ function headwearArt(kind: AvatarConfig['head'], uid: string): ReactNode {
       )
     case 'cowboy_pink':
       return (
-        <g transform="translate(0 -3)">
+        <g transform="translate(7 -3) scale(.86 1)">
           <path d="M12 25C18 33 32 39 50 39S82 33 88 25C84 23 80 25 76 28C68 31 58 32 50 32S32 31 24 28C20 25 16 23 12 25Z" fill="#c2185b" stroke={INK} strokeWidth="1" strokeLinejoin="round" />
           <P d="M12 22C18 29 32 34.4 50 34.4S82 29 88 22C84 20 80 22 76 25C68 28 58 29 50 29S32 28 24 25C20 22 16 20 12 22Z" fill="#ff7ab8" />
           <L d="M20 24.6C28 29.6 40 31.6 50 31.6M80 24.6C72 29.6 60 31.6 50 31.6" c="#ffc2dc" w="1" o={0.7} />
@@ -1585,106 +1609,15 @@ export function AvatarArt({ config, mood = 'smile' }: { config: AvatarConfig; mo
   const acc2 = config.acc2 ?? 'none'
   const lipC = config.acc === 'lipstick_pink' || acc2 === 'lipstick_pink' ? '#ff3d8b' : mix(shade(skin, -46), '#b3262c', 0.5)
   const hairC = HAIR_COLORS[config.hair] ?? '#1b120c'
-  const browC = config.hair === 'braids_pink' || config.hair === 'afro_pink' || config.hair === 'ponytail_pop' ? '#2a1a10' : hairC
+  // Sourcils : jamais jaunes ou roses vifs (cheveux teints) — on les assombrit pour qu'ils restent naturels.
+  const [hr, hg, hb] = toRgb(hairC)
+  const browC = (0.299 * hr + 0.587 * hg + 0.114 * hb) / 255 > 0.5 || config.hair === 'braids_pink' || config.hair === 'afro_pink' || config.hair === 'ponytail_pop' ? '#2a1a10' : hairC
   const head = HEAD_PATHS[config.face]
   // Un gélé est déjà une coiffe : il remplace tout autre couvre-chef.
   const headwear = config.hair === 'gele' ? 'none' : config.head
   const cover = COVERING.includes(headwear)
   const hairHiding = HAIR_HIDING.includes(headwear)
   const ey = config.face === 'long' ? 44 : 45
-
-  const brow = (s: -1 | 1) => {
-    const cx = 50 + s * 8.4
-    const innerY = mood === 'angry' ? 41.6 : 40.4
-    const outerY = mood === 'angry' ? 38 : mood === 'shock' ? 36.8 : 39.4
-    const apexY = mood === 'angry' ? 38.8 : mood === 'shock' ? 35.2 : 37.6
-    const ix = cx - s * 5.4
-    const ox = cx + s * 5.8
-    const ax = cx + s * 0.8
-    return <path key={s} d={`M${ix} ${innerY}Q${ax} ${apexY} ${ox} ${outerY}L${ox} ${outerY + 1}Q${ax} ${apexY + 1.8} ${ix} ${innerY + 1.4}Z`} fill={browC} stroke={browC} strokeWidth=".4" strokeLinejoin="round" />
-  }
-  const eye = (s: -1 | 1) => {
-    const cx = 50 + s * 8.4
-    const cy = ey
-    const big = mood === 'shock' ? 1.18 : 1
-    const rw = 4.9 * big
-    const top = 3.7 * big
-    const bot = 2.9 * big
-    const almond = `M${cx - rw} ${cy}C${cx - rw / 2} ${cy - top} ${cx + rw / 2} ${cy - top} ${cx + rw} ${cy}C${cx + rw / 2} ${cy + bot} ${cx - rw / 2} ${cy + bot} ${cx - rw} ${cy}Z`
-    const id = `${uid}e${s > 0 ? 'r' : 'l'}`
-    return (
-      <g key={s}>
-        <clipPath id={id}>
-          <path d={almond} />
-        </clipPath>
-        <path d={almond} fill="#fffdf6" />
-        <g clipPath={`url(#${id})`}>
-          <circle cx={cx + s * -0.5} cy={cy + 0.3} r={3.3 * big} fill={`url(#${uid}ir)`} />
-          <circle cx={cx + s * -0.5} cy={cy + 0.3} r={1.6 * big} fill="#0e0704" />
-          <ellipse cx={cx} cy={cy - top / 2 + 0.6} rx={rw} ry="1.6" fill="#000" opacity=".16" />
-          <circle cx={cx - 1.3} cy={cy - 1} r="1.1" fill="#fff" />
-          <circle cx={cx + 1.2} cy={cy + 1.3} r=".5" fill="#fff" opacity=".9" />
-        </g>
-        <path d={almond} fill="none" stroke={INK} strokeWidth=".6" />
-        <path d={`M${cx - rw - 0.3} ${cy + 0.2}C${cx - rw / 2} ${cy - top - 0.5} ${cx + rw / 2} ${cy - top - 0.5} ${cx + rw + 0.3} ${cy + 0.2}`} fill="none" stroke={INK} strokeWidth="1.8" strokeLinecap="round" />
-        <path d={`M${cx + s * (rw + 0.2)} ${cy + 0.1}l${s * 1.6} -1.1`} stroke={INK} strokeWidth="1.3" strokeLinecap="round" />
-        <path d={`M${cx - rw + 1} ${cy - top - 1.1}C${cx - 1} ${cy - top - 2.2} ${cx + 2} ${cy - top - 2.2} ${cx + rw - 0.6} ${cy - top - 0.7}`} fill="none" stroke={dark} strokeWidth=".6" opacity=".7" strokeLinecap="round" />
-        {mood === 'angry' && <path d={`M${cx - s * 6} ${cy - 6}L${cx + s * 6} ${cy - 6}L${cx + s * 5.4} ${cy - 3.6}L${cx - s * 5.6} ${cy - 1.2}Z`} fill={skin} stroke={INK} strokeWidth=".9" strokeLinejoin="round" />}
-      </g>
-    )
-  }
-  const eyes =
-    mood === 'dead' ? (
-      <g stroke={INK} strokeWidth="2" strokeLinecap="round">
-        <path d={`M38 ${ey - 2.4}l5 5M43 ${ey - 2.4}l-5 5M57 ${ey - 2.4}l5 5M62 ${ey - 2.4}l-5 5`} />
-      </g>
-    ) : mood === 'sleep' ? (
-      <g fill="none" stroke={INK} strokeWidth="2" strokeLinecap="round">
-        <path d={`M37.6 ${ey - 0.4}c1.8 3 5.8 3 7.6 0M54.8 ${ey - 0.4}c1.8 3 5.8 3 7.6 0`} />
-      </g>
-    ) : (
-      <>
-        {eye(-1)}
-        {eye(1)}
-      </>
-    )
-
-  const my = 60
-  const mouth =
-    mood === 'dead' ? (
-      <path d={`M44 ${my + 1.4}h12`} stroke={INK} strokeWidth="2" strokeLinecap="round" />
-    ) : mood === 'talk' ? (
-      <g stroke={INK} strokeWidth="1.1" strokeLinejoin="round">
-        <ellipse cx="50" cy={my + 1} rx="4" ry="3.6" fill="#4a1710" />
-        <ellipse cx="50" cy={my + 2.6} rx="2.3" ry="1.3" fill="#e0675f" stroke="none" />
-      </g>
-    ) : mood === 'shock' ? (
-      <g stroke={INK} strokeWidth="1.1">
-        <ellipse cx="50" cy={my + 1.6} rx="3.4" ry="4.6" fill="#4a1710" />
-        <ellipse cx="50" cy={my + 3.6} rx="2" ry="1.4" fill="#e0675f" stroke="none" />
-      </g>
-    ) : mood === 'grin' ? (
-      <g stroke={INK} strokeWidth="1.1" strokeLinejoin="round">
-        <path d={`M41.4 ${my - 1.4}C45 ${my - 2.6} 55 ${my - 2.6} 58.6 ${my - 1.4}C57.4 ${my + 6.6} 42.6 ${my + 6.6} 41.4 ${my - 1.4}Z`} fill="#4a1710" />
-        <path d={`M42.4 ${my - 1.2}C46 ${my - 2.2} 54 ${my - 2.2} 57.6 ${my - 1.2}L57 ${my + 1.8}C53.6 ${my + 1} 46.4 ${my + 1} 43 ${my + 1.8}Z`} fill="#fffdf6" stroke="none" />
-        <ellipse cx="50" cy={my + 4.2} rx="3.4" ry="1.5" fill="#e0675f" stroke="none" />
-      </g>
-    ) : mood === 'angry' ? (
-      <g stroke={INK} strokeWidth=".9" strokeLinejoin="round">
-        <path d={`M43.4 ${my + 2.4}C46 ${my - 0.2} 54 ${my - 0.2} 56.6 ${my + 2.4}C54 ${my + 1.8} 46 ${my + 1.8} 43.4 ${my + 2.4}Z`} fill={lipC} />
-        <path d={`M44 ${my + 2.4}C47 ${my + 4.4} 53 ${my + 4.4} 56 ${my + 2.4}`} fill="none" />
-      </g>
-    ) : (
-      <g stroke={INK} strokeWidth=".9" strokeLinejoin="round">
-        <path
-          d={mood === 'smile' ? `M42.6 ${my - 0.4}C45.6 ${my - 2.2} 48.4 ${my - 1.8} 50 ${my - 1}C51.6 ${my - 1.8} 54.4 ${my - 2.2} 57.4 ${my - 0.4}C55 ${my + 0.8} 52.4 ${my + 1} 50 ${my + 1}S45 ${my + 0.8} 42.6 ${my - 0.4}Z` : `M43.6 ${my}C46 ${my - 1.8} 48.4 ${my - 1.6} 50 ${my - 0.9}C51.6 ${my - 1.6} 54 ${my - 1.8} 56.4 ${my}C54.2 ${my + 0.8} 52 ${my + 1} 50 ${my + 1}S45.8 ${my + 0.8} 43.6 ${my}Z`}
-          fill={lipC}
-        />
-        <path d={mood === 'smile' ? `M43.4 ${my + 0.6}C46 ${my + 4.6} 54 ${my + 4.6} 56.6 ${my + 0.6}C54 ${my + 1.2} 46 ${my + 1.2} 43.4 ${my + 0.6}Z` : `M44.4 ${my + 0.8}C47 ${my + 3.8} 53 ${my + 3.8} 55.6 ${my + 0.8}C53 ${my + 1.2} 47 ${my + 1.2} 44.4 ${my + 0.8}Z`} fill={shade(lipC, 14)} />
-        {mood === 'smile' && <path d={`M41.6 ${my - 1.8}l1.2 1.6M58.4 ${my - 1.8}l-1.2 1.6`} fill="none" strokeWidth=".9" strokeLinecap="round" />}
-        <path d={`M47 ${my + 2.6}c1.8 .8 4.2 .8 6 0`} fill="none" stroke="#fff" strokeWidth=".6" opacity=".45" strokeLinecap="round" />
-      </g>
-    )
 
   return (
     <svg viewBox="0 0 100 100" className="block h-full w-full" aria-hidden="true">
@@ -1694,11 +1627,7 @@ export function AvatarArt({ config, mood = 'smile' }: { config: AvatarConfig; mo
           <stop offset=".55" stopColor="#fff" stopOpacity="0" />
           <stop offset="1" stopColor="#000" stopOpacity=".22" />
         </radialGradient>
-        <radialGradient id={`${uid}ir`} cx="42%" cy="36%" r="72%">
-          <stop offset="0" stopColor="#a8692a" />
-          <stop offset=".6" stopColor="#5b3416" />
-          <stop offset="1" stopColor="#2c1709" />
-        </radialGradient>
+        <FaceDefs uid={uid} skin={skin} ey={ey} />
         <linearGradient id={`${uid}sh`} x1="0" y1="72" x2="0" y2="100" gradientUnits="userSpaceOnUse">
           <stop offset="0" stopColor="#fff" stopOpacity=".1" />
           <stop offset=".5" stopColor="#000" stopOpacity="0" />
@@ -1719,22 +1648,15 @@ export function AvatarArt({ config, mood = 'smile' }: { config: AvatarConfig; mo
       <rect width="100" height="100" fill={`url(#${uid}bg)`} />
 
       {hairBack(config.hair, hairC, cover, hairHiding)}
-      <path d="M41.6 60v14c0 3.6 3.8 6 8.4 6s8.4-2.4 8.4-6V60z" fill={dark} stroke={INK} strokeWidth="1.4" strokeLinejoin="round" />
+      <Neck uid={uid} skin={skin} />
       {outfitArt(config.outfit, skin, dark, uid)}
       {cover && <ellipse cx="50" cy="73.4" rx="9" ry="3.6" fill="#000" opacity=".3" />}
-      {/* oreilles */}
-      {[-1, 1].map((s) => (
-        <g key={s}>
-          <path d={`M${50 + s * 18.4} ${ey - 3}c${s * 3.6} -1.2 ${s * 5.6} 1.4 ${s * 5} 4.8c-.4 3.4 ${s * -2.2} 5.2 ${s * -5} 4.6`} fill={skin} stroke={INK} strokeWidth="1.4" strokeLinejoin="round" />
-          <path d={`M${50 + s * 20.4} ${ey - 0.4}c${s * 1.6} .4 ${s * 1.8} 3 ${s * 0.2} 4`} fill="none" stroke={dark} strokeWidth=".8" strokeLinecap="round" />
-        </g>
-      ))}
-      <path d={head} fill={skin} stroke={INK} strokeWidth="1.6" strokeLinejoin="round" />
+      <Ears skin={skin} ey={ey} />
+      <path d={head} fill={skin} />
       <g clipPath={`url(#${uid}hd)`}>
-        <path d={`M66 30C70 44 66 60 52 72L72 80L80 20Z`} fill={shade(skin, -30)} opacity=".3" />
-        <ellipse cx="50" cy="71.4" rx="14" ry="3.6" fill={shade(skin, -40)} opacity={cover ? 0.5 : 0.35} />
-        <ellipse cx="41" cy="34" rx="6.4" ry="2.8" fill="#fff" opacity=".22" transform="rotate(-18 41 34)" />
+        <SkinShading uid={uid} skin={skin} ey={ey} face={config.face} cover={cover} mood={mood} />
       </g>
+      <path d={head} fill="none" stroke={shade(skin, -66)} strokeWidth=".7" strokeLinejoin="round" opacity=".85" />
       {hairFront(config.hair, hairC, uid, head, cover, hairHiding)}
       {cover && (
         <g clipPath={`url(#${uid}hd)`}>
@@ -1742,20 +1664,12 @@ export function AvatarArt({ config, mood = 'smile' }: { config: AvatarConfig; mo
         </g>
       )}
 
-      {eyes}
-      {mood !== 'dead' && mood !== 'sleep' ? [-1, 1].map((s) => brow(s as -1 | 1)) : null}
-      <path d="M52.4 46.4c.9 2.8 1.8 5 2.4 6.6" fill="none" stroke={dark} strokeWidth="1.1" strokeLinecap="round" />
-      <path d="M46.2 54.6c1.4 1.8 6.2 1.8 7.6 0" fill="none" stroke={dark} strokeWidth="1.3" strokeLinecap="round" />
-      {cover && (
-        <>
-          <ellipse cx="47.8" cy="54.4" rx=".9" ry=".6" fill={INK} opacity=".55" />
-          <ellipse cx="52.2" cy="54.4" rx=".9" ry=".6" fill={INK} opacity=".55" />
-        </>
-      )}
-      <ellipse cx="50.4" cy="52" rx="1.9" ry="1.1" fill="#fff" opacity=".22" />
+      <Eyes uid={uid} skin={skin} ey={ey} mood={mood} />
+      <Brows ey={ey} mood={mood} color={browC} />
+      <Nose uid={uid} skin={skin} ey={ey} />
       {mouthProp(config.acc)}
       {mouthProp(acc2)}
-      {mouth}
+      <Mouth uid={uid} skin={skin} mood={mood} lip={lipC} />
       {faceAccessory(config.acc, skin, ey)}
       {faceAccessory(acc2, skin, ey)}
       {headwearArt(headwear, uid)}
