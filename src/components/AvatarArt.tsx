@@ -487,7 +487,7 @@ const HAIR_COLORS: Partial<Record<AvatarConfig['hair'], string>> = {
 }
 
 // Coiffures qui reçoivent un reflet doux sur le haut (les autres ont déjà leurs propres reflets ou couvrent la tête).
-const SHEEN_HAIRS: AvatarConfig['hair'][] = ['fade', 'afro', 'curly', 'flat', 'cornrows', 'locs', 'long', 'braids', 'braids_pink', 'puffs', 'knots', 'slick_back', 'bun', 'topknot', 'afro_pink', 'xmas_braids', 'frost_locs', 'star_puffs']
+const SHEEN_HAIRS: AvatarConfig['hair'][] = ['fade', 'afro', 'curly', 'flat', 'cornrows', 'locs', 'long', 'braids', 'braids_pink', 'puffs', 'knots', 'slick_back', 'bun', 'topknot', 'afro_pink', 'xmas_braids', 'frost_locs', 'star_puffs', 'fiber_braids', 'holly_bun']
 const COVERING: AvatarConfig['head'][] = ['cap', 'hat', 'cowboy_pink', 'santa_hat', 'pompom_beanie', 'elf_hat']
 // Foulards : ils cachent les cheveux comme un couvre-chef, sans ombre portée sur le visage.
 const HAIR_HIDING: AvatarConfig['head'][] = ['scarf_pink', 'bandana_biker']
@@ -523,13 +523,14 @@ function hairBack(kind: AvatarConfig['hair'], h: string, cover = false, hide = f
       return <CurlBlob cx={50} cy={35} r={21} bumps={14} br={8.4} h={h} curls />
     case 'braids':
     case 'xmas_braids':
+    case 'fiber_braids':
       return (
         <>
           {[[37, 26, 24, 78], [35, 29, 27.5, 82], [33.5, 32, 31, 84]].map(([sx, sy, ex, ey], i) => (
-            <HangingBraid key={`l${i}`} sx={sx} sy={sy} ex={ex} ey={ey} bow={-5.5} h={h} bead={kind === 'xmas_braids' ? (i % 2 ? '#2f8a4f' : '#d4553a') : undefined} />
+            <HangingBraid key={`l${i}`} sx={sx} sy={sy} ex={ex} ey={ey} bow={-5.5} h={h} bead={kind === 'xmas_braids' ? (i % 2 ? '#2f8a4f' : '#d4553a') : kind === 'fiber_braids' ? ['#4ae3ff', '#ff5fd0', '#ffe14a'][i] : undefined} />
           ))}
           {[[63, 26, 76, 78], [65, 29, 72.5, 82], [66.5, 32, 69, 84]].map(([sx, sy, ex, ey], i) => (
-            <HangingBraid key={`r${i}`} sx={sx} sy={sy} ex={ex} ey={ey} bow={5.5} h={h} bead={kind === 'xmas_braids' ? (i % 2 ? '#d4553a' : '#2f8a4f') : undefined} />
+            <HangingBraid key={`r${i}`} sx={sx} sy={sy} ex={ex} ey={ey} bow={5.5} h={h} bead={kind === 'xmas_braids' ? (i % 2 ? '#d4553a' : '#2f8a4f') : kind === 'fiber_braids' ? ['#ffe14a', '#ff5fd0', '#4ae3ff'][i] : undefined} />
           ))}
         </>
       )
@@ -650,6 +651,7 @@ function hairFront(kind: AvatarConfig['hair'], h: string, uid: string, headPath:
   const hs = shade(h, -55)
   switch (kind) {
     case 'bun':
+    case 'holly_bun':
       return (
         <>
           <P d="M31.6 41.5C30.5 27 39 20 50 20S69.5 27 68.4 41.5C66.4 35.4 62.5 32 58 31.2 53.5 32.2 46.5 32.2 42 31.2 37.4 32 33.6 35.4 31.6 41.5Z" fill={h} />
@@ -657,7 +659,21 @@ function hairFront(kind: AvatarConfig['hair'], h: string, uid: string, headPath:
           <L d="M37 26c4-3.6 9-5.2 14-4.6" c={hl} w="1.8" o={0.38} />
           <P d="M40.6 12.4C40 6.6 44.6 3.6 50 3.6S60 6.6 59.4 12.4C59 17.4 55 20.6 50 20.6S41 17.4 40.6 12.4Z" fill={h} />
           <L d="M43.4 8.4c3.4-2.2 7.8-2.2 11.2 0M42.6 12.6c4.6-2.8 10.2-2.8 14.8 0M44 16.2c3.6-1.8 8.4-1.8 12 0" c={hl} w=".8" o={0.55} />
-          <path d="M42 19.4C46 22 54 22 58 19.4L57.6 22.6C54 24.4 46 24.4 42.4 22.6Z" fill="#e0b04a" stroke={INK} strokeWidth=".9" strokeLinejoin="round" />
+          {kind === 'holly_bun' ? (
+            <>
+              <path d="M41 21.2C45.6 24 54.4 24 59 21.2" fill="none" stroke="#14502e" strokeWidth="2.2" strokeLinecap="round" />
+              {[[42.4, 21.4, 200], [46.4, 23, 170], [53.6, 23, 10], [57.6, 21.4, -20]].map(([x, y, a], i) => (
+                <g key={i} transform={`translate(${x} ${y}) rotate(${a})`}>
+                  <path d="M-4.4 0C-2.4-2.6 2.4-2.8 4.6 0C2.4 2.8 -2.4 2.6-4.4 0Z" fill={i % 2 ? '#1f8a4c' : '#2aa05a'} stroke="#0f4a28" strokeWidth=".6" strokeLinejoin="round" />
+                </g>
+              ))}
+              {[[48.6, 20.6], [51.4, 20.6], [50, 22.4]].map(([x, y]) => (
+                <circle key={`${x}-${y}`} cx={x} cy={y} r="1.5" fill="#d03a2e" stroke="#7a1c14" strokeWidth=".5" />
+              ))}
+            </>
+          ) : (
+            <path d="M42 19.4C46 22 54 22 58 19.4L57.6 22.6C54 24.4 46 24.4 42.4 22.6Z" fill="#e0b04a" stroke={INK} strokeWidth=".9" strokeLinejoin="round" />
+          )}
         </>
       )
     case 'topknot':
@@ -779,6 +795,7 @@ function hairFront(kind: AvatarConfig['hair'], h: string, uid: string, headPath:
       )
     case 'braids':
     case 'xmas_braids':
+    case 'fiber_braids':
       return (
         <>
           <P d="M31 42C29.5 26 39 19 50 19S70.5 26 69 42C67 34.6 63 31.4 58 30.6 53.5 31.6 46.5 31.6 42 30.6 37 31.4 33 34.6 31 42Z" fill={h} />
@@ -787,8 +804,16 @@ function hairFront(kind: AvatarConfig['hair'], h: string, uid: string, headPath:
           <L d="M43 20.4C40.8 24 40 27.4 40.6 31M36.5 23C34.6 26.2 33.8 29.4 34 33M57 20.4C59.2 24 60 27.4 59.4 31M63.5 23C65.4 26.2 66.2 29.4 66 33" c={hl} w=".8" o={0.7} />
           <L d="M38 24.4c4-3.6 9-5 14-4.6" c={hl} w="1.7" o={0.38} />
           {[[40.5, 31.6], [34, 33.6], [59.5, 31.6], [66, 33.6]].map(([x, y], i) => (
-            <circle key={x} cx={x} cy={y} r="1.5" fill={kind === 'xmas_braids' ? ['#d4553a', '#2f8a4f', '#2f8a4f', '#d4553a'][i] : '#e0b04a'} stroke={INK} strokeWidth=".6" />
+            <circle key={x} cx={x} cy={y} r="1.5" fill={kind === 'xmas_braids' ? ['#d4553a', '#2f8a4f', '#2f8a4f', '#d4553a'][i] : kind === 'fiber_braids' ? ['#4ae3ff', '#ff5fd0', '#ffe14a', '#4ae3ff'][i] : '#e0b04a'} stroke={INK} strokeWidth=".6" />
           ))}
+          {kind === 'fiber_braids' && (
+            <g fill="none" strokeLinecap="round" opacity=".9">
+              <path d="M40 22.6C42 26 42.6 29 41.6 31.4" stroke="#4ae3ff" strokeWidth=".7" />
+              <path d="M46.4 21C47.4 25 47.6 28.6 46.8 31.4" stroke="#ff5fd0" strokeWidth=".7" />
+              <path d="M53.6 21C52.6 25 52.4 28.6 53.2 31.4" stroke="#ffe14a" strokeWidth=".7" />
+              <path d="M60 22.6C58 26 57.4 29 58.4 31.4" stroke="#4ae3ff" strokeWidth=".7" />
+            </g>
+          )}
           {kind === 'xmas_braids' && (
             <>
               <path d="M32.6 30.6C38 33.8 44 34.2 50 32.4C56 34.2 62 33.8 67.4 30.6" fill="none" stroke="#2f8a4f" strokeWidth="1.1" strokeLinecap="round" opacity=".9" />
@@ -963,6 +988,103 @@ function outfitArt(kind: AvatarConfig['outfit'], skin: string, dark: string, uid
           <ellipse cx="50" cy="93" rx="3.8" ry="3.1" fill="#c2432a" />
           {[[44.4, 88.6], [48, 86.4], [52, 86.4], [55.6, 88.6]].map(([x, y]) => (
             <ellipse key={x} cx={x} cy={y} rx="1.4" ry="1.7" fill="#c2432a" />
+          ))}
+          {sh}
+        </>
+      )
+    case 'led_sweater':
+      return (
+        <>
+          <P d={SHOULDERS} fill="#1b2542" />
+          <g clipPath={`url(#${uid}osc)`}>
+            {/* fils lumineux en zigzag : cyan, magenta, jaune, avec un halo */}
+            {[['#4ae3ff', 84], ['#ff5fd0', 90], ['#ffe14a', 96]].map(([c, y]) => {
+              const d = `M0 ${y}` + Array.from({ length: 12 }, (_, i) => `L${(i + 1) * 8.4} ${Number(y) + (i % 2 ? 0 : -3.4)}`).join('')
+              return (
+                <g key={c as string} fill="none" strokeLinecap="round" strokeLinejoin="round">
+                  <path d={d} stroke={c as string} strokeWidth="3.2" opacity=".22" />
+                  <path d={d} stroke={c as string} strokeWidth="1.2" />
+                  <path d={d} stroke="#fff" strokeWidth=".4" opacity=".8" />
+                </g>
+              )
+            })}
+            <path d="M16 80c4-3 8-4 12-3.6M84 80c-4-3-8-4-12-3.6" fill="none" stroke="#3a4a78" strokeWidth=".9" strokeLinecap="round" />
+          </g>
+          <path d="M36.6 73.6C39.6 84 60.4 84 63.4 73.6" fill="none" stroke={INK} strokeWidth="6" strokeLinecap="round" />
+          <path d="M36.6 73.6C39.6 84 60.4 84 63.4 73.6" fill="none" stroke="#2b3a66" strokeWidth="4.2" strokeLinecap="round" />
+          <path d="M39 75.4C41.6 82 58.4 82 61 75.4" fill="none" stroke="#3c4d80" strokeWidth=".7" strokeDasharray="1 1.2" />
+          {sh}
+        </>
+      )
+    case 'puffer_jacket':
+      return (
+        <>
+          <P d={SHOULDERS} fill="#1f6b52" />
+          <g clipPath={`url(#${uid}osc)`}>
+            {[80, 86.4, 92.8, 99].map((y) => (
+              <path key={y} d={`M0 ${y}C20 ${y - 2.2} 34 ${y - 2.2} 50 ${y}S80 ${y - 2.2} 100 ${y}`} fill="none" stroke="#0f4a37" strokeWidth="1.3" />
+            ))}
+            {[80, 86.4, 92.8].map((y) => (
+              <path key={`h${y}`} d={`M6 ${y + 1.2}C22 ${y - 1} 34 ${y - 1} 46 ${y + 1.2}`} fill="none" stroke="#4aa584" strokeWidth=".8" opacity=".65" />
+            ))}
+            {/* fermeture et logo baobab (marque fictive BabTech) */}
+            <path d="M50 83V102" stroke={INK} strokeWidth="1.6" />
+            <path d="M50 83V102" stroke="#e0a83c" strokeWidth=".7" strokeDasharray="1.2 1" />
+            <g transform="translate(29 91)">
+              <circle r="4.4" fill="#123229" stroke="#e0a83c" strokeWidth=".7" />
+              <path d="M-1.2 3V-0.6L1.2 -0.6V3Z" fill="#e0a83c" />
+              <path d="M0 -0.4L-2.6 -2.8M0 -0.4L0 -3.6M0 -0.4L2.6 -2.8" stroke="#e0a83c" strokeWidth=".6" strokeLinecap="round" />
+              <circle cx="-2.8" cy="-3.2" r=".9" fill="#52c29a" />
+              <circle cx="0" cy="-4" r=".9" fill="#52c29a" />
+              <circle cx="2.8" cy="-3.2" r=".9" fill="#52c29a" />
+            </g>
+          </g>
+          {/* col montant matelassé */}
+          <path d="M35.4 72.4C36.4 82 63.6 82 64.6 72.4L64.6 76.4C62 86.4 38 86.4 35.4 76.4Z" fill="#1f6b52" stroke={INK} strokeWidth="1.3" strokeLinejoin="round" />
+          <path d="M37 76.4C41 83 59 83 63 76.4" fill="none" stroke="#0f4a37" strokeWidth="1" />
+          {sh}
+        </>
+      )
+    case 'gala_suit':
+      return (
+        <>
+          <P d={SHOULDERS} fill="#15151d" />
+          <g clipPath={`url(#${uid}osc)`}>
+            <path d="M40 74L50 100L60 74L56 74L50 88L44 74Z" fill="#f6f1e8" />
+            <path d="M36 73.6L50 102L40 100Z" fill="#26263a" stroke={INK} strokeWidth=".8" />
+            <path d="M64 73.6L50 102L60 100Z" fill="#26263a" stroke={INK} strokeWidth=".8" />
+            {[[16, 90], [24, 96], [31, 86], [70, 88], [78, 95], [86, 90], [22, 84], [80, 84]].map(([x, y]) => (
+              <path key={`${x}-${y}`} d={sparkle(x, y, 0.9)} fill="#ffe9a8" stroke="#a8741c" strokeWidth=".25" />
+            ))}
+          </g>
+          {/* nœud papillon */}
+          <path d="M50 80C45 76.4 41.4 77.6 41.4 80.6C41.4 83.6 45 84.6 50 80.6Z" fill="#b3302a" stroke={INK} strokeWidth=".9" strokeLinejoin="round" />
+          <path d="M50 80C55 76.4 58.6 77.6 58.6 80.6C58.6 83.6 55 84.6 50 80.6Z" fill="#b3302a" stroke={INK} strokeWidth=".9" strokeLinejoin="round" />
+          <circle cx="50" cy="80.6" r="1.6" fill="#8f1f1b" stroke={INK} strokeWidth=".6" />
+          {sh}
+        </>
+      )
+    case 'festive_boubou':
+      return (
+        <>
+          <P d={SHOULDERS} fill="#b3302a" />
+          <path d="M5 100C5 94 6 90 8 86M95 100C95 94 94 90 92 86" stroke="#7a1f19" strokeWidth="1" fill="none" />
+          <path d="M22 100C20 92 20 84 24 78M78 100C80 92 80 84 76 78" stroke="#d9685f" strokeWidth="1" fill="none" opacity=".7" />
+          <path d="M34 73.6C37 84 63 84 66 73.6" fill="none" stroke={INK} strokeWidth="5.2" strokeLinecap="round" />
+          <path d="M34 73.6C37 84 63 84 66 73.6" fill="none" stroke="#e8b84a" strokeWidth="3.6" strokeLinecap="round" />
+          {[38, 43, 50, 57, 62].map((x, i) => (
+            <circle key={x} cx={x} cy={[79.6, 82, 83, 82, 79.6][i]} r="1.5" fill="#f6f1e8" stroke={INK} strokeWidth=".5" />
+          ))}
+          <path d="M50 84.4V100" stroke={INK} strokeWidth="4.8" />
+          <path d="M50 84.4V100" stroke="#e8b84a" strokeWidth="3.2" />
+          {[88, 93, 98].map((y) => (
+            <path key={y} d={`M45 ${y}l5-2.4 5 2.4-5 2.4z`} fill="#f6f1e8" stroke={INK} strokeWidth=".6" />
+          ))}
+          {[26, 74].map((x) => (
+            <g key={x}>
+              <path d={`M${x - 7} 90h14M${x - 6} 94h12M${x - 5} 98h10`} stroke="#e8b84a" strokeWidth="1.5" strokeLinecap="round" />
+              <path d={`M${x} 85l1.8 2.4-1.8 2.4-1.8-2.4z`} fill="#e8b84a" stroke={INK} strokeWidth=".5" />
+            </g>
           ))}
           {sh}
         </>
@@ -1629,6 +1751,64 @@ function faceAccessory(kind: AvatarConfig['acc'], skin: string, ey: number): Rea
           <circle cx="50" cy="84.4" r="2.8" fill="#ecc97d" stroke={INK} strokeWidth=".8" />
         </g>
       )
+    case 'griot_buds':
+      return (
+        <g>
+          {([-1, 1] as const).map((sd) => {
+            const x = 50 + sd * 19.8
+            return (
+              <g key={sd}>
+                <path d={`M${x} ${ey + 2.2}V${ey + 8.4}`} stroke={INK} strokeWidth="2.6" strokeLinecap="round" />
+                <path d={`M${x} ${ey + 2.2}V${ey + 8.4}`} stroke="#f6f1e8" strokeWidth="1.5" strokeLinecap="round" />
+                <circle cx={x} cy={ey + 2} r="2.3" fill="#f6f1e8" stroke={INK} strokeWidth=".9" />
+                <circle cx={x} cy={ey + 2} r="1.05" fill="#d4553a" />
+                <circle cx={x - 0.7} cy={ey + 1.2} r=".5" fill="#fff" opacity=".9" />
+              </g>
+            )
+          })}
+        </g>
+      )
+    case 'smart_glasses':
+      return (
+        <g>
+          <rect x="34.4" y={ey - 3.8} width="14" height="8.4" rx="3" fill="#4ae3ff" fillOpacity=".2" stroke={INK} strokeWidth="1.8" />
+          <rect x="51.6" y={ey - 3.8} width="14" height="8.4" rx="3" fill="#4ae3ff" fillOpacity=".2" stroke={INK} strokeWidth="1.8" />
+          <path d={`M48.4 ${ey - 0.6}c.8-.8 2.4-.8 3.2 0M34.4 ${ey - 1.6}l-3 -1M65.6 ${ey - 1.6}l3 -1`} fill="none" stroke={INK} strokeWidth="1.5" strokeLinecap="round" />
+          <path d={`M36.6 ${ey - 1.4}c1.6-1 3.6-1.2 5.4-.6M53.8 ${ey - 1.4}c1.6-1 3.6-1.2 5.4-.6`} fill="none" stroke="#fff" strokeWidth="1" strokeLinecap="round" opacity=".7" />
+          <circle cx="66.4" cy={ey - 2.4} r="1" fill="#4ae3ff" />
+          <circle cx="66.4" cy={ey - 2.4} r="2.2" fill="#4ae3ff" opacity=".28" />
+          <path d={`M55.6 ${ey + 1.6}h4M55.6 ${ey + 2.8}h2.6`} stroke="#4ae3ff" strokeWidth=".5" strokeLinecap="round" opacity=".9" />
+        </g>
+      )
+    case 'light_garland':
+      return (
+        <g>
+          <path d="M33.6 72.8C38 84.6 62 84.6 66.4 72.8" fill="none" stroke={INK} strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M33.6 72.8C38 84.6 62 84.6 66.4 72.8" fill="none" stroke="#1f6b52" strokeWidth=".9" strokeLinecap="round" />
+          {[[36.4, 78.4, '#ff5a4a'], [40.4, 81.6, '#ffe14a'], [45.4, 83.4, '#4ae3ff'], [50, 83.8, '#ff5fd0'], [54.6, 83.4, '#52e08a'], [59.6, 81.6, '#ff5a4a'], [63.6, 78.4, '#ffe14a']].map(([x, y, c]) => (
+            <g key={`${x}`}>
+              <circle cx={x as number} cy={(y as number) + 1.6} r="3.4" fill={c as string} opacity=".25" />
+              <path d={`M${x} ${y}v1.4`} stroke={INK} strokeWidth="1" />
+              <ellipse cx={x as number} cy={(y as number) + 3} rx="1.5" ry="2" fill={c as string} stroke={INK} strokeWidth=".6" />
+              <circle cx={(x as number) - 0.5} cy={(y as number) + 2.2} r=".5" fill="#fff" opacity=".9" />
+            </g>
+          ))}
+        </g>
+      )
+    case 'party_mask': {
+      const body = `M31.6 ${ey - 1}C34 ${ey - 5.4} 44 ${ey - 5.8} 50 ${ey - 2.6}C56 ${ey - 5.8} 66 ${ey - 5.4} 68.4 ${ey - 1}C67.4 ${ey + 3.6} 62 ${ey + 5.6} 56.6 ${ey + 4.6}C53.4 ${ey + 4.2} 51.6 ${ey + 2.2} 50 ${ey + 2.2}C48.4 ${ey + 2.2} 46.6 ${ey + 4.2} 43.4 ${ey + 4.6}C38 ${ey + 5.6} 32.6 ${ey + 3.6} 31.6 ${ey - 1}Z`
+      const hole = (cx: number) => `M${cx - 6} ${ey}C${cx - 4} ${ey - 3.6} ${cx + 4} ${ey - 3.6} ${cx + 6} ${ey}C${cx + 4} ${ey + 3} ${cx - 4} ${ey + 3} ${cx - 6} ${ey}Z`
+      return (
+        <g>
+          <path d={`${body}${hole(41.6)}${hole(58.4)}`} fillRule="evenodd" fill="#4b2a7a" stroke="#e8b84a" strokeWidth="1.1" strokeLinejoin="round" />
+          <path d={`M33 ${ey - 2.6}C38 ${ey - 5.2} 43 ${ey - 5} 47 ${ey - 3.4}M53 ${ey - 3.4}C57 ${ey - 5} 62 ${ey - 5.2} 67 ${ey - 2.6}`} fill="none" stroke="#9a6ad6" strokeWidth="1" strokeLinecap="round" opacity=".7" />
+          {[[35.6, ey + 2.4], [64.4, ey + 2.4], [50, ey - 0.8]].map(([x, y]) => (
+            <path key={`${x}`} d={sparkle(x, y, 1.1)} fill="#ffe9a8" stroke="#a8741c" strokeWidth=".3" />
+          ))}
+          <path d={`M31.6 ${ey - 0.6}l-2.4 -1.2M68.4 ${ey - 0.6}l2.4 -1.2`} stroke="#e8b84a" strokeWidth="1.2" strokeLinecap="round" />
+        </g>
+      )
+    }
     case 'gold_baubles':
       return (
         <g>
@@ -1667,7 +1847,7 @@ function faceAccessory(kind: AvatarConfig['acc'], skin: string, ey: number): Rea
 /** Couvre-chefs. Dessinés après les cheveux ; ceux qui couvrent la tête
  * (casquette, chapeau) vont avec `cover` côté cheveux. */
 /** Coiffures volumineuses : le couvre-chef se pose PAR-DESSUS le volume (plus haut, un peu plus large) au lieu de l'écraser. */
-const VOLUME_HAIRS: AvatarConfig['hair'][] = ['afro', 'afro_pink', 'snow_afro', 'curly', 'puffs', 'knots', 'bun', 'topknot', 'ponytail_pop', 'pompadour_ken', 'star_puffs']
+const VOLUME_HAIRS: AvatarConfig['hair'][] = ['afro', 'afro_pink', 'snow_afro', 'curly', 'puffs', 'knots', 'bun', 'topknot', 'ponytail_pop', 'pompadour_ken', 'star_puffs', 'holly_bun']
 
 /** Pose d'un couvre-chef selon la coiffure : plus haut et un peu plus large sur un volume (afro, macarons, chignon...). */
 function Posed({ hair, children, rise = -2.4 }: { hair: AvatarConfig['hair']; children: ReactNode; rise?: number }) {
@@ -1843,6 +2023,68 @@ function headwearArt(kind: AvatarConfig['head'], uid: string, hair: AvatarConfig
           })}
         </Posed>
       )
+    case 'headphones':
+      return (
+        <Posed hair={hair} rise={-1.4}>
+          {/* arceau passant par-dessus la tête, de chaque oreille à l'autre */}
+          <path d="M27.6 41C26.6 20 38 11 50 11S73.4 20 72.4 41" fill="none" stroke={INK} strokeWidth="5.4" strokeLinecap="round" />
+          <path d="M27.6 41C26.6 20 38 11 50 11S73.4 20 72.4 41" fill="none" stroke="#1d2a26" strokeWidth="3.6" strokeLinecap="round" />
+          <path d="M29.6 33C30.4 21 38.6 13.4 48 12.6" fill="none" stroke="#52c29a" strokeWidth=".9" strokeLinecap="round" opacity=".8" />
+          <path d="M40 12.4C46 10.6 54 10.6 60 12.4" fill="none" stroke="#3a4a44" strokeWidth="1.2" strokeLinecap="round" />
+          {/* écouteurs : coques sur les oreilles, avec le logo baobab */}
+          {[27.2, 72.8].map((x) => (
+            <g key={x}>
+              <rect x={x - 4.6} y="38.4" width="9.2" height="14.6" rx="4.4" fill="#1d2a26" stroke={INK} strokeWidth="1.2" />
+              <rect x={x - 3} y="40.2" width="6" height="11" rx="3" fill="#2c8a6c" />
+              <circle cx={x} cy="45.7" r="2.4" fill="#123229" stroke="#e0a83c" strokeWidth=".5" />
+              <path d={`M${x} 47.2V45.2M${x} 45.4L${x - 1.1} 44.4M${x} 45.4L${x + 1.1} 44.4`} stroke="#e0a83c" strokeWidth=".5" strokeLinecap="round" />
+              <path d={`M${x - 3} 41.6c.8-.8 2.6-.8 3.4 0`} fill="none" stroke="#9ee3c6" strokeWidth=".6" opacity=".8" />
+            </g>
+          ))}
+        </Posed>
+      )
+    case 'led_headband': {
+      const pts = [[35.6, 34.6, '#ff5a4a'], [40.4, 32.8, '#ffe14a'], [45.4, 31.8, '#52e08a'], [50, 31.4, '#4ae3ff'], [54.6, 31.8, '#ff5fd0'], [59.6, 32.8, '#ffe14a'], [64.4, 34.6, '#52e08a']]
+      return (
+        <Posed hair={hair}>
+          <path d="M31.2 39.6C33.4 31.6 41.4 28.4 50 28.4S66.6 31.6 68.8 39.6" fill="none" stroke={INK} strokeWidth="4" strokeLinecap="round" />
+          <path d="M31.2 39.6C33.4 31.6 41.4 28.4 50 28.4S66.6 31.6 68.8 39.6" fill="none" stroke="#232b3a" strokeWidth="2.6" strokeLinecap="round" />
+          {pts.map(([x, y, c]) => (
+            <g key={`${x}`}>
+              <circle cx={x as number} cy={(y as number) - 1.4} r="3.8" fill={c as string} opacity=".28" />
+              <circle cx={x as number} cy={(y as number) - 1.4} r="1.5" fill={c as string} stroke={INK} strokeWidth=".4" />
+              <circle cx={(x as number) - 0.4} cy={(y as number) - 1.9} r=".45" fill="#fff" opacity=".95" />
+            </g>
+          ))}
+        </Posed>
+      )
+    }
+    case 'party_hat': {
+      const stripes = [0.22, 0.42, 0.62, 0.8]
+      return (
+        <Posed hair={hair} rise={-1}>
+          <g transform="rotate(11 50 34)">
+            <clipPath id={`${uid}pc`}>
+              <path d="M37 33L50 2.6L63 33Z" />
+            </clipPath>
+            <path d="M37 33L50 2.6L63 33Z" fill="#7a3fd0" stroke={INK} strokeWidth="1.2" strokeLinejoin="round" />
+            <g clipPath={`url(#${uid}pc)`}>
+              {stripes.map((t, i) => (
+                <path key={t} d={`M${37 + (50 - 37) * t * 0.0 - 4} ${33 - 30.4 * t} L${63 + 4} ${33 - 30.4 * t + 7}`} stroke={['#ffd45a', '#4ae3ff', '#ff5fd0', '#ffd45a'][i]} strokeWidth="2" />
+              ))}
+              {[[44, 24, '#ffd45a'], [55, 20, '#4ae3ff'], [46, 14, '#ff5fd0'], [53, 28, '#ffd45a'], [50, 9, '#4ae3ff']].map(([x, y, c]) => (
+                <circle key={`${x}-${y}`} cx={x as number} cy={y as number} r=".9" fill={c as string} />
+              ))}
+              <path d="M44 28L50 5" stroke="#b58aff" strokeWidth="1.2" strokeLinecap="round" opacity=".6" />
+            </g>
+            <ellipse cx="50" cy="33.4" rx="13.6" ry="2.2" fill="#5c2aa8" stroke={INK} strokeWidth="1" />
+            {/* pompon de confettis */}
+            <circle cx="50" cy="2.4" r="2.8" fill="#ffd45a" stroke={INK} strokeWidth=".8" />
+            <path d="M47.6 1.6l1.2 1.2M51.4 1.2l1 1.4M49.6 3.8l1.2.6" stroke="#ff5fd0" strokeWidth=".7" strokeLinecap="round" />
+          </g>
+        </Posed>
+      )
+    }
     case 'pompom_beanie': {
       const dome = 'M31 36.4C30 20 39.6 11.6 50 11.6S70 20 69 36.4Z'
       return (

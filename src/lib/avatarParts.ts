@@ -16,6 +16,7 @@ export const HAIRS = [
   'braids_pink', 'afro_pink', 'ponytail_pop', 'pompadour_ken', 'slick_back', 'beard_full',
   'snow_afro',
   'xmas_braids', 'frost_locs', 'star_puffs',
+  'fiber_braids', 'holly_bun',
 ] as const
 export const OUTFITS = [
   'tunic', 'tee', 'cloak', 'wrap', 'kente', 'dashiki', 'boubou', 'hunter', 'suit', 'hood', 'armor', 'royal', 'furcape',
@@ -23,13 +24,15 @@ export const OUTFITS = [
   'varsity', 'gala_gown', 'tracksuit_neon', 'hawaiian',
   'xmas_sweater',
   'snow_gown', 'santa_jacket', 'elf_outfit', 'white_boubou',
+  'led_sweater', 'puffer_jacket', 'gala_suit', 'festive_boubou',
 ] as const
 export const ACCESSORIES = [
   'none', 'ring', 'freckles', 'glasses', 'sunglasses', 'hoops', 'scar', 'beads', 'facepaint', 'eyepatch', 'coeur_lunettes',
   'lipstick_pink', 'cigarette', 'toothpick', 'gold_chain',
   'gold_baubles', 'knit_scarf',
+  'griot_buds', 'smart_glasses', 'light_garland', 'party_mask',
 ] as const
-export const HEADWEAR = ['none', 'headband', 'cap', 'hat', 'feather', 'crown', 'ribbon_pink', 'scarf_pink', 'cowboy_pink', 'bandana_biker', 'santa_hat', 'holly_crown', 'antlers', 'pompom_beanie', 'elf_hat', 'star_halo'] as const
+export const HEADWEAR = ['none', 'headband', 'cap', 'hat', 'feather', 'crown', 'ribbon_pink', 'scarf_pink', 'cowboy_pink', 'bandana_biker', 'santa_hat', 'holly_crown', 'antlers', 'pompom_beanie', 'elf_hat', 'star_halo', 'headphones', 'led_headband', 'party_hat'] as const
 export const FACES = ['oval', 'round', 'square', 'long', 'heart'] as const
 
 // Seuil-sentinelle utilisé pour les pièces exclusives à une saison (voir
@@ -79,6 +82,7 @@ export const PART_MIN_POINTS: {
     // Saison 2 « Noël au Village » (migration 0262).
     snow_afro: SEASON_EXCLUSIVE_MIN_POINTS,
     // Saison 2 « Noël au Village », lot 2 (migration 0263) : récompenses de paliers, jamais en boutique.
+    fiber_braids: SEASON_EXCLUSIVE_MIN_POINTS, holly_bun: SEASON_EXCLUSIVE_MIN_POINTS,
     xmas_braids: SEASON_EXCLUSIVE_MIN_POINTS, frost_locs: SEASON_EXCLUSIVE_MIN_POINTS, star_puffs: SEASON_EXCLUSIVE_MIN_POINTS,
   },
   outfit: {
@@ -88,6 +92,7 @@ export const PART_MIN_POINTS: {
     varsity: STORE_EXCLUSIVE_MIN_POINTS, gala_gown: STORE_EXCLUSIVE_MIN_POINTS,
     tracksuit_neon: STORE_EXCLUSIVE_MIN_POINTS, hawaiian: STORE_EXCLUSIVE_MIN_POINTS,
     xmas_sweater: SEASON_EXCLUSIVE_MIN_POINTS,
+    led_sweater: SEASON_EXCLUSIVE_MIN_POINTS, puffer_jacket: SEASON_EXCLUSIVE_MIN_POINTS, gala_suit: SEASON_EXCLUSIVE_MIN_POINTS, festive_boubou: SEASON_EXCLUSIVE_MIN_POINTS,
     snow_gown: SEASON_EXCLUSIVE_MIN_POINTS, santa_jacket: SEASON_EXCLUSIVE_MIN_POINTS, elf_outfit: SEASON_EXCLUSIVE_MIN_POINTS, white_boubou: SEASON_EXCLUSIVE_MIN_POINTS,
   },
   acc: {
@@ -95,11 +100,13 @@ export const PART_MIN_POINTS: {
     coeur_lunettes: SEASON_EXCLUSIVE_MIN_POINTS,
     lipstick_pink: STORE_EXCLUSIVE_MIN_POINTS, cigarette: STORE_EXCLUSIVE_MIN_POINTS,
     toothpick: STORE_EXCLUSIVE_MIN_POINTS, gold_chain: STORE_EXCLUSIVE_MIN_POINTS,
+    griot_buds: SEASON_EXCLUSIVE_MIN_POINTS, smart_glasses: SEASON_EXCLUSIVE_MIN_POINTS, light_garland: SEASON_EXCLUSIVE_MIN_POINTS, party_mask: SEASON_EXCLUSIVE_MIN_POINTS,
     gold_baubles: SEASON_EXCLUSIVE_MIN_POINTS, knit_scarf: SEASON_EXCLUSIVE_MIN_POINTS,
   },
   head: { none: 0, headband: 100, cap: 250, hat: 550, feather: 800, crown: 2000, ribbon_pink: SEASON_EXCLUSIVE_MIN_POINTS,
     scarf_pink: STORE_EXCLUSIVE_MIN_POINTS, cowboy_pink: STORE_EXCLUSIVE_MIN_POINTS, bandana_biker: STORE_EXCLUSIVE_MIN_POINTS,
     santa_hat: SEASON_EXCLUSIVE_MIN_POINTS, holly_crown: SEASON_EXCLUSIVE_MIN_POINTS, antlers: SEASON_EXCLUSIVE_MIN_POINTS,
+    headphones: SEASON_EXCLUSIVE_MIN_POINTS, led_headband: SEASON_EXCLUSIVE_MIN_POINTS, party_hat: SEASON_EXCLUSIVE_MIN_POINTS,
     pompom_beanie: SEASON_EXCLUSIVE_MIN_POINTS, elf_hat: SEASON_EXCLUSIVE_MIN_POINTS, star_halo: SEASON_EXCLUSIVE_MIN_POINTS },
   face: { oval: 0, round: 0, square: 0, long: 0, heart: 0 },
 }
@@ -134,10 +141,10 @@ export function parseAvatarConfig(value: unknown): AvatarConfig | null {
 // détail appartient à une zone : en choisir un remplace celui de la même zone.
 // ---------------------------------------------------------------------------
 export const ACC_ZONE: Record<string, string> = {
-  glasses: 'eyes', sunglasses: 'eyes', eyepatch: 'eyes', coeur_lunettes: 'eyes',
-  hoops: 'ears', ring: 'ears', gold_baubles: 'ears',
+  glasses: 'eyes', sunglasses: 'eyes', eyepatch: 'eyes', coeur_lunettes: 'eyes', smart_glasses: 'eyes', party_mask: 'eyes',
+  hoops: 'ears', ring: 'ears', gold_baubles: 'ears', griot_buds: 'ears',
   cigarette: 'mouth', toothpick: 'mouth',
-  beads: 'neck', gold_chain: 'neck', knit_scarf: 'neck',
+  beads: 'neck', gold_chain: 'neck', knit_scarf: 'neck', light_garland: 'neck',
   freckles: 'skin', scar: 'skin', facepaint: 'skin',
   lipstick_pink: 'makeup',
 }
