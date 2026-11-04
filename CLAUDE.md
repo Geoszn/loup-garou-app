@@ -69,6 +69,10 @@ cd ~/Downloads/loup-garou-app && read -rs "?Mot de passe DB : " PW; echo; PWE=$(
 - Toute purge ou nettoyage d'« anonymes » doit exclure explicitement les comptes techniques (bots).
 - Une barre posée en `absolute` par-dessus une liste de messages en cache les derniers : mettre les barres dans le flux.
 
+## EN ATTENTE — test de performance du soir (ne pas oublier)
+
+L'utilisateur jouera une partie à 8 joueurs ou plus (2 nuits minimum) et préviendra AVANT de la lancer. À ce moment, lui renvoyer les deux commandes Terminal : `supabase/diagnostics/perf_game_before.sql` (avec `run-sql-file.mjs`, juste avant) puis `supabase/diagnostics/perf_game_after.sql` (avec `query-sql-file.mjs`, juste après). Il colle le JSON dans le chat ; on confirme ou infirme l'hypothèse « chaque vote fait relire get_my_game_view à tous les joueurs » (carré du nombre de joueurs) et le goulot du chat (`can_read_channel`). Suites possibles selon les chiffres : état de partie public précalculé + petite partie privée, chat en Broadcast, plan Pro (plan actuel : gratuit, plafond « serveur complet » à 160). Sons : `scripts/compress-sounds.sh` (effets en PCM sous extension .mp3, 6,9 Mo → ~0,4 Mo), à faire valider à l'écoute.
+
 ## État et suite (au 2026-11-04)
 
 Tout est poussé (`main` et `staging` identiques). À faire ou à vérifier :
