@@ -54,7 +54,7 @@ export function FaceDefs({ uid, skin, ey }: { uid: string; skin: string; ey: num
         <stop offset="0" stopColor={glow} stopOpacity="1" />
         <stop offset="1" stopColor={glow} stopOpacity="0" />
       </radialGradient>
-      <radialGradient id={`${uid}bl`} cx="50%" cy="50%" r="50%">
+      <radialGradient id={`${uid}blush`} cx="50%" cy="50%" r="50%">
         <stop offset="0" stopColor={blush} stopOpacity=".3" />
         <stop offset="1" stopColor={blush} stopOpacity="0" />
       </radialGradient>
@@ -179,8 +179,8 @@ export function SkinShading({ uid, skin, ey, face, cover, mood }: { uid: string;
       ))}
       {/* pommettes éclairées et joues rosées */}
       <ellipse cx="40.4" cy={ey + 7} rx="6" ry="3.4" fill={`url(#${uid}hi)`} opacity={0.3 * lk} />
-      <ellipse cx="38.6" cy="55" rx="6.4" ry="4.4" fill={`url(#${uid}bl)`} />
-      <ellipse cx="61.4" cy="55" rx="6.4" ry="4.4" fill={`url(#${uid}bl)`} />
+      <ellipse cx="38.6" cy="55" rx="6.4" ry="4.4" fill={`url(#${uid}blush)`} />
+      <ellipse cx="61.4" cy="55" rx="6.4" ry="4.4" fill={`url(#${uid}blush)`} />
       {/* sourire : les pommettes remontent et accrochent la lumière */}
       {(mood === 'smile' || mood === 'grin') && (
         <>

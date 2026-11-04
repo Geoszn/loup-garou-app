@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react'
+import { memo, useId, type ReactNode } from 'react'
 import { AVATAR_BGS, SKIN_TONES, type AvatarConfig, type AvatarMood } from '../lib/avatarParts'
 import { shade, mix, toRgb } from '../lib/avatarColor'
 import { FaceDefs, Neck, Ears, SkinShading, Eyes, Brows, Nose, Mouth, OutfitShading, HairSheen } from './avatarFace'
@@ -461,8 +461,8 @@ function curtains(kind: AvatarConfig['hair'], h: string): ReactNode {
   if (kind === 'malibu_wave') {
     return (
       <>
-        <P d="M31.4 42C28 52 33.4 60 29.4 70C26 78 31 84 34 90L41 86C37.6 78 42 70 38.6 60C36.4 51.6 38.4 45 36.6 40Z" fill={h} />
-        <P d="M68.6 42C72 52 66.6 60 70.6 70C74 78 69 84 66 90L59 86C62.4 78 58 70 61.4 60C63.6 51.6 61.6 45 63.4 40Z" fill={h} />
+        <P d="M31.4 42C28 52 33.4 60 29.4 70C26 78 31 84 34 90L41 86C37.6 78 40 70 36.8 62C34.8 56.6 35.2 46 34.6 40Z" fill={h} />
+        <P d="M68.6 42C72 52 66.6 60 70.6 70C74 78 69 84 66 90L59 86C62.4 78 60 70 63.2 62C65.2 56.6 64.8 46 65.4 40Z" fill={h} />
         <L d="M34.4 52c-2 6 2 10 0 16M64 54c2 6-2 10 0 16" c={hl} w="1.1" o={0.7} />
         <L d="M32.6 74c1.6 4 .6 8 2.6 12M67.4 74c-1.6 4-.6 8-2.6 12" c={hl} w="1" o={0.6} />
         <L d="M35.4 46c-1.8 8 .8 15-.6 25M37.6 44c.4 8-.6 14 .4 22M64.6 46c1.8 8-.8 15 .6 25M62.4 44c-.4 8 .6 14-.4 22" c={shade(h, -45)} w=".6" o={0.55} />
@@ -472,8 +472,8 @@ function curtains(kind: AvatarConfig['hair'], h: string): ReactNode {
   const hs = shade(h, -45)
   return (
     <>
-      <P d="M31.4 41.6C30.2 53 29.2 66 28.6 79C28.2 84 29 87 30.4 89.4C33.4 86.6 36.6 84 39.4 80.6C38 68 38.6 54 36.4 40Z" fill={h} w={1.2} />
-      <P d="M68.6 41.6C69.8 53 70.8 66 71.4 79C71.8 84 71 87 69.6 89.4C66.6 86.6 63.4 84 60.6 80.6C62 68 61.4 54 63.6 40Z" fill={h} w={1.2} />
+      <P d="M31.4 41.6C30.2 53 29.2 66 28.6 79C28.2 84 29 87 30.4 89.4C33.4 86.6 36.6 84 39.4 80.6C37.4 68 37.8 54 35 40Z" fill={h} w={1.2} />
+      <P d="M68.6 41.6C69.8 53 70.8 66 71.4 79C71.8 84 71 87 69.6 89.4C66.6 86.6 63.4 84 60.6 80.6C62.6 68 62.2 54 65 40Z" fill={h} w={1.2} />
       <L d="M33.4 46C32.8 58 32.2 70 31.4 84M66.6 46C67.2 58 67.8 70 68.6 84" c={hl} w=".9" o={0.55} />
       <L d="M35.4 44C35.2 56 35.6 68 36.8 78M64.6 44C64.8 56 64.4 68 63.2 78M31.8 60C31.2 70 30.8 78 30.6 86M68.2 60C68.8 70 69.2 78 69.4 86" c={hs} w=".6" o={0.6} />
     </>
@@ -683,7 +683,7 @@ function hairFront(kind: AvatarConfig['hair'], h: string, uid: string, headPath:
     case 'malibu_wave':
       return (
         <>
-          <P d="M30.6 43C29 26 39 19 50 19S71 26 69.4 43C67 35 61 30.4 55 28.6 50 31.6 40 33 33 40Z" fill={h} />
+          <P d="M30.6 43C29 26 39 19 50 19S71 26 69.4 43C67 35 61 30.4 55 28.6 50 31 41 31.6 33.4 36.4Z" fill={h} />
           <L d="M36 26c4-3.4 9-5 14-4.6M44 30c2.6-2 6-3.6 9-4" c={hl} w="1.5" o={0.6} />
           <L d="M56 22c4.4 2.6 6.6 7 6.6 12.6" c="#ff6fa5" w="3" o={1} />
           <L d="M57 23.4c3.4 2.2 5.2 5.6 5.4 9.6" c="#ffb3d1" w=".9" o={0.9} />
@@ -1604,7 +1604,7 @@ function headwearArt(kind: AvatarConfig['head'], uid: string): ReactNode {
   }
 }
 
-export function AvatarArt({ config, mood = 'smile' }: { config: AvatarConfig; mood?: AvatarMood }) {
+function AvatarArtImpl({ config, mood = 'smile' }: { config: AvatarConfig; mood?: AvatarMood }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '')
   const skin = SKIN_TONES[config.skin]
   const dark = shade(skin, -34)
@@ -1680,6 +1680,21 @@ export function AvatarArt({ config, mood = 'smile' }: { config: AvatarConfig; mo
     </svg>
   )
 }
+
+function sameAvatar(a: { config: AvatarConfig; mood?: AvatarMood }, b: { config: AvatarConfig; mood?: AvatarMood }): boolean {
+  const x = a.config
+  const y = b.config
+  return (
+    (a.mood ?? 'smile') === (b.mood ?? 'smile') &&
+    x.skin === y.skin && x.hair === y.hair && x.outfit === y.outfit && x.acc === y.acc && (x.acc2 ?? 'none') === (y.acc2 ?? 'none') &&
+    x.head === y.head && x.face === y.face && x.bg === y.bg
+  )
+}
+
+/** Le visage détaillé coûte cher à dessiner (~230 éléments SVG) et la grille de joueurs se rafraîchit à chaque vote ou changement
+ * de phase : on ne redessine un avatar que si sa configuration ou son expression ont réellement changé (les objets de
+ * configuration sont recréés à chaque lecture de la vue, d'où la comparaison champ par champ). */
+export const AvatarArt = memo(AvatarArtImpl, sameAvatar)
 
 export type ItemPart = 'hair' | 'outfit' | 'acc' | 'head' | 'bg'
 
