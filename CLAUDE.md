@@ -33,6 +33,10 @@ Avant un commit : `git checkout tsconfig.tsbuildinfo` (fichier régénéré par 
 - **Mobile d'abord** : tuiles compactes, avatars petits, blocs repliables ou paginés ; vérifier à 390 px. Les boutons doivent avoir un LIBELLÉ (les icônes seules ne sont pas retrouvées par les joueurs).
 - Ne rien supposer sur la base réelle : écrire ce qui est déduit du code comme tel.
 
+## Règle produit : objets de saison
+
+Un objet de saison (pièce d'avatar, skin) ne s'obtient QUE en participant à la saison, par un palier (piste gratuite ou premium) : jamais en boutique. Skin de saison = `season_id` renseigné, prix 0, seuil `999999` dans `avatar_part_min_points`. Ce qui est obtenu reste à vie (0259). Les seuils `999998` (boutique) ne servent plus que pour des collections hors saison.
+
 ## Migrations SQL (point critique)
 
 - **Les migrations sont appliquées PAR L'UTILISATEUR dans son Terminal Mac. Ne jamais lancer de commande qui exige le mot de passe de la base, ni le demander, ni l'afficher.** Le mot de passe se tape uniquement dans le Terminal, jamais dans le chat.

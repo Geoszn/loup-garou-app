@@ -15,18 +15,21 @@ export const HAIRS = [
   'long', 'knots', 'mohawk', 'topknot', 'gele', 'malibu_wave',
   'braids_pink', 'afro_pink', 'ponytail_pop', 'pompadour_ken', 'slick_back', 'beard_full',
   'snow_afro',
+  'xmas_braids', 'frost_locs', 'star_puffs',
 ] as const
 export const OUTFITS = [
   'tunic', 'tee', 'cloak', 'wrap', 'kente', 'dashiki', 'boubou', 'hunter', 'suit', 'hood', 'armor', 'royal', 'furcape',
   'dream_rose', 'cape_solidaire', 'louve_malibu',
   'varsity', 'gala_gown', 'tracksuit_neon', 'hawaiian',
   'xmas_sweater',
+  'snow_gown', 'santa_jacket', 'elf_outfit', 'white_boubou',
 ] as const
 export const ACCESSORIES = [
   'none', 'ring', 'freckles', 'glasses', 'sunglasses', 'hoops', 'scar', 'beads', 'facepaint', 'eyepatch', 'coeur_lunettes',
   'lipstick_pink', 'cigarette', 'toothpick', 'gold_chain',
+  'gold_baubles', 'knit_scarf',
 ] as const
-export const HEADWEAR = ['none', 'headband', 'cap', 'hat', 'feather', 'crown', 'ribbon_pink', 'scarf_pink', 'cowboy_pink', 'bandana_biker', 'santa_hat', 'holly_crown', 'antlers'] as const
+export const HEADWEAR = ['none', 'headband', 'cap', 'hat', 'feather', 'crown', 'ribbon_pink', 'scarf_pink', 'cowboy_pink', 'bandana_biker', 'santa_hat', 'holly_crown', 'antlers', 'pompom_beanie', 'elf_hat', 'star_halo'] as const
 export const FACES = ['oval', 'round', 'square', 'long', 'heart'] as const
 
 // Seuil-sentinelle utilisé pour les pièces exclusives à une saison (voir
@@ -75,6 +78,8 @@ export const PART_MIN_POINTS: {
     pompadour_ken: STORE_EXCLUSIVE_MIN_POINTS, slick_back: STORE_EXCLUSIVE_MIN_POINTS, beard_full: STORE_EXCLUSIVE_MIN_POINTS,
     // Saison 2 « Noël au Village » (migration 0262).
     snow_afro: SEASON_EXCLUSIVE_MIN_POINTS,
+    // Saison 2 « Noël au Village », lot 2 (migration 0263) : récompenses de paliers, jamais en boutique.
+    xmas_braids: SEASON_EXCLUSIVE_MIN_POINTS, frost_locs: SEASON_EXCLUSIVE_MIN_POINTS, star_puffs: SEASON_EXCLUSIVE_MIN_POINTS,
   },
   outfit: {
     tunic: 0, tee: 0, cloak: 100, wrap: 100, kente: 250, dashiki: 250, boubou: 350, hunter: 550, suit: 800,
@@ -83,16 +88,19 @@ export const PART_MIN_POINTS: {
     varsity: STORE_EXCLUSIVE_MIN_POINTS, gala_gown: STORE_EXCLUSIVE_MIN_POINTS,
     tracksuit_neon: STORE_EXCLUSIVE_MIN_POINTS, hawaiian: STORE_EXCLUSIVE_MIN_POINTS,
     xmas_sweater: SEASON_EXCLUSIVE_MIN_POINTS,
+    snow_gown: SEASON_EXCLUSIVE_MIN_POINTS, santa_jacket: SEASON_EXCLUSIVE_MIN_POINTS, elf_outfit: SEASON_EXCLUSIVE_MIN_POINTS, white_boubou: SEASON_EXCLUSIVE_MIN_POINTS,
   },
   acc: {
     none: 0, ring: 0, freckles: 0, glasses: 100, sunglasses: 150, hoops: 200, scar: 250, beads: 350, facepaint: 550, eyepatch: 800,
     coeur_lunettes: SEASON_EXCLUSIVE_MIN_POINTS,
     lipstick_pink: STORE_EXCLUSIVE_MIN_POINTS, cigarette: STORE_EXCLUSIVE_MIN_POINTS,
     toothpick: STORE_EXCLUSIVE_MIN_POINTS, gold_chain: STORE_EXCLUSIVE_MIN_POINTS,
+    gold_baubles: SEASON_EXCLUSIVE_MIN_POINTS, knit_scarf: SEASON_EXCLUSIVE_MIN_POINTS,
   },
   head: { none: 0, headband: 100, cap: 250, hat: 550, feather: 800, crown: 2000, ribbon_pink: SEASON_EXCLUSIVE_MIN_POINTS,
     scarf_pink: STORE_EXCLUSIVE_MIN_POINTS, cowboy_pink: STORE_EXCLUSIVE_MIN_POINTS, bandana_biker: STORE_EXCLUSIVE_MIN_POINTS,
-    santa_hat: SEASON_EXCLUSIVE_MIN_POINTS, holly_crown: SEASON_EXCLUSIVE_MIN_POINTS, antlers: SEASON_EXCLUSIVE_MIN_POINTS },
+    santa_hat: SEASON_EXCLUSIVE_MIN_POINTS, holly_crown: SEASON_EXCLUSIVE_MIN_POINTS, antlers: SEASON_EXCLUSIVE_MIN_POINTS,
+    pompom_beanie: SEASON_EXCLUSIVE_MIN_POINTS, elf_hat: SEASON_EXCLUSIVE_MIN_POINTS, star_halo: SEASON_EXCLUSIVE_MIN_POINTS },
   face: { oval: 0, round: 0, square: 0, long: 0, heart: 0 },
 }
 
@@ -127,9 +135,9 @@ export function parseAvatarConfig(value: unknown): AvatarConfig | null {
 // ---------------------------------------------------------------------------
 export const ACC_ZONE: Record<string, string> = {
   glasses: 'eyes', sunglasses: 'eyes', eyepatch: 'eyes', coeur_lunettes: 'eyes',
-  hoops: 'ears', ring: 'ears',
+  hoops: 'ears', ring: 'ears', gold_baubles: 'ears',
   cigarette: 'mouth', toothpick: 'mouth',
-  beads: 'neck', gold_chain: 'neck',
+  beads: 'neck', gold_chain: 'neck', knit_scarf: 'neck',
   freckles: 'skin', scar: 'skin', facepaint: 'skin',
   lipstick_pink: 'makeup',
 }
