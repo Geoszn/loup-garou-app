@@ -3224,6 +3224,8 @@ interface AdminSeason {
   xp_per_quest_claim: number
   is_enabled: boolean
   created_at: string
+  // Pass premium (migration 0260) : prix en Loup Coins, null = pas de pass.
+  pass_price_coins?: number | null
 }
 
 const SEASON_THEME_LABELS: Record<SeasonThemeColor, string> = {
@@ -3350,6 +3352,9 @@ function SeasonsTab() {
                   <p className="mt-1 text-xs text-moon-200/40">
                     XP : {s.xp_per_game_played}/partie · +{s.xp_per_game_won} victoire · {s.xp_per_quest_claim}/quête réclamée
                   </p>
+                  <p className="mt-1 text-xs text-moon-200/40">
+                    {s.pass_price_coins ? `👑 Pass premium : ${s.pass_price_coins} Loup Coins` : 'Pas de pass premium'}
+                  </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Button variant="ghost" className="px-3 py-1.5 text-xs" disabled={busyId === s.id} onClick={() => setTiersFor(s)}>
@@ -3414,6 +3419,7 @@ interface SeasonFormState {
   xp_per_game_won: string
   xp_per_quest_claim: string
   is_enabled: boolean
+  pass_price: string
 }
 
 const EMPTY_SEASON_FORM: SeasonFormState = {
@@ -3427,6 +3433,7 @@ const EMPTY_SEASON_FORM: SeasonFormState = {
   xp_per_game_won: '15',
   xp_per_quest_claim: '20',
   is_enabled: true,
+  pass_price: '',
 }
 
 function SeasonFormDrawer({
@@ -3458,6 +3465,7 @@ function SeasonFormDrawer({
         xp_per_game_won: String(season.xp_per_game_won),
         xp_per_quest_claim: String(season.xp_per_quest_claim),
         is_enabled: season.is_enabled,
+        pass_price: season.pass_price_coins ? String(season.pass_price_coins) : '',
       })
     } else {
       setForm(EMPTY_SEASON_FORM)
@@ -3483,9 +3491,14 @@ function SeasonFormDrawer({
       setError('La date de fin doit être après la date de début.')
       return
     }
+    const price = form.pass_price.trim() === '' ? null : Number(form.pass_price)
+    if (price !== null && (!Number.isInteger(price) || price <= 0)) {
+      setError('Le prix du pass doit être un nombre entier supérieur à 0 (ou vide pour une saison sans pass).')
+      return
+    }
     setBusy(true)
     setError(null)
-    const { error: rpcError } = await supabase.rpc('admin_upsert_season', {
+    const { data: savedId, error: rpcError } = await supabase.rpc('admin_upsert_season', {
       p_id: season?.id ?? null,
       p_slug: form.slug,
       p_name_fr: form.name_fr,
@@ -3498,11 +3511,22 @@ function SeasonFormDrawer({
       p_xp_per_quest_claim: Number(form.xp_per_quest_claim) || 0,
       p_is_enabled: form.is_enabled,
     })
-    setBusy(false)
     if (rpcError) {
+      setBusy(false)
       setError(rpcError.message)
       return
     }
+    // Le prix du pass se règle à part (admin_set_season_pass_price, migration 0260).
+    const seasonId = (season?.id ?? savedId) as string | null
+    if (seasonId && price !== (season?.pass_price_coins ?? null)) {
+      const { error: priceError } = await supabase.rpc('admin_set_season_pass_price', { p_season_id: seasonId, p_price: price })
+      if (priceError) {
+        setBusy(false)
+        setError(`Saison enregistrée, mais le prix du pass a échoué : ${priceError.message}`)
+        return
+      }
+    }
+    setBusy(false)
     onSaved()
   }
 
@@ -3596,6 +3620,20 @@ function SeasonFormDrawer({
           </p>
         </div>
 
+        <div className="rounded-xl border border-amber-400/30 bg-amber-400/[0.04] p-3">
+          <Label>👑 Prix du pass premium (Loup Coins)</Label>
+          <Input
+            type="number"
+            min={1}
+            value={form.pass_price}
+            onChange={(ev) => setForm((f) => ({ ...f, pass_price: ev.target.value }))}
+            placeholder="Vide = pas de pass premium"
+          />
+          <p className="mt-2 text-[11px] text-moon-200/40">
+            Le pass débloque la piste « Premium » des paliers. Acheté en cours de saison, il débloque d'un coup les paliers déjà atteints.
+          </p>
+        </div>
+
         <label className="flex items-center gap-2 text-sm text-moon-200/80">
           <input
             type="checkbox"
@@ -3632,6 +3670,7 @@ interface AdminSeasonTier {
   reward_skin_name: string | null
   label_fr: string
   label_en: string
+  track?: 'free' | 'premium'
 }
 
 /** Paliers d'une saison (remplace la liste des saisons le temps d'être
@@ -3719,6 +3758,7 @@ function SeasonTiersPanel({ season, onBack }: { season: AdminSeason; onBack: () 
               <thead>
                 <tr className="border-b border-night-700/60 text-left text-[10.5px] uppercase tracking-wide text-moon-200/40">
                   <th className="px-4 py-2.5 font-semibold">#</th>
+                  <th className="px-3 py-2.5 font-semibold">Piste</th>
                   <th className="px-3 py-2.5 font-semibold">XP requis</th>
                   <th className="px-3 py-2.5 font-semibold">Récompense</th>
                   <th className="px-3 py-2.5" />
@@ -3728,6 +3768,11 @@ function SeasonTiersPanel({ season, onBack }: { season: AdminSeason; onBack: () 
                 {tiers.map((tier) => (
                   <tr key={tier.id} className="border-b border-night-800/60 last:border-0 hover:bg-night-800/25">
                     <td className="px-4 py-2.5 font-semibold text-moon-200">{tier.tier_number}</td>
+                    <td className="px-3 py-2.5">
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${tier.track === 'premium' ? 'bg-amber-400/15 text-amber-300' : 'bg-night-700/60 text-moon-200/60'}`}>
+                        {tier.track === 'premium' ? '👑 Premium' : 'Gratuit'}
+                      </span>
+                    </td>
                     <td className="px-3 py-2.5 tabular-nums text-moon-200/80">{tier.xp_required}</td>
                     <td className="px-3 py-2.5">
                       {tier.reward_type === 'coins' ? (
@@ -3805,6 +3850,7 @@ interface SeasonTierFormState {
   reward_skin_id: string
   label_fr: string
   label_en: string
+  track: 'free' | 'premium'
 }
 
 const EMPTY_SEASON_TIER_FORM: SeasonTierFormState = {
@@ -3815,6 +3861,7 @@ const EMPTY_SEASON_TIER_FORM: SeasonTierFormState = {
   reward_skin_id: '',
   label_fr: '',
   label_en: '',
+  track: 'free',
 }
 
 function SeasonTierFormDrawer({
@@ -3847,6 +3894,7 @@ function SeasonTierFormDrawer({
         reward_skin_id: tier.reward_skin_id ?? '',
         label_fr: tier.label_fr,
         label_en: tier.label_en,
+        track: tier.track ?? 'free',
       })
     } else {
       setForm({ ...EMPTY_SEASON_TIER_FORM, reward_skin_id: seasonSkins[0]?.id ?? '' })
@@ -3876,6 +3924,7 @@ function SeasonTierFormDrawer({
       p_reward_skin_id: form.reward_type === 'skin' ? form.reward_skin_id : null,
       p_label_fr: form.label_fr,
       p_label_en: form.label_en,
+      p_track: form.track,
     })
     setBusy(false)
     if (rpcError) {
@@ -3897,6 +3946,18 @@ function SeasonTierFormDrawer({
             <Label>XP requis (cumulatif)</Label>
             <Input type="number" min={0} value={form.xp_required} onChange={(ev) => setForm((f) => ({ ...f, xp_required: ev.target.value }))} />
           </div>
+        </div>
+
+        <div>
+          <Label>Piste</Label>
+          <Segmented
+            tabs={[
+              { id: 'free' as const, label: 'Gratuit (pour tous)' },
+              { id: 'premium' as const, label: '👑 Premium (avec le pass)' },
+            ]}
+            active={form.track}
+            onChange={(id) => setForm((f) => ({ ...f, track: id }))}
+          />
         </div>
 
         <div>
