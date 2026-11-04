@@ -14,12 +14,22 @@ import type { MyGameView } from '../types/game'
  * qu'une fois déjà utilisé, en simple rappel (le formulaire d'envoi
  * lui-même reste affiché ailleurs sur l'écran fantôme, pas dans ce menu). */
 export function hasArtifactsToShow(view: MyGameView): boolean {
-  return view.my_owns_parchemin_griot || (view.my_owns_dernier_souffle && view.my_dernier_souffle_used) || hasOeilBaobabToShow(view)
+  return view.my_owns_parchemin_griot || (view.my_owns_dernier_souffle && view.my_dernier_souffle_used) || hasOeilBaobabToShow(view) || hasBoussoleToShow(view)
 }
 
 /** L'Œil du Baobab a quelque chose à montrer : une charge en réserve, ou le résultat déjà obtenu dans cette partie. */
 export function hasOeilBaobabToShow(view: MyGameView): boolean {
   return view.my_oeil_baobab_stock > 0 || !!view.my_oeil_baobab_result
+}
+
+/** La Boussole du Village a quelque chose à montrer : une charge en réserve, ou déjà activée dans cette partie. */
+export function hasBoussoleToShow(view: MyGameView): boolean {
+  return view.my_boussole_village_stock > 0 || view.my_boussole_village_used
+}
+
+/** La Boussole est activable maintenant : une charge, pas déjà activée, partie en cours. */
+export function boussoleUsableNow(view: MyGameView): boolean {
+  return view.my_boussole_village_stock > 0 && !view.my_boussole_village_used && view.game.status !== 'lobby' && view.game.status !== 'ended'
 }
 
 /** L'Œil du Baobab est utilisable maintenant : vivant, débat du jour à partir du 2e jour, une charge, pas déjà utilisé. */
@@ -30,7 +40,7 @@ export function oeilBaobabUsableNow(view: MyGameView): boolean {
 /** Vrai si au moins un artefact peut être activé MAINTENANT depuis ce menu
  * — pilote le petit point rouge sur l'icône (voir PhaseBanner.tsx). */
 export function hasUsableArtifact(view: MyGameView): boolean {
-  return (!view.my_alive && view.my_owns_parchemin_griot && !view.my_parchemin_griot_used) || oeilBaobabUsableNow(view)
+  return (!view.my_alive && view.my_owns_parchemin_griot && !view.my_parchemin_griot_used) || oeilBaobabUsableNow(view) || boussoleUsableNow(view)
 }
 
 /** Contenu du menu "🎒 Mes artefacts" (voir Modal dans GameRoom.tsx) :
@@ -51,6 +61,7 @@ export function ArtifactsMenu({ view, gameId }: { view: MyGameView; gameId: stri
   return (
     <div className="flex flex-col gap-2.5">
       {hasOeilBaobabToShow(view) && <OeilBaobabRow view={view} gameId={gameId} />}
+      {hasBoussoleToShow(view) && <BoussoleRow view={view} gameId={gameId} />}
       {!view.my_alive && view.my_owns_parchemin_griot && (
         <ParcheminGriotRow gameId={gameId} used={view.my_parchemin_griot_used} stock={view.my_parchemin_griot_stock} />
       )}
@@ -251,6 +262,66 @@ function OeilBaobabRow({ view, gameId }: { view: MyGameView; gameId: string }) {
           {step === 'armed' && <p className="text-[11px] text-moon-400">{t('artifacts.oeil.confirmNote')}</p>}
         </div>
       )}
+      <ErrorText>{error}</ErrorText>
+    </ArtifactRow>
+  )
+}
+
+/** Boussole du Village (migration 0255) : consomme une charge. Même double confirmation que le Parchemin du Griot : le premier clic
+ * arme seulement le bouton, le second appelle le serveur. Une fois activée, l'historique des votes passés apparaît dans l'écran de
+ * jeu (VoteHistoryPanel) — il vient de la vue de partie, donc il survit à un rechargement. */
+function BoussoleRow({ view, gameId }: { view: MyGameView; gameId: string }) {
+  const { t } = useLanguage()
+  const [step, setStep] = useState<'idle' | 'armed'>('idle')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [justActivated, setJustActivated] = useState(false)
+
+  const activated = view.my_boussole_village_used || justActivated
+  const usable = boussoleUsableNow(view) && !justActivated
+
+  async function confirm() {
+    setLoading(true)
+    setError(null)
+    const { error: rpcError } = await gameRpc('use_boussole_village', { p_game_id: gameId })
+    setLoading(false)
+    if (rpcError) {
+      setError(rpcError.message)
+      setStep('idle')
+      return
+    }
+    setJustActivated(true)
+  }
+
+  return (
+    <ArtifactRow
+      emoji="🧭"
+      name={t('artifacts.boussole.name')}
+      description={t('artifacts.boussole.description')}
+      badge={activated ? t('artifacts.badge.activated') : t('artifacts.badge.available')}
+      badgeTone={activated ? 'used' : 'ok'}
+    >
+      <p className="mt-1.5 text-[11px] text-moon-200/40">{t('artifacts.stock', { count: view.my_boussole_village_stock })}</p>
+      {usable && (
+        <div className="mt-2.5 flex gap-2">
+          {step === 'idle' ? (
+            <Button variant="ghost" className="flex-1 !py-2 !text-xs" onClick={() => setStep('armed')}>
+              {t('artifacts.use')}
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" className="flex-1 !py-2 !text-xs" disabled={loading} onClick={() => setStep('idle')}>
+                {t('common.cancel')}
+              </Button>
+              <Button className="flex-1 !py-2 !text-xs" disabled={loading} onClick={confirm}>
+                {t('artifacts.confirmUse')}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
+      {step === 'armed' && usable && <p className="mt-2 text-[11px] text-moon-400">{t('artifacts.boussole.confirmNote')}</p>}
+      {activated && <p className="mt-2 text-[11px] text-moon-400">{t('artifacts.boussole.activeNote')}</p>}
       <ErrorText>{error}</ErrorText>
     </ArtifactRow>
   )

@@ -3366,6 +3366,13 @@ export const translations = {
     en: 'Choose 3 players: the Eye secretly tells you whether there is at least one Wolf among them, or none. A clue, never a certainty. Once per game, by day, from day 2.',
   },
   'artifacts.stock': { fr: 'Charges : {{count}}', en: 'Charges: {{count}}' },
+  'artifacts.boussole.name': { fr: 'Boussole du Village', en: 'Village Compass' },
+  'artifacts.boussole.description': {
+    fr: 'Activée, elle te montre qui a voté contre qui lors de tous les jours précédents. Une charge par partie.',
+    en: 'Once activated, it shows you who voted against whom on every previous day. One charge per game.',
+  },
+  'artifacts.boussole.confirmNote': { fr: 'Dernière confirmation : cela consomme une charge et ne peut plus être annulé.', en: 'Last confirmation: this consumes a charge and cannot be undone.' },
+  'artifacts.boussole.activeNote': { fr: 'Activée : l’historique des votes apparaît sur l’écran de jeu.', en: 'Activated: the vote history appears on the game screen.' },
   'artifacts.oeil.pick': { fr: 'Choisis 3 autres joueurs ({{count}}/3)', en: 'Choose 3 other players ({{count}}/3)' },
   'artifacts.oeil.consult': { fr: 'Consulter l’Œil', en: 'Consult the Eye' },
   'artifacts.oeil.confirmNote': { fr: 'Dernière confirmation : cela consomme une charge et ne peut plus être annulé.', en: 'Last confirmation: this consumes a charge and cannot be undone.' },

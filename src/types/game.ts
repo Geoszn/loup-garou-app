@@ -520,6 +520,9 @@ export interface MyGameView {
   guest_user_ids: string[]
   my_guest_result: { won: boolean; points_preview: number } | null
   my_oeil_baobab_result: { targets: string[]; has_wolf: boolean } | null
+  // Boussole du Village (migration 0255) : par charges, à activer depuis « Mes artefacts » ; vote_history n'est rempli qu'une fois activée.
+  my_boussole_village_stock: number
+  my_boussole_village_used: boolean
   // Boussole du Village (artefact du Loup Store, effect_key =
   // 'boussole_village', migration 0152) : historique complet des votes de
   // TOUS les jours PASSÉS de cette partie (round_number > 0, jamais le round
