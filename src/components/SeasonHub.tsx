@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from './Avatar'
-import { Button } from './ui'
+import { Button, ConfirmDialog } from './ui'
+import { useAuth } from '../context/AuthContext'
 import { LoupCoinIcon } from './LoupCoinIcon'
-import { THEME_STYLE, daysLeftLabel } from './SeasonTrack'
+import { THEME_STYLE, accessibleTiers, daysLeftLabel } from './SeasonTrack'
 import { DEFAULT_AVATAR_CONFIG, type AvatarConfig } from '../lib/avatarParts'
 import { RARITY_STYLE } from '../lib/skins'
 import type { MySeason, SeasonTier } from '../types/season'
@@ -12,10 +13,17 @@ import type { MySeason, SeasonTier } from '../types/season'
 /** Palier mis en avant à l'ouverture : le premier à réclamer, sinon le
  * prochain à atteindre, sinon le dernier (piste terminée). */
 function defaultTierId(season: MySeason): string | null {
-  const claimable = season.tiers.find((tier) => !tier.claimed && tier.xp_required <= season.xp)
-  const next = season.tiers.find((tier) => !tier.claimed && tier.xp_required > season.xp)
+  const open = accessibleTiers(season)
+  const claimable = open.find((tier) => !tier.claimed && tier.xp_required <= season.xp)
+  const next = open.find((tier) => !tier.claimed && tier.xp_required > season.xp)
   return (claimable ?? next ?? season.tiers[season.tiers.length - 1])?.id ?? null
 }
+
+const laneOf = (tier: SeasonTier) => tier.track ?? 'free'
+/** Récompense premium que le joueur ne peut pas encore réclamer (pas de pass). */
+const lockedPremium = (season: MySeason, tier: SeasonTier) => laneOf(tier) === 'premium' && !season.has_pass
+/** Total des coins bonus de la piste premium : sert à annoncer ce que le pass rapporte. */
+const premiumCoins = (season: MySeason) => season.tiers.filter((tier) => laneOf(tier) === 'premium' && tier.reward_type === 'coins').reduce((sum, tier) => sum + (tier.reward_coins ?? 0), 0)
 
 function XpChips({ season }: { season: MySeason }) {
   const { t } = useLanguage()
@@ -57,9 +65,10 @@ export function SeasonQuestsCard({
   const { lang, t } = useLanguage()
   const theme = THEME_STYLE[season.theme_color]
   const name = lang === 'en' ? season.name_en : season.name_fr
-  const nextTier = season.tiers.find((tier) => !tier.claimed && tier.xp_required > season.xp)
-  const readyCount = season.tiers.filter((tier) => !tier.claimed && tier.xp_required <= season.xp).length
-  const target = nextTier?.xp_required ?? season.tiers[season.tiers.length - 1]?.xp_required ?? 1
+  const open = accessibleTiers(season)
+  const nextTier = open.find((tier) => !tier.claimed && tier.xp_required > season.xp)
+  const readyCount = open.filter((tier) => !tier.claimed && tier.xp_required <= season.xp).length
+  const target = nextTier?.xp_required ?? open[open.length - 1]?.xp_required ?? 1
   const pct = Math.min(Math.round((season.xp / target) * 100), 100)
   const nextLabel = nextTier ? (nextTier.reward_type === 'coins' ? t('season.hub.coinsTitle', { coins: nextTier.reward_coins ?? 0 }) : lang === 'en' ? nextTier.label_en : nextTier.label_fr) : null
 
@@ -127,21 +136,31 @@ export function SeasonHub({
   onClaimed: () => void
 }) {
   const { lang, t } = useLanguage()
+  const { refreshProfile } = useAuth()
   const theme = THEME_STYLE[season.theme_color]
   const name = lang === 'en' ? season.name_en : season.name_fr
   const [selectedId, setSelectedId] = useState<string | null>(() => defaultTierId(season))
   const [claimingId, setClaimingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [confirmPass, setConfirmPass] = useState(false)
+  const [buying, setBuying] = useState(false)
+  const [passError, setPassError] = useState<string | null>(null)
   const trackRef = useRef<HTMLDivElement>(null)
 
+  const hasPassLane = season.pass_price_coins != null
+  const open = accessibleTiers(season)
   const selected = season.tiers.find((tier) => tier.id === selectedId) ?? season.tiers.find((tier) => tier.id === defaultTierId(season)) ?? null
-  const nextTier = season.tiers.find((tier) => !tier.claimed && tier.xp_required > season.xp)
-  const lastTier = season.tiers[season.tiers.length - 1]
-  const reachedCount = season.tiers.filter((tier) => tier.xp_required <= season.xp).length
+  const nextTier = open.find((tier) => !tier.claimed && tier.xp_required > season.xp)
+  const lastTier = open[open.length - 1]
+  const reachedCount = new Set(season.tiers.filter((tier) => tier.xp_required <= season.xp).map((tier) => tier.tier_number)).size
+  const totalLevels = new Set(season.tiers.map((tier) => tier.tier_number)).size
   const target = nextTier?.xp_required ?? lastTier?.xp_required ?? 1
   const pct = Math.min(Math.round((season.xp / target) * 100), 100)
-  const readyCount = season.tiers.filter((tier) => !tier.claimed && tier.xp_required <= season.xp).length
+  const readyCount = open.filter((tier) => !tier.claimed && tier.xp_required <= season.xp).length
   const base = baseConfig ?? DEFAULT_AVATAR_CONFIG
+  const price = season.pass_price_coins ?? 0
+  const balance = season.my_loup_coins ?? 0
+  const enough = balance >= price
 
   // Centre le palier mis en avant dans la piste à l'ouverture, sans toucher au
   // défilement de la page (scrollTo sur le conteneur, pas scrollIntoView).
@@ -162,6 +181,20 @@ export function SeasonHub({
       setError(rpcError.message)
       return
     }
+    onClaimed()
+  }
+
+  async function buyPass() {
+    setBuying(true)
+    setPassError(null)
+    const { error: rpcError } = await supabase.rpc('purchase_season_pass', { p_season_id: season.id })
+    setBuying(false)
+    setConfirmPass(false)
+    if (rpcError) {
+      setPassError(rpcError.message)
+      return
+    }
+    await refreshProfile()
     onClaimed()
   }
 
@@ -187,7 +220,7 @@ export function SeasonHub({
             <span className="ml-1 text-base font-semibold text-moon-200/50">XP</span>
           </p>
           <p className="pb-0.5 text-right text-xs text-moon-200/60">
-            <span className="block font-semibold text-moon-300">{t('season.hub.level', { n: reachedCount, total: season.tiers.length })}</span>
+            <span className="block font-semibold text-moon-300">{t('season.hub.level', { n: reachedCount, total: totalLevels })}</span>
             {nextTier ? t('season.nextIn', { xp: nextTier.xp_required - season.xp }) : t('season.complete')}
           </p>
         </div>
@@ -199,6 +232,10 @@ export function SeasonHub({
         {readyCount > 0 && <p className="text-xs font-semibold text-moon-300">{t('season.claimableHint', { count: readyCount })}</p>}
       </div>
 
+      {hasPassLane && (
+        <PassCard season={season} bonus={premiumCoins(season)} enough={enough} error={passError} onBuy={() => { setPassError(null); setConfirmPass(true) }} />
+      )}
+
       <XpChipsSection season={season} />
 
       {/* Piste des paliers */}
@@ -208,51 +245,143 @@ export function SeasonHub({
           <p className="text-[11px] text-moon-200/45">{t('season.hub.trackHint')}</p>
         </div>
 
+        {hasPassLane && (
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-moon-200/60">
+            <span><b className="text-amber-300">👑 {t('season.lane.premium')}</b> · {t('season.lane.top')}</span>
+            <span><b className="text-moon-200">{t('season.lane.free')}</b> · {t('season.lane.bottom')}</span>
+          </p>
+        )}
+
         <div ref={trackRef} className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 pt-1.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {season.tiers.map((tier) => {
-            const unlocked = tier.xp_required <= season.xp
-            const canClaim = unlocked && !tier.claimed
-            const isSelected = tier.id === selected?.id
-            const preview = tier.reward_type === 'skin' && tier.reward_skin ? { ...base, ...tier.reward_skin.config } : null
-            return (
-              <button
-                key={tier.id}
-                type="button"
-                data-selected={isSelected}
-                aria-pressed={isSelected}
-                onClick={() => setSelectedId(tier.id)}
-                className={`relative flex w-[72px] shrink-0 flex-col items-center gap-1 rounded-xl border px-1.5 py-2 text-center transition-all ${
-                  isSelected
-                    ? 'border-moon-300 bg-moon-400/15 ring-1 ring-moon-300/70'
-                    : tier.claimed
-                      ? 'border-night-700/60 bg-night-900/30 opacity-60'
-                      : canClaim
-                        ? `${theme.border} bg-moon-400/10`
-                        : 'border-night-700/60 bg-night-900/20'
-                }`}
-              >
-                <span className="text-[10px] font-bold text-moon-200/50">#{tier.tier_number}</span>
-                {preview ? (
-                  <span className={`block h-10 w-10 overflow-hidden rounded-full border-2 ${tier.reward_skin ? RARITY_STYLE[tier.reward_skin.rarity].border : 'border-night-600/60'} ${!unlocked ? 'opacity-70' : ''}`}>
-                    <Avatar config={preview} className="h-10 w-10" />
-                  </span>
-                ) : (
-                  <span className={`flex h-10 w-10 items-center justify-center rounded-full bg-night-900/50 ${!unlocked ? 'opacity-70' : ''}`}>
-                    <LoupCoinIcon className="h-5 w-5" />
-                  </span>
-                )}
-                <span className="text-[10px] font-semibold tabular-nums text-moon-200/70">{tier.xp_required} XP</span>
-                {tier.claimed && <span className="absolute right-1 top-1 text-[10px]">✅</span>}
-                {!unlocked && <span className="absolute right-1 top-1 text-[10px] opacity-70">🔒</span>}
-                {canClaim && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 animate-pulse rounded-full bg-moon-400" />}
-              </button>
-            )
-          })}
+          {hasPassLane
+            ? Array.from(new Set(season.tiers.map((tier) => tier.tier_number))).map((n) => {
+                const premium = season.tiers.find((tier) => tier.tier_number === n && laneOf(tier) === 'premium')
+                const free = season.tiers.find((tier) => tier.tier_number === n && laneOf(tier) === 'free')
+                return (
+                  <div key={n} className="flex w-[72px] shrink-0 flex-col gap-1.5">
+                    <span className="text-center text-[10px] font-bold text-moon-200/50">#{n}</span>
+                    {premium ? <TierCell tier={premium} season={season} base={base} selectedId={selected?.id} onSelect={setSelectedId} /> : <EmptyCell />}
+                    {free ? <TierCell tier={free} season={season} base={base} selectedId={selected?.id} onSelect={setSelectedId} /> : <EmptyCell />}
+                  </div>
+                )
+              })
+            : season.tiers.map((tier) => (
+                <div key={tier.id} className="flex w-[72px] shrink-0 flex-col gap-1">
+                  <span className="text-center text-[10px] font-bold text-moon-200/50">#{tier.tier_number}</span>
+                  <TierCell tier={tier} season={season} base={base} selectedId={selected?.id} onSelect={setSelectedId} />
+                </div>
+              ))}
         </div>
       </div>
 
       {/* Volet de détail du palier sélectionné */}
-      {selected && <TierDetail key={selected.id} tier={selected} season={season} base={base} claiming={claimingId === selected.id} disabled={claimingId !== null} error={error} onClaim={() => claim(selected)} />}
+      {selected && (
+        <TierDetail
+          key={selected.id}
+          tier={selected}
+          season={season}
+          base={base}
+          claiming={claimingId === selected.id}
+          disabled={claimingId !== null}
+          error={error}
+          onClaim={() => claim(selected)}
+          onOpenPass={() => { setPassError(null); setConfirmPass(true) }}
+        />
+      )}
+
+      <ConfirmDialog
+        open={confirmPass}
+        title={t('season.pass.confirmTitle')}
+        message={enough ? t('season.pass.confirmMsg', { price, left: balance - price }) : t('season.pass.missing', { missing: price - balance })}
+        confirmLabel={enough ? (buying ? t('common.sending') : t('season.pass.confirmBtn', { price })) : t('common.close')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={() => (enough ? void buyPass() : setConfirmPass(false))}
+        onCancel={() => setConfirmPass(false)}
+      />
+    </div>
+  )
+}
+
+/** Case d'un palier dans la piste : aperçu de la récompense, état (réclamée, verrouillée, prête), pastille premium. */
+function TierCell({ tier, season, base, selectedId, onSelect }: { tier: SeasonTier; season: MySeason; base: AvatarConfig; selectedId?: string; onSelect: (id: string) => void }) {
+  const theme = THEME_STYLE[season.theme_color]
+  const unlocked = tier.xp_required <= season.xp
+  const premiumLocked = lockedPremium(season, tier)
+  const canClaim = unlocked && !tier.claimed && !premiumLocked
+  const isSelected = tier.id === selectedId
+  const preview = tier.reward_type === 'skin' && tier.reward_skin ? { ...base, ...tier.reward_skin.config } : null
+  return (
+    <button
+      type="button"
+      data-selected={isSelected}
+      aria-pressed={isSelected}
+      onClick={() => onSelect(tier.id)}
+      className={`relative flex min-h-[88px] flex-col items-center gap-1 rounded-xl border px-1.5 py-2 text-center transition-all ${
+        isSelected
+          ? 'border-moon-300 bg-moon-400/15 ring-1 ring-moon-300/70'
+          : tier.claimed
+            ? 'border-night-700/60 bg-night-900/30 opacity-60'
+            : canClaim
+              ? `${theme.border} bg-moon-400/10`
+              : laneOf(tier) === 'premium'
+                ? 'border-amber-400/30 bg-amber-400/[0.05]'
+                : 'border-night-700/60 bg-night-900/20'
+      }`}
+    >
+      {preview ? (
+        <span className={`block h-10 w-10 overflow-hidden rounded-full border-2 ${tier.reward_skin ? RARITY_STYLE[tier.reward_skin.rarity].border : 'border-night-600/60'} ${!unlocked || premiumLocked ? 'opacity-70' : ''}`}>
+          <Avatar config={preview} className="h-10 w-10" />
+        </span>
+      ) : (
+        <span className={`flex h-10 w-10 items-center justify-center rounded-full bg-night-900/50 ${!unlocked || premiumLocked ? 'opacity-70' : ''}`}>
+          <LoupCoinIcon className="h-5 w-5" />
+        </span>
+      )}
+      <span className="text-[10px] font-semibold tabular-nums text-moon-200/70">{tier.reward_type === 'coins' ? `${tier.reward_coins}` : `${tier.xp_required} XP`}</span>
+      {tier.claimed && <span className="absolute right-1 top-1 text-[10px]">✅</span>}
+      {!tier.claimed && premiumLocked && <span className="absolute right-1 top-1 text-[10px]">👑</span>}
+      {!tier.claimed && !premiumLocked && !unlocked && <span className="absolute right-1 top-1 text-[10px] opacity-70">🔒</span>}
+      {canClaim && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 animate-pulse rounded-full bg-moon-400" />}
+    </button>
+  )
+}
+
+function EmptyCell() {
+  return <div className="min-h-[88px] rounded-xl border border-dashed border-night-700/50" aria-hidden="true" />
+}
+
+/** Carte du pass premium : ce qu'il apporte, son prix, et l'achat (ou « pass actif »). Aucune promesse de rendement : on annonce
+ * les coins bonus de la piste, pas un gain. */
+function PassCard({ season, bonus, enough, error, onBuy }: { season: MySeason; bonus: number; enough: boolean; error: string | null; onBuy: () => void }) {
+  const { t } = useLanguage()
+  const price = season.pass_price_coins ?? 0
+  if (season.has_pass) {
+    return (
+      <div className="flex items-center gap-3 rounded-2xl border border-amber-400/40 bg-amber-400/[0.07] p-4">
+        <span className="text-2xl" aria-hidden="true">👑</span>
+        <div>
+          <p className="font-display text-base text-amber-300">{t('season.pass.owned')}</p>
+          <p className="text-xs text-moon-200/60">{t('season.pass.ownedHint')}</p>
+        </div>
+      </div>
+    )
+  }
+  if (!season.is_active) return null
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-amber-400/40 bg-gradient-to-b from-amber-400/[0.09] to-transparent p-4">
+      <div className="flex items-start gap-3">
+        <span className="text-2xl" aria-hidden="true">👑</span>
+        <div className="min-w-0">
+          <p className="font-display text-lg leading-tight text-moon-200">{t('season.pass.title')}</p>
+          <p className="mt-1 text-sm leading-relaxed text-moon-200/70">{t('season.pass.pitch', { bonus })}</p>
+          <p className="mt-1.5 text-xs text-moon-200/50">{t('season.pass.catchup')}</p>
+        </div>
+      </div>
+      {error && <p className="text-xs text-blood-400">{error}</p>}
+      <Button className="w-full py-3 text-sm" onClick={onBuy}>
+        {t('season.pass.buy')} · {price} <LoupCoinIcon className="ml-1 inline h-4 w-4" />
+      </Button>
+      {!enough && <p className="text-center text-[11px] text-moon-200/50">{t('season.pass.balanceHint', { balance: season.my_loup_coins ?? 0 })}</p>}
     </div>
   )
 }
@@ -276,6 +405,7 @@ function TierDetail({
   disabled,
   error,
   onClaim,
+  onOpenPass,
 }: {
   tier: SeasonTier
   season: MySeason
@@ -284,10 +414,12 @@ function TierDetail({
   disabled: boolean
   error: string | null
   onClaim: () => void
+  onOpenPass: () => void
 }) {
   const { lang, t } = useLanguage()
   const unlocked = tier.xp_required <= season.xp
-  const canClaim = unlocked && !tier.claimed
+  const premiumLocked = lockedPremium(season, tier)
+  const canClaim = unlocked && !tier.claimed && !premiumLocked
   const skin = tier.reward_type === 'skin' ? tier.reward_skin : null
   const rarity = skin ? RARITY_STYLE[skin.rarity] : null
   const missing = Math.max(tier.xp_required - season.xp, 0)
@@ -310,7 +442,10 @@ function TierDetail({
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-moon-200/50">{t('season.hub.tierN', { n: tier.tier_number })}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-moon-200/50">
+            {t('season.hub.tierN', { n: tier.tier_number })}
+            {season.pass_price_coins != null && <span className={laneOf(tier) === 'premium' ? ' text-amber-300' : ''}> · {laneOf(tier) === 'premium' ? `👑 ${t('season.lane.premium')}` : t('season.lane.free')}</span>}
+          </p>
           <p className="font-display text-lg leading-tight text-moon-200">{title}</p>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             {skin && rarity ? (
@@ -336,7 +471,7 @@ function TierDetail({
           <span className="text-moon-200/60">{t('season.hub.requires')}</span>
           <span className="font-display text-base font-bold tabular-nums text-moon-200">{tier.xp_required} XP</span>
         </div>
-        {!tier.claimed && !unlocked && (
+        {!tier.claimed && !unlocked && !premiumLocked && (
           <>
             <div className="h-2 overflow-hidden rounded-full bg-night-800">
               <div className="h-full rounded-full bg-moon-300" style={{ width: `${pct}%` }} />
@@ -351,6 +486,7 @@ function TierDetail({
         )}
         {tier.claimed && <p className="text-xs font-semibold text-emerald-400">✅ {t('season.hub.status.claimed')}</p>}
         {canClaim && <p className="text-xs font-semibold text-amber-300">🎁 {t('season.hub.status.ready')}</p>}
+        {premiumLocked && !tier.claimed && <p className="text-xs font-semibold text-amber-300">👑 {t('season.pass.lockedReward')}</p>}
       </div>
 
       {error && <p className="text-xs text-blood-400">{error}</p>}
@@ -358,6 +494,11 @@ function TierDetail({
       {canClaim && (
         <Button className="w-full py-3 text-sm" disabled={disabled} onClick={onClaim}>
           {claiming ? t('common.sending') : t('season.hub.claim')}
+        </Button>
+      )}
+      {premiumLocked && !tier.claimed && season.is_active && (
+        <Button className="w-full py-3 text-sm" onClick={onOpenPass}>
+          👑 {t('season.pass.buy')} · {season.pass_price_coins}
         </Button>
       )}
     </div>

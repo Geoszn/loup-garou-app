@@ -6,6 +6,8 @@ import type { SkinCategory, SkinRarity } from '../lib/skins'
 
 export type SeasonThemeColor = 'blush' | 'gold' | 'blood' | 'emerald' | 'violet'
 export type SeasonTierRewardType = 'coins' | 'skin'
+// Piste d'un palier (migration 0260) : 'free' pour tous, 'premium' avec le pass. Absent avant migration = 'free'.
+export type SeasonTrackLane = 'free' | 'premium'
 
 export interface SeasonTierRewardSkin {
   id: string
@@ -30,6 +32,7 @@ export interface SeasonTier {
   label_fr: string
   label_en: string
   claimed: boolean
+  track?: SeasonTrackLane
 }
 
 export interface MySeason {
@@ -49,5 +52,9 @@ export interface MySeason {
   xp_per_game_won?: number
   xp_per_quest_claim?: number
   xp: number
+  // Pass premium (migration 0260) : prix en Loup Coins (null / absent = pas de pass), possession, solde du joueur.
+  pass_price_coins?: number | null
+  has_pass?: boolean
+  my_loup_coins?: number
   tiers: SeasonTier[]
 }

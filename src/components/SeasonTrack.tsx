@@ -7,6 +7,11 @@ import { DEFAULT_AVATAR_CONFIG } from '../lib/avatarParts'
 import { RARITY_STYLE } from '../lib/skins'
 import type { MySeason, SeasonThemeColor, SeasonTier } from '../types/season'
 
+/** Pistes accessibles au joueur : la gratuite toujours, la premium seulement avec le pass (migration 0260). */
+export function accessibleTiers(season: MySeason): SeasonTier[] {
+  return season.tiers.filter((tier) => (tier.track ?? 'free') === 'free' || season.has_pass)
+}
+
 export const THEME_STYLE: Record<SeasonThemeColor, { border: string; glow: string; bar: string }> = {
   blush: { border: 'border-pink-400/30', glow: 'from-pink-500/15 via-pink-400/5', bar: 'from-pink-400 to-pink-300' },
   gold: { border: 'border-amber-400/30', glow: 'from-amber-500/15 via-amber-400/5', bar: 'from-amber-400 to-amber-300' },
@@ -36,9 +41,10 @@ export function SeasonTrack({ season, onClaimed }: { season: MySeason; onClaimed
 
   const theme = THEME_STYLE[season.theme_color]
   const name = lang === 'en' ? season.name_en : season.name_fr
-  const nextTier = season.tiers.find((tier) => !tier.claimed && tier.xp_required > season.xp)
-  const claimable = season.tiers.filter((tier) => !tier.claimed && tier.xp_required <= season.xp)
-  const lastTier = season.tiers[season.tiers.length - 1]
+  const tiers = accessibleTiers(season)
+  const nextTier = tiers.find((tier) => !tier.claimed && tier.xp_required > season.xp)
+  const claimable = tiers.filter((tier) => !tier.claimed && tier.xp_required <= season.xp)
+  const lastTier = tiers[tiers.length - 1]
   const barTarget = nextTier?.xp_required ?? lastTier?.xp_required ?? 1
   const barPct = Math.min(Math.round((season.xp / barTarget) * 100), 100)
 
@@ -79,7 +85,7 @@ export function SeasonTrack({ season, onClaimed }: { season: MySeason; onClaimed
       {error && <p className="mx-4 mt-2 text-[11px] text-blood-400">{error}</p>}
 
       <div className="mt-3 flex gap-2 overflow-x-auto px-4 pb-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        {season.tiers.map((tier) => {
+        {tiers.map((tier) => {
           const unlocked = tier.xp_required <= season.xp
           const canClaim = unlocked && !tier.claimed
           const preview = tier.reward_type === 'skin' && tier.reward_skin ? { ...DEFAULT_AVATAR_CONFIG, ...tier.reward_skin.config } : null
@@ -122,6 +128,9 @@ export function SeasonTrack({ season, onClaimed }: { season: MySeason; onClaimed
         })}
       </div>
 
+      {season.pass_price_coins != null && !season.has_pass && (
+        <p className="mx-4 -mt-2 mb-3.5 text-[11px] font-semibold text-amber-300">👑 {t('season.pass.teaser', { price: season.pass_price_coins })}</p>
+      )}
       {claimable.length > 0 && (
         <p className="mx-4 -mt-2 mb-3.5 text-[11px] font-semibold text-moon-300">
           {t('season.claimableHint', { count: claimable.length })}
