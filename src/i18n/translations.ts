@@ -1831,6 +1831,8 @@ export const translations = {
   'avatar.redo': { fr: 'Rétablir', en: 'Redo' },
   'avatar.reset': { fr: 'Revenir à l’avatar enregistré', en: 'Back to saved avatar' },
   'avatar.dirty': { fr: 'Modifications non enregistrées', en: 'Unsaved changes' },
+  'avatar.resetShort': { fr: 'Initial', en: 'Reset' },
+  'avatar.editNameShort': { fr: 'Pseudo', en: 'Name' },
   'avatar.saveFull': { fr: 'Enregistrer mon avatar', en: 'Save my avatar' },
   'avatar.preview': { fr: 'Aperçu', en: 'Preview' },
   'avatar.mood.smile': { fr: 'Sourire', en: 'Smile' },

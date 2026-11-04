@@ -147,6 +147,7 @@ export function AvatarStudio({
   const [editingName, setEditingName] = useState(false)
   const [confirmDiscard, setConfirmDiscard] = useState(false)
   const [pulse, setPulse] = useState(false)
+  const [compact, setCompact] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -166,7 +167,16 @@ export function AvatarStudio({
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 })
+    setCompact(false)
   }, [tab])
+
+  // L'aperçu se replie quand on défile vers le bas et se redéploie en haut de liste ; deux seuils (40 / 4 px) pour qu'il ne
+  // clignote pas quand le repli change la hauteur de la liste.
+  function onGridScroll() {
+    const top = scrollRef.current?.scrollTop ?? 0
+    if (top > 40) setCompact(true)
+    else if (top < 4) setCompact(false)
+  }
 
   const dirty = useMemo(() => !sameConfig(config, start), [config, start])
   const usernameDirty = username.trim().toLowerCase() !== (profile?.username ?? '').toLowerCase()
@@ -283,11 +293,11 @@ export function AvatarStudio({
                 setLockedNote(null)
                 apply(preview)
               }}
-              className={`col-span-2 flex items-center gap-3 rounded-xl border p-2 text-left text-sm transition-colors ${
+              className={`col-span-1 flex flex-col items-center gap-2 rounded-xl border p-3 text-center text-sm transition-colors ${
                 sameConfig(preview, config) ? 'border-moon-400 bg-moon-400/10' : 'border-night-600/60 bg-night-900/50 hover:border-moon-400/50'
               }`}
             >
-              <Avatar config={preview} className="h-14 w-14" />
+              <Avatar config={preview} className="h-20 w-20" />
               <span className="min-w-0 truncate text-moon-200">{lang === 'en' ? s.name_en : s.name_fr}</span>
             </button>
           )
@@ -309,11 +319,11 @@ export function AvatarStudio({
           }
           apply(look.config)
         }}
-        className={`col-span-2 flex items-center gap-3 rounded-xl border p-2 text-left text-sm transition-colors ${
+        className={`col-span-1 flex flex-col items-center gap-2 rounded-xl border p-3 text-center text-sm transition-colors ${
           sameConfig(look.config, config) ? 'border-moon-400 bg-moon-400/10' : 'border-night-600/60 bg-night-900/50 hover:border-moon-400/50'
         }`}
       >
-        <Avatar config={look.config} className="h-14 w-14" />
+        <Avatar config={look.config} className="h-20 w-20" />
         <span className="text-moon-200">{t(look.label)}</span>
       </button>
     ))
@@ -344,7 +354,7 @@ export function AvatarStudio({
             setLockedNote(null)
             apply({ ...config, [key]: i })
           }}
-          className={`relative aspect-square w-full rounded-full border-2 transition-shadow ${
+          className={`relative mx-auto aspect-square w-full max-w-[56px] rounded-full border-2 transition-shadow ${
             config[key] === i ? 'border-moon-400 shadow-[0_0_0_3px_rgba(224,168,74,0.45)]' : 'border-night-600'
           }`}
           style={tab === 'bg' && i >= FREE_BG_COUNT ? { background: BG_SWATCH[i] ?? color } : { backgroundColor: color }}
@@ -367,7 +377,7 @@ export function AvatarStudio({
           type="button"
           aria-pressed={active}
           onClick={() => choosePart(kind, value)}
-          className={`flex flex-col items-center gap-1 text-[11px] ${locked ? 'opacity-60' : ''}`}
+          className={`flex flex-col items-center gap-1.5 text-xs ${locked ? 'opacity-60' : ''}`}
         >
           <span className="relative block w-full">
             {thumb((kind === 'acc' ? (active ? config : toggleAccessory(config, value as Accessory)) : { ...config, [kind]: value }) as AvatarConfig, active, zoom)}
@@ -395,154 +405,147 @@ export function AvatarStudio({
       )
   }
 
-  const iconButton = 'inline-flex h-9 w-9 items-center justify-center rounded-xl border border-night-500 bg-gradient-to-b from-night-700/70 to-night-800/50 text-sm text-moon-200 transition-colors hover:border-night-500/80 disabled:opacity-40'
+  // Outil de la scène d'aperçu : petit bouton étiqueté (icône + mot), jamais une icône seule.
+  const tool = 'flex min-w-[58px] flex-col items-center gap-0.5 rounded-xl border border-night-600/70 bg-night-800/70 px-2 py-1.5 text-[10px] font-semibold leading-tight text-moon-200/85 backdrop-blur transition-colors active:scale-[0.96] disabled:opacity-35'
+  const colorGrid = tab === 'skin' ? 'grid-cols-6' : tab === 'bg' ? 'grid-cols-5' : tab === 'looks' ? 'grid-cols-2' : 'grid-cols-3'
 
   return (
     <div className="fixed inset-0 z-50 bg-night-950 text-moon-200" role="dialog" aria-modal="true" aria-label={t('avatar.title')}>
       <div className="texture-noise" />
-      {/* Colonne de largeur téléphone, centrée : sur ordinateur, l'éditeur
-          plein écran étirait les vignettes sur toute la largeur. */}
-      <div className="relative mx-auto flex h-full w-full max-w-lg flex-col sm:border-x sm:border-night-700/50 sm:shadow-card">
-      <header className="relative flex items-center justify-between gap-2 border-b border-night-700/60 px-4 py-3" style={{ paddingTop: 'max(env(safe-area-inset-top), 0.75rem)' }}>
-        <button
-          type="button"
-          onClick={requestClose}
-          aria-label={t('common.close')}
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-night-600 bg-night-800/60 text-sm text-moon-200/70 hover:text-moon-200"
-        >
-          ✕
-        </button>
-        <div className="text-center">
-          <p className="font-display text-base text-moon-200">{t('avatar.title')}</p>
-          <p className="h-3 text-[10px] text-moon-300">{dirty || usernameDirty ? t('avatar.dirty') : ' '}</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => onSave(config)}
-          disabled={saving || !!success}
-          className="inline-flex items-center justify-center rounded-xl bg-gradient-to-b from-blood-500 to-blood-700 px-3.5 py-2 text-xs font-semibold text-[#fdf6e3] shadow-blood-btn transition-all active:scale-[0.97] disabled:opacity-40"
-        >
-          {saving ? t('common.saving') : t('common.save')}
-        </button>
-      </header>
+      {/* Colonne de largeur téléphone, centrée ; hauteur dynamique (dvh) : la barre d'outils de Safari ne masque plus le bas. */}
+      <div className="relative mx-auto flex h-[100dvh] w-full max-w-lg flex-col sm:border-x sm:border-night-700/50 sm:shadow-card">
+        {/* En-tête : titre seul, avec une vraie marge haute (encoche, barre d'état) — les actions sont en bas, à portée du pouce. */}
+        <header className="relative px-4 pb-1 text-center" style={{ paddingTop: 'max(env(safe-area-inset-top), 1rem)' }}>
+          <p className="font-display text-lg leading-tight text-moon-200">{t('avatar.title')}</p>
+          <p className="h-3.5 text-[11px] text-moon-300">{dirty || usernameDirty ? t('avatar.dirty') : ' '}</p>
+        </header>
 
-      <section className="relative flex flex-col items-center gap-2.5 px-4 pb-3 pt-4">
-        <Avatar
-          config={config}
-          mood={mood}
-          className={`h-32 w-32 ring-2 ring-moon-400/60 ring-offset-4 ring-offset-night-950 shadow-[0_0_40px_-6px_rgba(217,154,63,0.35)] transition-transform duration-200 ${pulse ? 'scale-105' : ''}`}
-        />
-        {editingName ? (
-          <div className="w-full max-w-xs">
-            <Input value={username} onChange={(e) => onUsernameChange(e.target.value)} maxLength={24} disabled={usernameLocked} autoFocus />
-            {usernameLocked && usernameLockedNote && <p className="mt-1 text-xs text-moon-200/50">🔒 {usernameLockedNote}</p>}
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setEditingName(true)}
-            aria-label={t('avatar.editName')}
-            className="flex items-center gap-1.5 text-sm text-moon-200/90"
-          >
-            {username} <span className="text-xs text-moon-200/40">✎</span>
-          </button>
-        )}
-        <div className="flex items-center justify-center gap-2">
-          <button type="button" onClick={randomize} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-night-500 bg-gradient-to-b from-night-700/70 to-night-800/50 px-3 text-xs font-semibold text-moon-200 active:scale-[0.97]">
-            🎲 {t('avatar.random')}
-          </button>
-          <button type="button" onClick={undo} disabled={!past.length} title={t('avatar.undo')} aria-label={t('avatar.undo')} className={iconButton}>
-            ↶
-          </button>
-          <button type="button" onClick={redo} disabled={!future.length} title={t('avatar.redo')} aria-label={t('avatar.redo')} className={iconButton}>
-            ↷
-          </button>
-          <button
-            type="button"
-            onClick={() => apply(start)}
-            disabled={!dirty}
-            title={t('avatar.reset')}
-            aria-label={t('avatar.reset')}
-            className={iconButton}
-          >
-            ⟲
-          </button>
-        </div>
-        <div className="flex flex-wrap items-center justify-center gap-1.5 text-[11px] text-moon-200/50">
-          <span>{t('avatar.preview')} :</span>
-          {MOODS.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              aria-pressed={mood === m.id}
-              onClick={() => setMood(m.id)}
-              className={`rounded-full border px-2.5 py-1 transition-colors ${
-                mood === m.id ? 'border-moon-400 bg-moon-400/15 text-moon-200' : 'border-night-600 bg-night-800/60'
-              }`}
-            >
-              {t(m.label)}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <nav className="relative flex gap-1 overflow-x-auto border-y border-night-700/60 bg-night-900/60 px-2 py-2 [scrollbar-width:none]">
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            aria-pressed={tab === item.id}
-            onClick={() => {
-              setTab(item.id)
-              setLockedNote(null)
-            }}
-            className={`flex min-w-[54px] flex-1 flex-col items-center gap-0.5 rounded-lg px-1 py-1.5 text-[10px] font-semibold transition-colors ${
-              tab === item.id ? 'bg-blood-600 text-[#fdf6e3]' : 'text-moon-200/60'
-            }`}
-          >
-            <span className="text-base leading-none">{item.icon}</span>
-            {t(item.label)}
-          </button>
-        ))}
-      </nav>
-
-      <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto px-4 py-3">
-        {lockedNote && lockedNote.min >= SEASON_EXCLUSIVE_MIN_POINTS && (
-          <div className="mb-3 rounded-xl border border-moon-400/30 bg-moon-400/5 px-3 py-2 text-xs text-moon-200/80">
-            🔒 {t('avatar.seasonExclusiveMsg')}
-          </div>
-        )}
-        {lockedNote && lockedNote.min < SEASON_EXCLUSIVE_MIN_POINTS && (
-          <div className="mb-3 rounded-xl border border-moon-400/30 bg-moon-400/5 px-3 py-2 text-xs text-moon-200/80">
-            🔒{' '}
-            {t('avatar.lockedMsg', {
-              points: lockedNote.min,
-              tier: tierLabel(tierForPoints(lockedNote.min).id, t),
-              missing: Math.max(lockedNote.min - points, 0),
-            })}
-            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-night-800">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-moon-300 to-moon-400"
-                style={{ width: `${Math.min(Math.round((points / lockedNote.min) * 100), 100)}%` }}
+        {/* Scène d'aperçu : l'avatar en grand, outils étiquetés de chaque côté, expressions dessous. Se replie quand on fait défiler
+            les pièces, pour laisser la place aux vignettes. */}
+        <section className={`relative px-3 transition-[padding] duration-200 ${compact ? 'pb-2.5 pt-1' : 'pb-2.5 pt-1'}`}>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-col gap-1.5">
+              <button type="button" onClick={randomize} className={tool}>
+                <span className="text-base leading-none">🎲</span>
+                {t('avatar.random')}
+              </button>
+              <button type="button" onClick={() => apply(start)} disabled={!dirty} className={tool}>
+                <span className="text-base leading-none">⟲</span>
+                {t('avatar.resetShort')}
+              </button>
+            </div>
+            <div className="flex flex-col items-center gap-1.5">
+              <Avatar
+                config={config}
+                mood={mood}
+                className={`ring-2 ring-moon-400/60 ring-offset-4 ring-offset-night-950 shadow-[0_0_40px_-6px_rgba(217,154,63,0.35)] transition-all duration-200 ${compact ? 'h-24 w-24' : 'h-[min(10rem,22dvh)] w-[min(10rem,22dvh)]'} ${pulse ? 'scale-105' : ''}`}
               />
+              {!compact &&
+                (editingName ? (
+                  <div className="w-40">
+                    <Input value={username} onChange={(e) => onUsernameChange(e.target.value)} maxLength={24} disabled={usernameLocked} autoFocus />
+                    {usernameLocked && usernameLockedNote && <p className="mt-1 text-xs text-moon-200/50">🔒 {usernameLockedNote}</p>}
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setEditingName(true)} aria-label={t('avatar.editName')} className="flex items-center gap-1.5 rounded-full px-2 py-1 text-sm text-moon-200/90">
+                    {username} <span className="text-xs text-moon-200/50">✎ {t('avatar.editNameShort')}</span>
+                  </button>
+                ))}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <button type="button" onClick={undo} disabled={!past.length} className={tool}>
+                <span className="text-base leading-none">↶</span>
+                {t('avatar.undo')}
+              </button>
+              <button type="button" onClick={redo} disabled={!future.length} className={tool}>
+                <span className="text-base leading-none">↷</span>
+                {t('avatar.redo')}
+              </button>
             </div>
           </div>
-        )}
-        <div className={`grid gap-2.5 ${tab === 'skin' || tab === 'bg' ? 'grid-cols-6' : 'grid-cols-4'}`}>{grid}</div>
-      </div>
+          {!compact && (
+            <div className="mt-2 flex items-center justify-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
+              {MOODS.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  aria-pressed={mood === m.id}
+                  onClick={() => setMood(m.id)}
+                  className={`shrink-0 rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                    mood === m.id ? 'border-moon-400 bg-moon-400/15 text-moon-200' : 'border-night-600 bg-night-800/60 text-moon-200/60'
+                  }`}
+                >
+                  {t(m.label)}
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
 
-      <div className="relative border-t border-night-700/60 bg-night-900/95 px-4 pt-3 shadow-[0_-8px_24px_-4px_rgba(0,0,0,0.5)]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.75rem)' }}>
-        <ErrorText>{error}</ErrorText>
-        {success && <p className="mb-2 text-center text-sm text-emerald-400">{success}</p>}
-        <button
-          type="button"
-          onClick={() => onSave(config)}
-          disabled={saving || !!success}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-blood-500 to-blood-700 px-3.5 py-3.5 text-sm font-semibold text-[#fdf6e3] shadow-blood-btn transition-all active:scale-[0.97] disabled:opacity-40"
-        >
-          {saving ? t('common.saving') : t('avatar.saveFull')}
-        </button>
-      </div>
+        {/* Catégories : grandes cibles tactiles, défilement horizontal. */}
+        <nav className="relative flex gap-1.5 overflow-x-auto border-y border-night-700/60 bg-night-900/70 px-3 py-2 [scrollbar-width:none]">
+          {TABS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={tab === item.id}
+              onClick={() => {
+                setTab(item.id)
+                setLockedNote(null)
+              }}
+              className={`flex min-w-[68px] flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px] font-semibold transition-colors ${
+                tab === item.id ? 'bg-blood-600 text-[#fdf6e3] shadow-blood-btn' : 'bg-night-800/50 text-moon-200/65'
+              }`}
+            >
+              <span className="text-xl leading-none">{item.icon}</span>
+              {t(item.label)}
+            </button>
+          ))}
+        </nav>
+
+        {/* Pièces : vignettes plus grandes (3 par ligne), défilement ; l'aperçu se replie dès qu'on fait défiler. */}
+        <div ref={scrollRef} onScroll={onGridScroll} className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+          {lockedNote && lockedNote.min >= SEASON_EXCLUSIVE_MIN_POINTS && (
+            <div className="mb-3 rounded-xl border border-moon-400/30 bg-moon-400/5 px-3 py-2.5 text-xs text-moon-200/80">🔒 {t('avatar.seasonExclusiveMsg')}</div>
+          )}
+          {lockedNote && lockedNote.min < SEASON_EXCLUSIVE_MIN_POINTS && (
+            <div className="mb-3 rounded-xl border border-moon-400/30 bg-moon-400/5 px-3 py-2.5 text-xs text-moon-200/80">
+              🔒{' '}
+              {t('avatar.lockedMsg', {
+                points: lockedNote.min,
+                tier: tierLabel(tierForPoints(lockedNote.min).id, t),
+                missing: Math.max(lockedNote.min - points, 0),
+              })}
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-night-800">
+                <div className="h-full rounded-full bg-gradient-to-r from-moon-300 to-moon-400" style={{ width: `${Math.min(Math.round((points / lockedNote.min) * 100), 100)}%` }} />
+              </div>
+            </div>
+          )}
+          <div className={`grid gap-3 ${colorGrid}`}>{grid}</div>
+        </div>
+
+        {/* Actions : toujours visibles, en bas (zone du pouce), avec la marge de sécurité de l'appareil. Deux boutons étiquetés. */}
+        <div className="relative border-t border-night-700/60 bg-night-900/95 px-4 pt-3 shadow-[0_-8px_24px_-4px_rgba(0,0,0,0.5)]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.9rem)' }}>
+          <ErrorText>{error}</ErrorText>
+          {success && <p className="mb-2 text-center text-sm text-emerald-400">{success}</p>}
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={requestClose}
+              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-night-500 bg-night-800/70 px-3 py-3.5 text-sm font-semibold text-moon-200 transition-all active:scale-[0.97]"
+            >
+              ✕ {t('common.close')}
+            </button>
+            <button
+              type="button"
+              onClick={() => onSave(config)}
+              disabled={saving || !!success}
+              className="inline-flex flex-[1.6] items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-blood-500 to-blood-700 px-3 py-3.5 text-sm font-semibold text-[#fdf6e3] shadow-blood-btn transition-all active:scale-[0.97] disabled:opacity-40"
+            >
+              {saving ? t('common.saving') : `✓ ${t('common.save')}`}
+            </button>
+          </div>
+        </div>
 
       <ConfirmDialog
         open={confirmDiscard}
