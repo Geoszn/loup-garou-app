@@ -88,12 +88,17 @@ export default function Dashboard() {
   // juste ce booléen — pas besoin d'être admin pour savoir que la création
   // de partie est temporairement coupée.
   const [newGamesEnabled, setNewGamesEnabled] = useState(true)
+  // « Serveur complet » (migration 0256/0258) : plafond de joueurs en ligne atteint, les nouvelles parties sont refusées.
+  const [serverFull, setServerFull] = useState(false)
   useEffect(() => {
-    homeSection<{ new_games_enabled: boolean }>('app_status', async () => {
+    homeSection<{ new_games_enabled: boolean; server_full?: boolean }>('app_status', async () => {
       const { data, error: rpcError } = await supabase.rpc('get_app_status')
-      return rpcError ? null : (data as { new_games_enabled: boolean } | null)
+      return rpcError ? null : (data as { new_games_enabled: boolean; server_full?: boolean } | null)
     }).then((data) => {
-      if (data) setNewGamesEnabled(!!data.new_games_enabled)
+      if (data) {
+        setNewGamesEnabled(!!data.new_games_enabled)
+        setServerFull(!!data.server_full)
+      }
     })
   }, [])
 
@@ -317,6 +322,10 @@ export default function Dashboard() {
             ⏸ La création et l'entrée dans de nouvelles parties sont temporairement désactivées. Les parties déjà en
             cours continuent normalement.
           </div>
+        )}
+
+        {serverFull && newGamesEnabled && (
+          <div className="rounded-xl border border-moon-400/40 bg-moon-400/10 px-4 py-2.5 text-sm text-moon-200/90">⏳ {t('server.full')}</div>
         )}
 
         <ErrorText>{error}</ErrorText>

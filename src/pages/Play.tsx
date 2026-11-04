@@ -24,9 +24,15 @@ export default function Play() {
   const displayName = profile?.username ?? t('common.playerFallback')
 
   const [newGamesEnabled, setNewGamesEnabled] = useState(true)
+  // « Serveur complet » (migration 0256/0258) : plafond de joueurs en ligne atteint.
+  const [serverFull, setServerFull] = useState(false)
   useEffect(() => {
     supabase.rpc('get_app_status').then(({ data, error }) => {
-      if (!error && data) setNewGamesEnabled(!!(data as { new_games_enabled: boolean }).new_games_enabled)
+      if (!error && data) {
+        const status = data as { new_games_enabled: boolean; server_full?: boolean }
+        setNewGamesEnabled(!!status.new_games_enabled)
+        setServerFull(!!status.server_full)
+      }
     })
   }, [])
 
@@ -144,6 +150,9 @@ export default function Play() {
 
         {!newGamesEnabled && (
           <div className="rounded-xl border border-blood-700/40 bg-blood-700/10 px-4 py-2.5 text-sm text-moon-200/90">{t('play.paused')}</div>
+        )}
+        {serverFull && newGamesEnabled && (
+          <div className="rounded-xl border border-moon-400/40 bg-moon-400/10 px-4 py-2.5 text-sm text-moon-200/90">⏳ {t('server.full')}</div>
         )}
 
         <button type="button" className={card} onClick={() => (isGuest ? setWallOpen(true) : setCreateOpen(true))}>

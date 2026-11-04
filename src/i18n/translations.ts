@@ -2505,6 +2505,10 @@ export const translations = {
   'play.joinHint': { fr: 'Avec un code ou dans la liste des parties ouvertes', en: 'With a code or from the open games list' },
   'play.title': { fr: 'Jouer', en: 'Play' },
   'play.subtitle': { fr: 'Lance une partie ou rejoins tes amis.', en: 'Start a game or join your friends.' },
+  'server.full': {
+    fr: 'Serveur complet : beaucoup de joueurs sont en ligne. Tu ne peux pas créer ni rejoindre de nouvelle partie pour l’instant, réessaie dans quelques minutes. Les parties en cours continuent normalement.',
+    en: 'Server full: a lot of players are online. You can’t create or join a new game right now, please try again in a few minutes. Games already in progress continue normally.',
+  },
   'play.paused': { fr: 'La création et l’entrée dans de nouvelles parties sont temporairement désactivées. Les parties déjà en cours continuent normalement.', en: 'Creating and joining new games is temporarily disabled. Games already in progress continue normally.' },
   'play.create.text': { fr: 'Tu deviens l’hôte : tu choisis les rôles, tu invites tes amis et tu lances la partie quand tout le monde est prêt.', en: 'You become the host: you pick the roles, invite your friends and start the game when everyone is ready.' },
   'play.create.p1': { fr: 'Privée : seuls tes amis entrent, avec un code', en: 'Private: only your friends join, with a code' },
