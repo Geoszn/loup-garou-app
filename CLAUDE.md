@@ -5,7 +5,7 @@ Jeu de loups-garous en ligne, en français (et anglais). Dépôt : `Geoszn/loup-
 ## Stack
 
 - Client : React 18 + TypeScript + Vite + Tailwind, empaqueté pour mobile avec Capacitor (`ios/`, `android/`).
-- Back-end : Supabase (Postgres + RLS, fonctions RPC `security definer`, Realtime, Auth) — migrations dans `supabase/migrations/` (numérotées, jusqu'à 0254).
+- Back-end : Supabase (Postgres + RLS, fonctions RPC `security definer`, Realtime, Auth) — migrations dans `supabase/migrations/` (numérotées, jusqu'à 0261).
 - Fonctions serveur Vercel dans `api/` (notifications push, salons vocaux Daily.co, crons) ; code partagé dans `server/`.
 - Vocal : Daily.co. Notifications : Web Push.
 - Tests : `tests/` (Playwright, `npm run test:e2e`).
@@ -27,6 +27,8 @@ Avant un commit : `git checkout tsconfig.tsbuildinfo` (fichier régénéré par 
 - **Répondre en français, de façon concise.** Question exploratoire : une recommandation courte et son compromis, puis attendre. Dire honnêtement ce qui n'a pas pu être testé.
 - **Commits** : terminer le message par `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
 - **Ne jamais pousser sans que l'utilisateur dise « git push »** (ou « commite et push »). Alors : `git push origin main && git push origin main:staging`.
+  Exception (accordée le 2026-11-04) : pousser SOI-MÊME, sans attendre, ce qui n'a aucun effet de déploiement — fichiers de migration, diagnostics, scripts — dans un commit à part. Le client qui dépend d'une migration ne part qu'une fois la migration appliquée et l'accord de l'utilisateur obtenu.
+- **Une seule commande Terminal par message.** Ne jamais enchaîner ni donner plusieurs scripts à la suite : en donner un, attendre le résultat, répondre dessus, puis seulement présenter le suivant. Ne jamais réutiliser une commande d'un message précédent.
 - **Interface : toujours montrer un aperçu avant de valider.** Rendre les VRAIS composants (esbuild + Tailwind, `supabase`/`AuthContext`/`LanguageContext` remplacés par des stubs), en 390 px de large, mobile d'abord. Les stubs doivent reproduire l'interpolation réelle `{{variable}}` de `t()`. Le contenu du `content` Tailwind du harness doit inclure le fichier d'entrée. Nettoyer ensuite le harness et le serveur local. Ne commiter qu'après accord de l'utilisateur.
 - **Mobile d'abord** : tuiles compactes, avatars petits, blocs repliables ou paginés ; vérifier à 390 px. Les boutons doivent avoir un LIBELLÉ (les icônes seules ne sont pas retrouvées par les joueurs).
 - Ne rien supposer sur la base réelle : écrire ce qui est déduit du code comme tel.
