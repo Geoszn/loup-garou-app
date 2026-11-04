@@ -56,5 +56,7 @@ export interface MySeason {
   pass_price_coins?: number | null
   has_pass?: boolean
   my_loup_coins?: number
+  // Bonus d'XP de saison en cours (migration 0266, ex. « Double XP de Noël ») : null / absent s'il n'y en a pas.
+  xp_boost?: { multiplier: number; ends_at: string; label_fr: string; label_en: string } | null
   tiers: SeasonTier[]
 }

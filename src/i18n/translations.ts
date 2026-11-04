@@ -1888,6 +1888,7 @@ export const translations = {
   'season.hub.status.claimed': { fr: 'Réclamée', en: 'Claimed' },
   'season.hub.status.ready': { fr: 'Prête à réclamer', en: 'Ready to claim' },
   'season.hub.status.locked': { fr: 'Encore {{xp}} XP', en: '{{xp}} XP to go' },
+  'season.boost': { fr: '{{label}} : XP ×{{mult}} jusqu’au {{date}}', en: '{{label}}: XP ×{{mult}} until {{date}}' },
   'season.lane.premium': { fr: 'Premium', en: 'Premium' },
   'season.lane.free': { fr: 'Gratuit', en: 'Free' },
   'season.lane.top': { fr: 'ligne du haut', en: 'top row' },

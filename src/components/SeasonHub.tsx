@@ -230,6 +230,17 @@ export function SeasonHub({
         </div>
 
         {readyCount > 0 && <p className="text-xs font-semibold text-moon-300">{t('season.claimableHint', { count: readyCount })}</p>}
+
+        {season.xp_boost && season.is_active && (
+          <p className="rounded-xl border border-amber-400/40 bg-amber-400/[0.08] px-3 py-2 text-xs font-semibold text-amber-300">
+            ⚡{' '}
+            {t('season.boost', {
+              mult: season.xp_boost.multiplier,
+              label: lang === 'en' ? season.xp_boost.label_en : season.xp_boost.label_fr,
+              date: new Date(season.xp_boost.ends_at).toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR', { day: 'numeric', month: 'long' }),
+            })}
+          </p>
+        )}
       </div>
 
       {hasPassLane && (

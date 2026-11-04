@@ -5,7 +5,7 @@ Jeu de loups-garous en ligne, en français (et anglais). Dépôt : `Geoszn/loup-
 ## Stack
 
 - Client : React 18 + TypeScript + Vite + Tailwind, empaqueté pour mobile avec Capacitor (`ios/`, `android/`).
-- Back-end : Supabase (Postgres + RLS, fonctions RPC `security definer`, Realtime, Auth) — migrations dans `supabase/migrations/` (numérotées, jusqu'à 0261).
+- Back-end : Supabase (Postgres + RLS, fonctions RPC `security definer`, Realtime, Auth) — migrations dans `supabase/migrations/` (numérotées, jusqu'à 0266).
 - Fonctions serveur Vercel dans `api/` (notifications push, salons vocaux Daily.co, crons) ; code partagé dans `server/`.
 - Vocal : Daily.co. Notifications : Web Push.
 - Tests : `tests/` (Playwright, `npm run test:e2e`).
