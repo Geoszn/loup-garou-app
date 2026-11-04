@@ -1,7 +1,7 @@
 import { useId, type ReactNode } from 'react'
 import { AVATAR_BGS, SKIN_TONES, type AvatarConfig, type AvatarMood } from '../lib/avatarParts'
 import { shade, mix, toRgb } from '../lib/avatarColor'
-import { FaceDefs, Neck, Ears, SkinShading, Eyes, Brows, Nose, Mouth } from './avatarFace'
+import { FaceDefs, Neck, Ears, SkinShading, Eyes, Brows, Nose, Mouth, OutfitShading, HairSheen } from './avatarFace'
 
 // Dessin du buste d'un avatar (SVG 100×100), style « dessin animé détaillé » :
 // pour chaque forme un aplat de base, un ton d'ombre et un ton de lumière, le
@@ -29,7 +29,7 @@ const HEAD_PATHS: Record<AvatarConfig['face'], string> = {
 const SHOULDERS = 'M5 100C5 85 17 76 36 72.5L50 78L64 72.5C83 76 95 85 95 100Z'
 
 /** Forme pleine avec contour d'encre. */
-function P({ d, fill, w = 1.5, extra }: { d: string; fill: string; w?: number; extra?: object }) {
+function P({ d, fill, w = 1.15, extra }: { d: string; fill: string; w?: number; extra?: object }) {
   return <path d={d} fill={fill} stroke={INK} strokeWidth={w} strokeLinejoin="round" strokeLinecap="round" {...extra} />
 }
 /** Trait de détail sans remplissage. */
@@ -485,6 +485,8 @@ const HAIR_COLORS: Partial<Record<AvatarConfig['hair'], string>> = {
   braids_pink: '#ff6fae', afro_pink: '#f8a9cb', ponytail_pop: '#ff5fa0', pompadour_ken: '#f2c14e',
 }
 
+// Coiffures qui reçoivent un reflet doux sur le haut (les autres ont déjà leurs propres reflets ou couvrent la tête).
+const SHEEN_HAIRS: AvatarConfig['hair'][] = ['fade', 'afro', 'curly', 'flat', 'cornrows', 'locs', 'long', 'braids', 'braids_pink', 'puffs', 'knots', 'slick_back', 'bun', 'topknot', 'afro_pink']
 const COVERING: AvatarConfig['head'][] = ['cap', 'hat', 'cowboy_pink']
 // Foulards : ils cachent les cheveux comme un couvre-chef, sans ombre portée sur le visage.
 const HAIR_HIDING: AvatarConfig['head'][] = ['scarf_pink', 'bandana_biker']
@@ -1650,6 +1652,7 @@ export function AvatarArt({ config, mood = 'smile' }: { config: AvatarConfig; mo
       {hairBack(config.hair, hairC, cover, hairHiding)}
       <Neck uid={uid} skin={skin} />
       {outfitArt(config.outfit, skin, dark, uid)}
+      <OutfitShading uid={uid} cover={cover} />
       {cover && <ellipse cx="50" cy="73.4" rx="9" ry="3.6" fill="#000" opacity=".3" />}
       <Ears skin={skin} ey={ey} />
       <path d={head} fill={skin} />
@@ -1658,6 +1661,7 @@ export function AvatarArt({ config, mood = 'smile' }: { config: AvatarConfig; mo
       </g>
       <path d={head} fill="none" stroke={shade(skin, -66)} strokeWidth=".7" strokeLinejoin="round" opacity=".85" />
       {hairFront(config.hair, hairC, uid, head, cover, hairHiding)}
+      {!cover && !hairHiding && SHEEN_HAIRS.includes(config.hair) && <HairSheen uid={uid} />}
       {cover && (
         <g clipPath={`url(#${uid}hd)`}>
           <rect x="28" y={headwear === 'cap' ? 37 : 34} width="44" height="9" fill={`url(#${uid}hs)`} />

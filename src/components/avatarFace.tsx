@@ -85,11 +85,54 @@ export function FaceDefs({ uid, skin, ey }: { uid: string; skin: string; ey: num
         <stop offset=".55" stopColor={mix(skin, shade(skin, -42), sk)} />
         <stop offset="1" stopColor={mix(skin, shade(skin, -34), sk)} />
       </linearGradient>
+      {/* Tenue : lumière à gauche, ombre à droite et en bas, comme le visage. */}
+      <linearGradient id={`${uid}osh`} x1="0" y1="0" x2="1" y2="0.35">
+        <stop offset="0" stopColor="#fff" stopOpacity=".14" />
+        <stop offset=".45" stopColor="#fff" stopOpacity="0" />
+        <stop offset="1" stopColor="#000" stopOpacity=".34" />
+      </linearGradient>
+      <linearGradient id={`${uid}osv`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#000" stopOpacity=".3" />
+        <stop offset=".35" stopColor="#000" stopOpacity="0" />
+        <stop offset="1" stopColor="#000" stopOpacity=".26" />
+      </linearGradient>
+      <radialGradient id={`${uid}sheen`} cx="50%" cy="50%" r="50%">
+        <stop offset="0" stopColor="#fff" stopOpacity=".5" />
+        <stop offset="1" stopColor="#fff" stopOpacity="0" />
+      </radialGradient>
+      <clipPath id={`${uid}osc`}>
+        <path d="M5 100C5 85 17 76 36 72.5L50 78L64 72.5C83 76 95 85 95 100Z" />
+      </clipPath>
       <clipPath id={`${uid}eyearea`}>
         <ellipse cx="50" cy={ey} rx="22" ry="7" />
       </clipPath>
     </>
   )
+}
+
+/** Modelé de la tenue, posé PAR-DESSUS n'importe quelle tenue (dans la silhouette des épaules) : dégradés de lumière, plis
+ * discrets aux épaules et sur la poitrine, ombre portée du menton à la base du cou. Donne du volume aux aplats de couleur. */
+export function OutfitShading({ uid, cover }: { uid: string; cover: boolean }) {
+  return (
+    <g clipPath={`url(#${uid}osc)`}>
+      <rect x="0" y="68" width="100" height="34" fill={`url(#${uid}osh)`} />
+      <rect x="0" y="68" width="100" height="34" fill={`url(#${uid}osv)`} />
+      {/* plis du tissu */}
+      <g fill="none" strokeLinecap="round">
+        <path d="M22 96C24 88 29 82 36 78M30 99C31 92 35 86 41 82" stroke="#000" strokeWidth="1.1" opacity=".16" />
+        <path d="M78 96C76 88 71 82 64 78M70 99C69 92 65 86 59 82" stroke="#000" strokeWidth="1.1" opacity=".2" />
+        <path d="M24 94C26 87 31 82 38 79" stroke="#fff" strokeWidth=".7" opacity=".14" />
+        <path d="M44 99C45 92 47 87 50 84M56 99C55 92 53 87 50 84" stroke="#000" strokeWidth=".9" opacity=".12" />
+      </g>
+      {/* ombre du menton et du cou sur le vêtement */}
+      <ellipse cx="50" cy="76.4" rx="11.4" ry="3.2" fill="#000" opacity={cover ? 0.38 : 0.3} />
+    </g>
+  )
+}
+
+/** Reflet doux sur le haut des cheveux : un éclat large, pas un trait, pour donner du volume. */
+export function HairSheen({ uid }: { uid: string }) {
+  return <ellipse cx="42" cy="25" rx="11" ry="3.4" fill={`url(#${uid}sheen)`} transform="rotate(-16 42 25)" opacity=".55" />
 }
 
 /** Cou : ombré de haut en bas, sans contour noir. */
