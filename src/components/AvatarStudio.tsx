@@ -363,9 +363,10 @@ export function AvatarStudio({
     })
   } else {
     const kind = tab as PartKind
-    // Les pièces vendues en boutique n'apparaissent ici qu'une fois achetées ;
-    // celles du rang ou des paliers de saison restent visibles, verrouillées.
-    const visible = OPTIONS[kind].filter((value) => (PART_MIN_POINTS[kind] as Record<string, number>)[value] !== STORE_EXCLUSIVE_MIN_POINTS || isUnlocked(kind, value))
+    // L'éditeur ne montre que ce que le joueur POSSÈDE déjà. Une pièce de boutique ou de saison n'y apparaît qu'une fois obtenue
+    // (achetée, ou gagnée par un palier) ; avant, on la découvre dans la boutique ou dans le hub de la saison. Seules les pièces
+    // du rang restent visibles verrouillées, avec leur nombre de points.
+    const visible = OPTIONS[kind].filter((value) => (PART_MIN_POINTS[kind] as Record<string, number>)[value] < STORE_EXCLUSIVE_MIN_POINTS || isUnlocked(kind, value))
     const tiles = visible.map((value) => {
       const min = (PART_MIN_POINTS[kind] as Record<string, number>)[value]
       const locked = !isUnlocked(kind, value)
