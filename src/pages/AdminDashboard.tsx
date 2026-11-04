@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { Button, Card, ConfirmDialog, ErrorText, Input, Label, Modal, Segmented, SideDrawer, SuccessText } from '../components/ui'
+import { PagedList, Pager, usePaged } from '../components/admin/Pager'
 import { FullScreenLoader } from '../components/FullScreenLoader'
 import { DEFAULT_ROLE_IMAGES } from '../components/RoleCard'
 import { ROLES, ROLE_ORDER, type RoleId } from '../lib/roles'
@@ -773,11 +774,9 @@ function StatsTab({ onGoToTab }: { onGoToTab: (target: Tab, usersFilter?: Omit<U
           {todoItems.length === 0 ? (
             <p className="text-sm text-moon-200/40">Rien en attente — tout est à jour. ✅</p>
           ) : (
-            <div className="flex flex-col gap-2">
-              {todoItems.map((it) => (
+            <PagedList items={todoItems} className="flex flex-col gap-2" render={(it) => (
                 <TodoRow key={it.key} icon={it.icon} label={it.label} count={it.count} onClick={it.go} />
-              ))}
-            </div>
+              )} />
           )}
         </Card>
       </div>
@@ -1214,23 +1213,20 @@ function UserDetailModal({ userId, onClose }: { userId: string; onClose: () => v
               {detail.stats.by_role.length > 0 && (
                 <div>
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-moon-200/50">Par rôle</p>
-                  <div className="flex flex-col gap-1.5">
-                    {detail.stats.by_role.map((r) => (
+                  <PagedList items={detail.stats.by_role} className="flex flex-col gap-1.5" render={(r) => (
                       <div key={r.role} className="flex justify-between text-sm text-moon-200/70">
                         <span>{roleNameFr(r.role)}</span>
                         <span className="text-moon-200">
                           {r.won}/{r.played}
                         </span>
                       </div>
-                    ))}
-                  </div>
+                    )} />
                 </div>
               )}
               {detail.stats.recent_games.length > 0 && (
                 <div>
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-moon-200/50">Parties récentes</p>
-                  <div className="flex flex-col gap-1.5">
-                    {detail.stats.recent_games.slice(0, 8).map((g) => (
+                  <PagedList items={detail.stats.recent_games} className="flex flex-col gap-1.5" render={(g) => (
                       <div key={g.game_id} className="flex justify-between text-sm text-moon-200/60">
                         <span>
                           {g.code} · {g.role ? roleNameFr(g.role) : '?'}
@@ -1240,8 +1236,7 @@ function UserDetailModal({ userId, onClose }: { userId: string; onClose: () => v
                           {g.points_gained})
                         </span>
                       </div>
-                    ))}
-                  </div>
+                    )} />
                 </div>
               )}
             </div>
@@ -1338,8 +1333,7 @@ function GamesTab() {
         <p className="text-sm text-moon-200/50">Aucune partie ne correspond à "{search}".</p>
       )}
 
-      <div className="flex flex-col gap-2">
-        {filteredGames?.map((g) => (
+      <PagedList items={(filteredGames ?? [])} className="flex flex-col gap-2" resetKey={`${search}|${includeEnded}`} render={(g) => (
           <Card key={g.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
             <div>
               <p className="text-sm font-semibold text-moon-200">
@@ -1370,8 +1364,7 @@ function GamesTab() {
               )}
             </div>
           </Card>
-        ))}
-      </div>
+        )} />
 
       <ConfirmDialog
         open={!!endTarget}
@@ -1464,8 +1457,7 @@ function GameDetailModal({ gameId, onClose }: { gameId: string; onClose: () => v
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-moon-200/50">
               Joueurs {pendingCount > 0 && <span className="text-blood-400">· {pendingCount} en attente</span>}
             </p>
-            <div className="flex flex-col gap-1.5">
-              {detail.players.map((p) => (
+            <PagedList items={detail.players} className="flex flex-col gap-1.5" render={(p) => (
                 <div
                   key={p.user_id}
                   className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs ${
@@ -1493,8 +1485,7 @@ function GameDetailModal({ gameId, onClose }: { gameId: string; onClose: () => v
                   <span className="shrink-0 text-moon-200/50">{p.role ? roleNameFr(p.role) : '—'}</span>
                   {p.pending && <span className="shrink-0 font-semibold text-blood-400">en attente</span>}
                 </div>
-              ))}
-            </div>
+              )} />
           </div>
 
           {/* Historique des votes de jour, tous rounds (migration 0181) —
@@ -1511,20 +1502,16 @@ function GameDetailModal({ gameId, onClose }: { gameId: string; onClose: () => v
             {votesByRound.size === 0 ? (
               <p className="text-xs text-moon-200/40">Aucun vote pour l’instant.</p>
             ) : (
-              <div className="flex max-h-64 flex-col gap-3 overflow-y-auto scrollbar-thin rounded-lg border border-night-600/60 bg-night-800/40 p-3">
-                {[...votesByRound.entries()].map(([round, votes]) => (
+              <PagedList items={[...votesByRound.entries()]} className="flex max-h-64 flex-col gap-3 overflow-y-auto scrollbar-thin rounded-lg border border-night-600/60 bg-night-800/40 p-3" render={([round, votes]) => (
                   <div key={round}>
                     <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-moon-300">Round {round}</p>
-                    <ul className="flex flex-col gap-0.5">
-                      {votes.map((v) => (
+                    <PagedList items={votes} as="ul" className="flex flex-col gap-0.5" render={(v) => (
                         <li key={v.voter_id} className="text-xs text-moon-200/70">
                           {v.voter_name ?? '?'} → {v.target_name ?? <span className="italic text-moon-200/40">abstention</span>}
                         </li>
-                      ))}
-                    </ul>
+                      )} />
                   </div>
-                ))}
-              </div>
+                )} />
             )}
           </div>
 
@@ -1534,14 +1521,12 @@ function GameDetailModal({ gameId, onClose }: { gameId: string; onClose: () => v
             {detail.artifact_uses.length === 0 ? (
               <p className="text-xs text-moon-200/40">Aucun artefact utilisé.</p>
             ) : (
-              <ul className="flex max-h-48 flex-col gap-1 overflow-y-auto scrollbar-thin rounded-lg border border-night-600/60 bg-night-800/40 p-3">
-                {detail.artifact_uses.map((a, i) => (
+              <PagedList items={detail.artifact_uses} as="ul" className="flex max-h-48 flex-col gap-1 overflow-y-auto scrollbar-thin rounded-lg border border-night-600/60 bg-night-800/40 p-3" render={(a, i) => (
                   <li key={i} className="text-xs text-moon-200/70">
                     {a.user_name ?? '?'} — {a.artifact_name}
                     {a.round_number !== null && <> · round {a.round_number}</>} · {fmtDate(a.used_at)}
                   </li>
-                ))}
-              </ul>
+                )} />
             )}
           </div>
 
@@ -1554,13 +1539,11 @@ function GameDetailModal({ gameId, onClose }: { gameId: string; onClose: () => v
             {detail.log.length === 0 ? (
               <p className="text-xs text-moon-200/40">Journal vide.</p>
             ) : (
-              <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto scrollbar-thin rounded-lg border border-night-600/60 bg-night-800/40 p-3">
-                {detail.log.map((entry) => (
+              <PagedList items={detail.log} as="ul" className="flex max-h-64 flex-col gap-1 overflow-y-auto scrollbar-thin rounded-lg border border-night-600/60 bg-night-800/40 p-3" render={(entry) => (
                   <li key={entry.id} className="text-xs text-moon-200/70">
                     <span className="text-moon-200/30">{fmtDate(entry.created_at)}</span> — {entry.message}
                   </li>
-                ))}
-              </ul>
+                )} />
             )}
           </div>
         </div>
@@ -1654,22 +1637,18 @@ function ContentTab() {
           {roleFields.length > 0 && (
             <section>
               <h2 className="mb-2 font-display text-base text-moon-200">Textes des rôles</h2>
-              <div className="flex flex-col gap-3">
-                {roleFields.map((f) => (
+              <PagedList items={roleFields} className="flex flex-col gap-3" resetKey={q} render={(f) => (
                   <ContentField key={f.key} fieldKey={f.key} label={f.label} override={overrides[f.key]} onSaved={load} />
-                ))}
-              </div>
+                )} />
             </section>
           )}
 
           {rulesFields.length > 0 && (
             <section>
               <h2 className="mb-2 font-display text-base text-moon-200">Règles générales</h2>
-              <div className="flex flex-col gap-3">
-                {rulesFields.map((f) => (
+              <PagedList items={rulesFields} className="flex flex-col gap-3" resetKey={q} render={(f) => (
                   <ContentField key={f.key} fieldKey={f.key} label={f.label} override={overrides[f.key]} onSaved={load} />
-                ))}
-              </div>
+                )} />
             </section>
           )}
 
@@ -1869,8 +1848,7 @@ function RoleImagesSection() {
       {overriddenIds === null ? (
         <p className="text-sm text-moon-200/50">Chargement...</p>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-          {ROLE_ORDER.map((id) => {
+        <PagedList items={ROLE_ORDER} className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4" render={(id) => {
             const role = ROLES[id]
             const overridden = overriddenIds.has(id)
             const currentUrl = overridden
@@ -1938,8 +1916,7 @@ function RoleImagesSection() {
                 </div>
               </Card>
             )
-          })}
-        </div>
+          }} />
       )}
     </section>
   )
@@ -2201,8 +2178,7 @@ function EventsTab() {
       {events === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
       {events !== null && events.length === 0 && <p className="text-sm text-moon-200/50">Aucun événement créé.</p>}
 
-      <div className="flex flex-col gap-2">
-        {events?.map((e) => {
+      <PagedList items={(events ?? [])} className="flex flex-col gap-2" render={(e) => {
           const status = eventStatus(e)
           const bonus = bonusSummary(e)
           return (
@@ -2242,8 +2218,7 @@ function EventsTab() {
               <EventBannerImages event={e} onUploaded={load} />
             </Card>
           )
-        })}
-      </div>
+        }} />
 
       <EventFormDrawer
         open={formOpen}
@@ -2882,8 +2857,7 @@ function BannersTab() {
       {banners === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
       {banners !== null && banners.length === 0 && <p className="text-sm text-moon-200/50">Aucune bannière créée.</p>}
 
-      <div className="flex flex-col gap-2">
-        {banners?.map((b) => {
+      <PagedList items={(banners ?? [])} className="flex flex-col gap-2" render={(b) => {
           const status = bannerStatus(b)
           return (
             <Card key={b.id} className="flex flex-col gap-3 p-4">
@@ -2921,8 +2895,7 @@ function BannersTab() {
               <BannerImages banner={b} onUploaded={load} />
             </Card>
           )
-        })}
-      </div>
+        }} />
 
       <BannerFormDrawer
         open={formOpen}
@@ -3335,8 +3308,7 @@ function SeasonsTab() {
       {seasons === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
       {seasons !== null && seasons.length === 0 && <p className="text-sm text-moon-200/50">Aucune saison créée.</p>}
 
-      <div className="flex flex-col gap-2">
-        {seasons?.map((s) => {
+      <PagedList items={(seasons ?? [])} className="flex flex-col gap-2" render={(s) => {
           const status = seasonStatus(s)
           return (
             <Card key={s.id} className="flex flex-col gap-3 p-4">
@@ -3381,8 +3353,7 @@ function SeasonsTab() {
               </div>
             </Card>
           )
-        })}
-      </div>
+        }} />
 
       <SeasonFormDrawer
         open={formOpen}
@@ -3686,6 +3657,7 @@ function SeasonTiersPanel({ season, onBack }: { season: AdminSeason; onBack: () 
   const [editing, setEditing] = useState<AdminSeasonTier | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AdminSeasonTier | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const pagedTiers = usePaged(tiers)
 
   const load = useCallback(async () => {
     const [tiersRes, skinsRes] = await Promise.all([
@@ -3765,7 +3737,7 @@ function SeasonTiersPanel({ season, onBack }: { season: AdminSeason; onBack: () 
                 </tr>
               </thead>
               <tbody>
-                {tiers.map((tier) => (
+                {pagedTiers.pageItems.map((tier) => (
                   <tr key={tier.id} className="border-b border-night-800/60 last:border-0 hover:bg-night-800/25">
                     <td className="px-4 py-2.5 font-semibold text-moon-200">{tier.tier_number}</td>
                     <td className="px-3 py-2.5">
@@ -3815,6 +3787,8 @@ function SeasonTiersPanel({ season, onBack }: { season: AdminSeason; onBack: () 
           </div>
         </Card>
       )}
+
+      <Pager page={pagedTiers.page} totalPages={pagedTiers.totalPages} total={pagedTiers.total} onPage={pagedTiers.setPage} />
 
       <SeasonTierFormDrawer
         open={formOpen}
@@ -4224,8 +4198,7 @@ function QuestTemplatesTab() {
         <p className="text-sm text-moon-200/50">Aucune quête ne correspond à ce filtre.</p>
       )}
 
-      <div className="flex flex-col gap-2">
-        {filtered?.map((qt) => (
+      <PagedList items={(filtered ?? [])} className="flex flex-col gap-2" resetKey={filter} render={(qt) => (
           <Card key={qt.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-moon-200">
@@ -4269,8 +4242,7 @@ function QuestTemplatesTab() {
               </Button>
             </div>
           </Card>
-        ))}
-      </div>
+        )} />
 
       <QuestTemplateFormDrawer
         open={formOpen}
@@ -4916,6 +4888,7 @@ function StoreArtifactsTab() {
       (filter === 'all' || status === filter || (filter === 'active' && status === 'expiring')) &&
       (!q || sa.name_fr.toLowerCase().includes(q) || sa.key.toLowerCase().includes(q)),
   )
+  const pagedArtifacts = usePaged(filtered, `${filter}|${search}`)
 
   return (
     <div className="flex flex-col gap-4">
@@ -4965,7 +4938,7 @@ function StoreArtifactsTab() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(({ sa, status }) => (
+                {pagedArtifacts.pageItems.map(({ sa, status }) => (
                   <tr key={sa.id} className={`border-b border-night-800/60 last:border-0 hover:bg-night-800/25 ${status === 'expired' ? 'opacity-50' : ''}`}>
                     <td className="max-w-[260px] px-4 py-2.5">
                       <div className="flex min-w-0 items-center gap-2.5">
@@ -5034,6 +5007,8 @@ function StoreArtifactsTab() {
           </div>
         </Card>
       )}
+
+      <Pager page={pagedArtifacts.page} totalPages={pagedArtifacts.totalPages} total={pagedArtifacts.total} onPage={pagedArtifacts.setPage} />
 
       <StoreArtifactFormDrawer
         open={formOpen}
@@ -5596,6 +5571,7 @@ function StoreSkinsTab() {
   const filtered = withStatus.filter(
     ({ s, status }) => (filter === 'all' || status === filter || (filter === 'active' && status === 'expiring')) && (!q || s.name_fr.toLowerCase().includes(q)),
   )
+  const pagedSkins = usePaged(filtered, `${filter}|${search}`)
 
   return (
     <div className="flex flex-col gap-4">
@@ -5651,7 +5627,7 @@ function StoreSkinsTab() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(({ s, status }) => (
+                {pagedSkins.pageItems.map(({ s, status }) => (
                   <tr key={s.id} className={`border-b border-night-800/60 last:border-0 hover:bg-night-800/25 ${status === 'expired' ? 'opacity-50' : ''}`}>
                     <td className="max-w-[240px] px-4 py-2.5">
                       <div className="flex min-w-0 items-center gap-2.5">
@@ -5717,6 +5693,8 @@ function StoreSkinsTab() {
           </div>
         </Card>
       )}
+
+      <Pager page={pagedSkins.page} totalPages={pagedSkins.totalPages} total={pagedSkins.total} onPage={pagedSkins.setPage} />
 
       <StoreSkinFormDrawer
         open={formOpen}
@@ -6085,7 +6063,7 @@ function StoreSkinFormDrawer({
 // classique), mise à jour optimiste locale plutôt que de recharger toute la
 // page pour un simple changement de statut.
 // ----------------------------------------------------------------------------
-const MESSAGES_PAGE_SIZE = 20
+const MESSAGES_PAGE_SIZE = 10
 
 function MessagesTab() {
   const [messages, setMessages] = useState<FeedbackMsg[] | null>(null)
@@ -6140,8 +6118,7 @@ function MessagesTab() {
       {messages === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
       {messages !== null && messages.length === 0 && <p className="text-sm text-moon-200/50">Aucun message reçu pour l’instant.</p>}
 
-      <div className="flex flex-col gap-2">
-        {messages?.map((m) => {
+      <PagedList items={(messages ?? [])} className="flex flex-col gap-2" render={(m) => {
           const isUnread = !m.read_at
           return (
             <Card
@@ -6162,8 +6139,7 @@ function MessagesTab() {
               <p className="whitespace-pre-wrap text-sm text-moon-200/85">{m.message}</p>
             </Card>
           )
-        })}
-      </div>
+        }} />
 
       {total > 0 && (
         <div className="flex items-center justify-between gap-3 text-xs text-moon-200/50">
@@ -6399,6 +6375,7 @@ function CampaignHistoryPanel() {
   const [campaigns, setCampaigns] = useState<NotificationCampaign[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const pagedCampaigns = usePaged(campaigns)
 
   const load = useCallback(async () => {
     const { data, error: rpcError } = await supabase.rpc('admin_list_notification_campaigns', { p_limit: 30 })
@@ -6437,7 +6414,7 @@ function CampaignHistoryPanel() {
       {campaigns !== null && campaigns.length === 0 && (
         <p className="text-sm text-moon-200/50">Aucune notification envoyée ou programmée pour l’instant.</p>
       )}
-      {campaigns?.map((c) => (
+      {pagedCampaigns.pageItems.map((c) => (
         <Card key={c.id} className="flex flex-wrap items-start justify-between gap-3 p-4">
           <div className="min-w-0">
             <div className="mb-1 flex flex-wrap items-center gap-2">
@@ -6464,6 +6441,7 @@ function CampaignHistoryPanel() {
           )}
         </Card>
       ))}
+      <Pager page={pagedCampaigns.page} totalPages={pagedCampaigns.totalPages} total={pagedCampaigns.total} onPage={pagedCampaigns.setPage} />
     </div>
   )
 }
@@ -6520,8 +6498,7 @@ function SecurityTab() {
         <h2 className="mb-2 font-display text-base text-moon-200">Demandes de suppression de compte en attente</h2>
         {deletions === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
         {deletions !== null && deletions.length === 0 && <p className="text-sm text-moon-200/50">Aucune demande en attente.</p>}
-        <div className="flex flex-col gap-2">
-          {deletions?.map((d) => (
+        <PagedList items={(deletions ?? [])} className="flex flex-col gap-2" render={(d) => (
             <Card key={d.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
               <div>
                 <p className="text-sm font-semibold text-moon-200">{d.username}</p>
@@ -6531,8 +6508,7 @@ function SecurityTab() {
                 Supprimer le compte
               </Button>
             </Card>
-          ))}
-        </div>
+          )} />
       </section>
 
       <section>
@@ -6541,27 +6517,23 @@ function SecurityTab() {
         </h2>
         {accessLog === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
         {accessLog !== null && deniedAttempts.length === 0 && <p className="text-sm text-moon-200/50">Aucune tentative refusée récemment.</p>}
-        <div className="flex flex-col gap-1.5">
-          {deniedAttempts.map((a) => (
+        <PagedList items={deniedAttempts} className="flex flex-col gap-1.5" render={(a) => (
             <div key={a.id} className="rounded-lg border border-blood-700/50 bg-blood-700/10 px-3 py-2 text-xs text-blood-400">
               {a.username ?? a.user_id ?? 'Anonyme'} — refusé le {fmtDate(a.created_at)}
             </div>
-          ))}
-        </div>
+          )} />
       </section>
 
       <section>
         <h2 className="mb-2 font-display text-base text-moon-200">Journal des actions admin</h2>
         {auditLog === null && <p className="text-sm text-moon-200/50">Chargement...</p>}
         {auditLog !== null && auditLog.length === 0 && <p className="text-sm text-moon-200/50">Aucune action enregistrée.</p>}
-        <div className="flex flex-col gap-1.5">
-          {auditLog?.map((a) => (
+        <PagedList items={(auditLog ?? [])} className="flex flex-col gap-1.5" render={(a) => (
             <div key={a.id} className="rounded-lg border border-night-600/60 bg-night-800/40 px-3 py-2 text-xs text-moon-200/70">
               <span className="text-moon-200">{a.admin_username ?? a.admin_id}</span> — {ACTION_LABELS[a.action] ?? a.action}
               {a.target && <span className="text-moon-200/40"> · {a.target}</span>} · {fmtDate(a.created_at)}
             </div>
-          ))}
-        </div>
+          )} />
       </section>
 
       <ConfirmDialog
