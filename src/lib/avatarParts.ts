@@ -14,17 +14,19 @@ export const HAIRS = [
   'none', 'fade', 'afro', 'braids', 'puffs', 'curly', 'bun', 'flat', 'cornrows', 'locs',
   'long', 'knots', 'mohawk', 'topknot', 'gele', 'malibu_wave',
   'braids_pink', 'afro_pink', 'ponytail_pop', 'pompadour_ken', 'slick_back', 'beard_full',
+  'snow_afro',
 ] as const
 export const OUTFITS = [
   'tunic', 'tee', 'cloak', 'wrap', 'kente', 'dashiki', 'boubou', 'hunter', 'suit', 'hood', 'armor', 'royal', 'furcape',
   'dream_rose', 'cape_solidaire', 'louve_malibu',
   'varsity', 'gala_gown', 'tracksuit_neon', 'hawaiian',
+  'xmas_sweater',
 ] as const
 export const ACCESSORIES = [
   'none', 'ring', 'freckles', 'glasses', 'sunglasses', 'hoops', 'scar', 'beads', 'facepaint', 'eyepatch', 'coeur_lunettes',
   'lipstick_pink', 'cigarette', 'toothpick', 'gold_chain',
 ] as const
-export const HEADWEAR = ['none', 'headband', 'cap', 'hat', 'feather', 'crown', 'ribbon_pink', 'scarf_pink', 'cowboy_pink', 'bandana_biker'] as const
+export const HEADWEAR = ['none', 'headband', 'cap', 'hat', 'feather', 'crown', 'ribbon_pink', 'scarf_pink', 'cowboy_pink', 'bandana_biker', 'santa_hat', 'holly_crown', 'antlers'] as const
 export const FACES = ['oval', 'round', 'square', 'long', 'heart'] as const
 
 // Seuil-sentinelle utilisé pour les pièces exclusives à une saison (voir
@@ -71,6 +73,8 @@ export const PART_MIN_POINTS: {
     long: 550, knots: 800, mohawk: 1100, topknot: 1500, gele: 600, malibu_wave: SEASON_EXCLUSIVE_MIN_POINTS,
     braids_pink: STORE_EXCLUSIVE_MIN_POINTS, afro_pink: STORE_EXCLUSIVE_MIN_POINTS, ponytail_pop: STORE_EXCLUSIVE_MIN_POINTS,
     pompadour_ken: STORE_EXCLUSIVE_MIN_POINTS, slick_back: STORE_EXCLUSIVE_MIN_POINTS, beard_full: STORE_EXCLUSIVE_MIN_POINTS,
+    // Saison 2 « Noël au Village » (migration 0262).
+    snow_afro: SEASON_EXCLUSIVE_MIN_POINTS,
   },
   outfit: {
     tunic: 0, tee: 0, cloak: 100, wrap: 100, kente: 250, dashiki: 250, boubou: 350, hunter: 550, suit: 800,
@@ -78,6 +82,7 @@ export const PART_MIN_POINTS: {
     dream_rose: SEASON_EXCLUSIVE_MIN_POINTS, cape_solidaire: SEASON_EXCLUSIVE_MIN_POINTS, louve_malibu: SEASON_EXCLUSIVE_MIN_POINTS,
     varsity: STORE_EXCLUSIVE_MIN_POINTS, gala_gown: STORE_EXCLUSIVE_MIN_POINTS,
     tracksuit_neon: STORE_EXCLUSIVE_MIN_POINTS, hawaiian: STORE_EXCLUSIVE_MIN_POINTS,
+    xmas_sweater: SEASON_EXCLUSIVE_MIN_POINTS,
   },
   acc: {
     none: 0, ring: 0, freckles: 0, glasses: 100, sunglasses: 150, hoops: 200, scar: 250, beads: 350, facepaint: 550, eyepatch: 800,
@@ -86,7 +91,8 @@ export const PART_MIN_POINTS: {
     toothpick: STORE_EXCLUSIVE_MIN_POINTS, gold_chain: STORE_EXCLUSIVE_MIN_POINTS,
   },
   head: { none: 0, headband: 100, cap: 250, hat: 550, feather: 800, crown: 2000, ribbon_pink: SEASON_EXCLUSIVE_MIN_POINTS,
-    scarf_pink: STORE_EXCLUSIVE_MIN_POINTS, cowboy_pink: STORE_EXCLUSIVE_MIN_POINTS, bandana_biker: STORE_EXCLUSIVE_MIN_POINTS },
+    scarf_pink: STORE_EXCLUSIVE_MIN_POINTS, cowboy_pink: STORE_EXCLUSIVE_MIN_POINTS, bandana_biker: STORE_EXCLUSIVE_MIN_POINTS,
+    santa_hat: SEASON_EXCLUSIVE_MIN_POINTS, holly_crown: SEASON_EXCLUSIVE_MIN_POINTS, antlers: SEASON_EXCLUSIVE_MIN_POINTS },
   face: { oval: 0, round: 0, square: 0, long: 0, heart: 0 },
 }
 

@@ -483,21 +483,31 @@ function curtains(kind: AvatarConfig['hair'], h: string): ReactNode {
 const HAIR_COLORS: Partial<Record<AvatarConfig['hair'], string>> = {
   braids: '#2a1a10', locs: '#241610', malibu_wave: '#f4c95d',
   braids_pink: '#ff6fae', afro_pink: '#f8a9cb', ponytail_pop: '#ff5fa0', pompadour_ken: '#f2c14e',
+  snow_afro: '#e6edf5',
 }
 
 // Coiffures qui reçoivent un reflet doux sur le haut (les autres ont déjà leurs propres reflets ou couvrent la tête).
 const SHEEN_HAIRS: AvatarConfig['hair'][] = ['fade', 'afro', 'curly', 'flat', 'cornrows', 'locs', 'long', 'braids', 'braids_pink', 'puffs', 'knots', 'slick_back', 'bun', 'topknot', 'afro_pink']
-const COVERING: AvatarConfig['head'][] = ['cap', 'hat', 'cowboy_pink']
+const COVERING: AvatarConfig['head'][] = ['cap', 'hat', 'cowboy_pink', 'santa_hat']
 // Foulards : ils cachent les cheveux comme un couvre-chef, sans ombre portée sur le visage.
 const HAIR_HIDING: AvatarConfig['head'][] = ['scarf_pink', 'bandana_biker']
 
 function hairBack(kind: AvatarConfig['hair'], h: string, cover = false, hide = false): ReactNode {
-  if (hide) return null
-  if (cover && (kind === 'afro' || kind === 'afro_pink')) {
+  // Foulard sur un afro : les cheveux débordent de chaque côté, sous le foulard, au lieu de disparaître d'un coup.
+  if (hide && (kind === 'afro' || kind === 'afro_pink' || kind === 'snow_afro')) {
     return (
       <>
-        <CurlBlob cx={30} cy={43} r={3.6} bumps={6} br={5.4} h={h} curls />
-        <CurlBlob cx={70} cy={43} r={3.6} bumps={6} br={5.4} h={h} curls />
+        <CurlBlob cx={29.4} cy={42} r={4.6} bumps={7} br={6.4} h={h} curls />
+        <CurlBlob cx={70.6} cy={42} r={4.6} bumps={7} br={6.4} h={h} curls />
+      </>
+    )
+  }
+  if (hide) return null
+  if (cover && (kind === 'afro' || kind === 'afro_pink' || kind === 'snow_afro')) {
+    return (
+      <>
+        <CurlBlob cx={29.4} cy={42} r={4.6} bumps={7} br={6.4} h={h} curls />
+        <CurlBlob cx={70.6} cy={42} r={4.6} bumps={7} br={6.4} h={h} curls />
       </>
     )
   }
@@ -509,6 +519,7 @@ function hairBack(kind: AvatarConfig['hair'], h: string, cover = false, hide = f
       return <P d="M26 40C25 24 35.4 16 50 16S75 24 74 40C77 52 72 60 75.6 70C78 78 72 84 75 92H25C28 84 22 78 24.4 70C28 60 23 52 26 40Z" fill={h} />
     case 'afro':
     case 'afro_pink':
+    case 'snow_afro':
       return <CurlBlob cx={50} cy={35} r={21} bumps={14} br={8.4} h={h} curls />
     case 'braids':
       return (
@@ -717,6 +728,7 @@ function hairFront(kind: AvatarConfig['hair'], h: string, uid: string, headPath:
         </>
       )
     case 'afro_pink':
+    case 'snow_afro':
     case 'afro':
       return (
         <>
@@ -726,6 +738,16 @@ function hairFront(kind: AvatarConfig['hair'], h: string, uid: string, headPath:
               <path d={sparkle(41, 25.6, 1)} />
               <path d={sparkle(60, 24, 0.8)} />
               <path d={sparkle(51, 29.4, 0.6)} />
+            </g>
+          )}
+          {kind === 'snow_afro' && (
+            <g fill="#bfe4fb" stroke="#4a86b3" strokeWidth=".45">
+              <path d={sparkle(40, 25, 1.25)} />
+              <path d={sparkle(62, 23, 1.05)} />
+              <path d={sparkle(51, 29.6, 0.7)} />
+              <path d={sparkle(30, 34, 0.8)} />
+              <path d={sparkle(71, 33, 0.8)} />
+              <path d={sparkle(50, 14, 0.9)} />
             </g>
           )}
           <L d="M38 27c3-3 7-4.6 11-4.6M54 22.6c4 .6 7 2.4 9 5" c={hl} w="1.6" o={0.45} />
@@ -913,6 +935,31 @@ function outfitArt(kind: AvatarConfig['outfit'], skin: string, dark: string, uid
           {[[44.4, 88.6], [48, 86.4], [52, 86.4], [55.6, 88.6]].map(([x, y]) => (
             <ellipse key={x} cx={x} cy={y} rx="1.4" ry="1.7" fill="#c2432a" />
           ))}
+          {sh}
+        </>
+      )
+    case 'xmas_sweater':
+      return (
+        <>
+          <P d={SHOULDERS} fill="#b3302a" />
+          <g clipPath={`url(#${uid}osc)`}>
+            {/* bande nordique : crème, avec une frise de sapins verts */}
+            <rect x="0" y="85" width="100" height="8" fill="#f4efe4" />
+            {Array.from({ length: 12 }, (_, i) => (
+              <path key={i} d={`M${3 + i * 8.4} 93L${7.2 + i * 8.4} 85L${11.4 + i * 8.4} 93Z`} fill="#23724a" />
+            ))}
+            <rect x="0" y="84" width="100" height="1.2" fill="#d9d0bd" />
+            <rect x="0" y="93" width="100" height="1.2" fill="#d9d0bd" />
+            {/* flocons sur la poitrine */}
+            {[[18, 98], [34, 97], [50, 98.4], [66, 97], [82, 98]].map(([x, y]) => (
+              <circle key={x} cx={x} cy={y} r="1.2" fill="#f4efe4" />
+            ))}
+            <path d="M14 82c4-3 8-4 12-3.6M86 82c-4-3-8-4-12-3.6" fill="none" stroke="#d9695f" strokeWidth=".9" strokeLinecap="round" opacity=".7" />
+          </g>
+          {/* col roulé côtelé */}
+          <path d="M36.6 73.6C39.6 84 60.4 84 63.4 73.6" fill="none" stroke={INK} strokeWidth="6.2" strokeLinecap="round" />
+          <path d="M36.6 73.6C39.6 84 60.4 84 63.4 73.6" fill="none" stroke="#f4efe4" strokeWidth="4.4" strokeLinecap="round" />
+          <path d="M39 75.4C41.6 82 58.4 82 61 75.4" fill="none" stroke="#cfc6b2" strokeWidth=".7" strokeDasharray="1 1.2" />
           {sh}
         </>
       )
@@ -1460,7 +1507,18 @@ function faceAccessory(kind: AvatarConfig['acc'], skin: string, ey: number): Rea
 
 /** Couvre-chefs. Dessinés après les cheveux ; ceux qui couvrent la tête
  * (casquette, chapeau) vont avec `cover` côté cheveux. */
-function headwearArt(kind: AvatarConfig['head'], uid: string): ReactNode {
+/** Coiffures volumineuses : le couvre-chef se pose PAR-DESSUS le volume (plus haut, un peu plus large) au lieu de l'écraser. */
+const VOLUME_HAIRS: AvatarConfig['hair'][] = ['afro', 'afro_pink', 'snow_afro', 'curly', 'puffs', 'knots', 'bun', 'topknot', 'ponytail_pop', 'pompadour_ken']
+
+/** Pose d'un couvre-chef selon la coiffure : plus haut et un peu plus large sur un volume (afro, macarons, chignon...). */
+function Posed({ hair, children }: { hair: AvatarConfig['hair']; children: ReactNode }) {
+  const volume = VOLUME_HAIRS.includes(hair)
+  const lift = volume ? -2.4 : 0
+  const grow = volume ? 1.06 : 1
+  return <g transform={`translate(${50 - 50 * grow} ${lift + 34 - 34 * grow}) scale(${grow})`}>{children}</g>
+}
+
+function headwearArt(kind: AvatarConfig['head'], uid: string, hair: AvatarConfig['hair'] = 'none'): ReactNode {
   switch (kind) {
     case 'headband':
       return (
@@ -1541,6 +1599,90 @@ function headwearArt(kind: AvatarConfig['head'], uid: string): ReactNode {
           ))}
           <L d="M37 20.6l2.4 6M47.2 16l1 5" c="#fff4cf" w=".8" o={0.8} />
         </>
+      )
+    case 'santa_hat': {
+      // Pose : le bonnet épouse le front (bandeau de fourrure qui suit la courbure de la tête, ombre portée sur le front), le
+      // cône retombe sur le côté, le pompon est un petit amas de fourrure. Sur une coiffure volumineuse, il se pose plus haut.
+      const furY = (t: number) => 34.6 - 1.9 * (1 - (2 * t - 1) ** 2)
+      const fur = Array.from({ length: 11 }, (_, i) => {
+        const t = i / 10
+        return { x: 30.4 + 39.2 * t, y: furY(t), r: i % 2 ? 4.1 : 4.5 }
+      })
+      return (
+        <Posed hair={hair}>
+          {/* ombre du bandeau sur le front */}
+          <ellipse cx="50" cy="38.6" rx="17.4" ry="2.4" fill="#000" opacity=".2" />
+          {/* cône */}
+          <P d="M33 32C31.4 17.6 42.4 7.2 56.6 7C69.8 6.8 79 13.8 82.2 25C83.2 28.6 83.4 32 83 35.4L62 36L36 35.6Z" fill="#c92f2a" />
+          <path d="M60 9.6C72 11 80 18 82 28C82.6 31 82.8 33.4 82.6 35.2L71 35C71.6 25 68 15.6 60 9.6Z" fill="#8f1f1b" opacity=".4" />
+          <path d="M37.6 29C37.4 19.6 44.6 11.8 54 9.8" fill="none" stroke="#f0746c" strokeWidth="2" strokeLinecap="round" opacity=".55" />
+          <path d="M57.4 20.4C65.4 20.4 71.4 26 73.6 34" fill="none" stroke="#8f1f1b" strokeWidth="1" strokeLinecap="round" opacity=".5" />
+          {/* pompon de fourrure */}
+          {[[83.2, 38.6, 4.4], [80.4, 36.6, 3.3], [86, 36.8, 3.1], [83, 42, 3]].map(([x, y, r]) => (
+            <circle key={`${x}-${y}`} cx={x} cy={y} r={r + 0.9} fill={INK} />
+          ))}
+          {[[83.2, 38.6, 4.4], [80.4, 36.6, 3.3], [86, 36.8, 3.1], [83, 42, 3]].map(([x, y, r]) => (
+            <circle key={`w${x}-${y}`} cx={x} cy={y} r={r} fill="#f6f1e8" />
+          ))}
+          <path d="M80.4 36.8c1.4-1.6 3.4-1.8 4.8-.4M81.6 40.6c1.4.8 3.2.6 4.2-.6" fill="none" stroke="#cfc6b2" strokeWidth=".7" strokeLinecap="round" />
+          <circle cx="81.4" cy="37.4" r="1.3" fill="#fff" opacity=".85" />
+          {/* bandeau de fourrure : un chapelet de boules qui suit le front */}
+          {fur.map((f, i) => (
+            <circle key={`f${i}`} cx={f.x} cy={f.y} r={f.r + 0.9} fill={INK} />
+          ))}
+          {fur.map((f, i) => (
+            <circle key={`g${i}`} cx={f.x} cy={f.y} r={f.r} fill="#f6f1e8" />
+          ))}
+          <path d={`M32 ${furY(0.04) + 1.6}Q50 ${furY(0.5) + 4.6} 68 ${furY(0.96) + 1.6}`} fill="none" stroke="#d6cdb9" strokeWidth="1.6" strokeLinecap="round" opacity=".7" />
+          <path d={`M33 ${furY(0.06) - 2}Q50 ${furY(0.5) - 3.6} 67 ${furY(0.94) - 2}`} fill="none" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" opacity=".7" />
+        </Posed>
+      )
+    }
+    case 'holly_crown': {
+      // couronne de houx : feuilles pointues le long de l'arc du front, baies rouges au centre
+      const pts = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1].map((t) => {
+        const u = 1 - t
+        const x = u * u * 32.4 + 2 * u * t * 50 + t * t * 67.6
+        const y = u * u * 36.4 + 2 * u * t * 22.6 + t * t * 36.4
+        const dx = 2 * u * (50 - 32.4) + 2 * t * (67.6 - 50)
+        const dy = 2 * u * (22.6 - 36.4) + 2 * t * (36.4 - 22.6)
+        return { x, y, a: (Math.atan2(dy, dx) * 180) / Math.PI }
+      })
+      return (
+        <Posed hair={hair}>
+          <path d="M32.4 36.4Q50 22.6 67.6 36.4" fill="none" stroke="#14502e" strokeWidth="2.6" strokeLinecap="round" />
+          {pts.map((p, i) => (
+            <g key={i} transform={`translate(${p.x} ${p.y}) rotate(${p.a + (i % 2 ? 28 : -28)})`}>
+              <path d="M-5.8 0C-3.2-3.6 3-3.8 6 0C3 3.8 -3.2 3.6-5.8 0Z" fill={i % 2 ? '#1f8a4c' : '#2aa05a'} stroke="#0f4a28" strokeWidth=".7" strokeLinejoin="round" />
+              <path d="M-4.4 0H4.6" stroke="#0f4a28" strokeWidth=".5" opacity=".7" />
+            </g>
+          ))}
+          {[[46.6, 27], [50.4, 25.4], [54, 27.4]].map(([x, y]) => (
+            <g key={x}>
+              <circle cx={x} cy={y} r="2.3" fill="#d03a2e" stroke="#7a1c14" strokeWidth=".6" />
+              <circle cx={x - 0.7} cy={y - 0.7} r=".6" fill="#fff" opacity=".85" />
+            </g>
+          ))}
+        </Posed>
+      )
+    }
+    case 'antlers':
+      return (
+        <Posed hair={hair}>
+          {/* serre-tête brun et deux bois ramifiés */}
+          <path d="M32.6 36C36 28 43 25.6 50 25.6S64 28 67.4 36" fill="none" stroke={INK} strokeWidth="4.2" strokeLinecap="round" />
+          <path d="M32.6 36C36 28 43 25.6 50 25.6S64 28 67.4 36" fill="none" stroke="#7a4e2a" strokeWidth="2.6" strokeLinecap="round" />
+          {[-1, 1].map((sd) => {
+            const X = (x: number) => (sd < 0 ? x : 100 - x)
+            return (
+              <g key={sd}>
+                <path d={`M${X(38)} 29C${X(34)} 21 ${X(31)} 13 ${X(29)} 5M${X(34.6)} 20.4C${X(30.6)} 19.6 ${X(27)} 19.8 ${X(24)} 22M${X(31.6)} 12.6C${X(28)} 11.4 ${X(25.6)} 9.4 ${X(24.4)} 6.6`} fill="none" stroke={INK} strokeWidth="4" strokeLinecap="round" />
+                <path d={`M${X(38)} 29C${X(34)} 21 ${X(31)} 13 ${X(29)} 5M${X(34.6)} 20.4C${X(30.6)} 19.6 ${X(27)} 19.8 ${X(24)} 22M${X(31.6)} 12.6C${X(28)} 11.4 ${X(25.6)} 9.4 ${X(24.4)} 6.6`} fill="none" stroke="#b98450" strokeWidth="2.4" strokeLinecap="round" />
+                <path d={`M${X(36.6)} 25C${X(34.6)} 20 ${X(32.8)} 15 ${X(31.6)} 10`} fill="none" stroke="#e0b98a" strokeWidth=".7" strokeLinecap="round" opacity=".7" />
+              </g>
+            )
+          })}
+        </Posed>
       )
     case 'scarf_pink':
       return (
@@ -1676,7 +1818,7 @@ function AvatarArtImpl({ config, mood = 'smile' }: { config: AvatarConfig; mood?
       <Mouth uid={uid} skin={skin} mood={mood} lip={lipC} />
       {faceAccessory(config.acc, skin, ey)}
       {faceAccessory(acc2, skin, ey)}
-      {headwearArt(headwear, uid)}
+      {headwearArt(headwear, uid, config.hair)}
     </svg>
   )
 }
