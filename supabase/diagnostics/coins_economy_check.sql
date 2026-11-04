@@ -48,9 +48,9 @@ bal as (
 select jsonb_build_object(
   'real_players', (select count(*) from real_players),
   'active_players_14d', (select n from pct),
-  'weekly_earned', (select jsonb_build_object('p25', round(p25), 'p50', round(p50), 'p75', round(p75), 'p90', round(p90)) from pct),
-  'suggested_pass_price', (select jsonb_build_object('two_weeks_median', round(2 * p50, -1), 'two_weeks_p75', round(2 * p75, -1)) from pct),
-  'balances', (select jsonb_build_object('median', round(median_balance), 'p90', round(p90_balance), 'actives_with_1000_plus', with_1000, 'actives_with_2000_plus', with_2000) from bal),
+  'weekly_earned', (select jsonb_build_object('p25', round(p25::numeric), 'p50', round(p50::numeric), 'p75', round(p75::numeric), 'p90', round(p90::numeric)) from pct),
+  'suggested_pass_price', (select jsonb_build_object('two_weeks_median', round((2 * p50)::numeric, -1), 'two_weeks_p75', round((2 * p75)::numeric, -1)) from pct),
+  'balances', (select jsonb_build_object('median', round(median_balance::numeric), 'p90', round(p90_balance::numeric), 'actives_with_1000_plus', with_1000, 'actives_with_2000_plus', with_2000) from bal),
   'coins_in_circulation', (select coalesce(sum(loup_coins), 0) from real_players),
   'earned_by_reason_30d', (
     select coalesce(jsonb_agg(r order by (r->>'total')::bigint desc), '[]'::jsonb) from (
