@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -15,11 +15,11 @@ import { useMyAvatarConfig, notifyAvatarChanged } from '../components/AvatarEdit
 import type { StoreSkin } from '../lib/skins'
 import { useMySeason } from '../hooks/useMySeason'
 import { markStoreSeen, useStoreUnseen } from '../hooks/useStoreUnseen'
-import { SeasonHub, SeasonQuestsCard } from '../components/SeasonHub'
+import { SeasonHub } from '../components/SeasonHub'
 
 const STREAK_REWARD_COINS = 50 // à garder identique à claim_daily_login (migration 0196)
 
-type Tab = 'quests' | 'store' | 'season' | 'mine' | 'history'
+type Tab = 'quests' | 'store' | 'season' | 'mine'
 
 const box = 'rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/70 to-night-900/85 shadow-card'
 
@@ -45,34 +45,13 @@ function formatCountdown(ms: number): string {
   return `${pad(h)}:${pad(m)}:${pad(s)}`
 }
 
-/** Compte à rebours mis en avant : gros chiffres tabulaires (les secondes
- * défilent visiblement), fond rouge/ambre pulsant quand il reste moins d'une
- * heure — pour créer l'urgence de revenir avant la remise à zéro des quêtes
- * du jour, plutôt qu'une petite mention discrète dans l'en-tête. */
+/** Compte à rebours compact (en-tête de la carte des quêtes) : les secondes défilent, rouge pendant la dernière heure. */
 function CountdownClock({ ms }: { ms: number }) {
   const { t } = useLanguage()
   const urgent = ms < 60 * 60 * 1000
   return (
-    <div
-      className={`flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 ${
-        urgent ? 'border-blood-500/50 bg-blood-600/15 animate-pulse' : 'border-amber-400/40 bg-amber-400/10'
-      }`}
-    >
-      <span className={`text-xs font-semibold ${urgent ? 'text-blood-300' : 'text-amber-300'}`}>
-        ⏰ {t('rewards.streak.timerLabel')}
-      </span>
-      <span className={`font-display text-xl font-bold tabular-nums tracking-wide ${urgent ? 'text-blood-300' : 'text-amber-300'}`}>
-        {formatCountdown(ms)}
-      </span>
-    </div>
-  )
-}
-
-function SoonBadge() {
-  const { t } = useLanguage()
-  return (
-    <span className="rounded-full border border-moon-400/40 bg-moon-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-moon-300">
-      {t('hub.soonFull')}
+    <span className={`font-body text-[11px] font-normal normal-case tracking-normal tabular-nums ${urgent ? 'text-blood-300' : 'text-amber-300'}`}>
+      ⏰ {t('rewards.streak.timerLabel')} {formatCountdown(ms)}
     </span>
   )
 }
@@ -100,8 +79,9 @@ export default function Rewards() {
   // aucun onglet connu.
   const [searchParams] = useSearchParams()
   const [tab, setTab] = useState<Tab>(() => {
-    const requested = searchParams.get('tab')
-    const valid: Tab[] = ['quests', 'store', 'season', 'mine', 'history']
+    // « history » (anciens liens) ouvre « Mon sac », qui contient désormais l'historique.
+    const requested = searchParams.get('tab') === 'history' ? 'mine' : searchParams.get('tab')
+    const valid: Tab[] = ['quests', 'store', 'season', 'mine']
     return (valid as string[]).includes(requested ?? '') ? (requested as Tab) : 'quests'
   })
   const [summary, setSummary] = useState<LoupCoinsSummary | null>(null)
@@ -113,8 +93,6 @@ export default function Rewards() {
   const [error, setError] = useState<string | null>(null)
   const [questScope, setQuestScope] = useState<'day' | 'season'>('day')
   const [historyPage, setHistoryPage] = useState(0)
-  const [canScrollRight, setCanScrollRight] = useState(false)
-  const navRef = useRef<HTMLElement>(null)
   // ?section=skins ouvre directement les skins (lien de l'annonce « nouveaux
   // articles » et de la notification push correspondante).
   const [storeTab, setStoreTab] = useState<'artifacts' | 'skins'>(() => (searchParams.get('section') === 'skins' ? 'skins' : 'artifacts'))
@@ -168,8 +146,7 @@ export default function Rewards() {
     { id: 'quests', icon: '📜', label: t('hub.menu.quests') },
     { id: 'store', icon: '🛒', label: t('hub.menu.store') },
     { id: 'season', icon: '🏆', label: t('hub.menu.season') },
-    { id: 'mine', icon: '🎒', label: t('rewards.tab.mine') },
-    { id: 'history', icon: '🧾', label: t('rewards.tab.history') },
+    { id: 'mine', icon: '🎒', label: t('rewards.tab.bag') },
   ]
 
   const streak = profile?.login_streak ?? 0
@@ -189,20 +166,11 @@ export default function Rewards() {
   const daysToReward = 7 - (streak % 7)
 
   const allQuests = quests ?? []
+  const questsClaimable = allQuests.filter((q) => q.progress >= q.target && !q.claimed_at).length
   const dayQuests = quests === null ? null : allQuests.filter((q) => q.scope !== 'season')
   const seasonQuests = allQuests.filter((q) => q.scope === 'season')
   const hasSeasonQuests = seasonQuests.length > 0
   const shownQuests = questScope === 'season' && hasSeasonQuests ? seasonQuests : dayQuests
-
-  const updateScrollHint = useCallback(() => {
-    const el = navRef.current
-    if (el) setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 6)
-  }, [])
-  useEffect(() => {
-    updateScrollHint()
-    window.addEventListener('resize', updateScrollHint)
-    return () => window.removeEventListener('resize', updateScrollHint)
-  }, [updateScrollHint])
 
   const txs = summary?.transactions ?? []
   const historyPageCount = Math.max(1, Math.ceil(txs.length / PAGE_SIZE))
@@ -210,63 +178,41 @@ export default function Rewards() {
   return (
     <div className="min-h-screen px-4 pt-8">
       <div className="mx-auto flex max-w-3xl flex-col gap-4">
-        <header>
+        {/* En-tête et solde sur une seule ligne : le solde est l'information que l'on vient chercher ici. */}
+        <header className="flex items-center justify-between gap-3">
           <h1 className="font-display text-2xl text-moon-200">{t('hub.title')}</h1>
-          <p className="mt-0.5 text-sm text-moon-200/60">{t('rewards.subtitle')}</p>
+          <button
+            type="button"
+            onClick={() => setTab('mine')}
+            className="flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1.5 font-display text-lg text-amber-300"
+            aria-label={t('loupStore.balance')}
+          >
+            <LoupCoinIcon className="h-5 w-5" /> {balance}
+          </button>
         </header>
 
-        <div className={`${box} flex items-center justify-between gap-3 p-4`}>
-          <div>
-            <p className="text-[11px] uppercase tracking-wider text-moon-200/50">{t('loupStore.balance')}</p>
-            <p className="flex items-center gap-2 font-display text-3xl text-amber-300">
-              <LoupCoinIcon className="h-8 w-8" /> {balance}
-            </p>
-          </div>
-          {summary && (
-            <div className="text-right text-xs text-moon-200/60">
-              <p>
-                {t('loupStore.totalEarned')} : <b className="text-moon-200">{summary.total_earned}</b>
-              </p>
-              <p>
-                {t('loupStore.totalSpent')} : <b className="text-moon-200">{summary.total_spent}</b>
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="relative">
-        <nav ref={navRef} onScroll={updateScrollHint} className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 pr-10 [scrollbar-width:none]">
+        {/* Quatre onglets fixes, tous visibles à 390 px (plus de défilement horizontal ni de flèche « plus »). */}
+        <nav className="grid grid-cols-4 gap-1 rounded-2xl border border-night-600/60 bg-night-900/40 p-1">
           {tabs.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => setTab(item.id)}
-              className={`relative flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-semibold transition-colors ${
-                tab === item.id ? 'border-blood-500 bg-blood-600 text-[#fdf6e3]' : 'border-night-600/60 bg-night-900/40 text-moon-200/60 hover:text-moon-200'
+              className={`relative flex flex-col items-center gap-0.5 rounded-xl py-2 text-[11px] font-semibold transition-colors ${
+                tab === item.id ? 'bg-blood-600 text-[#fdf6e3]' : 'text-moon-200/60 hover:text-moon-200'
               }`}
             >
-              <span aria-hidden="true">{item.icon}</span>
+              <span aria-hidden="true" className="text-base leading-none">{item.icon}</span>
               {item.label}
               {item.id === 'store' && storeUnseen > 0 && (
-                <span aria-hidden="true" className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-night-950 bg-blood-500" />
+                <span aria-hidden="true" className="absolute right-2 top-1.5 h-2.5 w-2.5 rounded-full border-2 border-night-950 bg-blood-500" />
               )}
-              {item.soon && (
-                <span className="rounded-full border border-moon-400/40 bg-moon-400/10 px-1.5 text-[8px] uppercase tracking-wider text-moon-300">{t('hub.soon')}</span>
+              {item.id === 'quests' && questsClaimable > 0 && (
+                <span className="absolute right-1.5 top-1 rounded-full bg-amber-400 px-1.5 text-[9px] font-bold text-night-950">{questsClaimable}</span>
               )}
             </button>
           ))}
         </nav>
-          {canScrollRight && (
-            <button
-              type="button"
-              aria-label={t('rewards.tabs.more')}
-              onClick={() => navRef.current?.scrollBy({ left: 160, behavior: 'smooth' })}
-              className="absolute -right-4 top-0 flex h-[calc(100%-4px)] w-12 items-center justify-end bg-gradient-to-l from-night-950 via-night-950/85 to-transparent pr-3 text-moon-300"
-            >
-              <span className="animate-pulse text-lg leading-none" aria-hidden="true">›</span>
-            </button>
-          )}
-        </div>
 
         <ErrorText>{error}</ErrorText>
 
@@ -287,57 +233,15 @@ export default function Rewards() {
               </div>
             )}
 
-            {!hasSeasonQuests &&
-              (season ? (
-                <SeasonQuestsCard
-                  season={season}
-                  claimableQuests={(dayQuests ?? []).filter((q) => q.progress >= q.target && !q.claimed_at).length}
-                  onOpen={() => setTab('season')}
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-moon-400/30 bg-moon-400/[0.04] p-4 text-center">
-                  <p className="font-display text-base text-moon-200">{t('hub.quests.seasonTitle')}</p>
-                  <p className="text-xs text-moon-200/60">{t('hub.quests.seasonBody')}</p>
-                  <SoonBadge />
-                </div>
-              ))}
-
-            {questScope === 'day' || !hasSeasonQuests ? (
-              <>
-            <Section title={t('rewards.streak.title')} right={<span className="text-xs font-normal text-moon-300">{streak} {t('dailyStreak.days')} 🔥</span>}>
-              <div className="grid grid-cols-6 gap-1.5">
-                {streakDays.map((day) => (
-                  <div
-                    key={day.d}
-                    className={`flex flex-col items-center gap-1 rounded-lg border py-2 text-[10px] capitalize ${
-                      day.done
-                        ? 'border-amber-400/40 bg-amber-400/10 text-amber-300'
-                        : day.gift
-                          ? 'border-moon-400/40 bg-moon-400/[0.06] text-moon-300'
-                          : 'border-night-600/60 bg-night-900/40 text-moon-200/40'
-                    } ${day.d === 0 ? 'ring-1 ring-moon-400/60' : ''}`}
-                  >
-                    {day.label}
-                    <span className="text-sm">{day.done ? '✓' : day.gift ? '🎁' : '·'}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="text-center text-xs text-moon-200/60">
-                {t('rewards.streak.next', { days: daysToReward, coins: STREAK_REWARD_COINS })}
-              </p>
-              <p className="text-center text-[11px] text-moon-200/40">{t('rewards.streak.rule', { coins: STREAK_REWARD_COINS })}</p>
-            </Section>
-
-              </>
-            ) : null}
-
-            <Section title={questScope === 'season' && hasSeasonQuests ? t('hub.quests.seasonTitle') : t('hub.quests.daily')}>
-              {questScope !== 'season' && <CountdownClock ms={resetIn} />}
+            <Section
+              title={questScope === 'season' && hasSeasonQuests ? t('hub.quests.seasonTitle') : t('hub.quests.daily')}
+              right={questScope !== 'season' ? <CountdownClock ms={resetIn} /> : undefined}
+            >
               {shownQuests === null ? (
                 <div className="h-24 animate-pulse rounded-xl bg-night-900/40" />
               ) : (
                 <ul className="flex flex-col gap-3">
-                  {shownQuests.map((q) => {
+                  {sortQuests(shownQuests).map((q) => {
                     const done = q.progress >= q.target
                     const claimed = !!q.claimed_at
                     const segments = q.target > 0 && q.target <= 12 ? q.target : null
@@ -385,6 +289,34 @@ export default function Rewards() {
               )}
             </Section>
 
+            {questScope === 'day' || !hasSeasonQuests ? (
+              <>
+            <Section title={t('rewards.streak.title')} right={<span className="text-xs font-normal text-moon-300">{streak} {t('dailyStreak.days')} 🔥</span>}>
+              <div className="grid grid-cols-6 gap-1.5">
+                {streakDays.map((day) => (
+                  <div
+                    key={day.d}
+                    className={`flex flex-col items-center gap-1 rounded-lg border py-2 text-[10px] capitalize ${
+                      day.done
+                        ? 'border-amber-400/40 bg-amber-400/10 text-amber-300'
+                        : day.gift
+                          ? 'border-moon-400/40 bg-moon-400/[0.06] text-moon-300'
+                          : 'border-night-600/60 bg-night-900/40 text-moon-200/40'
+                    } ${day.d === 0 ? 'ring-1 ring-moon-400/60' : ''}`}
+                  >
+                    {day.label}
+                    <span className="text-sm">{day.done ? '✓' : day.gift ? '🎁' : '·'}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-center text-xs text-moon-200/60">
+                {t('rewards.streak.next', { days: daysToReward, coins: STREAK_REWARD_COINS })}
+              </p>
+            </Section>
+
+              </>
+            ) : null}
+
           </>
         )}
 
@@ -420,17 +352,6 @@ export default function Rewards() {
 
         {tab === 'mine' && (
           <>
-            <Section title={t('loupStore.myArtifacts.title')}>
-              {!myArtifacts || myArtifacts.length === 0 ? (
-                <p className="text-sm text-moon-200/50">{t('loupStore.myArtifacts.empty')}</p>
-              ) : (
-                <ul className="flex flex-col gap-2">
-                  {myArtifacts.map((a) => (
-                    <MyArtifactRow key={a.id} artifact={a} />
-                  ))}
-                </ul>
-              )}
-            </Section>
             <Section title={t('rewards.mySkins')}>
               {!ownedSkins || ownedSkins.length === 0 ? (
                 <p className="text-sm text-moon-200/50">{t('rewards.noSkins')}</p>
@@ -448,11 +369,21 @@ export default function Rewards() {
                 </div>
               )}
             </Section>
-          </>
-        )}
-
-        {tab === 'history' && (
-          <Section title={t('loupStore.history.title')}>
+            <Section title={t('loupStore.myArtifacts.title')}>
+              {!myArtifacts || myArtifacts.length === 0 ? (
+                <p className="text-sm text-moon-200/50">{t('loupStore.myArtifacts.empty')}</p>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {myArtifacts.map((a) => (
+                    <MyArtifactRow key={a.id} artifact={a} />
+                  ))}
+                </ul>
+              )}
+            </Section>
+          <Section
+            title={t('loupStore.history.title')}
+            right={summary ? <span className="text-[11px] font-normal text-moon-200/50">+{summary.total_earned} · −{summary.total_spent}</span> : undefined}
+          >
             {txs.length === 0 ? (
               <p className="text-sm text-moon-200/50">{t('loupStore.history.empty')}</p>
             ) : (
@@ -477,8 +408,16 @@ export default function Rewards() {
               </>
             )}
           </Section>
+          </>
         )}
+
       </div>
     </div>
   )
+}
+
+/** À réclamer d'abord, puis en cours, puis déjà réclamées. */
+function sortQuests<T extends { progress: number; target: number; claimed_at: string | null }>(list: T[]): T[] {
+  const rank = (q: T) => (q.claimed_at ? 2 : q.progress >= q.target ? 0 : 1)
+  return [...list].sort((a, b) => rank(a) - rank(b))
 }

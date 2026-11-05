@@ -2576,6 +2576,7 @@ export const translations = {
   'play.brief.day': { fr: 'Le jour, le village débat et vote pour éliminer un suspect.', en: 'By day, the village debates and votes to eliminate a suspect.' },
   'play.brief.win': { fr: 'Le camp qui élimine l’autre remporte la partie et gagne des points de rang.', en: 'The side that eliminates the other wins and earns rank points.' },
   'rewards.subtitle': { fr: 'Quêtes, Store et Saison.', en: 'Quests, Store and Season.' },
+  'rewards.tab.bag': { fr: 'Mon sac', en: 'My bag' },
   'rewards.tab.mine': { fr: 'Mes objets', en: 'My items' },
   'rewards.tab.history': { fr: 'Historique', en: 'History' },
   'rewards.streak.title': { fr: 'Série de connexion', en: 'Login streak' },
