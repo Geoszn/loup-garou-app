@@ -167,9 +167,10 @@ interface FeedbackMsg {
 }
 
 interface AdminUser {
+  status?: 'verified' | 'pending' | 'guest' | 'bot'
   id: string
   username: string
-  email: string
+  email: string | null
   created_at: string
   is_admin: boolean
   is_banned: boolean
@@ -837,6 +838,9 @@ function UsersTab({ currentUserId, seed }: { currentUserId: string | null; seed:
   const [adminOnlyInput, setAdminOnlyInput] = useState(false)
   const [filters, setFilters] = useState({ username: '', email: '', from: '', to: '', bannedOnly: false, adminOnly: false })
   const [page, setPage] = useState(1)
+  // Statut du compte (e-mail confirmé ou non) : appliqué tout de suite par les pastilles, hors du tiroir de filtres.
+  const [status, setStatus] = useState<string | null>(null)
+  const [counts, setCounts] = useState<Record<string, number>>({})
 
   // Arrivée depuis une carte de l'onglet Vue d'ensemble (ex. "Comptes
   // suspendus") : applique le filtre correspondant directement, sans que
@@ -870,8 +874,9 @@ function UsersTab({ currentUserId, seed }: { currentUserId: string | null; seed:
   const [banReason, setBanReason] = useState('')
   const [detailId, setDetailId] = useState<string | null>(null)
 
-  const load = useCallback(async (f: typeof filters, p: number) => {
+  const load = useCallback(async (f: typeof filters, p: number, st: string | null) => {
     const { data, error: rpcError } = await supabase.rpc('admin_list_users', {
+      p_status: st,
       p_username: f.username.trim() || null,
       p_email: f.email.trim() || null,
       p_created_from: f.from || null,
@@ -886,15 +891,16 @@ function UsersTab({ currentUserId, seed }: { currentUserId: string | null; seed:
       return
     }
     setError(null)
-    const result = data as { users: AdminUser[]; total: number }
+    const result = data as { users: AdminUser[]; total: number; counts?: Record<string, number> }
     setUsers(result.users)
     setTotal(result.total)
+    setCounts(result.counts ?? {})
   }, [])
 
   useEffect(() => {
-    load(filters, page)
+    load(filters, page, status)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, page])
+  }, [filters, page, status])
 
   function applyFilters(e: FormEvent) {
     e.preventDefault()
@@ -930,7 +936,7 @@ function UsersTab({ currentUserId, seed }: { currentUserId: string | null; seed:
         setError(rpcError.message)
         return
       }
-      load(filters, page)
+      load(filters, page, status)
     } else {
       setBanTarget(u)
       setBanReason('')
@@ -951,7 +957,7 @@ function UsersTab({ currentUserId, seed }: { currentUserId: string | null; seed:
       setError(rpcError.message)
       return
     }
-    load(filters, page)
+    load(filters, page, status)
   }
 
   async function toggleAdmin(u: AdminUser) {
@@ -962,7 +968,7 @@ function UsersTab({ currentUserId, seed }: { currentUserId: string | null; seed:
       setError(rpcError.message)
       return
     }
-    load(filters, page)
+    load(filters, page, status)
   }
 
   return (
@@ -979,6 +985,30 @@ function UsersTab({ currentUserId, seed }: { currentUserId: string | null; seed:
             <span className="rounded-full bg-blood-600 px-1.5 py-0.5 text-[10px] text-[#fdf6e3]">{activeFilterCount}</span>
           )}
         </button>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {([
+          [null, 'Tous', (counts.verified ?? 0) + (counts.pending ?? 0) + (counts.guest ?? 0) + (counts.bot ?? 0)],
+          ['verified', 'E-mail confirmé', counts.verified ?? 0],
+          ['pending', 'À confirmer', counts.pending ?? 0],
+          ['guest', 'Invités', counts.guest ?? 0],
+          ['bot', 'Bots', counts.bot ?? 0],
+        ] as [string | null, string, number][]).map(([key, label, n]) => (
+          <button
+            key={label}
+            type="button"
+            onClick={() => {
+              setStatus(key)
+              setPage(1)
+            }}
+            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              status === key ? 'border-moon-400/60 bg-moon-400/15 text-moon-200' : 'border-night-600/70 text-moon-200/60 hover:border-moon-400/40'
+            }`}
+          >
+            {label} · {n}
+          </button>
+        ))}
       </div>
 
       <ErrorText>{error}</ErrorText>
@@ -1000,9 +1030,13 @@ function UsersTab({ currentUserId, seed }: { currentUserId: string | null; seed:
                 {u.is_banned && (
                   <span className="rounded-full bg-night-600 px-2 py-0.5 text-[10px] uppercase text-moon-200/60">Suspendu</span>
                 )}
+                {u.status === 'verified' && <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] uppercase text-emerald-400">E-mail confirmé</span>}
+                {u.status === 'pending' && <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] uppercase text-amber-400">À confirmer</span>}
+                {u.status === 'guest' && <span className="rounded-full bg-night-600 px-2 py-0.5 text-[10px] uppercase text-moon-200/60">Invité</span>}
+                {u.status === 'bot' && <span className="rounded-full bg-night-600 px-2 py-0.5 text-[10px] uppercase text-moon-200/60">Bot</span>}
               </p>
               <p className="text-xs text-moon-200/50">
-                {u.email} · {u.games_count} partie(s) · inscrit le {fmtDate(u.created_at)}
+                {u.email ?? 'sans e-mail'} · {u.games_count} partie(s) · inscrit le {fmtDate(u.created_at)}
               </p>
               {u.is_banned && u.banned_reason && <p className="mt-1 text-xs text-blood-400">Motif : {u.banned_reason}</p>}
             </div>

@@ -60,6 +60,20 @@ function QueenBanner() {
   )
 }
 
+/** Fenêtre d'une annonce : publiée le `from`, retirée le `until`. Passé `until`, plus personne ne la voit. */
+interface AnnouncementWindow {
+  from: string
+  until: string
+}
+const TRIBES_WINDOW: AnnouncementWindow = { from: '2026-10-10T00:00:00Z', until: '2026-11-10T00:00:00Z' }
+const QUEEN_WINDOW: AnnouncementWindow = { from: '2026-10-11T00:00:00Z', until: '2026-11-11T00:00:00Z' }
+
+/** Vrai si l'annonce est encore dans sa fenêtre ET si le compte existait avant sa publication. */
+function announcementApplies(createdAt: string | undefined, w: AnnouncementWindow): boolean {
+  if (Date.now() >= new Date(w.until).getTime()) return false
+  return !createdAt || new Date(createdAt).getTime() < new Date(w.from).getTime()
+}
+
 function seasonAnnouncementKey(slug: string): string {
   return `season-launch-${slug}`
 }
@@ -174,13 +188,15 @@ export function AnnouncementsModal() {
     // l'appli après coup, une fois la saison déjà bien avancée ou terminée.
     // Les tribus : une seule fois, pour tout le monde.
     // La Reine Louve : la plus récente, donc en premier.
-    if (!seen.includes(QUEEN_ANNOUNCEMENT_KEY)) list.push('queen')
-    if (!seen.includes(TRIBES_ANNOUNCEMENT_KEY)) list.push('tribes')
+    // Nouveautés d'octobre : seulement pour les comptes déjà là au lancement, et pendant une durée limitée.
+    // Un compte créé après connaît ces fonctions comme faisant partie du jeu : rien de « nouveau » à lui annoncer.
+    if (announcementApplies(user?.created_at, QUEEN_WINDOW) && !seen.includes(QUEEN_ANNOUNCEMENT_KEY)) list.push('queen')
+    if (announcementApplies(user?.created_at, TRIBES_WINDOW) && !seen.includes(TRIBES_ANNOUNCEMENT_KEY)) list.push('tribes')
     if (season && season.is_active && !seen.includes(seasonAnnouncementKey(season.slug))) list.push('season')
     if (store) list.push('store')
     if (comp) list.push('compensation')
     setSlides(list)
-  }, [slides, seen, comp, season, store, myAvatar.loaded, myAvatar.config])
+  }, [slides, seen, comp, season, store, myAvatar.loaded, myAvatar.config, user])
 
   if (!slides || slides.length === 0) return null
   const current = slides[index]
