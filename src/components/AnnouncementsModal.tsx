@@ -68,6 +68,8 @@ interface AnnouncementWindow {
 }
 const TRIBES_WINDOW: AnnouncementWindow = { from: '2026-10-10T00:00:00Z', until: '2026-11-10T00:00:00Z' }
 const QUEEN_WINDOW: AnnouncementWindow = { from: '2026-10-11T00:00:00Z', until: '2026-11-11T00:00:00Z' }
+// Collection boutique Octobre Rose : vente jusqu'au 7 novembre ; un compte créé après son lancement ne la voit jamais.
+const STORE_WINDOW: AnnouncementWindow = { from: '2026-10-10T00:00:00Z', until: '2026-11-07T00:00:00Z' }
 
 /** Vrai si l'annonce est encore dans sa fenêtre ET si le compte existait avant sa publication. */
 function announcementApplies(createdAt: string | undefined, w: AnnouncementWindow): boolean {
@@ -196,7 +198,7 @@ export function AnnouncementsModal() {
     if (announcementApplies(user?.created_at, QUEEN_WINDOW) && !seen.includes(QUEEN_ANNOUNCEMENT_KEY)) list.push('queen')
     if (announcementApplies(user?.created_at, TRIBES_WINDOW) && !seen.includes(TRIBES_ANNOUNCEMENT_KEY)) list.push('tribes')
     if (season && season.is_active && !seen.includes(seasonAnnouncementKey(season.slug))) list.push('season')
-    if (store) list.push('store')
+    if (store && announcementApplies(user?.created_at, STORE_WINDOW)) list.push('store')
     if (comp) list.push('compensation')
     setSlides(list)
   }, [slides, seen, comp, season, store, myAvatar.loaded, myAvatar.config, user])
