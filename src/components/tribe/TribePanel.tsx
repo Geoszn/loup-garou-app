@@ -141,6 +141,15 @@ function TribeLanding({
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<TribeSearchResult[] | null>(null)
   const debounced = useDebounced(query.trim(), 350)
+  // « Tribus qui recrutent » (migration 0269) : proposées sans avoir à connaître un nom. Section masquée si la fonction manque.
+  const [recruiting, setRecruiting] = useState<TribeSearchResult[] | null>(null)
+  const loadRecruiting = useCallback(async () => {
+    const { data, error: rpcError } = await supabase.rpc('list_recruiting_tribes')
+    setRecruiting(rpcError ? null : ((data as TribeSearchResult[]) ?? []))
+  }, [])
+  useEffect(() => {
+    void loadRecruiting()
+  }, [loadRecruiting])
 
   const search = useCallback(async (q: string) => {
     if (q.length < 2) {
@@ -171,15 +180,39 @@ function TribeLanding({
     const { error: rpcError } = await supabase.rpc('request_join_tribe', { p_tribe_id: tribeId })
     setBusy(null)
     if (rpcError) setError(rpcError.message)
-    await Promise.all([search(debounced), refresh()])
+    await Promise.all([search(debounced), refresh(), loadRecruiting()])
   }
 
   async function cancelRequest(id: string) {
     setError(null)
     const { error: rpcError } = await supabase.rpc('cancel_tribe_join_request', { p_request_id: id })
     if (rpcError) setError(rpcError.message)
-    await Promise.all([search(debounced), refresh()])
+    await Promise.all([search(debounced), refresh(), loadRecruiting()])
   }
+
+  // Une ligne de tribu (recherche ou « qui recrutent ») avec son bouton de demande.
+  const tribeRow = (r: TribeSearchResult) => (
+    <div key={r.id} className="flex items-center gap-3 rounded-2xl border border-night-600/60 bg-night-900/50 p-3">
+      <TribeShield emblem={r.emblem} color={r.color} className="h-11 w-11 text-xl" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-moon-200">{r.name}</p>
+        <p className="truncate text-[11px] text-moon-200/50">{t('tribe.members.count', { n: r.member_count, max: 30 })}{r.motto ? ` · ${r.motto}` : ''}</p>
+      </div>
+      {r.requested ? (
+        <button type="button" onClick={() => r.request_id && cancelRequest(r.request_id)} className="shrink-0 rounded-lg bg-night-700 px-3 py-1.5 text-xs text-moon-200/70">
+          {t('tribe.request.sentShort')} ✓
+        </button>
+      ) : r.full ? (
+        <span className="text-[11px] text-moon-200/45">{t('tribe.search.full')}</span>
+      ) : !r.accepting ? (
+        <span className="text-[11px] text-moon-200/45">{t('tribe.search.closed')}</span>
+      ) : (
+        <button type="button" disabled={busy === r.id} onClick={() => requestJoin(r.id)} className="shrink-0 rounded-lg bg-blood-600 px-3 py-1.5 text-xs font-semibold text-[#fdf6e3] disabled:opacity-50">
+          {t('tribe.request.short')}
+        </button>
+      )}
+    </div>
+  )
 
   return (
     <div className="flex flex-col gap-4">
@@ -195,44 +228,8 @@ function TribeLanding({
         <FriendsPanel />
       ) : (
         <>
-          <Card className="flex flex-col gap-3">
-            <div>
-              <h2 className="font-display text-lg text-moon-200">{t('tribe.search.title')}</h2>
-              <p className="text-xs text-moon-200/55">{t('tribe.search.subtitle')}</p>
-            </div>
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`🔍 ${t('tribe.search.placeholder')}`} className={fieldCls} />
-            {debounced.length >= 2 && results !== null && (
-              results.length === 0 ? (
-                <p className="text-xs text-moon-200/45">{t('tribe.search.none')}</p>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {results.map((r) => (
-                    <div key={r.id} className="flex items-center gap-3 rounded-2xl border border-night-600/60 bg-night-900/50 p-3">
-                      <TribeShield emblem={r.emblem} color={r.color} className="h-11 w-11 text-xl" />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-moon-200">{r.name}</p>
-                        <p className="truncate text-[11px] text-moon-200/50">{t('tribe.members.count', { n: r.member_count, max: 30 })}{r.motto ? ` · ${r.motto}` : ''}</p>
-                      </div>
-                      {r.requested ? (
-                        <button type="button" onClick={() => r.request_id && cancelRequest(r.request_id)} className="rounded-lg bg-night-700 px-3 py-1.5 text-xs text-moon-200/70">
-                          {t('tribe.request.sent')} ✓
-                        </button>
-                      ) : r.full ? (
-                        <span className="text-[11px] text-moon-200/45">{t('tribe.search.full')}</span>
-                      ) : !r.accepting ? (
-                        <span className="text-[11px] text-moon-200/45">{t('tribe.search.closed')}</span>
-                      ) : (
-                        <button type="button" disabled={busy === r.id} onClick={() => requestJoin(r.id)} className="rounded-lg bg-blood-600 px-3 py-1.5 text-xs font-semibold text-[#fdf6e3] disabled:opacity-50">
-                          {t('tribe.request.send')}
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )
-            )}
-          </Card>
-
+          {/* Sans tribu (2026-11) : d'abord ce qui se fait d'un toucher (invitations, tribus qui recrutent), puis la recherche,
+              et la fondation d'une tribu en dernier (réservée à un rang élevé). */}
           {invites.length > 0 && (
             <div className="flex flex-col gap-2">
               <p className={sectionLabel}>{t('tribe.invites.received', { n: invites.length })}</p>
@@ -269,27 +266,50 @@ function TribeLanding({
             </div>
           )}
 
-          <Card className="flex flex-col items-center gap-2 text-center">
-            <span className="text-3xl" aria-hidden="true">🛡️</span>
-            <h2 className="font-display text-lg text-moon-200">{t('tribe.empty.title')}</h2>
-            <p className="text-xs leading-relaxed text-moon-200/60">{t('tribe.empty.body')}</p>
-            {canCreate ? (
+          {recruiting && recruiting.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <div>
+                <p className={sectionLabel}>{t('tribe.recruiting.title')}</p>
+                <p className="text-[11px] text-moon-200/50">{t('tribe.recruiting.sub')}</p>
+              </div>
+              {recruiting.map(tribeRow)}
+            </div>
+          )}
+
+          <Card className="flex flex-col gap-3">
+            <div>
+              <h2 className="font-display text-lg text-moon-200">{t('tribe.search.title')}</h2>
+              <p className="text-xs text-moon-200/55">{t('tribe.search.subtitle')}</p>
+            </div>
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`🔍 ${t('tribe.search.placeholder')}`} className={fieldCls} />
+            {debounced.length >= 2 && results !== null && (
+              results.length === 0 ? (
+                <p className="text-xs text-moon-200/45">{t('tribe.search.none')}</p>
+              ) : (
+                <div className="flex flex-col gap-2">{results.map(tribeRow)}</div>
+              )
+            )}
+          </Card>
+
+          {canCreate ? (
+            <Card className="flex flex-col items-center gap-2 text-center">
+              <span className="text-3xl" aria-hidden="true">🛡️</span>
+              <h2 className="font-display text-lg text-moon-200">{t('tribe.empty.title')}</h2>
+              <p className="text-xs leading-relaxed text-moon-200/60">{t('tribe.empty.body')}</p>
               <button type="button" onClick={onCreate} className={`${primaryBtn} mt-1`}>
                 {t('tribe.create.cta')}
               </button>
-            ) : (
-              <div className="mt-1 flex w-full flex-col items-center gap-2">
-                <button type="button" disabled className={`${primaryBtn} cursor-not-allowed opacity-45`}>
-                  🔒 {t('tribe.create.cta')}
-                </button>
-                <p className="text-xs font-semibold text-amber-300">{t('tribe.create.locked', { rank: tierLabel(tierForPoints(TRIBE_CREATE_MIN_POINTS).id, t), pts: TRIBE_CREATE_MIN_POINTS })}</p>
-                <span className="h-1.5 w-full max-w-[220px] overflow-hidden rounded-full bg-night-800">
-                  <span className="block h-full rounded-full bg-amber-400" style={{ width: `${Math.min(100, (myPoints / TRIBE_CREATE_MIN_POINTS) * 100)}%` }} />
-                </span>
-                <p className="text-[11px] text-moon-200/55">{t('tribe.create.lockedHint', { have: myPoints })}</p>
-              </div>
-            )}
-          </Card>
+            </Card>
+          ) : (
+            <div className="flex flex-col gap-2 rounded-2xl border border-night-600/60 bg-night-900/40 p-3">
+              <p className="text-xs text-moon-200/70">
+                🔒 {t('tribe.create.lockedShort', { rank: tierLabel(tierForPoints(TRIBE_CREATE_MIN_POINTS).id, t), pts: TRIBE_CREATE_MIN_POINTS, have: myPoints })}
+              </p>
+              <span className="h-1.5 w-full overflow-hidden rounded-full bg-night-800">
+                <span className="block h-full rounded-full bg-amber-400" style={{ width: `${Math.min(100, (myPoints / TRIBE_CREATE_MIN_POINTS) * 100)}%` }} />
+              </span>
+            </div>
+          )}
           <ErrorText>{error}</ErrorText>
         </>
       )}
@@ -568,8 +588,9 @@ function TribeRoom({ tribe, refresh, tab, setTab, pendingFriends }: { tribe: Tri
             {t('tribe.code')} <b className="font-mono tracking-widest text-amber-300">{tribe.code}</b> {copied ? `✓ ${t('common.copied')}` : '📋'}
           </button>
         </div>
-        <button type="button" onClick={() => setMenuOpen(true)} aria-label={t('tribe.menu.title')} className="rounded-lg border border-night-500 bg-night-800 px-2.5 py-1 text-moon-200/80 shadow-md">
-          ⋯
+        <button type="button" onClick={() => setMenuOpen(true)} className="flex shrink-0 flex-col items-center rounded-lg border border-night-500 bg-night-800 px-2 py-1 text-moon-200/80 shadow-md">
+          <span className="text-sm leading-none" aria-hidden="true">⋯</span>
+          <span className="text-[10px] font-semibold leading-3">{t('tribe.menu.button')}</span>
         </button>
       </div>
 
