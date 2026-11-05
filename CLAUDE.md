@@ -5,7 +5,7 @@ Jeu de loups-garous en ligne, en français (et anglais). Dépôt : `Geoszn/loup-
 ## Stack
 
 - Client : React 18 + TypeScript + Vite + Tailwind, empaqueté pour mobile avec Capacitor (`ios/`, `android/`).
-- Back-end : Supabase (Postgres + RLS, fonctions RPC `security definer`, Realtime, Auth) — migrations dans `supabase/migrations/` (numérotées, jusqu'à 0266).
+- Back-end : Supabase (Postgres + RLS, fonctions RPC `security definer`, Realtime, Auth) — migrations dans `supabase/migrations/` (numérotées, jusqu'à 0271).
 - Fonctions serveur Vercel dans `api/` (notifications push, salons vocaux Daily.co, crons) ; code partagé dans `server/`.
 - Vocal : Daily.co. Notifications : Web Push.
 - Tests : `tests/` (Playwright, `npm run test:e2e`).
@@ -76,6 +76,8 @@ cd ~/Downloads/loup-garou-app && read -rs "?Mot de passe DB : " PW; echo; PWE=$(
 - Jouer : salons ouverts directement sur la page, « Le jeu en bref » replié. Profil : « Mes amis » (→ `/tribu?tab=amis`, pastille des demandes).
 - Annonces : une fenêtre de dates par annonce (`AnnouncementsModal.tsx`), jamais montrée à un compte créé après son lancement. Notifications proposées seulement après une première partie.
 - Plafond d'un salon : 25 joueurs (base).
+- Tribus : blasons dessinés en SVG (`TribeCrest.tsx`, 10 au choix dans `CREST_CHOICES` ; les 6 anciens emblèmes restent affichables). Nouvel emblème = un dessin dans `ART` + l'id dans la contrainte `tribes_emblem_check` (voir 0271) + un émoji dans `TRIBE_EMBLEMS` (décor du village). Le chef renomme la tribu une fois tous les 7 jours (0270) ; le CODE ne change jamais. « Tribus qui recrutent » : `list_recruiting_tribes` (0269).
+- Vérification d'e-mail : Supabase n'ouvre PAS de session avant confirmation (« Confirm email » activé). L'écran `/verifier-email` reçoit l'adresse par l'état de navigation / `sessionStorage` (`rememberPendingEmail`) ; le renvoi du mail se fait sans session. Ne pas compter sur une session pour un compte non confirmé.
 
 ## Leçons à ne pas reproduire
 
