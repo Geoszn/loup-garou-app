@@ -5,8 +5,7 @@ import { supabase } from '../lib/supabase'
 import { cachedRpc } from '../lib/rpcCache'
 import { homeSection } from '../lib/homeBootstrap'
 import { notifyJoinRequest } from '../lib/pushSubscription'
-import { Button, Card, ErrorText, SectionDivider } from '../components/ui'
-import { RankBadge } from '../components/RankBadge'
+import { Button, Card, ErrorText } from '../components/ui'
 import { DailyLoginBanner } from '../components/DailyLoginBanner'
 import { AnnouncementsModal } from '../components/AnnouncementsModal'
 import { NotificationTimezoneSync } from '../components/NotificationTimezoneSync'
@@ -14,20 +13,19 @@ import { FriendsOnlineWidget, type FriendPerson } from '../components/FriendsOnl
 import { RankProgress } from '../components/RankProgress'
 import { useMyAvatarConfig } from '../components/AvatarEditor'
 import { useMyQuests } from '../hooks/useMyQuests'
-import { DashboardLeaderboard } from '../components/DashboardLeaderboard'
 import { ContinentPrompt } from '../components/ContinentPrompt'
 import { NotificationOptInPrompt } from '../components/NotificationOptInPrompt'
-import { QuoteCarousel } from '../components/QuoteCarousel'
 import { PromoCarousel } from '../components/PromoCarousel'
 import { useActiveEvents } from '../hooks/useActiveEvents'
 import { useActiveBanners } from '../hooks/useActiveBanners'
 import { useMySeason } from '../hooks/useMySeason'
-import { SeasonTrack } from '../components/SeasonTrack'
+import { accessibleTiers } from '../components/SeasonTrack'
+import { useQuickPlay } from '../hooks/useQuickPlay'
 import { LiveVillage } from '../components/LiveVillage'
 import { GettingStartedCard } from '../components/GettingStartedCard'
 import { MusicToggle } from '../components/MusicToggle'
 import { TribeCard } from '../components/tribe/TribeCard'
-import { AfterIdle, LazyMount } from '../components/Deferred'
+import { AfterIdle } from '../components/Deferred'
 import { useLanguage } from '../i18n/LanguageContext'
 import { Avatar } from '../components/Avatar'
 
@@ -46,7 +44,7 @@ interface ActiveGame {
 }
 
 export default function Dashboard() {
-  const { user, profile } = useAuth()
+  const { user, profile, isGuest } = useAuth()
   const myAvatar = useMyAvatarConfig()
   const { quests, claimableCount } = useMyQuests()
   const navigate = useNavigate()
@@ -112,7 +110,16 @@ export default function Dashboard() {
   // qui détecterait sa propre fin — le polling de 30s de useActiveBanners
   // suffit à la faire disparaître.
   const { banners } = useActiveBanners()
-  const { season, refresh: refreshSeason } = useMySeason()
+  const { season } = useMySeason()
+  // Tuile « Saison » : palier atteint et récompenses prêtes, sur les pistes accessibles (gratuite, + premium avec le pass).
+  const seasonTile = season
+    ? (() => {
+        const tiers = accessibleTiers(season)
+        const reached = new Set(tiers.filter((tier) => tier.xp_required <= season.xp).map((tier) => tier.tier_number)).size
+        return { reached, claimable: tiers.filter((tier) => !tier.claimed && tier.xp_required <= season.xp).length }
+      })()
+    : null
+  const quick = useQuickPlay(profile?.username ?? t('common.playerFallback'), isGuest)
 
   function resumeActiveGame() {
     if (!activeGame) return
@@ -190,14 +197,9 @@ export default function Dashboard() {
           (voir le commentaire du composant) — jamais superposée à celle du
           dessus au même login. */}
       <NotificationOptInPrompt />
-      <div className="mx-auto flex max-w-3xl flex-col gap-8">
+      <div className="mx-auto flex max-w-3xl flex-col gap-5">
         <header className="flex items-center justify-between gap-2">
-          {/* Logo cliquable vers la page d'accueil publique — jusqu'ici rien
-              sur ce tableau de bord ne permettait d'en sortir autrement
-              qu'en fermant l'onglet. Une seule ligne, taille réduite sur
-              mobile : le retour à la ligne forcé faisait passer les badges
-              de droite sur une deuxième ligne collée à gauche, un rendu qui
-              ressemblait à un bug plus qu'à une mise en page voulue. */}
+          {/* Logo cliquable vers la page d'accueil publique. */}
           <Link
             to="/"
             title={t('common.backHome')}
@@ -206,115 +208,55 @@ export default function Dashboard() {
             <img src="/logo.png" alt="" className="h-7 w-7 shrink-0 rounded-full sm:h-8 sm:w-8" />
             <span className="truncate">Loup Garou d'Afrique</span>
           </Link>
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
-            {profile && <RankBadge points={profile.rank_points} streak={profile.current_streak} />}
-          </div>
+          <MusicToggle />
         </header>
 
-        {/* Deux actions principales, côte à côte, réduites à l'essentiel :
-            chaque bouton ouvre une pop-up qui pose UNE question à la fois
-            (privé/public, recherche/code) plutôt que d'étaler tous les choix
-            et explications directement sur cette page. Placées juste sous le
-            header, AVANT les bannières conditionnelles ci-dessous
-            (partie en cours, événement, notice, partie désactivée,
-            invitations) : ce sont les deux actions les plus utilisées de
-            toute l'app, elles ne doivent jamais dépendre du nombre de
-            bannières actives ce jour-là pour rester atteignables sans
-            scroll. Le rappel "partie en cours" juste après suit désormais le
-            même principe (voir son commentaire dédié) — seuls la bannière
-            d'événement, la notice ponctuelle et le reste peuvent encore
-            s'empiler en dessous. */}
-        {/* Style "verre dépoli" (fond très translucide + backdrop-blur, fine
-            bordure quasi-blanche) plutôt que le dégradé opaque du Card
-            générique — direction esthétique demandée par l'admin
-            ("liquid glass" à la Apple), amorcée sur EventBanner.tsx et
-            étendue ici progressivement. Volontairement PAS reporté sur le
-            composant Card partagé lui-même (ui.tsx) : il est réutilisé ~45
-            fois dans l'appli, souvent plusieurs cartes empilées en même
-            temps pendant une partie, et backdrop-blur coûte une couche de
-            composition GPU par élément sur WKWebView iOS — un coût déjà
-            identifié et évité ailleurs (voir le commentaire de Card). Ces
-            deux boutons sont en revanche uniques sur cette page, sans
-            empilement ni répétition : aucun risque de fluidité comparable. */}
-        <div className="flex flex-col gap-3 rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/70 to-night-900/85 p-4 shadow-card">
-          <div className="flex items-center gap-3">
-            <Avatar config={myAvatar.config} icon={profile?.avatar_icon} name={profile?.username} className="h-14 w-14 ring-2 ring-moon-400/50" />
-            <div className="min-w-0 flex-1">
-              <p className="text-xs text-moon-200/50">{t('home.welcomeBack')}</p>
-              <p className="truncate font-display text-lg text-moon-200">{profile?.username}</p>
-            </div>
-            <div className="text-right text-xs text-moon-200/60">
-              <p>🔥 {profile?.current_streak ?? 0}</p>
-              <p>📅 {profile?.login_streak ?? 0} {t('dailyStreak.days')}</p>
-            </div>
-            <MusicToggle />
-          </div>
-          <RankProgress points={profile?.rank_points ?? 0} />
-        </div>
+        {/* Accueil en 3 zones (refonte 2026-11) : 1. ce qui ne peut pas attendre, 2. jouer, 3. ma tribu et ma progression.
+            Une seule information urgente à la fois, un seul gros bouton, le reste en tuiles libellées. */}
 
-        {/* Nouveau joueur sans vraie partie : par où commencer (voir GettingStartedCard). */}
-        <GettingStartedCard />
-
-        {/* « Le village veille » : une maison par partie en cours (publiques et
-            privées), pour montrer d'emblée que le jeu est vivant et qu'on
-            peut rejoindre — voir LiveVillage.tsx / migration 0213. */}
-        <LiveVillage />
-
-        {/* Ma tribu (migration 0222) : une lecture légère, montée après l'essentiel. */}
-        <AfterIdle delay={1200}>
-          <TribeCard />
-        </AfterIdle>
-
-        {/* Espace bannière (événements ET bannières du tableau de bord admin,
-            voir migration 0202) : juste sous la carte du joueur, avant les
-            quêtes. Tous les éléments actifs à la fois défilent
-            automatiquement (voir PromoCarousel) plutôt que de s'empiler à la
-            suite. */}
-        <PromoCarousel events={events} banners={banners} onExpire={refreshEvents} />
-
-        {/* Piste de saison (voir migration 0203) — absente s'il n'y a pas de
-            saison en cours, ni de récompense en attente d'une saison
-            passée (voir get_my_season). */}
-        {season && <SeasonTrack season={season} onClaimed={refreshSeason} />}
-
-        {activeGame && (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-moon-400/40 bg-moon-400/5 px-4 py-3">
-            <p className="text-sm text-moon-200/90">
-              🎮 {t('dashboard.activeGame')} — <strong className="text-moon-200">{activeGame.code}</strong>
-            </p>
-            <Button className="px-3.5 py-1.5 text-xs" onClick={resumeActiveGame}>
-              {t('dashboard.resume')}
-            </Button>
-          </div>
-        )}
-
-        <DailyLoginBanner hasActiveEvent={events.length > 0} />
-        {/* Pas urgents : montés quelques secondes après l'affichage (leurs
-            requêtes ne se battent plus avec celles de l'accueil). */}
-        <AfterIdle delay={1500}>
-          <AnnouncementsModal />
-        </AfterIdle>
-        <AfterIdle delay={4000}>
-          <NotificationTimezoneSync />
-        </AfterIdle>
-
+        {/* ZONE 1 — « Maintenant » : messages ponctuels, partie en cours, invitations. Rien ne s'affiche s'il n'y a rien. */}
         {notice && !noticeDismissed && (
           <div
             className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-2.5 text-sm text-moon-200/90 ${
-              noticeTone === 'success'
-                ? 'border-emerald-700/50 bg-emerald-700/10'
-                : 'border-blood-700/40 bg-blood-700/10'
+              noticeTone === 'success' ? 'border-emerald-700/50 bg-emerald-700/10' : 'border-blood-700/40 bg-blood-700/10'
             }`}
           >
             <span>{noticeTone === 'success' ? '✅' : '🚫'} {notice}</span>
-            <button
-              type="button"
-              onClick={() => setNoticeDismissed(true)}
-              className="shrink-0 text-moon-200/40 transition-colors hover:text-moon-200"
-            >
+            <button type="button" onClick={() => setNoticeDismissed(true)} className="shrink-0 text-moon-200/40 transition-colors hover:text-moon-200">
               ✕
             </button>
           </div>
+        )}
+
+        {activeGame ? (
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-moon-400/50 bg-moon-400/10 px-4 py-3">
+            <p className="min-w-0 text-sm text-moon-200/90">
+              <span className="block text-[11px] uppercase tracking-wide text-moon-300">🎮 {t('dashboard.activeGame')}</span>
+              {t('home.now.resume', { code: activeGame.code })}
+            </p>
+            <Button className="shrink-0 px-4 py-2 text-sm" onClick={resumeActiveGame}>
+              {t('dashboard.resume')}
+            </Button>
+          </div>
+        ) : (
+          invites.length > 0 && (
+            <Card className="flex flex-col gap-3 py-4">
+              <p className="flex flex-wrap items-center gap-1 text-sm text-moon-200/90">
+                <Avatar config={invites[0].from_avatar_config} icon={invites[0].from_avatar_icon} name={invites[0].from_username} className="h-7 w-7" />
+                <strong className="text-moon-200">{invites[0].from_username}</strong>
+                {t('dashboard.inviteFrom')} ({invites[0].code}).
+              </p>
+              <div className="flex items-center gap-2">
+                {invites.length > 1 && <span className="mr-auto text-xs text-moon-200/50">{t('home.now.moreInvites', { n: invites.length - 1 })}</span>}
+                <Button variant="ghost" className="ml-auto px-3 py-1.5 text-xs" onClick={() => dismissInvite(invites[0].invite_id)}>
+                  {t('dashboard.inviteDismiss')}
+                </Button>
+                <Button className="px-3 py-1.5 text-xs" disabled={joiningInvite === invites[0].invite_id} onClick={() => acceptInvite(invites[0])}>
+                  {joiningInvite === invites[0].invite_id ? t('dashboard.inviteJoining') : t('dashboard.inviteJoin')}
+                </Button>
+              </div>
+            </Card>
+          )
         )}
 
         {!newGamesEnabled && (
@@ -323,75 +265,107 @@ export default function Dashboard() {
             cours continuent normalement.
           </div>
         )}
-
         {serverFull && newGamesEnabled && (
           <div className="rounded-xl border border-moon-400/40 bg-moon-400/10 px-4 py-2.5 text-sm text-moon-200/90">⏳ {t('server.full')}</div>
         )}
+        <ErrorText>{error ?? quick.error}</ErrorText>
 
-        <ErrorText>{error}</ErrorText>
+        {/* Nouveau joueur sans vraie partie : par où commencer (partie d'entraînement, avatar). */}
+        <GettingStartedCard />
 
-        {invites.length > 0 && (
-          <div className="flex flex-col gap-3">
-            {invites.map((invite) => (
-              <Card key={invite.invite_id} className="flex flex-wrap items-center justify-between gap-3 py-4">
-                <p className="flex flex-wrap items-center gap-1 text-sm text-moon-200/90">
-                  <Avatar config={invite.from_avatar_config} icon={invite.from_avatar_icon} name={invite.from_username} className="h-7 w-7" />
-                  <strong className="text-moon-200">{invite.from_username}</strong>
-                  {t('dashboard.inviteFrom')} ({invite.code}).
-                </p>
-                <div className="flex gap-2">
-                  <Button variant="ghost" className="px-3 py-1.5 text-xs" onClick={() => dismissInvite(invite.invite_id)}>
-                    {t('dashboard.inviteDismiss')}
-                  </Button>
-                  <Button
-                    className="px-3 py-1.5 text-xs"
-                    disabled={joiningInvite === invite.invite_id}
-                    onClick={() => acceptInvite(invite)}
-                  >
-                    {joiningInvite === invite.invite_id ? t('dashboard.inviteJoining') : t('dashboard.inviteJoin')}
-                  </Button>
-                </div>
-              </Card>
-            ))}
+        {/* ZONE 2 — Jouer : un gros bouton qui place directement dans une partie publique, deux raccourcis libellés. */}
+        {!activeGame && (
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => void quick.quickPlay()}
+              disabled={quick.busy || !newGamesEnabled || serverFull}
+              className="flex w-full flex-col items-center gap-0.5 rounded-2xl bg-gradient-to-b from-blood-500 to-blood-700 px-5 py-4 text-[#fdf6e3] shadow-blood-btn transition-all active:scale-[0.98] disabled:opacity-50"
+            >
+              <span className="font-display text-xl">🐺 {quick.busy ? t('home.play.searching') : t('home.play.now')}</span>
+              <span className="text-xs text-[#fdf6e3]/75">{t('home.play.nowSub')}</span>
+            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <Link
+                to="/jouer?ouvrir=creer"
+                className="rounded-xl border border-night-600/70 bg-night-800/60 px-3 py-2.5 text-center text-sm font-semibold text-moon-200 transition-colors hover:border-moon-400/40"
+              >
+                🌕 {t('home.play.create')}
+              </Link>
+              <Link
+                to="/jouer?ouvrir=code"
+                className="rounded-xl border border-night-600/70 bg-night-800/60 px-3 py-2.5 text-center text-sm font-semibold text-moon-200 transition-colors hover:border-moon-400/40"
+              >
+                🔑 {t('home.play.code')}
+              </Link>
+            </div>
           </div>
         )}
 
-        {quests && quests.length > 0 && (
-          <Link
-            to="/recompenses"
-            className="flex items-center gap-3 rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/70 to-night-900/85 px-4 py-3 shadow-card transition-colors hover:border-moon-400/40"
-          >
-            <span className="text-2xl" aria-hidden="true">📜</span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold text-moon-200">
-                {t('home.quests', { done: quests.filter((q) => q.progress >= q.target).length, total: quests.length })}
-              </span>
-              <span className="mt-1.5 flex gap-1">
-                {quests.map((q) => (
-                  <span key={q.template_id} className={`h-1.5 flex-1 rounded-full ${q.progress >= q.target ? 'bg-moon-300' : 'bg-night-700'}`} />
-                ))}
-              </span>
-            </span>
-            {claimableCount > 0 && (
-              <span className="shrink-0 rounded-full bg-amber-400/15 px-2.5 py-1 text-xs font-semibold text-amber-300">
-                {t('home.claim', { count: claimableCount })}
-              </span>
-            )}
-          </Link>
-        )}
+        {/* « Le village veille » : la preuve que le jeu est vivant, et les salons à rejoindre d'un toucher. */}
+        <LiveVillage />
 
-        {/* Tout en bas de la page : ses requêtes ne partent que quand on s'en
-            approche. */}
-        <LazyMount minHeight={260}>
-          <DashboardLeaderboard />
-        </LazyMount>
+        {/* ZONE 3 — Ma tribu (gardée en bonne place : c'est elle qui fait revenir les joueurs), puis ma progression. */}
+        <AfterIdle delay={1200}>
+          <TribeCard />
+        </AfterIdle>
+
+        <div className="flex flex-col gap-3 rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/70 to-night-900/85 p-4 shadow-card">
+          <div className="flex items-center gap-3">
+            <Avatar config={myAvatar.config} icon={profile?.avatar_icon} name={profile?.username} className="h-11 w-11 ring-2 ring-moon-400/50" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-display text-base text-moon-200">{profile?.username}</p>
+              <p className="truncate text-[11px] text-moon-200/50">
+                {t('home.streak.wins', { n: profile?.current_streak ?? 0 })} · {t('home.streak.days', { n: profile?.login_streak ?? 0 })}
+              </p>
+            </div>
+          </div>
+          <RankProgress points={profile?.rank_points ?? 0} />
+          <div className="grid grid-cols-3 gap-2">
+            <ProgressTile to="/recompenses?tab=store" label={t('home.tile.coins')} value={String(profile?.loup_coins ?? 0)} />
+            <ProgressTile
+              to="/recompenses"
+              label={t('home.tile.quests')}
+              value={quests ? t('home.tile.questsValue', { done: quests.filter((q) => q.progress >= q.target).length, total: quests.length }) : '—'}
+              badge={claimableCount > 0 ? t('home.tile.claim', { count: claimableCount }) : undefined}
+            />
+            {seasonTile ? (
+              <ProgressTile
+                to="/recompenses?tab=season"
+                label={t('home.tile.season')}
+                value={t('home.tile.seasonValue', { n: seasonTile.reached })}
+                badge={seasonTile.claimable > 0 ? t('home.tile.claim', { count: seasonTile.claimable }) : undefined}
+              />
+            ) : (
+              <ProgressTile to="/stats" label={t('home.tile.rank')} value={t('home.tile.rankValue', { points: profile?.rank_points ?? 0 })} />
+            )}
+          </div>
+        </div>
+
+        {/* Événements et bannières : un seul emplacement, qui défile. */}
+        <PromoCarousel events={events} banners={banners} onExpire={refreshEvents} />
+
+        <DailyLoginBanner hasActiveEvent={events.length > 0} />
+        <AfterIdle delay={1500}>
+          <AnnouncementsModal />
+        </AfterIdle>
+        <AfterIdle delay={4000}>
+          <NotificationTimezoneSync />
+        </AfterIdle>
 
         <FriendsOnlineWidget friends={friends} />
-
-        <SectionDivider />
-
-        <QuoteCarousel />
       </div>
     </div>
+  )
+}
+
+/** Tuile de la carte « Ma progression » : un libellé, une valeur, et au besoin une pastille « à réclamer ». */
+function ProgressTile({ to, label, value, badge }: { to: string; label: string; value: string; badge?: string }) {
+  return (
+    <Link to={to} className="flex min-w-0 flex-col items-center gap-0.5 rounded-xl border border-night-600/60 bg-night-900/50 px-2 py-2.5 text-center transition-colors hover:border-moon-400/40">
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-moon-200/50">{label}</span>
+      <span className="truncate text-sm font-semibold text-moon-200">{value}</span>
+      {badge && <span className="mt-0.5 rounded-full bg-amber-400/15 px-2 py-0.5 text-[10px] font-semibold text-amber-300">{badge}</span>}
+    </Link>
   )
 }

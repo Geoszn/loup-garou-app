@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { notifyJoinRequest } from '../lib/pushSubscription'
@@ -55,6 +55,19 @@ export default function Play() {
   }
 
   const [joinStep, setJoinStep] = useState<JoinStep>('closed')
+  // Raccourcis de l'accueil (« Créer une partie », « J'ai un code ») : ouvrent directement la bonne fenêtre.
+  const [searchParams, setSearchParams] = useSearchParams()
+  useEffect(() => {
+    const open = searchParams.get('ouvrir')
+    if (!open) return
+    if (open === 'creer') {
+      if (isGuest) setWallOpen(true)
+      else setCreateOpen(true)
+    }
+    if (open === 'code') setJoinStep('code')
+    setSearchParams({}, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [code, setCode] = useState('')
   const [joining, setJoining] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)

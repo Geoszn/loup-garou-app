@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { cachedRpc } from '../lib/rpcCache'
 import { useAuth } from '../context/AuthContext'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 import { Button, Modal } from './ui'
@@ -39,10 +40,24 @@ export function NotificationOptInPrompt() {
   const { t } = useLanguage()
   const push = usePushNotifications()
   const [dismissed, setDismissed] = useState(false)
+  // Proposée seulement après une première partie jouée : à l'inscription, le joueur ne sait pas encore ce qu'il gagnerait
+  // à être prévenu (et l'accueil d'un nouveau compte a déjà sa carte « par où commencer »).
+  const [played, setPlayed] = useState(0)
+  useEffect(() => {
+    if (!profile) return
+    let active = true
+    cachedRpc<{ games_played: number }>('get_my_stats').then(({ data }) => {
+      if (active) setPlayed(data?.games_played ?? 0)
+    })
+    return () => {
+      active = false
+    }
+  }, [profile])
 
   const shouldOffer =
     !!profile &&
     !!profile.continent &&
+    played > 0 &&
     push.supported &&
     push.permission === 'default' &&
     !push.subscribed &&
