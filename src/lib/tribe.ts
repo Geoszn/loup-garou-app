@@ -25,6 +25,11 @@ export const TRIBE_EMBLEMS = [
   { id: 'scorpion', icon: '🦂' },
   { id: 'snake', icon: '🐍' },
   { id: 'shield', icon: '🛡️' },
+  // Blasons dessinés (migration 0271) ; l'émoji ne sert plus qu'au décor du village et à l'admin.
+  { id: 'panther', icon: '🐆' },
+  { id: 'crocodile', icon: '🐊' },
+  { id: 'buffalo', icon: '🐃' },
+  { id: 'baobab', icon: '🌳' },
 ] as const
 export type TribeEmblem = (typeof TRIBE_EMBLEMS)[number]['id']
 

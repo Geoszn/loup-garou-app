@@ -11,7 +11,6 @@ import {
   TRIBE_COLORS,
   TRIBE_CREATE_MIN_POINTS,
   isChatQuiet,
-  TRIBE_EMBLEMS,
   TRIBE_MOTTO_MAX,
   TRIBE_NAME_MAX,
   TRIBE_NAME_MIN,
@@ -34,6 +33,8 @@ import { continentName } from '../../lib/continents'
 import { Avatar } from '../Avatar'
 import { Button, Card, ConfirmDialog, ErrorText, Modal, Segmented } from '../ui'
 import { TribeShield } from './TribeShield'
+import type { TranslationKey } from '../../i18n/translations'
+import { CREST_CHOICES } from './TribeCrest'
 import { TribeChat } from './TribeChat'
 import { VillageSky, VillageView } from './VillageView'
 import { DECOR_UNLOCKS } from './VillageDecor'
@@ -329,7 +330,7 @@ function TribeForm({ mode, tribe, onCancel, onDone }: { mode: 'create' | 'edit';
   const [accepting, setAccepting] = useState(tribe?.accepting_requests ?? true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const valid = mode === 'edit' || name.trim().length >= TRIBE_NAME_MIN
+  const valid = name.trim().length >= TRIBE_NAME_MIN
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -339,7 +340,7 @@ function TribeForm({ mode, tribe, onCancel, onDone }: { mode: 'create' | 'edit';
     const { error: rpcError } =
       mode === 'create'
         ? await supabase.rpc('create_tribe', { p_name: name, p_motto: motto, p_emblem: emblem, p_color: color })
-        : await supabase.rpc('update_tribe', { p_motto: motto, p_emblem: emblem, p_color: color, p_accepting: accepting })
+        : await supabase.rpc('update_tribe', { p_motto: motto, p_emblem: emblem, p_color: color, p_accepting: accepting, p_name: name })
     setBusy(false)
     if (rpcError) {
       setError(rpcError.message)
@@ -357,20 +358,22 @@ function TribeForm({ mode, tribe, onCancel, onDone }: { mode: 'create' | 'edit';
         <h2 className="font-display text-xl text-moon-200">{mode === 'create' ? t('tribe.create.title') : t('tribe.edit.title')}</h2>
       </div>
       <div className="flex justify-center">
-        <TribeShield emblem={emblem} color={color} className="h-24 w-24 text-5xl" />
+        <TribeShield emblem={emblem} color={color} spears className="h-36 w-32" />
       </div>
       <div>
         <p className={`${sectionLabel} mb-1.5`}>{t('tribe.create.emblem')}</p>
-        <div className="grid grid-cols-6 gap-2">
-          {TRIBE_EMBLEMS.map((e) => (
+        {/* Les 10 blasons dessinés (TribeCrest) ; un ancien emblème déjà porté par la tribu reste proposé en tête. */}
+        <div className="grid grid-cols-5 gap-1.5">
+          {[...((CREST_CHOICES as readonly string[]).includes(emblem) ? [] : [emblem]), ...CREST_CHOICES].map((id) => (
             <button
-              key={e.id}
+              key={id}
               type="button"
-              onClick={() => setEmblem(e.id)}
-              aria-pressed={emblem === e.id}
-              className={`flex aspect-square items-center justify-center rounded-xl border text-xl ${emblem === e.id ? 'border-moon-400 bg-moon-400/10' : 'border-night-600/60 bg-night-900/50'}`}
+              onClick={() => setEmblem(id as TribeEmblem)}
+              aria-pressed={emblem === id}
+              className={`flex flex-col items-center gap-0.5 rounded-xl border px-0.5 pb-1 pt-1.5 ${emblem === id ? 'border-moon-400 bg-moon-400/10' : 'border-night-600/60 bg-night-900/50'}`}
             >
-              {e.icon}
+              <TribeShield emblem={id} color={color} className="h-11 w-10" />
+              <span className="w-full truncate text-center text-[9px] font-semibold text-moon-200/70">{t(`tribe.emblem.${id}` as TranslationKey)}</span>
             </button>
           ))}
         </div>
@@ -382,16 +385,14 @@ function TribeForm({ mode, tribe, onCancel, onDone }: { mode: 'create' | 'edit';
       </div>
       <div>
         <p className={`${sectionLabel} mb-1.5`}>{t('tribe.create.name')}</p>
-        {mode === 'create' ? (
-          <>
-            <input value={name} onChange={(e) => setName(e.target.value.slice(0, TRIBE_NAME_MAX))} maxLength={TRIBE_NAME_MAX} placeholder={t('tribe.create.namePh')} className={fieldCls} />
-            <p className="mt-1 text-right text-[10px] text-moon-200/35">
-              {name.length} / {TRIBE_NAME_MAX}
-            </p>
-          </>
-        ) : (
-          <p className={`${fieldCls} opacity-60`}>{tribe?.name}</p>
-        )}
+        {/* Le chef peut renommer sa tribu (migration 0270, une fois tous les 7 jours) ; le code, lui, ne change jamais. */}
+        <input value={name} onChange={(e) => setName(e.target.value.slice(0, TRIBE_NAME_MAX))} maxLength={TRIBE_NAME_MAX} placeholder={t('tribe.create.namePh')} className={fieldCls} />
+        <p className="mt-1 flex justify-between gap-2 text-[10px] text-moon-200/40">
+          <span>{mode === 'edit' && tribe ? t('tribe.edit.nameHint', { code: tribe.code }) : ''}</span>
+          <span className="shrink-0">
+            {name.length} / {TRIBE_NAME_MAX}
+          </span>
+        </p>
       </div>
       <div>
         <p className={`${sectionLabel} mb-1.5`}>{t('tribe.create.motto')}</p>
