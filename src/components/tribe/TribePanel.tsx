@@ -26,6 +26,7 @@ import {
   type TribeInviteIn,
 } from '../../lib/tribe'
 import { FriendsPanel } from '../../pages/Friends'
+import { usePendingFriends } from '../../hooks/usePendingFriends'
 import { PlayerProfileModal } from '../PlayerProfileModal'
 import { RankTierBadge } from '../RankTierBadge'
 import { tierForPoints, tierLabel, type RankTier } from '../../lib/ranks'
@@ -57,22 +58,6 @@ function Dot({ n }: { n?: number }) {
   )
 }
 
-/** Nombre de demandes d'amis en attente (pastille de l'onglet « Amis »). */
-function usePendingFriends(): number {
-  const { user } = useAuth()
-  const [n, setN] = useState(0)
-  useEffect(() => {
-    if (!user) return
-    let active = true
-    cachedRpc<{ incoming_requests?: unknown[] }>('get_my_social').then(({ data }) => {
-      if (active && data) setN((data.incoming_requests ?? []).length)
-    })
-    return () => {
-      active = false
-    }
-  }, [user])
-  return n
-}
 
 /**
  * Page « Tribu » (migration 0222/0223) : avec une tribu, un village où chaque membre

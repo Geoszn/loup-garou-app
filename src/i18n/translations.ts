@@ -2598,6 +2598,8 @@ export const translations = {
   'profile.games': { fr: 'Parties', en: 'Games' },
   'profile.wins': { fr: 'Victoires', en: 'Wins' },
   'profile.bestStreak': { fr: 'Série max', en: 'Best streak' },
+  'profile.friends': { fr: 'Mes amis', en: 'My friends' },
+  'profile.friendsHint': { fr: 'Ajouter des amis, demandes reçues', en: 'Add friends, requests received' },
   'profile.statsHint': { fr: 'Historique, rôles joués, classement', en: 'History, roles played, leaderboard' },
   'profile.accountHint': { fr: 'Pseudo, mot de passe, langue, notifications', en: 'Username, password, language, notifications' },
   'profile.helpHint': { fr: 'Règles et rôles du jeu', en: 'Game rules and roles' },
