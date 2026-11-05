@@ -69,6 +69,14 @@ cd ~/Downloads/loup-garou-app && read -rs "?Mot de passe DB : " PW; echo; PWE=$(
 - **Interface de chat plein écran (jour et nuit)** : barre d'actions libellée (`ActionBar.tsx`) posée EN BAS DU FLUX au-dessus de la saisie — jamais en recouvrement du fil de messages. Le journal de la partie est un volet (`GameJournal.tsx`), pas un onglet qui remplace le chat.
 - Comptes invités (anonymes) : `profiles.is_guest`, garde `guest_guard()` côté PostgREST, quota vocal. Les bots de test (`profiles.is_bot`, 12 comptes `bot1..12@bots.loupgarouafrique.internal`) NE doivent JAMAIS être anonymes ni invités : `purge_stale_guests` les épargne depuis 0254.
 
+## Interface allégée (refonte de novembre 2026, à respecter)
+
+- Accueil en 3 zones : 1. « Maintenant » (une seule carte urgente : partie en cours > invitation), 2. « Jouer maintenant » (`useQuickPlay` : demande au salon public le plus rempli, sinon crée une partie publique) + raccourcis `/jouer?ouvrir=creer|code`, puis le village, 3. la tribu (toujours en bonne place, demande de l'utilisateur) et la carte « Ma progression » (tuiles libellées). Pas de classement ni de citations sur l'accueil.
+- Récompenses : 4 onglets fixes (Quêtes, Store, Saison, Mon sac = objets + historique), solde dans l'en-tête, quêtes à réclamer en tête.
+- Jouer : salons ouverts directement sur la page, « Le jeu en bref » replié. Profil : « Mes amis » (→ `/tribu?tab=amis`, pastille des demandes).
+- Annonces : une fenêtre de dates par annonce (`AnnouncementsModal.tsx`), jamais montrée à un compte créé après son lancement. Notifications proposées seulement après une première partie.
+- Plafond d'un salon : 25 joueurs (base).
+
 ## Leçons à ne pas reproduire
 
 - Un `NULL` explicite dans un `INSERT` n'applique pas le `default` d'une colonne `not null` : omettre la colonne. (0250 a cassé toutes les inscriptions par e-mail ; corrigé en 0254.)
