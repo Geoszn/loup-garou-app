@@ -4,8 +4,8 @@ import { supabase } from '../lib/supabase'
 import { notifyJoinRequest } from '../lib/pushSubscription'
 import type { PublicGameListing } from '../types/game'
 
-/** Plafond d'un salon (même valeur que LiveVillage.tsx). */
-const MAX_LOBBY_PLAYERS = 20
+/** Plafond d'un salon (25, voir join_game / request_join_public_game en base). */
+const MAX_LOBBY_PLAYERS = 25
 
 /**
  * « Jouer maintenant » : un seul geste pour se retrouver dans une partie.

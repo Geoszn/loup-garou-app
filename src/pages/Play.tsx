@@ -9,11 +9,12 @@ import { GameInProgressChoice } from '../components/GameInProgressChoice'
 import { GuestWallBody } from '../components/GuestWall'
 import { HowToPlayButton } from '../components/HowToPlayButton'
 import { useLanguage } from '../i18n/LanguageContext'
+import { useQuickPlay } from '../hooks/useQuickPlay'
 
-type JoinStep = 'closed' | 'choose' | 'public' | 'code'
+type JoinStep = 'closed' | 'code'
 
-const card =
-  'flex w-full flex-col gap-3 rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/70 to-night-900/85 p-5 text-left shadow-card transition-colors hover:border-moon-400/50 active:scale-[0.99] disabled:opacity-60'
+const shortcut =
+  'flex flex-col gap-1 rounded-xl border border-night-600/70 bg-night-800/60 px-3 py-2.5 text-left transition-colors hover:border-moon-400/40 active:scale-[0.99]'
 
 /** Page « Jouer » : les deux façons de lancer une partie — créer ou rejoindre —
  * avec, pour chacune, ce qui se passe ensuite. */
@@ -22,6 +23,7 @@ export default function Play() {
   const navigate = useNavigate()
   const { t } = useLanguage()
   const displayName = profile?.username ?? t('common.playerFallback')
+  const quick = useQuickPlay(displayName, isGuest)
 
   const [newGamesEnabled, setNewGamesEnabled] = useState(true)
   // « Serveur complet » (migration 0256/0258) : plafond de joueurs en ligne atteint.
@@ -168,63 +170,57 @@ export default function Play() {
           <div className="rounded-xl border border-moon-400/40 bg-moon-400/10 px-4 py-2.5 text-sm text-moon-200/90">⏳ {t('server.full')}</div>
         )}
 
-        <button type="button" className={card} onClick={() => (isGuest ? setWallOpen(true) : setCreateOpen(true))}>
-          <span className="flex items-center gap-3">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-moon-400/30 bg-moon-400/10 text-moon-300">
-              <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M12 8v8M8 12h8" />
-              </svg>
-            </span>
-            <span className="font-display text-xl text-moon-200">{t('dashboard.createGame')}</span>
-            {isGuest && <span className="ml-auto text-lg" aria-label={t('guest.nav.locked')}>🔒</span>}
-          </span>
-          <span className="text-sm leading-relaxed text-moon-200/75">{t('play.create.text')}</span>
-          <ul className="flex flex-col gap-1 text-xs text-moon-200/55">
-            {(['play.create.p1', 'play.create.p2', 'play.create.p3'] as const).map((k) => (
-              <li key={k} className="flex gap-2">
-                <span className="text-moon-300">•</span>
-                {t(k)}
-              </li>
-            ))}
-          </ul>
+        {/* Page Jouer allégée (2026-11) : un gros bouton, deux raccourcis, puis directement les salons ouverts.
+            Les explications détaillées restent dans « Comment jouer » et dans le résumé repliable en bas. */}
+        <button
+          type="button"
+          onClick={() => void quick.quickPlay()}
+          disabled={quick.busy || !newGamesEnabled || serverFull}
+          className="flex w-full flex-col items-center gap-0.5 rounded-2xl bg-gradient-to-b from-blood-500 to-blood-700 px-5 py-4 text-[#fdf6e3] shadow-blood-btn transition-all active:scale-[0.98] disabled:opacity-50"
+        >
+          <span className="font-display text-xl">🐺 {quick.busy ? t('home.play.searching') : t('home.play.now')}</span>
+          <span className="text-xs text-[#fdf6e3]/75">{t('home.play.nowSub')}</span>
         </button>
+        <ErrorText>{quick.error}</ErrorText>
 
-        <button type="button" className={card} onClick={() => setJoinStep('choose')}>
-          <span className="flex items-center gap-3">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-moon-400/30 bg-moon-400/10 text-moon-300">
-              <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H4" />
-              </svg>
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" className={shortcut} onClick={() => (isGuest ? setWallOpen(true) : setCreateOpen(true))}>
+            <span className="text-sm font-semibold text-moon-200">
+              🌕 {t('home.play.create')} {isGuest && <span aria-label={t('guest.nav.locked')}>🔒</span>}
             </span>
-            <span className="font-display text-xl text-moon-200">{t('dashboard.joinGame')}</span>
-          </span>
-          <span className="text-sm leading-relaxed text-moon-200/75">{t('play.join.text')}</span>
-          <ul className="flex flex-col gap-1 text-xs text-moon-200/55">
-            {(['play.join.p1', 'play.join.p2', 'play.join.p3'] as const).map((k) => (
-              <li key={k} className="flex gap-2">
-                <span className="text-moon-300">•</span>
-                {t(k)}
-              </li>
-            ))}
-          </ul>
-        </button>
+            <span className="text-[11px] leading-snug text-moon-200/55">{t('play.create.short')}</span>
+          </button>
+          <button type="button" className={shortcut} onClick={() => setJoinStep('code')}>
+            <span className="text-sm font-semibold text-moon-200">🔑 {t('home.play.code')}</span>
+            <span className="text-[11px] leading-snug text-moon-200/55">{t('play.code.short')}</span>
+          </button>
+        </div>
 
         <div className="flex flex-col gap-3 rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/70 to-night-900/85 p-4 shadow-card">
-          <p className="font-display text-base text-moon-200">{t('play.brief.title')}</p>
-          {(
-            [
-              ['🌙', 'play.brief.night'],
-              ['☀️', 'play.brief.day'],
-              ['🏆', 'play.brief.win'],
-            ] as const
-          ).map(([icon, key]) => (
-            <p key={key} className="flex gap-3 text-sm text-moon-200/70">
-              <span aria-hidden="true">{icon}</span>
-              {t(key)}
-            </p>
-          ))}
+          <p className="font-display text-base text-moon-200">🌍 {t('play.openGames')}</p>
+          <PublicGamesList displayName={displayName} />
         </div>
+
+        <details className="group rounded-2xl border border-night-600/60 bg-night-900/40 px-4 py-3">
+          <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold text-moon-200/80">
+            {t('play.brief.title')}
+            <span className="text-moon-200/40 transition-transform group-open:rotate-90" aria-hidden="true">›</span>
+          </summary>
+          <div className="mt-3 flex flex-col gap-2">
+            {(
+              [
+                ['🌙', 'play.brief.night'],
+                ['☀️', 'play.brief.day'],
+                ['🏆', 'play.brief.win'],
+              ] as const
+            ).map(([icon, key]) => (
+              <p key={key} className="flex gap-3 text-sm text-moon-200/70">
+                <span aria-hidden="true">{icon}</span>
+                {t(key)}
+              </p>
+            ))}
+          </div>
+        </details>
       </div>
 
       <Modal open={wallOpen} onClose={() => setWallOpen(false)} title={`🔒 ${t('guest.wall.create')}`}>
@@ -240,22 +236,9 @@ export default function Play() {
         <ErrorText>{createError}</ErrorText>
       </Modal>
 
-      <Modal open={joinStep !== 'closed'} onClose={closeJoin} title={`🔑 ${t('dashboard.join.title')}`}>
-        {joinStep === 'choose' && (
-          <div className="flex flex-col gap-3">
-            <ChoiceButton emoji="🔍" title={t('dashboard.join.searchPublic.title')} subtitle={t('dashboard.join.searchPublic.subtitle')} onClick={() => setJoinStep('public')} />
-            <ChoiceButton emoji="🔢" title={t('dashboard.join.enterCode.title')} subtitle={t('dashboard.join.enterCode.subtitle')} onClick={() => setJoinStep('code')} />
-          </div>
-        )}
-        {joinStep === 'public' && (
-          <div className="flex flex-col gap-3">
-            <BackButton onClick={() => setJoinStep('choose')} />
-            <PublicGamesList displayName={displayName} />
-          </div>
-        )}
+      <Modal open={joinStep !== 'closed'} onClose={closeJoin} title={`🔑 ${t('home.play.code')}`}>
         {joinStep === 'code' && (
           <div className="flex flex-col gap-3">
-            <BackButton onClick={() => setJoinStep('choose')} />
             <form onSubmit={handleJoin} className="flex flex-col gap-3">
               <div>
                 <Label htmlFor="join-code">{t('dashboard.join.codeLabel')}</Label>
@@ -294,15 +277,6 @@ function ChoiceButton({ emoji, title, subtitle, disabled, onClick }: { emoji: Re
         <span className="block text-sm font-semibold text-moon-200">{title}</span>
         <span className="block text-xs text-moon-200/50">{subtitle}</span>
       </span>
-    </button>
-  )
-}
-
-function BackButton({ onClick }: { onClick: () => void }) {
-  const { t } = useLanguage()
-  return (
-    <button type="button" onClick={onClick} className="self-start text-xs text-moon-200/50 underline underline-offset-4 transition-colors hover:text-moon-200">
-      ← {t('common.back')}
     </button>
   )
 }

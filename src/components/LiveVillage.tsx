@@ -20,7 +20,7 @@ import type { GameStatus } from '../types/game'
 export const HOUSES_PER_ROW = 5
 export const ROWS = 2
 export const PAGE_SIZE = HOUSES_PER_ROW * ROWS
-const MAX_LOBBY_PLAYERS = 20
+const MAX_LOBBY_PLAYERS = 25 // plafond d'un salon en base (join_game)
 const POLL_MS = 20000
 
 export interface LiveGame {
