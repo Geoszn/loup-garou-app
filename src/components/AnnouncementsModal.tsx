@@ -15,6 +15,7 @@ import type { MySeason } from '../types/season'
 /** Clé de l'annonce des avatars (voir migration 0194) : ne jamais la
  * réutiliser pour une autre annonce. */
 export const AVATARS_ANNOUNCEMENT_KEY = 'avatars-2026-09'
+const AVATARS_LAUNCH = '2026-10-01T00:00:00Z'
 
 /** Clé de l'annonce de lancement d'une saison — une par saison (son slug),
  * jamais réutilisée d'une saison à l'autre : chaque nouvelle saison doit
@@ -180,7 +181,9 @@ export function AnnouncementsModal() {
     if (slides || seen === null || comp === undefined || season === undefined || store === undefined || !myAvatar.loaded) return
     const list: Slide[] = []
     const avatarSeen = seen.includes(AVATARS_ANNOUNCEMENT_KEY)
-    if (!avatarSeen && !myAvatar.config) list.push('avatars')
+    // Un compte créé après l'arrivée des avatars a déjà l'étape « Crée ton avatar » dans « Bien démarrer » : pas de doublon.
+    const avatarsNews = !user?.created_at || new Date(user.created_at).getTime() < new Date(AVATARS_LAUNCH).getTime()
+    if (!avatarSeen && !myAvatar.config && avatarsNews) list.push('avatars')
     // Un joueur qui a déjà créé son avatar connaît la nouveauté.
     if (!avatarSeen && myAvatar.config) void supabase.rpc('mark_announcement_seen', { p_key: AVATARS_ANNOUNCEMENT_KEY })
     // Annonce de lancement de saison : seulement tant qu'elle est vraiment

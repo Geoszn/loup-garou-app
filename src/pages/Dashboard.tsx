@@ -22,7 +22,7 @@ import { useMySeason } from '../hooks/useMySeason'
 import { accessibleTiers } from '../components/SeasonTrack'
 import { useQuickPlay } from '../hooks/useQuickPlay'
 import { LiveVillage } from '../components/LiveVillage'
-import { GettingStartedCard } from '../components/GettingStartedCard'
+import { GettingStartedCard, useIsNewPlayer } from '../components/GettingStartedCard'
 import { MusicToggle } from '../components/MusicToggle'
 import { TribeCard } from '../components/tribe/TribeCard'
 import { AfterIdle } from '../components/Deferred'
@@ -119,6 +119,8 @@ export default function Dashboard() {
         return { reached, claimable: tiers.filter((tier) => !tier.claimed && tier.xp_required <= season.xp).length }
       })()
     : null
+  // Nouveau joueur : « Bien démarrer » est sa seule zone d'action (son bouton fait déjà « Jouer maintenant »).
+  const newPlayer = useIsNewPlayer()
   const quick = useQuickPlay(profile?.username ?? t('common.playerFallback'), isGuest)
 
   function resumeActiveGame() {
@@ -274,7 +276,7 @@ export default function Dashboard() {
         <GettingStartedCard />
 
         {/* ZONE 2 — Jouer : un gros bouton qui place directement dans une partie publique, deux raccourcis libellés. */}
-        {!activeGame && (
+        {!activeGame && newPlayer === false && (
           <div className="flex flex-col gap-2">
             <button
               type="button"
@@ -310,6 +312,7 @@ export default function Dashboard() {
           <TribeCard />
         </AfterIdle>
 
+        {newPlayer === false && (
         <div className="flex flex-col gap-3 rounded-2xl border border-night-600/70 bg-gradient-to-b from-night-700/70 to-night-900/85 p-4 shadow-card">
           <div className="flex items-center gap-3">
             <Avatar config={myAvatar.config} icon={profile?.avatar_icon} name={profile?.username} className="h-11 w-11 ring-2 ring-moon-400/50" />
@@ -341,6 +344,7 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+        )}
 
         {/* Événements et bannières : un seul emplacement, qui défile. */}
         <PromoCarousel events={events} banners={banners} onExpire={refreshEvents} />

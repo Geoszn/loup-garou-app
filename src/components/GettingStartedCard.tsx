@@ -7,6 +7,8 @@ import { ONBOARDING_DISMISSED, ONBOARDING_PRACTICE_DONE, ONBOARDING_TUTORIAL_SEE
 import { useMyAvatarConfig } from './AvatarEditor'
 import { TutorialFlow } from './TutorialFlow'
 import { ErrorText } from './ui'
+import { useAuth } from '../context/AuthContext'
+import { useQuickPlay } from '../hooks/useQuickPlay'
 
 /**
  * « Bien démarrer » : en haut de l'accueil d'un joueur qui n'a encore joué aucune vraie
@@ -14,9 +16,30 @@ import { ErrorText } from './ui'
  * d'entraînement contre des bots), puis le bouton pour jouer une vraie partie. Disparaît
  * dès la première vraie partie, ou quand on la masque.
  */
+/** Vrai tant que le joueur n'a joué aucune vraie partie et n'a pas masqué « Bien démarrer » ; null pendant le chargement.
+ * L'accueil s'en sert pour n'afficher, à un nouveau joueur, que cette carte (pas de bouton « Jouer » en double ni de
+ * carte de progression vide). */
+export function useIsNewPlayer(): boolean | null {
+  const { flags } = useOnboardingFlags()
+  const [played, setPlayed] = useState<number | null>(null)
+  useEffect(() => {
+    let active = true
+    cachedRpc<{ games_played: number }>('get_my_stats').then(({ data }) => {
+      if (active) setPlayed(data?.games_played ?? 0)
+    })
+    return () => {
+      active = false
+    }
+  }, [])
+  if (!flags || played === null) return null
+  return played === 0 && !flags.has(ONBOARDING_DISMISSED)
+}
+
 export function GettingStartedCard() {
   const { t } = useLanguage()
   const navigate = useNavigate()
+  const { profile, isGuest } = useAuth()
+  const quick = useQuickPlay(profile?.username ?? t('common.playerFallback'), isGuest)
   const { flags, mark } = useOnboardingFlags()
   const myAvatar = useMyAvatarConfig()
   const [played, setPlayed] = useState<number | null>(null)
@@ -101,12 +124,13 @@ export function GettingStartedCard() {
 
       <button
         type="button"
-        onClick={() => navigate('/jouer')}
+        onClick={() => void quick.quickPlay()}
+        disabled={quick.busy}
         className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-b from-blood-500 to-blood-700 px-4 py-3 text-sm font-semibold text-[#fdf6e3] shadow-blood-btn transition-all active:scale-[0.97]"
       >
-        {t('start.play')}
+        🐺 {quick.busy ? t('home.play.searching') : t('start.play')}
       </button>
-      <ErrorText>{error}</ErrorText>
+      <ErrorText>{error ?? quick.error}</ErrorText>
 
       {tutorialOpen && (
         <TutorialFlow
