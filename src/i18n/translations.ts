@@ -3114,18 +3114,22 @@ export const translations = {
   'joinByLink.authLogin': { fr: 'J’ai déjà un compte', en: 'I already have an account' },
 
   // --- Vérifier email (VerifyEmail.tsx) ----------------------------------------
-  'verifyEmail.title': { fr: 'Vérifiez votre email', en: 'Verify your email' },
-  'verifyEmail.body': {
-    fr: 'Nous avons envoyé un lien de confirmation à {{email}}. Cliquez dessus pour activer votre compte — cette page se mettra à jour automatiquement.',
-    en: 'We sent a confirmation link to {{email}}. Click it to activate your account — this page will update automatically.',
-  },
-  'verifyEmail.emailFallback': { fr: 'votre adresse', en: 'your address' },
+  'verifyEmail.title': { fr: 'Confirme ton adresse e-mail', en: 'Confirm your e-mail address' },
+  'verifyEmail.sentTo': { fr: 'Nous avons envoyé un lien de confirmation à', en: 'We sent a confirmation link to' },
+  'verifyEmail.emailFallback': { fr: 'ton adresse', en: 'your address' },
+  'verifyEmail.step1': { fr: 'Ouvre ta messagerie (sur ce téléphone, c’est plus simple).', en: 'Open your mailbox (on this phone, it’s easier).' },
+  'verifyEmail.step2': { fr: 'Touche le lien de confirmation dans le mail reçu.', en: 'Tap the confirmation link in the e-mail.' },
+  'verifyEmail.step3': { fr: 'Tu arrives directement dans le jeu.', en: 'You land straight in the game.' },
   'verifyEmail.spamNote': {
-    fr: '📬 Vous ne le voyez pas ? Vérifiez votre dossier Spams / Courrier indésirable — et pensez à marquer le message comme "Non spam" pour que les prochains arrivent directement.',
-    en: '📬 Don\'t see it? Check your Spam / Junk folder — and mark the message as "Not spam" so future ones land directly in your inbox.',
+    fr: '📬 Rien reçu ? Regarde dans les Spams / Courrier indésirable, puis marque le message « Non spam ».',
+    en: '📬 Nothing? Check your Spam / Junk folder, then mark the message as “Not spam”.',
   },
-  'verifyEmail.resent': { fr: 'Email renvoyé ✓', en: 'Email resent ✓' },
-  'verifyEmail.resend': { fr: "Renvoyer l'email", en: 'Resend email' },
+  'verifyEmail.resent': { fr: 'Mail renvoyé ✓', en: 'E-mail resent ✓' },
+  'verifyEmail.resend': { fr: 'Renvoyer le mail', en: 'Resend the e-mail' },
+  'verifyEmail.tutorial': { fr: 'En attendant, découvre comment jouer', en: 'Meanwhile, learn how to play' },
+  'verifyEmail.tutorialDone': { fr: "J'ai compris", en: 'Got it' },
+  'verifyEmail.alreadyConfirmed': { fr: 'Déjà confirmé ? Se connecter', en: 'Already confirmed? Log in' },
+  'verifyEmail.wrongAddress': { fr: 'Mauvaise adresse ? Recommencer', en: 'Wrong address? Start over' },
   'verifyEmail.confirmedNotice': {
     fr: 'Email confirmé ! Bienvenue.',
     en: 'Email confirmed! Welcome.',

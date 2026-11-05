@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { Button, Card, ErrorText, Input, Label, PasswordInput } from '../components/ui'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { CONTINENTS } from '../lib/continents'
+import { rememberPendingEmail } from './VerifyEmail'
 import { useLanguage } from '../i18n/LanguageContext'
 import { safeRedirect } from '../lib/safeRedirect'
 
@@ -62,7 +63,8 @@ export default function SignUp() {
       return
     }
 
-    navigate(verifyEmailPath)
+    rememberPendingEmail(email.trim())
+    navigate(verifyEmailPath, { state: { email: email.trim() } })
   }
 
   return (

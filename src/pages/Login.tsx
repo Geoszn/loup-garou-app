@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Button, Card, ErrorText, Input, Label, SuccessText, PasswordInput } from '../components/ui'
+import { rememberPendingEmail } from './VerifyEmail'
 import { useLanguage } from '../i18n/LanguageContext'
 import { isAdminApp } from '../lib/adminApp'
 import { safeRedirect } from '../lib/safeRedirect'
@@ -29,7 +30,8 @@ export default function Login() {
 
     if (signInError) {
       if (signInError.message.toLowerCase().includes('email not confirmed')) {
-        navigate('/verifier-email')
+        rememberPendingEmail(email.trim())
+        navigate('/verifier-email', { state: { email: email.trim() } })
         return
       }
       setError(t('login.error.invalid'))
